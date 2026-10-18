@@ -186,6 +186,7 @@ describe('TelegramWebAppService.signIn', () => {
     });
     expect(authService.buildStudentSession).toHaveBeenCalledWith(
       DILNOZA.userId,
+      undefined,
     );
   });
 
@@ -212,7 +213,10 @@ describe('TelegramWebAppService.signIn', () => {
     const result = await service.signIn(initDataFor(), SARDOR.id);
 
     expect(result.status).toBe('authenticated');
-    expect(authService.buildStudentSession).toHaveBeenCalledWith(SARDOR.userId);
+    expect(authService.buildStudentSession).toHaveBeenCalledWith(
+      SARDOR.userId,
+      undefined,
+    );
   });
 
   it("bu Telegram'ga bog'lanmagan o'quvchini tanlashni rad etadi", async () => {
@@ -245,6 +249,7 @@ describe('TelegramWebAppService.signIn', () => {
     expect(result.status).toBe('authenticated');
     expect(authService.buildStudentSession).toHaveBeenCalledWith(
       DILNOZA.userId,
+      undefined,
     );
   });
 
@@ -336,7 +341,12 @@ describe('TelegramWebAppService.signInStaff (ADR-0045)', () => {
       [4],
     );
     // Portal darvozasi parol bilan kirishdagi funksiyada yana tekshiriladi.
-    expect(authService.login).toHaveBeenCalledWith(DOSTON, LEHRER);
+    expect(authService.login).toHaveBeenCalledWith(
+      DOSTON,
+      LEHRER,
+      undefined,
+      undefined,
+    );
   });
 
   it('admin portalida admin rollarini qidiradi', async () => {
@@ -348,7 +358,12 @@ describe('TelegramWebAppService.signInStaff (ADR-0045)', () => {
       String(TG_USER_ID),
       [1, 2, 3, 5],
     );
-    expect(authService.login).toHaveBeenCalledWith(GULNOZA, ADMIN);
+    expect(authService.login).toHaveBeenCalledWith(
+      GULNOZA,
+      ADMIN,
+      undefined,
+      undefined,
+    );
   });
 
   it("lokal dev'da (portal cheklovi yo'q) barcha xodim rollarini qidiradi", async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatNumber } from "@/lib/format-utils";
-import { averageText, barPercent, responseText, trend } from "./rating-format";
+import { averageText, barPercent, commentStateLabel, isLongComment, responseText, trend } from "./rating-format";
 
 describe("averageText", () => {
   it("shows one decimal with a star, or a dash", () => {
@@ -44,5 +44,21 @@ describe("barPercent", () => {
   it("rounds to a whole percent", () => {
     expect(barPercent(1, 3)).toBe("33%");
     expect(barPercent(2, 3)).toBe("67%");
+  });
+});
+
+describe("isLongComment", () => {
+  it("is long only above the limit", () => {
+    expect(isLongComment("a".repeat(140))).toBe(false);
+    expect(isLongComment("a".repeat(141))).toBe(true);
+    expect(isLongComment("abcdef", 5)).toBe(true);
+  });
+});
+
+describe("commentStateLabel", () => {
+  it("names the three states", () => {
+    expect(commentStateLabel("WRITTEN")).toEqual({ text: "Yozdi", tone: "green" });
+    expect(commentStateLabel("NOT_WRITTEN")).toEqual({ text: "Yozmadi", tone: "muted" });
+    expect(commentStateLabel("PENDING")).toEqual({ text: "Kutilmoqda", tone: "amber" });
   });
 });

@@ -32,6 +32,7 @@ import { StatusHistoryDialog } from "@/components/shared/status-history-dialog";
 import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
 
 interface TeacherRowActionsProps {
   teacher: TeacherData;
@@ -40,6 +41,7 @@ interface TeacherRowActionsProps {
 }
 
 export function TeacherRowActions({ teacher, onDeleted, onStatusChanged }: TeacherRowActionsProps) {
+  const t = useT();
   const { openDrawer } = useEditTeacher();
   const [showDelete, setShowDelete] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
@@ -47,15 +49,18 @@ export function TeacherRowActions({ teacher, onDeleted, onStatusChanged }: Teach
   const [deleting, setDeleting] = useState(false);
   const [deleteReason, setDeleteReason] = useState("");
 
+  // The name is data: split the translated sentence around it so it stays bold.
+  const [deleteBefore, deleteAfter] = t("{name} o'qituvchisini arxivga o'tkazilsinmi?", { name: "\u0001" }).split("\u0001");
+
   const handleDelete = async () => {
     setDeleting(true);
     setShowDelete(false);
     onDeleted?.(teacher.id);
     try {
       await api.delete(`/teachers/${teacher.id}`);
-      toast.success("O'qituvchi muvaffaqiyatli o'chirildi");
+      toast.success(t("O'qituvchi muvaffaqiyatli o'chirildi"));
     } catch (error) {
-      toast.error(getErrorMessage(error, "O'chirishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("O'chirishda xatolik yuz berdi")));
     } finally {
       setDeleting(false);
       setDeleteReason("");
@@ -74,24 +79,24 @@ export function TeacherRowActions({ teacher, onDeleted, onStatusChanged }: Teach
                 onClick={(e) => e.stopPropagation()}
               >
                 <MoreHorizontal className="size-4" />
-                <span className="sr-only">Amallar</span>
+                <span className="sr-only">{t("Amallar")}</span>
               </Button>
             </DropdownMenuTrigger>
           </TooltipTrigger>
-          <TooltipContent>Amallar</TooltipContent>
+          <TooltipContent>{t("Amallar")}</TooltipContent>
         </Tooltip>
         <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
           <DropdownMenuItem onClick={() => openDrawer(teacher)}>
             <Pencil className="mr-2 size-4" />
-            Tahrirlash
+            {t("Tahrirlash")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setShowStatus(true)}>
             <RefreshCw className="mr-2 size-4" />
-            Status o&apos;zgartirish
+            {t("Status o'zgartirish")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setShowHistory(true)}>
             <History className="mr-2 size-4" />
-            Status tarixi
+            {t("Status tarixi")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -99,7 +104,7 @@ export function TeacherRowActions({ teacher, onDeleted, onStatusChanged }: Teach
             onClick={() => setShowDelete(true)}
           >
             <Trash2 className="mr-2 size-4" />
-            O&apos;chirish
+            {t("O'chirish")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -107,27 +112,27 @@ export function TeacherRowActions({ teacher, onDeleted, onStatusChanged }: Teach
       <AlertDialog open={showDelete} onOpenChange={setShowDelete}>
         <AlertDialogContent onClick={(e) => e.stopPropagation()}>
           <AlertDialogHeader>
-            <AlertDialogTitle>O&apos;chirishni tasdiqlang</AlertDialogTitle>
+            <AlertDialogTitle>{t("O'chirishni tasdiqlang")}</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>{`${teacher.firstName} ${teacher.lastName}`}</strong> o&apos;qituvchisini arxivga o&apos;tkazilsinmi?
+              {deleteBefore}<strong>{`${teacher.firstName} ${teacher.lastName}`}</strong>{deleteAfter}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="px-6 pb-2">
             <Textarea
-              placeholder="Sabab yozing (ixtiyoriy)..."
+              placeholder={t("Sabab yozing (ixtiyoriy)...")}
               value={deleteReason}
               onChange={(e) => setDeleteReason(e.target.value)}
               rows={2}
             />
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Bekor qilish</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{t("Bekor qilish")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleting}
               variant="destructive"
             >
-              {deleting ? "O'chirilmoqda..." : "O'chirish"}
+              {deleting ? t("O'chirilmoqda...") : t("O'chirish")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

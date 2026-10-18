@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CalendarX, ClipboardCheck, DoorOpen, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import {
   attendanceBadge,
   getLessonStatus,
@@ -16,9 +18,9 @@ export function canOfferAttendance(isToday: boolean, att: DashboardLesson["atten
 }
 
 const STATUS_LABEL = {
-  past: "Tugagan",
-  current: "Davom etmoqda",
-  upcoming: "Kutilmoqda",
+  past: msg("Tugagan"),
+  current: msg("Davom etmoqda"),
+  upcoming: msg("Boshlanadi"),
 } as const;
 
 /**
@@ -34,6 +36,7 @@ export function TeacherLessonCards({
   lessons: DashboardLesson[];
   isToday: boolean;
 }) {
+  const t = useT();
   const [now, setNow] = useState(() => hhmm(new Date()));
   useEffect(() => {
     if (!isToday) return;
@@ -45,9 +48,9 @@ export function TeacherLessonCards({
     return (
       <div className="p-8 text-center">
         <CalendarX className="text-muted-foreground mx-auto mb-3 size-8" />
-        <p className="text-sm font-medium">Darslar yo&apos;q</p>
+        <p className="text-sm font-medium">{t("Darslar yo'q")}</p>
         <p className="text-muted-foreground mt-1 text-xs">
-          Tanlangan kun uchun hech qanday dars rejalashtirilmagan
+          {t("Tanlangan kun uchun hech qanday dars rejalashtirilmagan")}
         </p>
       </div>
     );
@@ -57,6 +60,7 @@ export function TeacherLessonCards({
     <ul className="divide-y">
       {lessons.map((lesson) => {
         const status = isToday ? getLessonStatus(lesson.startTime, lesson.endTime, now) : null;
+        const statusLabel = status ? STATUS_LABEL[status] : "";
         const att = lesson.attendanceStatus;
         const badge = att ? attendanceBadge[att] : null;
         const offer = canOfferAttendance(isToday, att);
@@ -86,7 +90,7 @@ export function TeacherLessonCards({
                         : "text-muted-foreground text-xs"
                     }
                   >
-                    {STATUS_LABEL[status]}
+                    {t(statusLabel)}
                   </p>
                 )}
               </div>
@@ -106,7 +110,7 @@ export function TeacherLessonCards({
                   className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${badge.className}`}
                 >
                   <badge.icon className="size-3" />
-                  {badge.label}
+                  {t(badge.label)}
                 </span>
               )}
             </div>
@@ -115,7 +119,7 @@ export function TeacherLessonCards({
               <Button asChild size="sm" className="w-full">
                 <Link href={`/groups/${lesson.groupId}`}>
                   <ClipboardCheck className="mr-1.5 size-4" />
-                  Davomat olish
+                  {t("Davomat olish")}
                 </Link>
               </Button>
             )}

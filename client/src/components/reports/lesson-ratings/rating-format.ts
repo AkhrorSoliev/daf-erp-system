@@ -1,3 +1,4 @@
+import type { CommentState } from "./types";
 import { formatNumber, formatPercent } from "@/lib/format-utils";
 
 /** Baholar shu oydan beri yig'iladi (spec 2026-10-13). */
@@ -34,4 +35,26 @@ export function barPercent(count: number, max: number): string {
 export function dayText(date: string): string {
   const [y, m, d] = date.split("-");
   return `${d}.${m}.${y}`;
+}
+
+/** Uzun izoh qisqartiriladi va «Ko'proq o'qish» chiqadi. */
+export const LONG_COMMENT = 140;
+
+export function isLongComment(text: string, limit = LONG_COMMENT): boolean {
+  return text.length > limit;
+}
+
+/** Izoh holati belgisi: matn va rang. */
+export function commentStateLabel(state: CommentState): {
+  text: string;
+  tone: "green" | "muted" | "amber";
+} {
+  switch (state) {
+    case "WRITTEN":
+      return { text: "Yozdi", tone: "green" };
+    case "PENDING":
+      return { text: "Kutilmoqda", tone: "amber" };
+    default:
+      return { text: "Yozmadi", tone: "muted" };
+  }
 }

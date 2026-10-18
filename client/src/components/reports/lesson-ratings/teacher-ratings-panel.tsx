@@ -5,35 +5,38 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BlockError } from "@/components/payments/overview/block-state";
 import { monthShort } from "@/components/payments/salary-utils";
 import { formatNumber } from "@/lib/format-utils";
+import { useT } from "@/i18n/context";
 import { useTeacherRatings } from "./queries";
 import { averageText, dayText } from "./rating-format";
+import { ExpandableText } from "./expandable-text";
 
 /** Bitta ustozning baholari: 6 oy, guruhlar, izohlar (spec §6.3–6.4). */
 export function TeacherRatingsPanel({ teacherId, month }: { teacherId: number; month: string }) {
+  const t = useT();
   const q = useTeacherRatings(teacherId, month);
   if (q.isPending) return <Skeleton className="h-48 w-full" />;
-  if (q.isError) return <BlockError title="Baholar" onRetry={() => q.refetch()} />;
+  if (q.isError) return <BlockError title={t("Baholar")} onRetry={() => q.refetch()} />;
   const { months, groups, comments } = q.data;
 
   return (
     <div className="space-y-6">
       <section>
-        <h3 className="mb-2 text-sm font-medium">Oylar bo&apos;yicha</h3>
+        <h3 className="mb-2 text-sm font-medium">{t("Oylar bo'yicha")}</h3>
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
           {months.map((m) => (
             <div key={m.month} className="rounded-md border p-2 text-center">
-              <p className="text-xs text-muted-foreground">{monthShort(m.month)}</p>
+              <p className="text-xs text-muted-foreground">{monthShort(m.month, t)}</p>
               <p className="font-medium">{averageText(m.average)}</p>
-              <p className="text-xs text-muted-foreground">{formatNumber(m.rated)} ta baho</p>
+              <p className="text-xs text-muted-foreground">{t("{n} ta baho", { n: formatNumber(m.rated) })}</p>
             </div>
           ))}
         </div>
       </section>
 
       <section>
-        <h3 className="mb-2 text-sm font-medium">Guruhlar bo&apos;yicha</h3>
+        <h3 className="mb-2 text-sm font-medium">{t("Guruhlar bo'yicha")}</h3>
         {groups.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Bu oyda baho yo&apos;q</p>
+          <p className="text-sm text-muted-foreground">{t("Bu oyda baho yo'q")}</p>
         ) : (
           <ul className="divide-y rounded-md border">
             {groups.map((g) => (
@@ -42,7 +45,7 @@ export function TeacherRatingsPanel({ teacherId, month }: { teacherId: number; m
                   {g.name}
                 </Link>
                 <span>
-                  {averageText(g.average)} · {formatNumber(g.rated)} ta
+                  {t("{avg} · {n} ta", { avg: averageText(g.average), n: formatNumber(g.rated) })}
                 </span>
               </li>
             ))}
@@ -51,22 +54,19 @@ export function TeacherRatingsPanel({ teacherId, month }: { teacherId: number; m
       </section>
 
       <section>
-        <h3 className="mb-2 text-sm font-medium">Izohlar</h3>
+        <h3 className="mb-2 text-sm font-medium">{t("Izohlar")}</h3>
         {comments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Bu oyda izoh yozilmagan</p>
+          <p className="text-sm text-muted-foreground">{t("Bu oyda izoh yozilmagan")}</p>
         ) : (
           <ul className="space-y-2">
             {comments.map((c, i) => (
-              <li key={`${c.studentId}-${c.date}-${i}`} className="rounded-md border p-3 text-sm">
+              <li key={`${c.date}-${i}`} className="rounded-md border p-3 text-sm">
                 <div className="mb-1 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
                   <span>{dayText(c.date)}</span>
                   <span>{c.groupName}</span>
-                  <Link href={`/students/profile/${c.studentId}`} className="hover:underline">
-                    {c.studentName}
-                  </Link>
                   <span>{c.score} ⭐</span>
                 </div>
-                <p>{c.comment}</p>
+                <ExpandableText text={c.comment} />
               </li>
             ))}
           </ul>

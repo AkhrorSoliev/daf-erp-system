@@ -89,6 +89,7 @@ describe('SalaryStaffMonthlyService', () => {
       },
       expense: { findMany: jest.fn().mockResolvedValue([]) },
       salaryPayment: { findMany: jest.fn().mockResolvedValue([]) },
+      staffSalaryAdjustment: { findMany: jest.fn().mockResolvedValue([]) },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -596,6 +597,87 @@ describe('SalaryStaffMonthlyService', () => {
     const res = await service.computeStaff(juneScope());
     expect(res.staff).toEqual([]);
   });
+
+  describe('manual figure (ADR-0112)', () => {
+    const adjustment = (amount: number) => ({
+      userId: 10030,
+      amount,
+      reason: "oy o'rtasidan qo'shilgan",
+      updatedAt: new Date('2026-10-17T10:00:00.000Z'),
+      createdBy: { id: 1, firstName: 'Ceo', lastName: 'One' },
+    });
+
+    it('replaces the formula and keeps the formula beside it', async () => {
+      prisma.employeeSalaryConfig.findMany.mockResolvedValue([adminConfig]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        {
+          configId: 'cfg1',
+          value: 3_000_000,
+          effectiveFrom: tsh(2026, 6, 11), // Jun 11..30 = 20/30 → 2 000 000
+          effectiveTo: null,
+        },
+      ]);
+      prisma.staffSalaryAdjustment.findMany.mockResolvedValue([
+        adjustment(2_076_000),
+      ]);
+
+      const res = await service.computeStaff(juneScope());
+
+      expect(res.staff[0].monthly).toBe(2_076_000);
+      expect(res.staff[0].calculated).toBe(2_000_000);
+      expect(res.staff[0].adjustment).toEqual({
+        amount: 2_076_000,
+        reason: "oy o'rtasidan qo'shilgan",
+        by: { id: 1, firstName: 'Ceo', lastName: 'One' },
+        at: '2026-10-17T10:00:00.000Z',
+      });
+      expect(res.staff[0].netToPay).toBe(2_076_000);
+      expect(res.staffTotals.monthly).toBe(2_076_000);
+    });
+
+    it('a row whose formula is 0 still appears when it has a manual figure', async () => {
+      prisma.employeeSalaryConfig.findMany.mockResolvedValue([adminConfig]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([]); // none overlap
+      prisma.staffSalaryAdjustment.findMany.mockResolvedValue([
+        adjustment(500_000),
+      ]);
+
+      const res = await service.computeStaff(juneScope());
+
+      expect(res.staff).toHaveLength(1);
+      expect(res.staff[0].monthly).toBe(500_000);
+      expect(res.staff[0].calculated).toBe(0);
+    });
+
+    it('a plain row has no adjustment and its formula equals monthly', async () => {
+      prisma.employeeSalaryConfig.findMany.mockResolvedValue([adminConfig]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        {
+          configId: 'cfg1',
+          value: 5_000_000,
+          effectiveFrom: tsh(2026, 5, 1),
+          effectiveTo: null,
+        },
+      ]);
+
+      const res = await service.computeStaff(juneScope());
+
+      expect(res.staff[0].adjustment).toBeNull();
+      expect(res.staff[0].calculated).toBe(res.staff[0].monthly);
+    });
+
+    it("asks for the scope month's corrections of the scoped people only", async () => {
+      prisma.employeeSalaryConfig.findMany.mockResolvedValue([adminConfig]);
+
+      await service.computeStaff(juneScope());
+
+      expect(prisma.staffSalaryAdjustment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { companyId: 1, month: '2026-06', userId: { in: [10030] } },
+        }),
+      );
+    });
+  });
 });
 
 // A profit figure must count each salary once. Production 2026-09: an
@@ -641,6 +723,7 @@ describe('SalaryStaffMonthlyService — home-branch basis', () => {
       },
       expense: { findMany: jest.fn().mockResolvedValue([]) },
       salaryPayment: { findMany: jest.fn().mockResolvedValue([]) },
+      staffSalaryAdjustment: { findMany: jest.fn().mockResolvedValue([]) },
     };
     const module: TestingModule = await Test.createTestingModule({
       providers: [

@@ -79,7 +79,7 @@ describe('LessonRatingTelegramHandler — buttons', () => {
       message_effect_id: CONFETTI_EFFECT_ID,
     });
     expect(ctx.reply).toHaveBeenCalledWith(
-      'Nima yoqmadi? Shu xabarga javob qilib yozing (ixtiyoriy).',
+      "Nima yoqmadi? Shu xabarga javob qilib yozing (ixtiyoriy).\n\n🔒 Fikringiz ham to'liq anonim.",
       { reply_markup: { force_reply: true } },
     );
     expect(prisma.lessonRating.update).toHaveBeenCalledWith({
@@ -134,7 +134,7 @@ describe('LessonRatingTelegramHandler — comment', () => {
       where: { id: ID, comment: null },
       data: { comment: 'Ustoz kech qoldi', commentedAt: NOW },
     });
-    expect(ctx.reply).toHaveBeenCalledWith('Rahmat, fikringiz yetkazildi.');
+    expect(ctx.reply).toHaveBeenCalledWith('Rahmat, fikringiz qabul qilindi.');
     expect(next).not.toHaveBeenCalled();
   });
 

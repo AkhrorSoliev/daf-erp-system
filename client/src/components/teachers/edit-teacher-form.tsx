@@ -17,6 +17,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   editTeacherSchema,
+  teacherFormError,
   type EditTeacherFormValues,
 } from "@/lib/schemas/teacher-schema";
 import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
@@ -24,6 +25,7 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher"; // getState() o
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
 
 interface EditTeacherFormProps {
   teacher: TeacherData | null;
@@ -57,6 +59,7 @@ export function EditTeacherForm({
   onSaved,
   formId,
 }: EditTeacherFormProps) {
+  const t = useT();
   const form = useForm<EditTeacherFormValues>({
     resolver: zodResolver(editTeacherSchema),
     defaultValues: teacherToForm(teacher),
@@ -127,21 +130,24 @@ export function EditTeacherForm({
         const { data } = await api.post("/teachers", payload);
         if (data.generatedLogin && data.generatedPassword) {
           toast.success(
-            `O'qituvchi qo'shildi!\nLogin: ${data.generatedLogin}\nParol: ${data.generatedPassword}`,
+            t("O'qituvchi qo'shildi!\nLogin: {login}\nParol: {password}", {
+              login: data.generatedLogin,
+              password: data.generatedPassword,
+            }),
             { duration: 8000 },
           );
         } else {
-          toast.success("O'qituvchi muvaffaqiyatli qo'shildi");
+          toast.success(t("O'qituvchi muvaffaqiyatli qo'shildi"));
         }
         onSaved?.(data);
       } else if (teacher) {
         const { data } = await api.patch(`/teachers/${teacher.id}`, payload);
-        toast.success("O'qituvchi muvaffaqiyatli yangilandi");
+        toast.success(t("O'qituvchi muvaffaqiyatli yangilandi"));
         onSaved?.(data);
       }
       onClose();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Xatolik yuz berdi")));
     } finally {
       setSubmitting(false);
     }
@@ -161,14 +167,14 @@ export function EditTeacherForm({
       {/* Asosiy ma'lumotlar */}
       <section className="space-y-5 px-6 py-5">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Asosiy ma&apos;lumotlar
+          {t("Asosiy ma'lumotlar")}
         </h3>
 
         {/* Avatar */}
         <div className="flex items-center gap-4">
           <div className="relative">
             <Avatar className="size-16">
-              <AvatarImage src={avatarPreview} alt="Avatar" />
+              <AvatarImage src={avatarPreview} alt={t("Avatar")} />
               <AvatarFallback className="text-lg">{initials}</AvatarFallback>
             </Avatar>
             <Tooltip>
@@ -184,7 +190,7 @@ export function EditTeacherForm({
                   <Camera className="size-3" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Rasm yuklash</TooltipContent>
+              <TooltipContent>{t("Rasm yuklash")}</TooltipContent>
             </Tooltip>
             <input
               ref={fileInputRef}
@@ -208,7 +214,7 @@ export function EditTeacherForm({
                 className="flex items-center gap-1 text-xs text-destructive hover:underline"
               >
                 <Trash2 className="size-3" />
-                Rasmni o&apos;chirish
+                {t("Rasmni o'chirish")}
               </button>
             )}
           </div>
@@ -217,28 +223,28 @@ export function EditTeacherForm({
         {/* Ism / Familiya */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label htmlFor="firstName">Ism</Label>
+            <Label htmlFor="firstName">{t("Ism")}</Label>
             <Input
               id="firstName"
-              placeholder="Ism"
+              placeholder={t("Ism")}
               {...form.register("firstName")}
             />
             {form.formState.errors.firstName && (
               <p className="text-xs text-destructive">
-                {form.formState.errors.firstName.message}
+                {teacherFormError(t, form.formState.errors.firstName.message)}
               </p>
             )}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="lastName">Familiya</Label>
+            <Label htmlFor="lastName">{t("Familiya")}</Label>
             <Input
               id="lastName"
-              placeholder="Familiya"
+              placeholder={t("Familiya")}
               {...form.register("lastName")}
             />
             {form.formState.errors.lastName && (
               <p className="text-xs text-destructive">
-                {form.formState.errors.lastName.message}
+                {teacherFormError(t, form.formState.errors.lastName.message)}
               </p>
             )}
           </div>
@@ -246,7 +252,7 @@ export function EditTeacherForm({
 
         {/* Telefon */}
         <div className="space-y-1.5">
-          <Label>Telefon raqam</Label>
+          <Label>{t("Telefon raqam")}</Label>
           <Controller
             control={form.control}
             name="phone"
@@ -260,14 +266,14 @@ export function EditTeacherForm({
           />
           {form.formState.errors.phone && (
             <p className="text-xs text-destructive">
-              {form.formState.errors.phone.message}
+              {teacherFormError(t, form.formState.errors.phone.message)}
             </p>
           )}
         </div>
 
         {/* Jins */}
         <div className="space-y-1.5">
-          <Label>Jinsi</Label>
+          <Label>{t("Jinsi")}</Label>
           <div className="flex gap-3">
             <button
               type="button"
@@ -280,7 +286,7 @@ export function EditTeacherForm({
               )}
             >
               <User className="size-4" />
-              Erkak
+              {t("Erkak")}
             </button>
             <button
               type="button"
@@ -293,7 +299,7 @@ export function EditTeacherForm({
               )}
             >
               <UserRound className="size-4" />
-              Ayol
+              {t("Ayol")}
             </button>
           </div>
         </div>
@@ -303,34 +309,34 @@ export function EditTeacherForm({
       {!isAdd && (
         <section className="space-y-5 border-t px-6 py-5">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Tizim ma&apos;lumotlari
+            {t("Tizim ma'lumotlari")}
           </h3>
 
           <div className="space-y-1.5">
-            <Label htmlFor="login">Login</Label>
+            <Label htmlFor="login">{t("Login")}</Label>
             <Input
               id="login"
-              placeholder="Login"
+              placeholder={t("Login")}
               {...form.register("login")}
             />
             {form.formState.errors.login && (
               <p className="text-xs text-destructive">
-                {form.formState.errors.login.message}
+                {teacherFormError(t, form.formState.errors.login.message)}
               </p>
             )}
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="password">Yangi parol</Label>
+            <Label htmlFor="password">{t("Yangi parol")}</Label>
             <Input
               id="password"
               type="password"
-              placeholder="Bo'sh qoldirilsa o'zgarmaydi"
+              placeholder={t("Bo'sh qoldirilsa o'zgarmaydi")}
               {...form.register("password")}
             />
             {form.formState.errors.password && (
               <p className="text-xs text-destructive">
-                {form.formState.errors.password.message}
+                {teacherFormError(t, form.formState.errors.password.message)}
               </p>
             )}
           </div>

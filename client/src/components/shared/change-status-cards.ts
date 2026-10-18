@@ -33,7 +33,7 @@ export const STATUS_CARD_CONFIG: Record<string, StatusCardConfig> = {
   EXPELLED: { icon: Ban, label: msg("Chetlatilgan"), description: msg("O'qishni butunlay tashlab ketdi"), color: "red" },
   ARCHIVED: { icon: Archive, label: msg("Arxivlash"), description: msg("Faqat xato/duplikat yozuv uchun"), color: "red" },
   // User/Teacher
-  SUSPENDED: { icon: ShieldOff, label: msg("To'xtatilgan"), description: msg("Vaqtincha to'xtatish"), color: "amber" },
+  SUSPENDED: { icon: ShieldOff, label: msg("Vaqtincha to'xtatilgan"), description: msg("Vaqtincha to'xtatish"), color: "amber" },
   TERMINATED: { icon: UserX, label: msg("Ishdan bo'shatilgan"), description: msg("Butunlay to'xtatish"), color: "red" },
   // Group
   FORMING: { icon: Play, label: msg("Boshlanmagan"), description: msg("Guruh shakllanmoqda"), color: "blue" },

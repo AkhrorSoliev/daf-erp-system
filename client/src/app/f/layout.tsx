@@ -26,7 +26,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#EDF1F6", // light-only surface
+  viewportFit: "cover", // lets the sticky button clear the iPhone home bar
+  themeColor: "#FFFFFF", // phone: the form is a white page, no card
 };
 
 // Public form route — no app shell, no auth, no sidebar. The whole tree is
@@ -42,11 +43,10 @@ export default function PublicFormLayout({
       className={cn(
         fontDisplay.variable,
         fontBody.variable,
-        "form-theme min-h-screen bg-background text-foreground",
-        "flex items-center justify-center px-4 py-8 sm:py-12",
+        "form-theme min-h-dvh bg-background text-foreground",
       )}
     >
-      <div className="w-full max-w-md">{children}</div>
+      {children}
     </div>
   );
 }

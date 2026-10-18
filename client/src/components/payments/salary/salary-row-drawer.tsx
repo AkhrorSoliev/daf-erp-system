@@ -9,13 +9,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CanLink } from "@/components/shared/can-link";
 import api from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { isOwnPayrollLocked } from "../own-payroll";
 import { currentMonthKey, monthLabel, staffRoleText } from "../salary-utils";
 import { csvFromLessons, drawerButtons, drawerHint } from "./salary-drawer-model";
+import { SalaryAdjustmentDialog } from "./salary-adjustment-dialog";
 import { SalaryDrawerBody } from "./salary-drawer-sections";
 import { useInvalidateSalary, useSalaryDetail } from "./salary-queries";
-import type { BreakdownLine, MonthStateKind, SalaryDetail } from "./salary-types";
+import type { BreakdownLine, MonthStateKind, SalaryDetail, StaffRow } from "./salary-types";
 
 interface Props {
   userId: number | null;
@@ -32,6 +34,8 @@ interface Props {
 /** Row click on «Ish haqi» (spec §2.5): one person's month, in any state. */
 export function SalaryRowDrawer({ userId, month, state, onClose, onPay, canClose, canPay }: Props) {
   const { data, isError, isFetching, refetch } = useSalaryDetail(userId, month);
+  const canAdjust = useCan("salary.adjust");
+  const [adjusting, setAdjusting] = useState(false);
   // Until the page's answer arrives: OPEN is exactly "the current Tashkent month" (spec §4).
   const kind = state ?? (month === currentMonthKey() ? "OPEN" : "NOT_CALCULATED");
   const user = data?.row.user;
@@ -58,7 +62,11 @@ export function SalaryRowDrawer({ userId, month, state, onClose, onPay, canClose
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
           {data ? (
-            <SalaryDrawerBody detail={data} state={kind} />
+            <SalaryDrawerBody
+              detail={data}
+              state={kind}
+              onAdjust={canAdjust && data.kind === "staff" ? () => setAdjusting(true) : undefined}
+            />
           ) : isError ? (
             <div className="flex flex-col items-center gap-3 py-10 text-center">
               <p className="text-sm text-muted-foreground">Ma&apos;lumotni yuklab bo&apos;lmadi</p>
@@ -88,6 +96,11 @@ export function SalaryRowDrawer({ userId, month, state, onClose, onPay, canClose
             }}
           />
         )}
+        <SalaryAdjustmentDialog
+          row={adjusting && data?.kind === "staff" ? (data.row as StaffRow) : null}
+          month={data?.month ?? month}
+          onClose={() => setAdjusting(false)}
+        />
       </SheetContent>
     </Sheet>
   );

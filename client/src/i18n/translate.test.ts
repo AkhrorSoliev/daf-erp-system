@@ -49,4 +49,15 @@ describe("translate", () => {
     expect(translate("uz-Cyrl", {}, "JAMI")).toBe("JAMI");
     expect(translate("uz-Cyrl", uzCyrl, "JAMI")).toBe("ЖАМИ");
   });
+
+  it("writes the month lists (full and short) in Uzbek Cyrillic spelling", () => {
+    const full = ["Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun", "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"];
+    const short = ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek"];
+    expect(full.map((m) => translate("uz-Cyrl", uzCyrl, m))).toEqual([
+      "Январ", "Феврал", "Март", "Апрел", "Май", "Июн", "Июл", "Август", "Сентябр", "Октябр", "Ноябр", "Декабр",
+    ]);
+    expect(short.map((m) => translate("uz-Cyrl", uzCyrl, m))).toEqual([
+      "Ян", "Фев", "Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек",
+    ]);
+  });
 });

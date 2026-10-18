@@ -7,6 +7,27 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-18",
+    sarlavha: "Profilda faol seanslar ro'yxati",
+    matn: "Profil sahifasida «Faol seanslar» bo'limi paydo bo'ldi: hisobingizga kirilgan qurilmalar (brauzer va tizim nomi, IP manzil, oxirgi faollik). Siz turgan qurilma «Joriy qurilma» deb belgilanadi. Tanimagan qurilma yonidagi «Chiqarish» tugmasi faqat shu qurilmadagi kirishni darhol tugatadi, qolganlariga tegmaydi. «Boshqa qurilmalardan chiqish» tugmasi avvalgidek ishlaydi. Shahar hozircha ko'rsatilmaydi. Yangilanishdan oldin kirgan qurilmalar ro'yxatda taxminan bir soatdan keyin paydo bo'ladi.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "tizimga-kirish" },
+  },
+  {
+    sana: "2026-10-18",
+    sarlavha: "Xodim oyligini qo'lda to'g'rilash",
+    matn: "Oy o'rtasidan kelgan yoki ketgan xodimning oyligi stavkadan kunlarga proporsional hisoblanadi, kelishilgan summa esa boshqacha bo'lishi mumkin. Ish haqi sahifasida xodim oynasidagi «Oylik hisobi» blokida endi «To'g'rilash» tugmasi bor: CEO oy uchun o'z summasini va sababini kiritadi. Stavka va uning tarixi o'zgarmaydi; qo'lda summa jadvalda «qo'lda» belgisi bilan, hisobotlarda va Excelda shu oyning oyligi sifatida ko'rinadi. Hisoblangan oylik yangi summaga qayta hisoblanadi.",
+    rollar: [1],
+    sahifa: { bolim: "tolovlar", sahifa: "ish-haqi" },
+  },
+  {
+    sana: "2026-10-18",
+    sarlavha: "Dars baholari to'liq anonim, izoh holati ko'rinadi",
+    matn: "Dars baholari hisobotida o'quvchining ismi endi hech qayerda ko'rinmaydi, botda ham o'quvchiga shunday deyiladi. Past baholar ro'yxatida izoh holati bor: Yozdi, Yozmadi yoki Kutilmoqda, va faqat izohlilarni ko'rsatadigan tugma. Uzun izoh «Ko'proq o'qish» bilan ochiladi. Kartalar ixchamlashdi: taqsimot va eng yaxshi, eng past ustoz bitta kartada, ustozlar jadvalida «Izohlar» ustuni qo'shildi.",
+    rollar: [1],
+    sahifa: { bolim: "hisobotlar", sahifa: "dars-baholari" },
+  },
+  {
+    sana: "2026-10-18",
     sarlavha: "Arxivdagi o'quvchi va guruhni ko'rish, arxivga tushish sababi",
     matn: "Sozlamalar → Arxiv → «O'quvchilar» va «Guruhlar» ro'yxatida endi «Sabab» ustuni bor. Qatorni bossangiz o'ng tomondan oyna ochiladi: arxivlangan sana, kim arxivlagani, sabab, o'quvchining guruhlari (yoki guruhning ustozi va o'quvchilari) va tarixi. Oyna faqat ko'rish uchun; «Qayta tiklash» tugmasi ro'yxatdagi bilan bir xil. Sabab yozilmagan eski yozuvlarda «—» turadi.",
     rollar: [1],

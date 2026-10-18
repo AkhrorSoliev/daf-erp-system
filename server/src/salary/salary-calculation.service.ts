@@ -15,8 +15,11 @@ import {
   pickActiveVersion,
   RateVersion,
 } from './shared/deserved-math';
-import { planAdvanceNetting } from './shared/advance-netting';
-import { prorateFixedMonthly } from './shared/prorate-fixed-monthly';
+import { settlePendingAdvances } from './shared/advance-settle';
+import {
+  resolveStaffMonthly,
+  staffAdjustmentMonth,
+} from './shared/staff-monthly-amount';
 import {
   awaitsStudentPayment,
   packPriceCandidates,
@@ -299,6 +302,16 @@ export class SalaryCalculationService {
       },
     );
 
+    // The CEO's manual figures for the settled month (ADR-0112); a missing row
+    // means the prorated formula stands.
+    const adjustmentRows = await this.prisma.staffSalaryAdjustment.findMany({
+      where: { companyId, month: staffAdjustmentMonth(periodStart) },
+      select: { userId: true, amount: true },
+    });
+    const adjustmentByUser = new Map(
+      adjustmentRows.map((a) => [a.userId, { amount: a.amount }]),
+    );
+
     for (const config of fixedMonthlyConfigs) {
       // Prorate over every FIXED_MONTHLY version overlapping the settled period
       // (mid-cycle hire via effectiveFrom, leave via effectiveTo, rate change =
@@ -314,7 +327,12 @@ export class SalaryCalculationService {
         },
         select: { value: true, effectiveFrom: true, effectiveTo: true },
       });
-      const amount = prorateFixedMonthly(versions, periodStart, periodEnd);
+      const { amount } = resolveStaffMonthly({
+        versions,
+        adjustment: adjustmentByUser.get(config.userId) ?? null,
+        periodStart,
+        periodEnd,
+      });
       if (amount <= 0) continue;
 
       // Skip if a payment already exists for this exact period (idempotent cron).
@@ -405,34 +423,18 @@ export class SalaryCalculationService {
     companyId: number,
     periodEndDateExclusive: Date,
   ): Promise<number> {
-    const pending = await tx.expense.findMany({
-      where: {
-        category: 'TEACHER_ADVANCE',
-        relatedUserId: userId,
-        companyId,
-        settledBySalaryPaymentId: null,
-        deletedAt: null,
-      },
-      select: { id: true, amount: true, date: true, createdAt: true },
-    });
-    if (pending.length === 0) return 0;
-
-    const { settle: toSettle, total: deducted } = planAdvanceNetting(
-      pending,
-      salaryPayment.amount,
+    const deducted = await settlePendingAdvances(tx, {
+      paymentId: salaryPayment.id,
+      available: salaryPayment.amount,
+      userId,
+      companyId,
       periodEndDateExclusive,
-    );
-    if (toSettle.length === 0) return 0;
-
-    await tx.expense.updateMany({
-      where: { id: { in: toSettle } },
-      data: { settledBySalaryPaymentId: salaryPayment.id },
     });
+    if (deducted === 0) return 0;
     await tx.salaryPayment.update({
       where: { id: salaryPayment.id },
       data: { amount: salaryPayment.amount - deducted },
     });
-
     return deducted;
   }
 

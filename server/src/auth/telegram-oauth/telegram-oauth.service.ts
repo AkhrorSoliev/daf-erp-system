@@ -9,6 +9,7 @@ import { randomBytes } from 'crypto';
 import { RedisService } from '../../redis/redis.service';
 import { AuthService } from '../auth.service';
 import { getAllowedRoleIds } from '../portal-roles.config';
+import type { SessionMeta } from '../../common/auth/user-session';
 import { TelegramOauthConfig } from './telegram-oauth.config';
 import { TelegramIdTokenVerifier } from './telegram-id-token.verifier';
 import { TelegramOauthStateStore } from './telegram-oauth-state.store';
@@ -61,6 +62,7 @@ export class TelegramOauthService {
   async handleCallback(
     code: string,
     state: string,
+    meta?: SessionMeta,
   ): Promise<{ redirectUrl: string }> {
     // `code` tekshiruvi `consumeState` dan OLDIN: `state` bir martalik, ya'ni
     // uni iste'mol qilib keyin "kod yo'q" deb rad etsak, foydalanuvchi hech
@@ -84,7 +86,7 @@ export class TelegramOauthService {
     // foydalanuvchini API domenida xom JSON bilan qoldirmasligi kerak — uni
     // portalning kirish sahifasiga tushunarli xabar bilan qaytaramiz.
     try {
-      const handoff = await this.signIn(code, stored);
+      const handoff = await this.signIn(code, stored, meta);
       return { redirectUrl: this.portalUrl(stored.portalOrigin, { handoff }) };
     } catch (error) {
       const message =
@@ -109,6 +111,7 @@ export class TelegramOauthService {
   private async signIn(
     code: string,
     stored: { portalOrigin: string; codeVerifier: string },
+    meta?: SessionMeta,
   ): Promise<string> {
     const idToken = await this.exchangeCode(code, stored.codeVerifier);
     const identity = await this.verifier.verify(idToken);
@@ -162,6 +165,8 @@ export class TelegramOauthService {
     const session: TelegramOauthSession = await this.authService.login(
       user,
       stored.portalOrigin,
+      undefined,
+      meta,
     );
 
     const handoff = randomBytes(32).toString('hex');

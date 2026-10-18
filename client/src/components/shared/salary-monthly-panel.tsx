@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 import { formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import {
@@ -87,6 +88,7 @@ function MoneyCard({
   className?: string;
   valueClassName?: string;
 }) {
+  const t = useT();
   return (
     <div className={cn("space-y-1 rounded-lg border p-3", className)}>
       {tooltip ? (
@@ -106,7 +108,7 @@ function MoneyCard({
         {value == null ? (
           <span className="font-normal text-muted-foreground">—</span>
         ) : (
-          `${formatPrice(value)} so'm`
+          `${formatPrice(value)} ${t("so'm")}`
         )}
       </p>
     </div>
@@ -120,6 +122,7 @@ function MoneyCard({
  * deliberately no calculation in this component.
  */
 export function SalaryMonthlyPanel({ userId, scope }: Props) {
+  const t = useT();
   const { filters, setFilters } = useUrlFilters(filtersSchema);
   const maxMonth = currentMonthKey();
   const month = filters.salary_month || maxMonth;
@@ -143,6 +146,7 @@ export function SalaryMonthlyPanel({ userId, scope }: Props) {
   // (May — configs only became effective in June) report it as unavailable.
   const isStaffRow = row != null && row.monthly !== undefined;
   const noLessonData = row != null && !isStaffRow && !row.hasLessonData;
+  const statusLabel = row?.payment ? SALARY_STATUS_LABELS[row.payment.status] : undefined;
 
   return (
     <div className="space-y-4">
@@ -159,7 +163,7 @@ export function SalaryMonthlyPanel({ userId, scope }: Props) {
             variant="secondary"
             className={SALARY_STATUS_BADGE[row.payment.status] ?? ""}
           >
-            {SALARY_STATUS_LABELS[row.payment.status] ?? row.payment.status}
+            {statusLabel ? t(statusLabel) : row.payment.status}
           </Badge>
         )}
       </div>
@@ -168,8 +172,7 @@ export function SalaryMonthlyPanel({ userId, scope }: Props) {
         <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
           <Info className="mt-0.5 size-4 shrink-0" />
           <span>
-            {monthLabel(shownMonth)} — bu oy qo&apos;lda kiritilgan, har bir dars
-            bo&apos;yicha ma&apos;lumot yo&apos;q. Faqat kiritilgan summa va avans ko&apos;rsatilgan.
+            {t("{month} — bu oy qo'lda kiritilgan, har bir dars bo'yicha ma'lumot yo'q. Faqat kiritilgan summa va avans ko'rsatilgan.", { month: monthLabel(shownMonth, t) })}
           </span>
         </div>
       )}
@@ -186,46 +189,45 @@ export function SalaryMonthlyPanel({ userId, scope }: Props) {
       ) : !row ? (
         <div className="flex h-24 items-center justify-center rounded-md border">
           <p className="text-sm text-muted-foreground">
-            {monthLabel(shownMonth)} uchun oylik ma&apos;lumoti yo&apos;q — boshqa
-            oyni tanlab ko&apos;ring.
+            {t("{month} uchun oylik ma'lumoti yo'q — boshqa oyni tanlab ko'ring.", { month: monthLabel(shownMonth, t) })}
           </p>
         </div>
       ) : (
         <>
           {/* The headline: what the center actually owes for this month. */}
           <MoneyCard
-            label="To'lanishi kerak"
+            label={t("To'lanishi kerak")}
             value={row.netToPay}
-            tooltip="Bu oy uchun to'lanishi kerak bo'lgan sof summa: to'liq ishlangan (markaz qo'shimchasi bilan) − avans. Hisoblab bo'lingan oylar uchun haqiqiy to'langan summa ko'rsatiladi."
+            tooltip={t("Bu oy uchun to'lanishi kerak bo'lgan sof summa: to'liq ishlangan (markaz qo'shimchasi bilan) − avans. Hisoblab bo'lingan oylar uchun haqiqiy to'langan summa ko'rsatiladi.")}
             className="border-primary/30 bg-primary/5 p-4"
             valueClassName="text-2xl"
           />
 
           {isStaffRow ? (
             <div className="grid grid-cols-2 gap-3">
-              <MoneyCard label="Oylik (belgilangan)" value={row.monthly} />
-              <MoneyCard label="Avans" value={row.advances} />
+              <MoneyCard label={t("Oylik (belgilangan)")} value={row.monthly} />
+              <MoneyCard label={t("Avans")} value={row.advances} />
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <MoneyCard label="To'liq ishlangan" value={row.fullDeserved} />
+              <MoneyCard label={t("To'liq ishlangan")} value={row.fullDeserved} />
               <MoneyCard
-                label="O'quvchilar to'lagan"
+                label={t("O'quvchilar to'lagan")}
                 value={row.covered}
-                tooltip="To'liq ishlangandan o'quvchilar haqiqatan to'lagani bilan qoplangan qismi."
+                tooltip={t("To'liq ishlangandan o'quvchilar haqiqatan to'lagani bilan qoplangan qismi.")}
               />
               <MoneyCard
-                label="Markaz qo'shimchasi"
+                label={t("Markaz qo'shimchasi")}
                 value={row.centerFunded}
-                tooltip="Markazning o'z hisobidan qo'shgan (yoki oy yopilgunicha qo'shadigan) qismi. Oy yopilgach bu raqam qolaveradi — o'quvchi keyin to'lasa, pul markazga qaytadi, ustozga qayta yozilmaydi. Oylik to'lov kurslarida o'quvchi hali to'lamagan oylik hisobining ulushi ham shu yerda — u to'lagan sari kamayadi."
+                tooltip={t("Markazning o'z hisobidan qo'shgan (yoki oy yopilgunicha qo'shadigan) qismi. Oy yopilgach bu raqam qolaveradi — o'quvchi keyin to'lasa, pul markazga qaytadi, ustozga qayta yozilmaydi. Oylik to'lov kurslarida o'quvchi hali to'lamagan oylik hisobining ulushi ham shu yerda — u to'lagan sari kamayadi.")}
                 valueClassName={
                   (row.centerFunded ?? 0) > 0 ? "text-amber-600 dark:text-amber-400" : ""
                 }
               />
               <MoneyCard
-                label="Avans"
+                label={t("Avans")}
                 value={row.advances}
-                tooltip="Shu oy ichida ustozga oldindan berilgan pul (Xarajatlar → Avans). U «To'lanishi kerak»dan allaqachon ayirilgan."
+                tooltip={t("Shu oy ichida ustozga oldindan berilgan pul (Xarajatlar → Avans). U «To'lanishi kerak»dan allaqachon ayirilgan.")}
               />
             </div>
           )}

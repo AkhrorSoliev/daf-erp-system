@@ -44,6 +44,7 @@ describe('SalaryCalculationService', () => {
       salaryPeriodSetting: { findFirst: jest.fn().mockResolvedValue(null) },
       salaryAccrual: { findMany: jest.fn().mockResolvedValue([]) },
       employeeSalaryConfig: { findMany: jest.fn().mockResolvedValue([]) },
+      staffSalaryAdjustment: { findMany: jest.fn().mockResolvedValue([]) },
       employeeSalaryConfigVersion: {
         findFirst: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
@@ -900,6 +901,56 @@ describe('SalaryCalculationService', () => {
         }),
       );
       expect(result.calculated).toBe(1);
+    });
+
+    it('pays the CEO figure instead of the formula (ADR-0112)', async () => {
+      prisma.employeeSalaryConfig.findMany.mockResolvedValue([
+        { id: 'cfg1', userId: 10030 },
+      ]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        {
+          value: 5_000_000,
+          effectiveFrom: new Date('2026-01-01'),
+          effectiveTo: null,
+        },
+      ]);
+      prisma.staffSalaryAdjustment.findMany.mockResolvedValue([
+        { userId: 10030, amount: 2_076_000 },
+      ]);
+
+      await service.calculateMonthlySalaries(1, { now });
+
+      expect(prisma.staffSalaryAdjustment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ companyId: 1 }),
+        }),
+      );
+      expect(tx.salaryPayment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ userId: 10030, amount: 2_076_000 }),
+        }),
+      );
+    });
+
+    it('a correction of 0 pays nothing for the month', async () => {
+      prisma.employeeSalaryConfig.findMany.mockResolvedValue([
+        { id: 'cfg1', userId: 10030 },
+      ]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue([
+        {
+          value: 5_000_000,
+          effectiveFrom: new Date('2026-01-01'),
+          effectiveTo: null,
+        },
+      ]);
+      prisma.staffSalaryAdjustment.findMany.mockResolvedValue([
+        { userId: 10030, amount: 0 },
+      ]);
+
+      const result = await service.calculateMonthlySalaries(1, { now });
+
+      expect(tx.salaryPayment.create).not.toHaveBeenCalled();
+      expect(result.calculated).toBe(0);
     });
 
     it('skips a config with no version overlapping the settled period', async () => {

@@ -51,7 +51,7 @@ describe("contract 6.2 in the dialogs", () => {
   });
 
   it("the history names the money line", () => {
-    expect(read("shared", "entity-history-utils.ts")).toContain('pul: "Pul"');
+    expect(read("shared", "entity-history-utils.ts")).toContain('pul: msg("Pul")');
   });
 
   it("only the CEO edits the threshold", () => {

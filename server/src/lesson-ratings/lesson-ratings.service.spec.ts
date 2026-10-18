@@ -116,6 +116,15 @@ describe('LessonRatingsService.summary', () => {
     });
   });
 
+  it('gives each teacher row its commented count', async () => {
+    const { service } = setup([
+      { score: 2, messageId: 1, comment: 'x', teacherIds: [1] },
+      { score: 2, messageId: 2, comment: null, teacherIds: [1] },
+    ]);
+    const r = await service.summary(1, null, '2026-10');
+    expect(r.teachers[0]).toMatchObject({ teacherId: 1, commented: 1 });
+  });
+
   it('reads the comment column so lowCommented can be counted', async () => {
     const { service, prisma } = setup();
     await service.summary(1, null, '2026-10');
@@ -143,10 +152,8 @@ describe('LessonRatingsService.teacher', () => {
         messageId: 1,
         comment: 'kech',
         groupId: 'g1',
-        studentId: 10001,
         teacherIds: [7],
         group: { name: 'A1-3' },
-        student: { firstName: 'Ali', lastName: 'V' },
       },
       {
         date: d('2026-09-10'),
@@ -154,10 +161,8 @@ describe('LessonRatingsService.teacher', () => {
         messageId: 2,
         comment: null,
         groupId: 'g1',
-        studentId: 10002,
         teacherIds: [7],
         group: { name: 'A1-3' },
-        student: { firstName: 'Bek', lastName: 'Q' },
       },
     ]);
     const r = await service.teacher(1, null, 7, '2026-10');
@@ -185,12 +190,11 @@ describe('LessonRatingsService.teacher', () => {
     expect(r.groups).toEqual([
       { groupId: 'g1', name: 'A1-3', average: 2, rated: 1 },
     ]);
+    expect(JSON.stringify(r)).not.toMatch(/student/i);
     expect(r.comments).toEqual([
       {
         date: '2026-10-05',
         groupName: 'A1-3',
-        studentId: 10001,
-        studentName: 'Ali V',
         score: 2,
         comment: 'kech',
       },
@@ -199,21 +203,22 @@ describe('LessonRatingsService.teacher', () => {
 });
 
 describe('LessonRatingsService.low', () => {
+  const now = new Date('2026-10-18T12:00:00.000Z');
+  const hoursAgo = (h: number) => new Date(now.getTime() - h * 3_600_000);
+  const row = (id: string, comment: string | null, sentAt: Date) => ({
+    id,
+    date: d('2026-10-05'),
+    score: 1,
+    comment,
+    sentAt,
+    groupId: 'g1',
+    teacherIds: [7],
+    group: { name: 'A1-3' },
+  });
+
   it('pages the 1–3 scores of the month, newest first', async () => {
-    const { service, prisma } = setup([
-      {
-        id: 'r1',
-        date: d('2026-10-05'),
-        score: 1,
-        comment: null,
-        groupId: 'g1',
-        studentId: 10001,
-        teacherIds: [7],
-        group: { name: 'A1-3' },
-        student: { firstName: 'Ali', lastName: 'V' },
-      },
-    ]);
-    const r = await service.low(1, null, '2026-10', 2, 20);
+    const { service, prisma } = setup([row('r1', null, hoursAgo(1))]);
+    const r = await service.low(1, null, '2026-10', 2, 20, undefined, now);
     const args = findManyArgs(prisma)[0];
     expect(args.where).toEqual({
       companyId: 1,
@@ -231,7 +236,40 @@ describe('LessonRatingsService.low', () => {
       id: 'r1',
       date: '2026-10-05',
       teacherNames: ['U 7'],
-      studentName: 'Ali V',
+    });
+  });
+
+  it('carries no student fields and selects no student relation', async () => {
+    const { service, prisma } = setup([row('r1', 'x', hoursAgo(1))]);
+    const r = await service.low(1, null, '2026-10', 1, 10, undefined, now);
+    expect(Object.keys(r.data[0])).not.toContain('studentId');
+    expect(Object.keys(r.data[0])).not.toContain('studentName');
+    const select = (
+      prisma.lessonRating.findMany.mock.calls as [{ select: object }][]
+    )[0][0].select;
+    expect(select).not.toHaveProperty('student');
+    expect(select).not.toHaveProperty('studentId');
+  });
+
+  it('computes WRITTEN / PENDING / NOT_WRITTEN from the 48h window', async () => {
+    const { service } = setup([
+      row('a', 'izoh', hoursAgo(100)),
+      row('b', null, hoursAgo(47)),
+      row('c', null, hoursAgo(49)),
+    ]);
+    const r = await service.low(1, null, '2026-10', 1, 10, undefined, now);
+    expect(r.data.map((x) => x.commentState)).toEqual([
+      'WRITTEN',
+      'PENDING',
+      'NOT_WRITTEN',
+    ]);
+  });
+
+  it('adds comment: { not: null } when only commented are asked', async () => {
+    const { service, prisma } = setup();
+    await service.low(1, null, '2026-10', 1, 10, true, now);
+    expect(findManyArgs(prisma)[0].where).toMatchObject({
+      comment: { not: null },
     });
   });
 });

@@ -4,6 +4,8 @@ import * as React from "react";
 import { CalendarIcon, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/i18n/use-t";
+import { msg } from "@/i18n/msg";
 import {
   Popover,
   PopoverContent,
@@ -11,33 +13,33 @@ import {
 } from "@/components/ui/popover";
 
 const UZBEK_MONTHS = [
-  "Yanvar",
-  "Fevral",
-  "Mart",
-  "Aprel",
-  "May",
-  "Iyun",
-  "Iyul",
-  "Avgust",
-  "Sentabr",
-  "Oktabr",
-  "Noyabr",
-  "Dekabr",
+  msg("Yanvar"),
+  msg("Fevral"),
+  msg("Mart"),
+  msg("Aprel"),
+  msg("May"),
+  msg("Iyun"),
+  msg("Iyul"),
+  msg("Avgust"),
+  msg("Sentabr"),
+  msg("Oktabr"),
+  msg("Noyabr"),
+  msg("Dekabr"),
 ];
 
 const UZBEK_MONTHS_SHORT = [
-  "Yan",
-  "Fev",
-  "Mar",
-  "Apr",
-  "May",
-  "Iyn",
-  "Iyl",
-  "Avg",
-  "Sen",
-  "Okt",
-  "Noy",
-  "Dek",
+  msg("Yan"),
+  msg("Fev"),
+  msg("Mar"),
+  msg("Apr"),
+  msg("May"),
+  msg("Iyn"),
+  msg("Iyl"),
+  msg("Avg"),
+  msg("Sen"),
+  msg("Okt"),
+  msg("Noy"),
+  msg("Dek"),
 ];
 
 interface MonthPickerProps {
@@ -64,20 +66,24 @@ interface MonthPickerProps {
   onClear?: () => void;
 }
 
-function formatMonth(value: string | null | undefined): string | null {
+function formatMonth(
+  value: string | null | undefined,
+  t: (source: string) => string,
+): string | null {
   if (!value) return null;
   const match = /^(\d{4})-(\d{2})$/.exec(value);
   if (!match) return null;
   const year = match[1];
   const month = parseInt(match[2], 10);
   if (month < 1 || month > 12) return null;
-  return `${UZBEK_MONTHS[month - 1]} ${year}`;
+  const name = UZBEK_MONTHS[month - 1];
+  return `${t(name)} ${year}`;
 }
 
 export function MonthPicker({
   value,
   onChange,
-  placeholder = "Oyni tanlang",
+  placeholder,
   disabled,
   className,
   id,
@@ -85,6 +91,7 @@ export function MonthPicker({
   maxMonth,
   onClear,
 }: MonthPickerProps) {
+  const t = useT();
   const minYear = minMonth ? parseInt(minMonth.slice(0, 4), 10) : null;
   const maxYear = maxMonth ? parseInt(maxMonth.slice(0, 4), 10) : null;
   const keyOf = (year: number, monthIndex: number) =>
@@ -128,7 +135,7 @@ export function MonthPicker({
         )}
       >
         <CalendarIcon className="mr-2 size-4" />
-        {formatMonth(value) ?? <span>{placeholder}</span>}
+        {formatMonth(value, t) ?? <span>{placeholder ?? t("Oyni tanlang")}</span>}
       </Button>
     </PopoverTrigger>
   );
@@ -145,7 +152,7 @@ export function MonthPicker({
           {showClear && (
             <button
               type="button"
-              aria-label="Tanlangan oyni bekor qilish"
+              aria-label={t("Tanlangan oyni bekor qilish")}
               onClick={onClear}
               className={cn(
                 "absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-0.5",
@@ -199,7 +206,7 @@ export function MonthPicker({
                 disabled={outOfRange}
                 onClick={() => handlePick(idx)}
               >
-                {label}
+                {t(label)}
               </Button>
             );
           })}

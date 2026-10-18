@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { GroupsCards } from "@/components/groups/groups-cards";
 import type { GroupData } from "@/hooks/use-edit-group";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 
 /**
  * «Boshlanmagan guruhlarim» — groups the teacher has been given that have not
@@ -14,6 +15,7 @@ import api from "@/lib/api";
  * timetable above it is the page.
  */
 export function UpcomingGroups() {
+  const t = useT();
   const { data, isPending } = useQuery({
     queryKey: ["groups", "forming", "mine"],
     queryFn: () =>
@@ -30,7 +32,7 @@ export function UpcomingGroups() {
   return (
     <section className="space-y-3">
       <h2 className="flex items-center gap-2 text-sm font-semibold">
-        Boshlanmagan guruhlarim
+        {t("Boshlanmagan guruhlarim")}
         <span className="text-muted-foreground text-xs font-normal">
           ({data.length})
         </span>

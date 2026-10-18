@@ -23,7 +23,7 @@ const STUDENT_STATUS: Record<string, StatusConfig> = {
 const USER_STATUS: Record<string, StatusConfig> = {
   ACTIVE: { label: msg("Faol"), variant: "default" },
   INACTIVE: { label: msg("Nofaol"), variant: "secondary" },
-  SUSPENDED: { label: msg("To'xtatilgan"), variant: "destructive" },
+  SUSPENDED: { label: msg("Vaqtincha to'xtatilgan"), variant: "destructive" },
   TERMINATED: { label: msg("Ishdan bo'shatilgan"), variant: "destructive" },
   ARCHIVED: { label: msg("Arxivlangan"), variant: "ghost" },
 };

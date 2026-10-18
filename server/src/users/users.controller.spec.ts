@@ -37,6 +37,8 @@ describe('UsersController — route access', () => {
       refreshToken: 'r2',
       user: { id: 7 },
     }),
+    listSessions: jest.fn().mockResolvedValue([{ id: 'sid-1' }]),
+    revokeSession: jest.fn().mockResolvedValue({ message: 'ok' }),
   };
 
   // The mocks live for the whole suite, so order checks compare LAST calls.
@@ -201,14 +203,14 @@ describe('UsersController — route access', () => {
         sessionVersion: 5,
       });
 
-      const res = await controller.changePassword(7, {
+      const res = await controller.changePassword(7, 'sid-1', {
         oldPassword: 'eskiParol1',
         newPassword: 'yangiParol1',
       });
 
       // Signed with exactly the version the change produced; the number
       // itself never reaches the response.
-      expect(mockAuth.issueSession).toHaveBeenCalledWith(7, 5);
+      expect(mockAuth.issueSession).toHaveBeenCalledWith(7, 5, 'sid-1');
       // Issued before the change, the pair would carry the old version.
       expect(lastCall(mockService.changePassword)).toBeLessThan(
         lastCall(mockAuth.issueSession),
@@ -258,6 +260,37 @@ describe('UsersController — route access', () => {
     });
   });
 
+  describe('device list (ADR-0113)', () => {
+    it('is open to every signed-in account, own data only', () => {
+      expect(routeAccess(UsersController, 'listSessions')).toEqual({
+        kind: 'anyUser',
+      });
+      expect(routeAccess(UsersController, 'revokeSession')).toEqual({
+        kind: 'anyUser',
+      });
+    });
+
+    it('lists with the id, version and device taken from the token', async () => {
+      const res = await controller.listSessions(7, 3, 'sid-me');
+
+      expect(mockAuth.listSessions).toHaveBeenCalledWith(7, 3, 'sid-me');
+      expect(res).toEqual([{ id: 'sid-1' }]);
+    });
+
+    it("revokes by the caller's own id — the row id is the only thing from the request", async () => {
+      await controller.revokeSession(7, 'sid-me', 'sid-2');
+
+      expect(mockAuth.revokeSession).toHaveBeenCalledWith(7, 'sid-2', 'sid-me');
+    });
+
+    it('GET sessions is declared before GET :id, or :id would take it', () => {
+      const names = Object.getOwnPropertyNames(UsersController.prototype);
+      expect(names.indexOf('listSessions')).toBeLessThan(
+        names.indexOf('findOne'),
+      );
+    });
+  });
+
   describe('logoutOthers()', () => {
     it('is open to every signed-in account', () => {
       expect(routeAccess(UsersController, 'logoutOthers')).toEqual({
@@ -266,9 +299,9 @@ describe('UsersController — route access', () => {
     });
 
     it("acts on the caller only, from the caller's own session version", async () => {
-      const res = await controller.logoutOthers(7, 3);
+      const res = await controller.logoutOthers(7, 3, 'sid-1');
 
-      expect(mockAuth.logoutOtherSessions).toHaveBeenCalledWith(7, 3);
+      expect(mockAuth.logoutOtherSessions).toHaveBeenCalledWith(7, 3, 'sid-1');
       expect(res).toEqual({
         accessToken: 'a2',
         refreshToken: 'r2',

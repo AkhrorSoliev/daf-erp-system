@@ -14,6 +14,7 @@ import {
   SESSION_ENDED_MESSAGE,
   sessionVersionKey,
 } from '../auth/session-version';
+import { sessionRevokedKey } from '../auth/user-session';
 import { IS_PUBLIC_KEY } from '../decorators';
 
 /** What a blocked, archived or deleted account is told; `PermissionGuard` says the same. */
@@ -58,9 +59,33 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     if (userId) {
       await this.assertNotBlocked(userId);
       await this.assertSessionCurrent(userId, request.user.sessionVersion);
+      await this.assertSessionNotRevoked(request.user.sid);
     }
 
     return true;
+  }
+
+  /**
+   * Profildan bitta qurilma o'chirilsa (ADR-0113), `AuthService` Redis'ga
+   * shu `sid` uchun belgi qo'yadi — access token keyingi so'rovdayoq to'xtaydi.
+   * Belgi faqat haqiqiy o'chirishda yoziladi va `sid` hech qachon qayta
+   * ishlatilmaydi, shuning uchun bazadan tasdiqlash kerak emas. Redis
+   * ishlamasa so'rov o'tadi: `refresh` bazaga qarab to'xtatadi.
+   */
+  private async assertSessionNotRevoked(sid: string | undefined) {
+    if (!sid) return;
+    let revoked: string | null = null;
+    try {
+      revoked = await this.redis.get(sessionRevokedKey(sid));
+    } catch (err) {
+      this.logger.warn(
+        `Session-revoked cache unavailable for ${sid}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+      return;
+    }
+    if (revoked) throw new UnauthorizedException(SESSION_ENDED_MESSAGE);
   }
 
   /**
