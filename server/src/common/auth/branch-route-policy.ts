@@ -693,6 +693,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'payslip reads took no caller at all, and the matrix let an ' +
       'Administrator see every branch.',
     routes: [
+      'DELETE /salary/monthly/user/:userId/adjustment',
       'GET /salary/accruals/:userId',
       'GET /salary/config-history/:userId',
       'GET /salary/config/:userId',
@@ -704,6 +705,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /salary/payments/settle-month/preview',
       'POST /salary/payments/:id/pay',
       'POST /salary/payments/settle-month',
+      'PUT /salary/monthly/user/:userId/adjustment',
     ],
   },
   {

@@ -1075,6 +1075,12 @@
     "Branch Director",
     "CEO"
   ],
+  "PUT /salary/monthly/user/:userId/adjustment": [
+    "CEO"
+  ],
+  "DELETE /salary/monthly/user/:userId/adjustment": [
+    "CEO"
+  ],
   "GET /salary/monthly/user/:userId/lessons": [
     "Branch Director",
     "CEO"
