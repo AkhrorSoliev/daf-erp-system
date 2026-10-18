@@ -60,13 +60,20 @@ function Belgi({
   return <span className="shrink-0">{badan}</span>;
 }
 
-/** Skelet holati — belgilar yo'q bo'lib ketmaydi, sahifa sakramaydi. */
-function YolTepasiSkelet() {
+/**
+ * Skelet holati — belgilar yo'q bo'lib ketmaydi, sahifa sakramaydi. Maqsad kartasi
+ * (81 px + 12 px oraliq) uchun ham joy qoldiriladi: usiz ma'lumot kelgach butun
+ * yo'l 93 px pastga tushardi.
+ */
+export function YolTepasiSkelet() {
   return (
-    <div aria-hidden className="flex items-center gap-1.5 sm:gap-2">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <Skeleton key={i} className="h-8 w-16 rounded-pill sm:w-20" />
-      ))}
+    <div aria-hidden className="space-y-3">
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-8 w-16 rounded-pill sm:w-20" />
+        ))}
+      </div>
+      <Skeleton className="h-[81px] sm:max-w-md" />
     </div>
   );
 }
