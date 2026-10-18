@@ -16,12 +16,14 @@ import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import { usePublishEntity } from "@/components/tasks/entity-context";
 import type { GroupData } from "@/hooks/use-edit-group";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 
 interface GroupDetailClientProps {
   id: string;
 }
 
 export function GroupDetailClient({ id }: GroupDetailClientProps) {
+  const t = useT();
   const [group, setGroup] = useState<GroupData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -101,10 +103,10 @@ export function GroupDetailClient({ id }: GroupDetailClientProps) {
     return (
       <div className="space-y-6">
         <h1 className="font-heading text-2xl font-bold tracking-tight">
-          Guruh topilmadi
+          {t("Guruh topilmadi")}
         </h1>
         <p className="text-muted-foreground">
-          ID: {id} bo&apos;yicha guruh mavjud emas
+          {t("ID: {id} bo'yicha guruh mavjud emas", { id })}
         </p>
       </div>
     );
@@ -122,7 +124,7 @@ export function GroupDetailClient({ id }: GroupDetailClientProps) {
                   <span className="block truncate font-semibold">{group.name}</span>
                   <span className="block truncate text-xs text-muted-foreground">
                     {[
-                      group.exactDays?.length > 0 ? formatWeekdays(group.exactDays) : null,
+                      group.exactDays?.length > 0 ? formatWeekdays(group.exactDays, t) : null,
                       group.lessonStartTime && group.lessonEndTime
                         ? `${group.lessonStartTime} – ${group.lessonEndTime}`
                         : null,

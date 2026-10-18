@@ -16,6 +16,7 @@ import { StudentRowActions } from "@/components/students/student-row-actions";
 import { formatPhone } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { useCan } from "@/hooks/use-permissions";
+import { useT } from "@/i18n/context";
 import type { Student } from "@/data/student-model";
 
 export interface GroupStudent {
@@ -68,10 +69,10 @@ function toStudent(gs: GroupStudent): Student {
   };
 }
 
-function formatBalance(balance: number) {
+function formatBalance(balance: number, unit: string) {
   const abs = Math.abs(balance).toLocaleString("uz-UZ");
   const sign = balance < 0 ? "-" : "";
-  return `${sign}${abs} so'm`;
+  return `${sign}${abs} ${unit}`;
 }
 
 interface GroupStudentsTableProps {
@@ -80,6 +81,7 @@ interface GroupStudentsTableProps {
 }
 
 export function GroupStudentsTable({ students, onStudentDeleted }: GroupStudentsTableProps) {
+  const t = useT();
   const canManage = useCan("students.enroll");
   // O'qituvchi guruhini ko'radi, o'quvchi profilini esa server unga bermaydi.
   const canOpenProfile = useCan("students.profile");
@@ -88,7 +90,7 @@ export function GroupStudentsTable({ students, onStudentDeleted }: GroupStudents
     return (
       <div className="flex h-24 items-center justify-center rounded-md border">
         <p className="text-sm text-muted-foreground">
-          Bu guruhda o&apos;quvchilar yo&apos;q
+          {t("Bu guruhda o'quvchilar yo'q")}
         </p>
       </div>
     );
@@ -101,13 +103,13 @@ export function GroupStudentsTable({ students, onStudentDeleted }: GroupStudents
           <TableRow>
             <TableHead className="w-8 border-r">#</TableHead>
             <TableHead className="w-16">ID</TableHead>
-            <TableHead className="w-10">Rasm</TableHead>
-            <TableHead className="min-w-30">Ism familiya</TableHead>
+            <TableHead className="w-10">{t("Rasm")}</TableHead>
+            <TableHead className="min-w-30">{t("Ism familiya")}</TableHead>
             <TableHead className="hidden min-w-32 sm:table-cell">
-              Telefon
+              {t("Telefon")}
             </TableHead>
-            <TableHead className="min-w-28 text-right">Balans</TableHead>
-            <TableHead className="hidden sm:table-cell">Holat</TableHead>
+            <TableHead className="min-w-28 text-right">{t("Balans")}</TableHead>
+            <TableHead className="hidden sm:table-cell">{t("Holat")}</TableHead>
             {canManage && <TableHead className="w-10" />}
           </TableRow>
         </TableHeader>
@@ -156,11 +158,11 @@ export function GroupStudentsTable({ students, onStudentDeleted }: GroupStudents
                     : "text-green-600 dark:text-green-400"
                 )}
               >
-                {formatBalance(student.balance)}
+                {formatBalance(student.balance, t("so'm"))}
               </TableCell>
               <TableCell className="hidden sm:table-cell">
                 <Badge variant={student.isActive ? "default" : "secondary"}>
-                  {student.isActive ? "Faol" : "Muzlatilgan"}
+                  {student.isActive ? t("Faol") : t("Muzlatilgan")}
                 </Badge>
               </TableCell>
               {canManage && (

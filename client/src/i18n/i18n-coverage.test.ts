@@ -188,6 +188,11 @@ export const STRICT_FILES: string[] = [
   "components/groups/lesson-date-select.tsx",
   "components/groups/select-empty-state.tsx",
   "components/groups/group-form-empty-hints.ts",
+  "components/groups/group-detail-client.tsx",
+  "components/groups/group-detail-tabs.tsx",
+  "components/groups/group-info-card.tsx",
+  "components/groups/group-students-table.tsx",
+  "components/groups/lesson-modifications/lesson-modifications-table.tsx",
   "lib/lesson-dates.ts",
   "lib/schemas/group-schema.ts",
 ];
