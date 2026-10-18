@@ -208,7 +208,7 @@
   --accent-foreground: #0e2a3d;
   --destructive: #f0513a; /* danger */
   --border: #e0e7ee;
-  --input: #e0e7ee;
+  --input: #b9c8d5; /* field outline: darker than --border so fields read on white */
   --ring: #ff6b4a; /* coral focus */
   --radius: 1.25rem; /* soft Lumio rounding → rounded-md≈16px (inputs), rounded-sm≈12px */
   /* Clay-extrude shadow tokens (signature Lumio button effect) */
@@ -250,7 +250,7 @@
 /* Bigger, finger-friendly select trigger (its h-9 is variant-scoped, so a
    utility class can't override it — set the height here instead). */
 .form-theme [data-slot="select-trigger"] {
-  height: 3rem;
+  height: 3.25rem;
 }
 
 /* Clay-extrude CTA: solid coral lip + soft ambient, collapses on press. */
