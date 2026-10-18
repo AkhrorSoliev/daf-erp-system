@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { use, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
 import { changeUiLocale, type LocaleState } from "./change-ui-locale";
+import { getDictionary, rememberDictionary } from "./dictionary-cache";
 import { bindDocumentLanguage } from "./document-language";
 import { loadDictionary } from "./load-dictionary";
 import { writeLocaleCookie } from "./locale-cookie";
@@ -18,9 +19,12 @@ import { I18nContext, type SetLocaleOptions } from "./use-t";
 export { useT, useLocale } from "./use-t";
 
 /**
- * The page's interface language. The dashboard layout reads the device cookie on
- * the server and hands the language and its dictionary here, so the first paint
- * is already in the right language. `setLocale` switches without a reload.
+ * The page's interface language. The layout reads the device cookie on the
+ * server and hands only the language here; the provider reads its dictionary
+ * with `use()` from the cached chunk (`dictionary-cache.ts`). The server render
+ * waits for it, so the first paint is already in the right language, and the
+ * dictionary never travels in the page payload. `initialDictionary` (tests)
+ * skips the load. `setLocale` switches without a reload.
  */
 export function I18nProvider({
   initialLocale,
@@ -28,10 +32,11 @@ export function I18nProvider({
   children,
 }: {
   initialLocale: UiLocale;
-  initialDictionary: Dictionary;
+  initialDictionary?: Dictionary;
   children: ReactNode;
 }) {
-  const [state, setState] = useState<LocaleState>({ locale: initialLocale, dictionary: initialDictionary });
+  const dictionary = initialDictionary ?? use(getDictionary(initialLocale));
+  const [state, setState] = useState<LocaleState>({ locale: initialLocale, dictionary });
   // What the page holds right now. `apply` is its only writer, so a late render
   // never puts an older state over a newer one.
   const stateRef = useRef(state);
@@ -46,6 +51,7 @@ export function I18nProvider({
         current: () => stateRef.current,
         load: loadDictionary,
         apply: (locale, dictionary) => {
+          rememberDictionary(locale, dictionary);
           stateRef.current = { locale, dictionary };
           setState({ locale, dictionary });
           writeLocaleCookie(locale);
