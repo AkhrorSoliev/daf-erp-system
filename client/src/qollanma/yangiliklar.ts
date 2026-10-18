@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-18",
+    sarlavha: "Arxivdagi o'quvchi va guruhni ko'rish, arxivga tushish sababi",
+    matn: "Sozlamalar → Arxiv → «O'quvchilar» va «Guruhlar» ro'yxatida endi «Sabab» ustuni bor. Qatorni bossangiz o'ng tomondan oyna ochiladi: arxivlangan sana, kim arxivlagani, sabab, o'quvchining guruhlari (yoki guruhning ustozi va o'quvchilari) va tarixi. Oyna faqat ko'rish uchun; «Qayta tiklash» tugmasi ro'yxatdagi bilan bir xil. Sabab yozilmagan eski yozuvlarda «—» turadi.",
+    rollar: [1],
+    sahifa: { bolim: "oquvchilar", sahifa: "chetlatish-va-arxiv" },
+  },
+  {
+    sana: "2026-10-18",
     sarlavha: "Lidlar arxivi yangilandi",
     matn: "Lidlar arxivida endi «Lidlar» va «Bo'limlar» yorliqlari bor, jadvallar sahifalarga bo'lingan (10 dan 50 tagacha). Ism, telefon yoki sabab bo'yicha qidirish, «Kim tomonidan» va sana oralig'i bo'yicha filtr qo'shildi; filtrlar havolada saqlanadi. Har qatorda arxivlangan sana ko'rinadi. Lidni tiklash oynasi lidning eski joyini oldindan tanlaydi va tiklash nimani o'zgartirishini (bosqich, mas'ul) yozib turadi. Tiklash tugmasi faqat lidlarni boshqarish huquqi borlarga ko'rinadi. Tiklangan qator darrov ro'yxatdan yo'qoladi.",
     rollar: [1, 2, 3],
