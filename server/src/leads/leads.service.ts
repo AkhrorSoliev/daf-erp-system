@@ -336,11 +336,42 @@ export class LeadsService {
       select: LEAD_CARD_SELECT,
     });
 
-    const [counts, withDue] = await Promise.all([
+    const [counts, withDue, linked] = await Promise.all([
       this.commentCountsFor(leads.map((l) => l.id)),
       this.withOwnerDue(leads, companyId),
+      this.linkedStudentsByPhone(
+        leads.map((l) => l.phone),
+        companyId,
+      ),
     ]);
-    return withDue.map((l) => ({ ...l, commentCount: counts.get(l.id) ?? 0 }));
+    return withDue.map((l) => ({
+      ...l,
+      commentCount: counts.get(l.id) ?? 0,
+      linkedStudent: linked.get(l.phone) ?? null,
+    }));
+  }
+
+  /**
+   * Cardda «boshqa profilga bog'langan» belgisi uchun: lidning telefoni bilan
+   * mos jonli o'quvchi (detail drawer'dagi `matchedStudent` bilan bir qoida),
+   * bitta so'rovda butun bo'lim uchun.
+   */
+  private async linkedStudentsByPhone(phones: string[], companyId: number) {
+    if (phones.length === 0)
+      return new Map<
+        string,
+        { id: number; firstName: string; lastName: string }
+      >();
+    const students = await this.prisma.student.findMany({
+      where: { phone: { in: phones }, deletedAt: null, companyId },
+      select: { id: true, firstName: true, lastName: true, phone: true },
+    });
+    return new Map(
+      students.map((s) => [
+        s.phone,
+        { id: s.id, firstName: s.firstName, lastName: s.lastName },
+      ]),
+    );
   }
 
   /** Full lead detail for the detail drawer. */
