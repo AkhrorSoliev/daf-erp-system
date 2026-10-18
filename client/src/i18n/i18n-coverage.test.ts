@@ -122,6 +122,15 @@ export const STRICT_FILES: string[] = [
   "components/students/write-off-debt-dialog.tsx",
   "components/students/debt-write-off-types.ts",
   "components/payments/salary-utils.ts",
+  "components/students/correct-payment-dialog.tsx",
+  "components/students/initial-balance-dialog.tsx",
+  "components/ui/multi-select-combobox.tsx",
+  "components/ui/time-picker.tsx",
+  "components/shared/status-history-dialog.tsx",
+  "components/shared/in-other-branch.tsx",
+  "components/outreach/table-pagination.tsx",
+  "components/payments/debt/debt-months-badge.tsx",
+  "components/groups/app-activity/student-activity-panel.tsx",
 ];
 
 function walk(dir: string): string[] {

@@ -10,6 +10,7 @@ import {
 import { formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { monthLabel } from "../salary-utils";
+import { useT } from "@/i18n/context";
 
 export interface DebtMonthSlice {
   monthKey: string;
@@ -46,6 +47,7 @@ export function DebtMonthsBadge({
   highlightMonthKey,
   className,
 }: Props) {
+  const t = useT();
   if (months.length < 2) return null;
 
   const sorted = [...months].sort((a, b) =>
@@ -63,7 +65,7 @@ export function DebtMonthsBadge({
             )}
           >
             <Layers className="size-3" />
-            {sorted.length} oy
+            {t("{n} oy", { n: sorted.length })}
           </span>
         </TooltipTrigger>
         {/* The base TooltipContent is an `inline-flex` ROW on a DARK surface
@@ -74,7 +76,7 @@ export function DebtMonthsBadge({
           <div className="border-b border-background/20 px-3 py-2">
             <p className="text-xs font-semibold">{studentName}</p>
             <p className="text-[11px] text-background/70">
-              To&apos;lanmagan qarzi qaysi oyda paydo bo&apos;lgan
+              {t("To'lanmagan qarzi qaysi oyda paydo bo'lgan")}
             </p>
           </div>
           <div className="px-3 py-2">
@@ -89,10 +91,10 @@ export function DebtMonthsBadge({
                   )}
                 >
                   <span>
-                    {monthLabel(o.monthKey)}
+                    {monthLabel(o.monthKey, t)}
                     {isCurrent && (
                       <span className="ml-1 font-normal text-background/70">
-                        (ochilgan oy)
+                        {t("(ochilgan oy)")}
                       </span>
                     )}
                   </span>
@@ -101,7 +103,7 @@ export function DebtMonthsBadge({
               );
             })}
             <div className="mt-1.5 flex items-baseline justify-between gap-3 border-t border-background/20 pt-1.5 text-xs font-semibold">
-              <span>Jami qarzi</span>
+              <span>{t("Jami qarzi")}</span>
               <span className="tabular-nums">{formatPrice(totalDebt)}</span>
             </div>
           </div>

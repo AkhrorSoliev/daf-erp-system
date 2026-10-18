@@ -17,9 +17,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
-import { ENTITY_API_PATH } from "@/lib/status-config";
+import { ENTITY_API_PATH, getStatusConfig } from "@/lib/status-config";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 
 interface StatusHistoryRecord {
@@ -39,6 +40,18 @@ interface StatusHistoryDialogProps {
   entityName: string;
 }
 
+/**
+ * A status chip. Only the student labels are `msg()` texts that `t` can
+ * translate (the other entities' labels in `status-config.ts` are not yet), and
+ * an unknown status falls back to its raw code, which is data and must not go
+ * through `t`.
+ */
+function HistoryStatusBadge({ entityType, status }: { entityType: string; status: string }) {
+  const t = useT();
+  const config = getStatusConfig(entityType, status);
+  return <Badge variant={config.variant}>{entityType === "students" ? t(config.label) : config.label}</Badge>;
+}
+
 export function StatusHistoryDialog({
   open,
   onOpenChange,
@@ -46,6 +59,10 @@ export function StatusHistoryDialog({
   entityId,
   entityName,
 }: StatusHistoryDialogProps) {
+  const t = useT();
+  // The name is bold inside a sentence whose word order differs by language:
+  // translate with a marker, then cut the sentence around it.
+  const [introBefore, introAfter] = t("{name} uchun barcha status o'zgarishlar", { name: "\u0001" }).split("\u0001");
   const [records, setRecords] = useState<StatusHistoryRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -72,9 +89,11 @@ export function StatusHistoryDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Status tarixi</DialogTitle>
+          <DialogTitle>{t("Status tarixi")}</DialogTitle>
           <DialogDescription>
-            <strong>{entityName}</strong> uchun barcha status o&apos;zgarishlar
+            {introBefore}
+            <strong>{entityName}</strong>
+            {introAfter}
           </DialogDescription>
         </DialogHeader>
 
@@ -85,18 +104,18 @@ export function StatusHistoryDialog({
             </div>
           ) : records.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
-              Status tarixi mavjud emas
+              {t("Status tarixi mavjud emas")}
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12 border-r">#</TableHead>
-                  <TableHead>Sana</TableHead>
-                  <TableHead>Kim</TableHead>
-                  <TableHead>Oldingi</TableHead>
-                  <TableHead>Yangi</TableHead>
-                  <TableHead>Sabab</TableHead>
+                  <TableHead>{t("Sana")}</TableHead>
+                  <TableHead>{t("Kim")}</TableHead>
+                  <TableHead>{t("Oldingi holat")}</TableHead>
+                  <TableHead>{t("Yangi holat")}</TableHead>
+                  <TableHead>{t("Sabab")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -113,13 +132,13 @@ export function StatusHistoryDialog({
                     </TableCell>
                     <TableCell>
                       {record.fromStatus ? (
-                        <StatusBadge entityType={entityType} status={record.fromStatus} />
+                        <HistoryStatusBadge entityType={entityType} status={record.fromStatus} />
                       ) : (
                         <span className="text-muted-foreground text-sm">—</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge entityType={entityType} status={record.toStatus} />
+                      <HistoryStatusBadge entityType={entityType} status={record.toStatus} />
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground max-w-48 truncate">
                       {record.reason ?? "—"}

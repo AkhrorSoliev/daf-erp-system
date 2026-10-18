@@ -141,10 +141,14 @@ export function monthKeyOf(iso: string): string {
   return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-/** "2026-06" → "Iyun 2026". */
-export function monthLabel(key: string): string {
+/** "2026-06" → "Iyun 2026". `t` translates the month name (default: the Uzbek text). */
+export function monthLabel(
+  key: string,
+  t: (source: string) => string = (source) => source,
+): string {
   const [y, m] = key.split("-").map(Number);
-  return `${UZ_MONTHS[(m - 1 + 12) % 12]} ${y}`;
+  const month = UZ_MONTHS[(m - 1 + 12) % 12];
+  return `${t(month)} ${y}`;
 }
 
 /** "2026-06" → "Iyun" (no year). `t` translates the month name (default: the Uzbek text). */

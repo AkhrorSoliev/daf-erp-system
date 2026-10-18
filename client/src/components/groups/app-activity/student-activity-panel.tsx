@@ -17,6 +17,7 @@ import {
 } from "./student-activity-sections";
 import type { Davr, OquvchiFaolligi } from "./types";
 import { useOquvchiFaolligi } from "./use-app-activity";
+import { useT } from "@/i18n/context";
 
 export function oxirgiFaollikMatni(data: OquvchiFaolligi): string {
   const matn = formatOxirgiFaollik(data.oxirgiFaollik?.vaqt ?? null, new Date());
@@ -37,6 +38,7 @@ export function StudentActivityPanel({
   renderHeader: ((data: OquvchiFaolligi | undefined, meta: React.ReactNode) => React.ReactNode) | null;
   bodyClassName?: string;
 }) {
+  const t = useT();
   const { data, isLoading, isError, refetch } = useOquvchiFaolligi(url, davr);
 
   const meta = data && (
@@ -45,10 +47,10 @@ export function StudentActivityPanel({
         <Sparkles /> {data.joriyDaraja.daraja} · {data.fortschritt.stufe.uz}
       </Badge>
       <Badge variant="secondary" className="gap-1">
-        <Trophy /> {formatNumber(data.fortschritt.gesamt)} ball
+        <Trophy /> {t("{n} ball", { n: formatNumber(data.fortschritt.gesamt) })}
       </Badge>
       <Badge variant="secondary" className="gap-1">
-        <Flame /> {data.fortschritt.serie} kun seriya
+        <Flame /> {t("{n} kun seriya", { n: data.fortschritt.serie })}
       </Badge>
     </div>
   );
@@ -82,16 +84,17 @@ function PanelTanasi({
   sarlavhaYoq: boolean;
   meta: React.ReactNode;
 }) {
+  const t = useT();
   return (
     <>
       {sarlavhaYoq && (
         <div>
-          <p className="text-sm text-muted-foreground">Oxirgi faollik: {oxirgiFaollikMatni(data)}</p>
+          <p className="text-sm text-muted-foreground">{t("Oxirgi faollik: {when}", { when: oxirgiFaollikMatni(data) })}</p>
           {meta}
         </div>
       )}
       {!data.akkaunt ? (
-        <BoshHolat sarlavha="Akkaunt yo'q" matn="O'quvchiga ilova akkaunti ochilmagan — faollikni o'lchab bo'lmaydi." />
+        <BoshHolat sarlavha={t("Akkaunt yo'q")} matn={t("O'quvchiga ilova akkaunti ochilmagan — faollikni o'lchab bo'lmaydi.")} />
       ) : (
         <>
           {/* Davr tanlovi akkaunti bor har bir o'quvchi uchun doim ko'rinadi
@@ -99,13 +102,13 @@ function PanelTanasi({
               qolib ketadi va bosh sarlavhadagi ball/seriya bilan ziddiyat
               chiqadi. */}
           <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-muted-foreground">Davr</span>
+            <span className="text-sm text-muted-foreground">{t("Davr")}</span>
             <PeriodToggle value={davr} onChange={onDavrChange} />
           </div>
           {hechQachonKirmaganmi(data) ? (
             <BoshHolat
-              sarlavha="O'quvchi ilovaga hali kirmagan"
-              matn="Na vebdan, na telefondan kirish qayd etilmagan. Ota-onasi yoki o'quvchining o'zi bilan gaplashib ko'rish mumkin."
+              sarlavha={t("O'quvchi ilovaga hali kirmagan")}
+              matn={t("Na vebdan, na telefondan kirish qayd etilmagan. Ota-onasi yoki o'quvchining o'zi bilan gaplashib ko'rish mumkin.")}
             />
           ) : (
             <>

@@ -42,12 +42,13 @@ export const LESSON_DEDUCTION_MODE_LABELS: Record<string, string> = {
   SINGLE_UNCOVERED: "Qarzga yozildi",
 };
 
+// The correction dialog draws `t(label)`.
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  CASH: "Naqd",
-  PAYME: "Payme",
-  CLICK: "Click",
-  UZUM: "Uzum",
-  TRANSFER: "O'tkazma",
+  CASH: msg("Naqd"),
+  PAYME: msg("Payme"),
+  CLICK: msg("Click"),
+  UZUM: msg("Uzum"),
+  TRANSFER: msg("O'tkazma"),
 };
 
 export interface StudentTransaction {
