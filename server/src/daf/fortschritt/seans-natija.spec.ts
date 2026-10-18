@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { FortschrittService } from './fortschritt.service';
 import { zentrumQueryRaw } from './zentrum-sql.fake-spec';
 
@@ -9,11 +10,19 @@ function fake(opts: {
   week: { studentId: number; points: number }[];
   groupWeek?: { studentId: number; points: number }[];
   groupId?: string | null;
+  dailyGoal?: string | null;
+  /** Muddati kelgan so'zlar (`bosh` tekshiruvi). */
+  due?: number;
+  ochiqDars?: boolean;
+  /** O'rganilgan so'zlar (nishon sharti). */
+  woerter?: number;
+  /** INSERT … RETURNING javobi; `'xato'` — so'rov yiqiladi. */
+  badges?: string[] | 'xato';
 }) {
-  return {
-    // Day rows for the SQL fake: the week dated today (Monday), the caller's
-    // row carrying today's attempts, and a Sunday row for the streak.
-    $queryRaw: zentrumQueryRaw(() => [
+  // Day rows for the SQL fake: the week dated today (Monday), the caller's
+  // row carrying today's attempts, and a Sunday row for the streak.
+  const zentrum = zentrumQueryRaw(
+    () => [
       ...opts.week.map((w) => ({
         ...w,
         companyId: 1,
@@ -27,7 +36,15 @@ function fake(opts: {
         points: 0,
         attempts: 1,
       },
-    ]),
+    ],
+    () => opts.dailyGoal ?? null,
+  );
+  return {
+    $queryRaw: jest.fn((sql: Prisma.Sql) => {
+      if (!sql.strings[0].includes('/* nishon-berish */')) return zentrum(sql);
+      if (opts.badges === 'xato') return Promise.reject(new Error('db down'));
+      return Promise.resolve((opts.badges ?? []).map((key) => ({ key })));
+    }),
     dafAttempt: { findMany: jest.fn(async () => opts.session) },
     dafStudentDay: {
       // Only the group table still uses groupBy.
@@ -36,6 +53,16 @@ function fake(opts: {
           studentId: w.studentId,
           _sum: { points: w.points },
         })),
+      ),
+    },
+    dafLexemeState: {
+      count: jest.fn(async ({ where }: any) =>
+        where.correctCount ? (opts.woerter ?? 0) : (opts.due ?? 1),
+      ),
+    },
+    dafLesson: {
+      findFirst: jest.fn(async () =>
+        opts.ochiqDars === false ? null : { id: 1 },
       ),
     },
     enrollment: {
@@ -146,5 +173,120 @@ describe('seansNatijasi', () => {
       .spyOn(svc, 'seansNatijasi')
       .mockRejectedValueOnce(new Error('db down'));
     expect(await svc.seansNatijasiXavfsiz('s-1', 55, 1)).toBeNull();
+  });
+
+  describe('maqsad (S2)', () => {
+    const seans = (points: number, iso = '2026-10-19T08:50:00Z') => ({
+      points,
+      createdAt: new Date(iso),
+      groupId: null,
+    });
+
+    it('seans maqsadni kesib o`tdi — yangiBajarildi', async () => {
+      // Bugun 100 (oldin 50 + seans 50), maqsad O'RTA 80.
+      const svc = new FortschrittService(
+        fake({
+          session: [seans(50)],
+          todayAttempts: 2,
+          week: [{ studentId: 55, points: 100 }],
+        }),
+      );
+      const n = await svc.seansNatijasi('s-1', 55, 1);
+      expect(n.maqsad).toEqual({
+        ball: 80,
+        hozir: 100,
+        bajarildi: true,
+        yangiBajarildi: true,
+      });
+    });
+
+    it('seansdan oldin ham bajarilgan edi — yangi emas, bosh tekshirilmaydi', async () => {
+      const prisma = fake({
+        session: [seans(20)],
+        todayAttempts: 5,
+        week: [{ studentId: 55, points: 120 }],
+      });
+      const n = await new FortschrittService(prisma).seansNatijasi(
+        's-1',
+        55,
+        1,
+      );
+      expect(n.maqsad.yangiBajarildi).toBe(false);
+      expect(prisma.dafLesson.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('yarim tun: kechagi qism bugungi baldan ayirilmaydi', async () => {
+      // Yakshanba 23:55 da 30, dushanba 00:05 da 10; bugun jami 60 (oldin 50).
+      // Maqsad YENGIL 40 seansdan OLDIN bajarilgan edi.
+      const svc = new FortschrittService(
+        fake({
+          session: [
+            seans(30, '2026-10-18T18:55:00Z'),
+            seans(10, '2026-10-18T19:05:00Z'),
+          ],
+          todayAttempts: 3,
+          week: [{ studentId: 55, points: 60 }],
+          dailyGoal: 'YENGIL',
+        }),
+      );
+      const n = await svc.seansNatijasi('s-1', 55, 1);
+      expect(n.maqsad).toMatchObject({
+        ball: 40,
+        hozir: 60,
+        yangiBajarildi: false,
+      });
+    });
+
+    it("bosh holat (so'z ham, ochiq dars ham yo'q) — yutuq ko'rsatilmaydi", async () => {
+      const svc = new FortschrittService(
+        fake({
+          session: [seans(50)],
+          todayAttempts: 2,
+          week: [{ studentId: 55, points: 100 }],
+          due: 0,
+          ochiqDars: false,
+        }),
+      );
+      const n = await svc.seansNatijasi('s-1', 55, 1);
+      expect(n.maqsad.yangiBajarildi).toBe(false);
+    });
+  });
+
+  describe('yangiNishonlar (S2)', () => {
+    const asos = {
+      session: [
+        {
+          points: 10,
+          createdAt: new Date('2026-10-19T08:50:00Z'),
+          groupId: null,
+        },
+      ],
+      todayAttempts: 1,
+      week: [{ studentId: 55, points: 10 }],
+      woerter: 50,
+    };
+
+    it('shu seans bergan kalitlar qaytadi', async () => {
+      const svc = new FortschrittService(
+        fake({ ...asos, badges: ['WOERTER_50'] }),
+      );
+      const n = await svc.seansNatijasi('s-1', 55, 1);
+      expect(n.yangiNishonlar).toEqual(['WOERTER_50']);
+    });
+
+    it('allaqachon olingan bo`lsa — bo`sh ro`yxat', async () => {
+      const svc = new FortschrittService(fake({ ...asos, badges: [] }));
+      expect((await svc.seansNatijasi('s-1', 55, 1)).yangiNishonlar).toEqual(
+        [],
+      );
+    });
+
+    it('nishon berishdagi xato natijani yiqitmaydi', async () => {
+      const svc = new FortschrittService(fake({ ...asos, badges: 'xato' }));
+      const n = await svc.seansNatijasiXavfsiz('s-1', 55, 1);
+      expect(n).not.toBeNull();
+      expect(n!.punkte).toBe(10);
+      expect(n!.yangiNishonlar).toEqual([]);
+    });
   });
 });

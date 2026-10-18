@@ -6,13 +6,16 @@ import {
   utcMidnightFromDateStr,
 } from '../../common/date/tashkent';
 import { currentGroupId } from '../shared/student-scope';
+import { nishonlarniBerXavfsiz } from '../nishon/nishon-berish';
 import {
+  MAQSAD_BALL,
   maqsadDarajasi,
   maqsadHolati,
   serieAus,
   stufeFuer,
   wochenStartTag,
   wochenStartUtc,
+  yangiBajarildi,
   type MaqsadHolati,
 } from '../uebung/punkte';
 import { bugunBoshmi } from './maqsad';
@@ -55,6 +58,15 @@ export interface SeansNatijasi {
     gruppe: { oldin: number; hozir: number } | null;
     zentrum: { oldin: number; hozir: number };
   };
+  /** Kunlik maqsad: `yangiBajarildi` — shu seans uni kesib o'tdi (spec S2 1.3). */
+  maqsad: {
+    ball: number;
+    hozir: number;
+    bajarildi: boolean;
+    yangiBajarildi: boolean;
+  };
+  /** Shu seans bergan nishon kalitlari (spec S2 2.3). */
+  yangiNishonlar: string[];
 }
 
 export type ReytingQamrovi = 'gruppe' | 'zentrum';
@@ -305,9 +317,10 @@ export class FortschrittService {
     ]);
 
     const shuHafta = shuHaftaOf(urinishlar);
-    const bugungi = urinishlar.filter(
+    const bugungiUrinishlar = urinishlar.filter(
       (u) => tashkentDateStr(u.createdAt) === heute,
-    ).length;
+    );
+    const bugungi = bugungiUrinishlar.length;
 
     let gruppe: SeansNatijasi['orin']['gruppe'] = null;
     if (guruh && guruh.saralangan.length > 0) {
@@ -321,14 +334,40 @@ export class FortschrittService {
       };
     }
 
+    const serie = serieAus(oz.tage, heute);
+    const ball = MAQSAD_BALL[maqsadDarajasi(oz.dailyGoal)];
+    // Seansdan oldingi bugungi ball = hozir − seansning BUGUNGI qismi
+    // (yarim tundan oldingi qismi kechaga tushgan).
+    const kesdi = yangiBajarildi(
+      ball,
+      oz.heutePunkte,
+      sum(bugungiUrinishlar),
+      false,
+    );
+    // `bosh` faqat maqsad kesilganda o'qiladi — kuniga ko'pi bilan bir marta.
+    // Nishonlar shu yerda (seriya va so'z soni yangilangan); xatosi o'zi
+    // ushlanadi, natija `null` ga tushmaydi.
+    const [bosh, yangiNishonlar] = await Promise.all([
+      kesdi ? bugunBoshmi(this.prisma, studentId) : Promise.resolve(false),
+      nishonlarniBerXavfsiz(this.prisma, studentId, companyId, serie),
+    ]);
+
     return {
       punkte: sum(urinishlar),
-      serie: serieAus(oz.tage, heute),
+      serie,
       serieYangi: bugungi > 0 && oz.heuteAttempts === bugungi,
       orin: {
         gruppe,
         zentrum: { oldin: oz.oldin, hozir: oz.hozir },
       },
+      // `bajarildi` faqat ballga qarab: `bosh` kesilgandagina o'qiladi.
+      maqsad: {
+        ball,
+        hozir: oz.heutePunkte,
+        bajarildi: oz.heutePunkte >= ball,
+        yangiBajarildi: kesdi && !bosh,
+      },
+      yangiNishonlar,
     };
   }
 
