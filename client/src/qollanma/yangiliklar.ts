@@ -6,6 +6,13 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-18",
+    sarlavha: "O'quvchilar bo'limi tarjima qilindi",
+    matn: "O'quvchilar bo'limi endi tanlangan tilda ochiladi: o'quvchilar ro'yxati (jadval, filtrlar, statistika, qator amallari, holat belgilari), o'quvchi qo'shish va tahrirlash oynalari, o'quvchi profili (kartochka, yorliqlar, guruhga qo'shish va chiqarish, ketganda pul hisobi, to'lov oynalari, dars izi, SMS, hisob-kitob varaqasi, qatnashganlik hujjatlari va shartnomalar). Ismlar, nomlar va serverdan keladigan matnlar o'zgarishsiz qoladi. Boshqa sahifalar hali o'zbekcha.",
+    rollar: [1, 2, 3, 4, 5],
+    sahifa: { bolim: "boshlash", sahifa: "interfeys" },
+  },
+  {
     sana: "2026-10-17",
     sarlavha: "Yangi hisobot: Auditoriya",
     matn: "Hisobotlarda «Auditoriya» sahifasi paydo bo'ldi: hozir o'qiyotgan o'quvchilar jinsi, yoshi, kurs va filial bo'yicha. Foizlar faqat jinsi yoki tug'ilgan sanasi kiritilgan o'quvchilar ichidan hisoblanadi, sahifa tepasida esa ma'lumot qanchalik to'liqligi ko'rsatiladi. Ma'lumot o'quvchilar ilovaga kirgan sari to'lib boradi. Beshtadan kam ma'lumotli qatorda foiz o'rniga chiziqcha turadi.",
