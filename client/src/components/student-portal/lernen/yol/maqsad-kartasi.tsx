@@ -19,6 +19,7 @@ import { qisqaRaqam } from "./yol-tuzilishi";
  */
 export function MaqsadKartasi({ maqsad }: { maqsad: Maqsad }) {
   const [ochiq, setOchiq] = React.useState(false);
+  const kartaRef = React.useRef<HTMLButtonElement>(null);
   const ozgartir = useMaqsadOzgartir();
   const k = maqsadKartasi(maqsad);
   const tolgan = k.holat !== "jarayon";
@@ -26,6 +27,7 @@ export function MaqsadKartasi({ maqsad }: { maqsad: Maqsad }) {
   return (
     <>
       <button
+        ref={kartaRef}
         type="button"
         onClick={() => setOchiq(true)}
         className="flex w-full items-center gap-3 rounded-card border border-line bg-surface px-3 py-2.5 text-left shadow-lumio-sm transition-transform active:translate-y-[1px]"
@@ -55,7 +57,17 @@ export function MaqsadKartasi({ maqsad }: { maqsad: Maqsad }) {
         </span>
       </button>
 
-      <BottomSheet open={ochiq} onOpenChange={setOchiq} title="Kunlik maqsad">
+      <BottomSheet
+        open={ochiq}
+        onOpenChange={setOchiq}
+        title="Kunlik maqsad"
+        onCloseAutoFocus={(e) => {
+          // Fokus kartaga qaytadi: oynachada Tab/Escape bilan ishlagan
+          // foydalanuvchi o'z joyidan ketmaydi.
+          e.preventDefault();
+          kartaRef.current?.focus();
+        }}
+      >
         <div className="space-y-2">
           {MAQSAD_VARIANTLARI.map((v) => {
             const tanlangan = v.daraja === maqsad.daraja;
