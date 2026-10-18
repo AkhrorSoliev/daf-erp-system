@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/context";
 
 /** A block's place while its request runs. */
 export function BlockSkeleton({ className }: { className?: string }) {
@@ -11,14 +12,15 @@ export function BlockSkeleton({ className }: { className?: string }) {
 
 /** A block whose request failed: its title, what happened and a retry. The rest of the page stays. */
 export function BlockError({ title, onRetry }: { title: string; onRetry: () => void }) {
+  const t = useT();
   return (
     <div className="space-y-2 rounded-xl border bg-card p-4">
       <p className="text-sm font-medium text-muted-foreground">{title}</p>
       <p role="alert" className="text-sm text-muted-foreground">
-        Ma&apos;lumotni yuklab bo&apos;lmadi
+        {t("Ma'lumotni yuklab bo'lmadi")}
       </p>
       <Button variant="outline" size="sm" onClick={onRetry}>
-        Qayta urinish
+        {t("Qayta urinish")}
       </Button>
     </div>
   );

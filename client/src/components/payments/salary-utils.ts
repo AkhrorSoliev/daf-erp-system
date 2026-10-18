@@ -40,10 +40,10 @@ export const SALARY_TYPE_LABELS: Record<string, string> = {
 };
 
 export const SALARY_STATUS_LABELS: Record<string, string> = {
-  CALCULATED: "Hisoblangan",
-  APPROVED: "Tasdiqlangan",
-  PAID: "To'langan",
-  CANCELLED: "Bekor qilingan",
+  CALCULATED: msg("Hisoblangan"),
+  APPROVED: msg("Tasdiqlangan"),
+  PAID: msg("To'langan"),
+  CANCELLED: msg("Bekor qilingan"),
 };
 
 // Restrained semantic palette: amber=draft, blue=approved, green=paid.

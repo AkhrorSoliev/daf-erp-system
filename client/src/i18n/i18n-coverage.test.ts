@@ -221,6 +221,17 @@ export const STRICT_FILES: string[] = [
   "components/teachers/edit-teacher-drawer.tsx",
   "components/teachers/edit-teacher-form.tsx",
   "lib/schemas/teacher-schema.ts",
+  "components/teachers/teacher-profile-client.tsx",
+  "components/teachers/teacher-profile-card.tsx",
+  "components/teachers/teacher-profile-tabs.tsx",
+  "components/teachers/teacher-groups-table.tsx",
+  "components/teachers/teacher-stats-charts.tsx",
+  "components/teachers/teacher-timeline-tab.tsx",
+  "components/shared/salary-monthly-panel.tsx",
+  "components/shared/salary-due-card.tsx",
+  "components/payments/possible-deductions-info.tsx",
+  "components/payments/overview/block-state.tsx",
+  "components/reports/lesson-ratings/teacher-ratings-panel.tsx",
 ];
 
 function walk(dir: string): string[] {
