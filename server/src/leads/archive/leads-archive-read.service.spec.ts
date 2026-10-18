@@ -157,4 +157,103 @@ describe('LeadsArchiveReadService', () => {
       expect(res.archivers).toEqual([]);
     });
   });
+
+  describe('getArchivedLead', () => {
+    const row = (extra: object = {}) => ({
+      id: 'l1',
+      firstName: 'Aziz',
+      lastName: 'Karimov',
+      statusEnum: LeadStatus.LOST,
+      convertedStudentId: null,
+      ownerId: 8,
+      ownershipLogs: [],
+      ...extra,
+    });
+
+    it('scopes to archived leads of the company and returns the panel shape', async () => {
+      prisma.lead.findFirst = jest.fn().mockResolvedValue(row());
+      const res = await service.getArchivedLead('l1', 1001, null);
+      const arg = prisma.lead.findFirst.mock.calls[0][0];
+      expect(arg.where.AND[0]).toMatchObject({
+        id: 'l1',
+        companyId: 1001,
+        deletedAt: { not: null },
+      });
+      expect(res.notes).toHaveLength(2);
+      expect(res).not.toHaveProperty('ownerId');
+      expect(res.ownershipLog).toEqual([]);
+    });
+
+    it('passes a branch scope through the lead branch predicate', async () => {
+      prisma.lead.findFirst = jest.fn().mockResolvedValue(row());
+      await service.getArchivedLead('l1', 1001, [7]);
+      const where = prisma.lead.findFirst.mock.calls[0][0].where.AND[0];
+      expect(where.OR).toEqual([{ branchId: { in: [7] } }, { branchId: null }]);
+    });
+
+    it('words what a restore changes for a lost, owned lead', async () => {
+      prisma.lead.findFirst = jest.fn().mockResolvedValue(row());
+      const res = await service.getArchivedLead('l1', 1001, null);
+      expect(res.notes).toEqual([
+        "Yo'qotilgan lid «Yangi» bosqichiga qaytadi, yo'qotilish sababi o'chadi.",
+        "Lidning mas'uli bo'shaydi: u umumiy havzaga qaytadi.",
+      ]);
+    });
+
+    it('404s when not archived or out of scope', async () => {
+      prisma.lead.findFirst = jest.fn().mockResolvedValue(null);
+      await expect(service.getArchivedLead('x', 1001, null)).rejects.toThrow(
+        'Arxivda lid topilmadi',
+      );
+    });
+
+    it('resolves names with one lookup; a system actor stays null; limit 30 newest first', async () => {
+      const d = new Date('2026-10-01T10:00:00Z');
+      prisma.lead.findFirst = jest.fn().mockResolvedValue(
+        row({
+          ownershipLogs: [
+            {
+              id: 'a',
+              kind: 'EXPIRE',
+              fromUserId: 5,
+              toUserId: null,
+              actorId: null,
+              reason: null,
+              createdAt: d,
+            },
+            {
+              id: 'b',
+              kind: 'ASSIGN',
+              fromUserId: null,
+              toUserId: 5,
+              actorId: 6,
+              reason: 'x',
+              createdAt: d,
+            },
+          ],
+        }),
+      );
+      prisma.user.findMany.mockResolvedValue([
+        { id: 5, firstName: 'Ali', lastName: 'Valiyev' },
+        { id: 6, firstName: 'Vali', lastName: 'Aliyev' },
+      ]);
+      const res = await service.getArchivedLead('l1', 1001, null);
+      const sel = prisma.lead.findFirst.mock.calls[0][0].select.ownershipLogs;
+      expect(sel).toMatchObject({
+        take: 30,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      });
+      expect(prisma.user.findMany).toHaveBeenCalledTimes(1);
+      expect(res.ownershipLog[0]).toMatchObject({
+        from: 'Ali Valiyev',
+        to: null,
+        actor: null,
+      });
+      expect(res.ownershipLog[1]).toMatchObject({
+        to: 'Ali Valiyev',
+        actor: 'Vali Aliyev',
+        reason: 'x',
+      });
+    });
+  });
 });

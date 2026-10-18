@@ -9,6 +9,8 @@ export const LEADS_ARCHIVE_SCHEMA = {
   gacha: { type: "string" as const, defaultValue: "" },
   sahifa: { type: "number" as const, defaultValue: 1 },
   soni: { type: "number" as const, defaultValue: 10 },
+  // The lead whose side panel is open (not a filter).
+  lid: { type: "string" as const, defaultValue: "" },
 };
 
 export interface ArchiveFilters {
@@ -19,6 +21,7 @@ export interface ArchiveFilters {
   gacha: string;
   sahifa: number;
   soni: number;
+  lid: string;
 }
 
 export type ArchiveTab = "lidlar" | "bolimlar";
@@ -52,7 +55,7 @@ export function archiveParams(f: ArchiveFilters): ArchiveParams {
   };
 }
 
-/** Paging and the tab are not filters. */
+/** Paging, the tab and the open panel are not filters. */
 export function hasArchiveFilter(f: ArchiveFilters): boolean {
   return f.q.trim() !== "" || f.kim.length > 0 || f.dan !== "" || f.gacha !== "";
 }

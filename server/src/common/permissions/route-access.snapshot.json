@@ -518,6 +518,11 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /leads/archive/leads/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "GET /leads/archive/sections": [
     "Administrator",
     "Branch Director",

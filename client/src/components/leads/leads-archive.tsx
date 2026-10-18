@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
@@ -41,7 +41,9 @@ import {
   type ArchiveFilters,
 } from "./archive/archive-url";
 import { originOf } from "./archive/restore-lead-model";
-import { RestoreLeadDialog } from "./restore-lead-dialog";
+import { RestoreLeadDialog, type RestoreLeadTarget } from "./restore-lead-dialog";
+import { ArchivedLeadPanel } from "./archive/archived-lead-panel";
+import { useArchivePanelUrl } from "./archive/archive-panel-url";
 
 interface LeadsArchiveProps {
   /** When rendered inside /settings/archive, returns to the category grid. */
@@ -49,6 +51,14 @@ interface LeadsArchiveProps {
 }
 
 const countLabel = (n: number | undefined) => (n === undefined ? "" : ` (${n})`);
+
+const toRestoreTarget = (lead: ArchivedLead): RestoreLeadTarget => ({
+  id: lead.id,
+  firstName: lead.firstName,
+  lastName: lead.lastName,
+  origin: originOf(lead),
+  notes: lead.notes,
+});
 
 // A stable empty list: the section dialog resets itself when `columns` changes.
 const NO_COLUMNS: BoardColumn[] = [];
@@ -66,7 +76,17 @@ export function LeadsArchive({ onBack }: LeadsArchiveProps) {
   const leads = useArchivedLeads(params, tab === "lidlar");
   const sections = useArchivedSections(params, tab === "bolimlar");
 
-  const [leadTarget, setLeadTarget] = useState<ArchivedLead | null>(null);
+  const [leadTarget, setLeadTarget] = useState<RestoreLeadTarget | null>(null);
+  const panel = useArchivePanelUrl();
+  // The last opened lead stays for the panel's closing animation.
+  const [lastLid, setLastLid] = useState("");
+  if (filters.lid && filters.lid !== lastLid) setLastLid(filters.lid);
+  // A link like ?tab=bolimlar&lid=x must not leave a dangling panel param.
+  const strayLid = tab !== "lidlar" && !!filters.lid;
+  const closePanel = panel.close;
+  useEffect(() => {
+    if (strayLid) closePanel();
+  }, [strayLid, closePanel]);
   const [sectionTarget, setSectionTarget] = useState<ArchivedSection | null>(
     null,
   );
@@ -91,7 +111,8 @@ export function LeadsArchive({ onBack }: LeadsArchiveProps) {
     }
   }
 
-  function leadRestored(lead: ArchivedLead) {
+  function leadRestored(lead: RestoreLeadTarget) {
+    // The prefix also holds single-lead details; `withoutRow` leaves those alone.
     queryClient.setQueriesData<Paged<ArchivedLead>>(
       { queryKey: archiveKeys.leads },
       (old) => withoutRow(old, lead.id),
@@ -165,7 +186,15 @@ export function LeadsArchive({ onBack }: LeadsArchiveProps) {
 
       <Tabs
         value={tab}
-        onValueChange={(value) => setFilters({ tab: value, sahifa: 1 })}
+        onValueChange={(value) =>
+          // Leaving the leads tab closes the panel and its tab param too.
+          filters.lid
+            ? panel.close({
+                tab: value === "lidlar" ? null : value,
+                sahifa: null,
+              })
+            : setFilters({ tab: value, sahifa: 1 })
+        }
       >
         <TabsList>
           <TabsTrigger value="lidlar">
@@ -182,7 +211,9 @@ export function LeadsArchive({ onBack }: LeadsArchiveProps) {
             pageSize={pageSize}
             filtered={filtered}
             canRestore={canRestore}
-            onRestore={setLeadTarget}
+            openId={filters.lid}
+            onOpen={(id) => setFilters({ lid: id })}
+            onRestore={(lead) => setLeadTarget(toRestoreTarget(lead))}
             onPage={onPage}
             onPageSize={onPageSize}
             onClear={clear}
@@ -204,21 +235,25 @@ export function LeadsArchive({ onBack }: LeadsArchiveProps) {
       </Tabs>
 
       <RestoreLeadDialog
-        target={
-          leadTarget && {
-            id: leadTarget.id,
-            firstName: leadTarget.firstName,
-            lastName: leadTarget.lastName,
-            origin: originOf(leadTarget),
-            notes: leadTarget.notes,
-          }
-        }
+        target={leadTarget}
         columns={board.data ?? NO_COLUMNS}
         columnsLoading={board.isPending}
         columnsFailed={boardFailed}
         onClose={() => setLeadTarget(null)}
         onRestored={() => leadTarget && leadRestored(leadTarget)}
       />
+      {tab === "lidlar" && (
+        <ArchivedLeadPanel
+          open={!!filters.lid}
+          leadId={filters.lid || lastLid}
+          canRestore={canRestore}
+          onClose={() => panel.close()}
+          onRestore={(target) => {
+            panel.close();
+            setLeadTarget(target);
+          }}
+        />
+      )}
       <RestoreSectionDialog
         target={sectionTarget}
         columns={board.data ?? NO_COLUMNS}
