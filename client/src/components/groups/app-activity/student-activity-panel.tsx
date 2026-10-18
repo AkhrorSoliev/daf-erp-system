@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatNumber } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { ActivityError, PeriodToggle } from "./activity-ui";
-import { formatOxirgiFaollik, hechQachonKirmaganmi, PLATFORMA_NOMLARI } from "./activity-format";
+import { formatOxirgiFaollik, hechQachonKirmaganmi, PLATFORMA_NOMLARI, type Translate } from "./activity-format";
 import {
   KursBolimi,
   MashqBolimi,
@@ -18,10 +18,14 @@ import {
 import type { Davr, OquvchiFaolligi } from "./types";
 import { useOquvchiFaolligi } from "./use-app-activity";
 import { useT } from "@/i18n/context";
+import { interpolate } from "@/i18n/translate";
 
-export function oxirgiFaollikMatni(data: OquvchiFaolligi): string {
-  const matn = formatOxirgiFaollik(data.oxirgiFaollik?.vaqt ?? null, new Date());
-  return data.oxirgiFaollik ? `${matn} · ${PLATFORMA_NOMLARI[data.oxirgiFaollik.platforma]}` : matn;
+/** The last-activity text; the optional last argument is the page's translator (the default says Uzbek). */
+export function oxirgiFaollikMatni(data: OquvchiFaolligi, t: Translate = interpolate): string {
+  const matn = formatOxirgiFaollik(data.oxirgiFaollik?.vaqt ?? null, new Date(), t);
+  if (!data.oxirgiFaollik) return matn;
+  const platforma = PLATFORMA_NOMLARI[data.oxirgiFaollik.platforma];
+  return `${matn} · ${t(platforma)}`;
 }
 
 export function StudentActivityPanel({
@@ -89,7 +93,7 @@ function PanelTanasi({
     <>
       {sarlavhaYoq && (
         <div>
-          <p className="text-sm text-muted-foreground">{t("Oxirgi faollik: {when}", { when: oxirgiFaollikMatni(data) })}</p>
+          <p className="text-sm text-muted-foreground">{t("Oxirgi faollik: {when}", { when: oxirgiFaollikMatni(data, t) })}</p>
           {meta}
         </div>
       )}

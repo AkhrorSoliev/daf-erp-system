@@ -39,6 +39,39 @@ describe("sanalar", () => {
   });
 });
 
+describe("matn quruvchilar sahifa tarjimoniga uzatiladi", () => {
+  // A stand-in for the page's `t`: marks the source and the parameter names it got.
+  const t = (source: string, params?: Record<string, string | number>) =>
+    `[${source}${params ? `|${Object.entries(params).map(([k, v]) => `${k}=${v}`).join(",")}` : ""}]`;
+
+  it("formatDavomiylik says every form through t with its figures", () => {
+    expect(formatDavomiylik(0, t)).toBe("[0 daq]");
+    expect(formatDavomiylik(59, t)).toBe("[<1 daq]");
+    expect(formatDavomiylik(1200, t)).toBe("[{n} daq|n=20]");
+    expect(formatDavomiylik(7200, t)).toBe("[{n} soat|n=2]");
+    expect(formatDavomiylik(4830, t)).toBe("[{h} soat {m} daq|h=1,m=20]");
+  });
+
+  it("weekday and day label are translated, the date part is not", () => {
+    expect(haftaKuni("2026-09-13", t)).toBe("[Yak]");
+    expect(formatKunYorligi("2026-09-14", t)).toBe("14.09 ([Du])");
+  });
+
+  it("formatOxirgiFaollik hands the time and the day count over as parameters", () => {
+    const now = new Date("2026-09-13T10:00:00Z");
+    expect(formatOxirgiFaollik(null, now, t)).toBe("[Ilovaga hali kirmagan]");
+    expect(formatOxirgiFaollik("2026-09-13T09:58:00Z", now, t)).toBe("[Hozirgina]");
+    expect(formatOxirgiFaollik("2026-09-13T04:05:00Z", now, t)).toBe("[Bugun, {time}|time=09:05]");
+    expect(formatOxirgiFaollik("2026-09-12T18:30:00Z", now, t)).toBe("[Kecha, {time}|time=23:30]");
+    expect(formatOxirgiFaollik("2026-09-09T10:00:00Z", now, t)).toBe("[{n} kun oldin|n=4]");
+  });
+
+  it("the Uzbek output without t is unchanged", () => {
+    expect(formatDavomiylik(1200)).toBe("20 daq");
+    expect(formatDavomiylik(7200)).toBe("2 soat");
+  });
+});
+
 describe("foizRangi", () => {
   it("80 va 60 chegaralari, amber ishlatilmaydi", () => {
     expect(foizRangi(null)).toContain("muted");

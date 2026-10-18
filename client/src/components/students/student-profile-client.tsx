@@ -109,11 +109,7 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
 
   if (otherBranch) {
     return (
-      <InOtherBranch
-        title={t("O'quvchi boshqa filialda")}
-        what="o'quvchi"
-        branch={otherBranch}
-      />
+      <InOtherBranch what="o'quvchi" branch={otherBranch} />
     );
   }
 

@@ -12,12 +12,10 @@ import type { OtherBranch } from "@/lib/other-branch";
  * which then loads the record there.
  */
 export function InOtherBranch({
-  title,
   what,
   branch,
 }: {
-  title: string;
-  /** Which record it is; each has its own sentence (no word is glued into another language). */
+  /** Which record it is; the title and the sentence are its own (no word is glued into another language). */
   what: "guruh" | "o'quvchi";
   branch: OtherBranch;
 }) {
@@ -30,7 +28,7 @@ export function InOtherBranch({
   return (
     <div className="space-y-4">
       <h1 className="font-heading text-2xl font-bold tracking-tight">
-        {title}
+        {what === "guruh" ? t("Guruh boshqa filialda") : t("O'quvchi boshqa filialda")}
       </h1>
       <p className="text-muted-foreground">
         {what === "guruh"

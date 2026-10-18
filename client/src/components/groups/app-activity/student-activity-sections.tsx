@@ -4,6 +4,7 @@ import { CheckCircle2, Monitor, Radio, Smartphone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/context";
 import {
   DARAJA_HOLATI_NOMLARI,
   KONIKMA_NOMLARI,
@@ -41,6 +42,7 @@ function ShareBar({
   jami: number;
   icon?: React.ReactNode;
 }) {
+  const t = useT();
   const pct = jami > 0 ? Math.round((soniya / jami) * 100) : 0;
   return (
     <div className="grid grid-cols-[6.5rem_1fr_5.5rem] items-center gap-3 text-sm">
@@ -51,7 +53,7 @@ function ShareBar({
       <div className="h-2 overflow-hidden rounded-full bg-muted">
         <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-right tabular-nums">{formatDavomiylik(soniya)}</span>
+      <span className="text-right tabular-nums">{formatDavomiylik(soniya, t)}</span>
     </div>
   );
 }
@@ -72,48 +74,53 @@ const PLATFORM_ICONS: Record<Platforma, React.ReactNode> = {
 };
 
 export function VaqtBolimi({ data }: { data: OquvchiFaolligi }) {
+  const t = useT();
   return (
-    <Section title="Ilovada vaqt">
+    <Section title={t("Ilovada vaqt")}>
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-xl border p-3">
-          <div className="text-xs text-muted-foreground">Faol vaqt</div>
-          <div className="mt-1 text-xl font-semibold tabular-nums">{formatDavomiylik(data.vaqt.faolSoniya)}</div>
+          <div className="text-xs text-muted-foreground">{t("Faol vaqt")}</div>
+          <div className="mt-1 text-xl font-semibold tabular-nums">{formatDavomiylik(data.vaqt.faolSoniya, t)}</div>
           <div className="text-xs text-muted-foreground">
-            {data.shugullanganKunlar} / {data.maxraj} kun shug&apos;ullangan
+            {t("{n} / {total} kun shug'ullangan", { n: data.shugullanganKunlar, total: data.maxraj })}
           </div>
         </div>
         <div className="rounded-xl border p-3">
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Radio className="size-3" /> Radio
+            <Radio className="size-3" /> {t("Radio")}
           </div>
-          <div className="mt-1 text-xl font-semibold tabular-nums">{formatDavomiylik(data.vaqt.radioSoniya)}</div>
-          <div className="text-xs text-muted-foreground">faol vaqtga qo&apos;shilmaydi</div>
+          <div className="mt-1 text-xl font-semibold tabular-nums">{formatDavomiylik(data.vaqt.radioSoniya, t)}</div>
+          <div className="text-xs text-muted-foreground">{t("faol vaqtga qo'shilmaydi")}</div>
         </div>
       </div>
       <div className="space-y-2 pt-1">
-        <p className="text-xs font-medium text-muted-foreground">Platforma bo&apos;yicha</p>
-        {(Object.keys(PLATFORMA_NOMLARI) as Platforma[]).map((p) => (
-          <ShareBar
-            key={p}
-            label={PLATFORMA_NOMLARI[p]}
-            icon={PLATFORM_ICONS[p]}
-            soniya={data.vaqt.platforma[p]}
-            jami={data.vaqt.faolSoniya}
-          />
-        ))}
+        <p className="text-xs font-medium text-muted-foreground">{t("Platforma bo'yicha")}</p>
+        {(Object.keys(PLATFORMA_NOMLARI) as Platforma[]).map((p) => {
+          const nom = PLATFORMA_NOMLARI[p];
+          return (
+            <ShareBar
+              key={p}
+              label={t(nom)}
+              icon={PLATFORM_ICONS[p]}
+              soniya={data.vaqt.platforma[p]}
+              jami={data.vaqt.faolSoniya}
+            />
+          );
+        })}
       </div>
       <div className="space-y-2 pt-1">
-        <p className="text-xs font-medium text-muted-foreground">Bo&apos;lim bo&apos;yicha</p>
-        <ShareBar label="Ta'lim" soniya={data.vaqt.bolim.LERNEN} jami={data.vaqt.faolSoniya} />
-        <ShareBar label="Boshqa" soniya={data.vaqt.bolim.OTHER} jami={data.vaqt.faolSoniya} />
+        <p className="text-xs font-medium text-muted-foreground">{t("Bo'lim bo'yicha")}</p>
+        <ShareBar label={t("Ta'lim")} soniya={data.vaqt.bolim.LERNEN} jami={data.vaqt.faolSoniya} />
+        <ShareBar label={t("Boshqa")} soniya={data.vaqt.bolim.OTHER} jami={data.vaqt.faolSoniya} />
       </div>
     </Section>
   );
 }
 
 export function XaritaBolimi({ data }: { data: OquvchiFaolligi }) {
+  const t = useT();
   return (
-    <Section title="Kunlik faollik" hint="Oxirgi 30 kun · rang — faol vaqt, nuqta — shug'ullangan kun">
+    <Section title={t("Kunlik faollik")} hint={t("Oxirgi 30 kun · rang — faol vaqt, nuqta — shug'ullangan kun")}>
       <div className="grid grid-cols-10 gap-1.5">
         {data.xarita.map((kun) => (
           <Tooltip key={kun.sana}>
@@ -135,45 +142,50 @@ export function XaritaBolimi({ data }: { data: OquvchiFaolligi }) {
       </div>
       <div className="flex justify-between text-xs text-muted-foreground">
         <span>{formatKunOy(data.xarita[0].sana)}</span>
-        <span>Bugun</span>
+        <span>{t("Bugun")}</span>
       </div>
     </Section>
   );
 }
 
 export function MashqBolimi({ data }: { data: OquvchiFaolligi }) {
+  const t = useT();
   const { mashq } = data;
   return (
     <Section
-      title="Mashqlar"
-      hint="To'g'ri javob — birinchi urinish bo'yicha. Qayta so'ralgandagi to'g'ri javob kirmaydi."
+      title={t("Mashqlar")}
+      hint={t("To'g'ri javob — birinchi urinish bo'yicha. Qayta so'ralgandagi to'g'ri javob kirmaydi.")}
     >
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-xl border p-3">
-          <div className="text-xs text-muted-foreground">To&apos;g&apos;ri javob</div>
+          <div className="text-xs text-muted-foreground">{t("To'g'ri javob")}</div>
           <div className={cn("mt-1 text-xl font-semibold tabular-nums", foizRangi(mashq.foiz))}>
             {mashq.foiz === null ? "—" : `${mashq.foiz}%`}
           </div>
         </div>
         <div className="rounded-xl border p-3">
-          <div className="text-xs text-muted-foreground">Savollar</div>
+          <div className="text-xs text-muted-foreground">{t("Savollar")}</div>
           <div className="mt-1 text-xl font-semibold tabular-nums">{mashq.savollar}</div>
         </div>
         <div className="rounded-xl border p-3">
-          <div className="text-xs text-muted-foreground">Xato</div>
+          <div className="text-xs text-muted-foreground">{t("Xato")}</div>
           <div className="mt-1 text-xl font-semibold tabular-nums">{mashq.xatolar}</div>
         </div>
       </div>
       <div className="space-y-2.5 pt-1">
-        <p className="text-xs font-medium text-muted-foreground">Ko&apos;nikma bo&apos;yicha</p>
-        {mashq.konikmalar.map((k) => (
+        <p className="text-xs font-medium text-muted-foreground">{t("Ko'nikma bo'yicha")}</p>
+        {mashq.konikmalar.map((k) => {
+          const nom = KONIKMA_NOMLARI[k.konikma];
+          const nomi = t(nom.uz);
+          return (
           <div key={k.konikma} className="grid grid-cols-[8.5rem_1fr_3rem] items-center gap-3 text-sm">
             <span>
-              {KONIKMA_NOMLARI[k.konikma].uz}{" "}
-              <span className="text-xs text-muted-foreground">{KONIKMA_NOMLARI[k.konikma].de}</span>
+              {nomi}
+              {/* The German skill name beside it; in German it would repeat the word. */}
+              {nom.de !== nomi && <span className="ml-1 text-xs text-muted-foreground">{nom.de}</span>}
             </span>
             {k.savollar === 0 ? (
-              <span className="col-span-2 text-xs text-muted-foreground">Hali mashq yo&apos;q</span>
+              <span className="col-span-2 text-xs text-muted-foreground">{t("Hali mashq yo'q")}</span>
             ) : (
               <>
                 <div className="h-2 overflow-hidden rounded-full bg-muted">
@@ -186,30 +198,33 @@ export function MashqBolimi({ data }: { data: OquvchiFaolligi }) {
               </>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </Section>
   );
 }
 
 export function KursBolimi({ data }: { data: OquvchiFaolligi }) {
+  const t = useT();
   return (
-    <Section title="Kurs progressi">
+    <Section title={t("Kurs progressi")}>
       <div className="space-y-1.5">
         {data.darajalar.map((d) => {
           const joriy = d.daraja === data.joriyDaraja.daraja;
+          const holat = DARAJA_HOLATI_NOMLARI[d.holat];
           return (
             <div
               key={d.daraja}
               className={cn("flex items-center gap-3 rounded-md px-2 py-1.5 text-sm", joriy && "bg-primary/10")}
             >
               <Badge variant="outline">{d.daraja}</Badge>
-              <span className="shrink-0 text-xs text-muted-foreground">{DARAJA_HOLATI_NOMLARI[d.holat]}</span>
+              <span className="shrink-0 text-xs text-muted-foreground">{t(holat)}</span>
               {d.holat !== "KURS_YOQ" && (
                 <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex items-center justify-between gap-2 text-xs tabular-nums text-muted-foreground">
                     <span>
-                      {d.tugatilgan}/{d.jami} dars
+                      {t("{n}/{capacity} dars", { n: d.tugatilgan, capacity: d.jami })}
                     </span>
                     {d.tugatilganSana && <span>{formatSanaToshkent(d.tugatilganSana)}</span>}
                   </div>
@@ -239,12 +254,13 @@ export function KursBolimi({ data }: { data: OquvchiFaolligi }) {
 }
 
 export function SozlarBolimi({ data }: { data: OquvchiFaolligi }) {
+  const t = useT();
   const { sozlar, qiyinSozlar } = data;
   const jami = sozlar.mustahkam + sozlar.organilmoqda + sozlar.yangi;
   return (
-    <Section title="So&apos;zlar" hint={`Bugun takrorlash kerak: ${sozlar.bugunTakror} ta so'z`}>
+    <Section title={t("So'zlar")} hint={t("Bugun takrorlash kerak: {n} ta so'z", { n: sozlar.bugunTakror })}>
       {jami === 0 ? (
-        <p className="text-sm text-muted-foreground">Hali so&apos;z o&apos;rganilmagan</p>
+        <p className="text-sm text-muted-foreground">{t("Hali so'z o'rganilmagan")}</p>
       ) : (
         <>
           <div className="flex h-2.5 overflow-hidden rounded-full bg-muted">
@@ -253,15 +269,15 @@ export function SozlarBolimi({ data }: { data: OquvchiFaolligi }) {
           </div>
           <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
             <span className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full bg-green-500" /> Mustahkam{" "}
+              <span className="size-2.5 rounded-full bg-green-500" /> {t("Mustahkam")}{" "}
               <b className="tabular-nums">{sozlar.mustahkam}</b>
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full bg-yellow-400" /> O&apos;rganilmoqda{" "}
+              <span className="size-2.5 rounded-full bg-yellow-400" /> {t("O'rganilmoqda")}{" "}
               <b className="tabular-nums">{sozlar.organilmoqda}</b>
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full bg-muted-foreground/30" /> Yangi yoki xato{" "}
+              <span className="size-2.5 rounded-full bg-muted-foreground/30" /> {t("Yangi yoki xato")}{" "}
               <b className="tabular-nums">{sozlar.yangi}</b>
             </span>
           </div>
@@ -269,14 +285,14 @@ export function SozlarBolimi({ data }: { data: OquvchiFaolligi }) {
       )}
       {qiyinSozlar.length > 0 && (
         <div className="space-y-1.5 pt-1">
-          <p className="text-xs font-medium text-muted-foreground">Eng ko&apos;p xato qilingan so&apos;zlar</p>
+          <p className="text-xs font-medium text-muted-foreground">{t("Eng ko'p xato qilingan so'zlar")}</p>
           {qiyinSozlar.map((w) => (
             <div key={w.lexemeId} className="flex items-center justify-between rounded-md border px-3 py-1.5 text-sm">
               <span>
                 <span className="font-medium">{w.de}</span>
                 {w.uz && <span className="text-muted-foreground"> — {w.uz}</span>}
               </span>
-              <span className="text-xs tabular-nums text-red-600 dark:text-red-400">{w.xatolar} marta xato</span>
+              <span className="text-xs tabular-nums text-red-600 dark:text-red-400">{t("{n} marta xato", { n: w.xatolar })}</span>
             </div>
           ))}
         </div>
@@ -286,12 +302,13 @@ export function SozlarBolimi({ data }: { data: OquvchiFaolligi }) {
 }
 
 export function SeanslarBolimi({ data }: { data: OquvchiFaolligi }) {
+  const t = useT();
   const { seanslar } = data;
   return (
-    <Section title="Seanslar tarixi" hint={`Tanlangan davrda oxirgi ${seanslar.length} ta seans`}>
+    <Section title={t("Seanslar tarixi")} hint={t("Tanlangan davrda oxirgi {n} ta seans", { n: seanslar.length })}>
       {seanslar.length === 0 ? (
         <p className="rounded-md border px-3 py-4 text-center text-sm text-muted-foreground">
-          Bu davrda mashq qilinmagan
+          {t("Bu davrda mashq qilinmagan")}
         </p>
       ) : (
         <div className="divide-y rounded-md border">
@@ -303,12 +320,12 @@ export function SeanslarBolimi({ data }: { data: OquvchiFaolligi }) {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <Badge variant={s.tur === "LESSON" ? "secondary" : "outline"}>
-                      {s.tur === "LESSON" ? "Dars" : "Takrorlash"}
+                      {s.tur === "LESSON" ? t("Dars") : t("Takrorlash")}
                     </Badge>
-                    <span className="truncate">{s.darsNomi ?? "Takrorlash"}</span>
+                    <span className="truncate">{s.darsNomi ?? t("Takrorlash")}</span>
                   </div>
                   <div className="mt-0.5 text-xs text-muted-foreground">
-                    {formatSanaVaqt(s.boshlandi)} · {formatDavomiylik(davomiylikSoniya)}
+                    {formatSanaVaqt(s.boshlandi)} · {formatDavomiylik(davomiylikSoniya, t)}
                   </div>
                 </div>
                 <span className={cn("shrink-0 font-medium tabular-nums", foizRangi(foizi))}>

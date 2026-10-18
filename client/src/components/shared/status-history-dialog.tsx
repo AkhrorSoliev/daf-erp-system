@@ -17,9 +17,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
-import { ENTITY_API_PATH, getStatusConfig } from "@/lib/status-config";
+import { ENTITY_API_PATH } from "@/lib/status-config";
+import { TranslatedStatusBadge } from "@/components/shared/translated-status-badge";
 import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 
@@ -38,18 +38,6 @@ interface StatusHistoryDialogProps {
   entityType: string;
   entityId: string | number;
   entityName: string;
-}
-
-/**
- * A status chip. Only the student labels are `msg()` texts that `t` can
- * translate (the other entities' labels in `status-config.ts` are not yet), and
- * an unknown status falls back to its raw code, which is data and must not go
- * through `t`.
- */
-function HistoryStatusBadge({ entityType, status }: { entityType: string; status: string }) {
-  const t = useT();
-  const config = getStatusConfig(entityType, status);
-  return <Badge variant={config.variant}>{entityType === "students" ? t(config.label) : config.label}</Badge>;
 }
 
 export function StatusHistoryDialog({
@@ -132,13 +120,13 @@ export function StatusHistoryDialog({
                     </TableCell>
                     <TableCell>
                       {record.fromStatus ? (
-                        <HistoryStatusBadge entityType={entityType} status={record.fromStatus} />
+                        <TranslatedStatusBadge entityType={entityType} status={record.fromStatus} />
                       ) : (
                         <span className="text-muted-foreground text-sm">—</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      <HistoryStatusBadge entityType={entityType} status={record.toStatus} />
+                      <TranslatedStatusBadge entityType={entityType} status={record.toStatus} />
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground max-w-48 truncate">
                       {record.reason ?? "—"}
