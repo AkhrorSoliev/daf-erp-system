@@ -43,6 +43,7 @@ export function RatingTeachersTable({
             <TableHead>Baholar</TableHead>
             <TableHead>Javob ulushi</TableHead>
             <TableHead>Past (1–3)</TableHead>
+            <TableHead>Izohlar</TableHead>
             <TableHead>O&apos;tgan oyga nisbatan</TableHead>
           </TableRow>
         </TableHeader>
@@ -71,6 +72,7 @@ export function RatingTeachersTable({
                 <TableCell>{formatNumber(r.rated)}</TableCell>
                 <TableCell>{responseText(r.rated, r.delivered, r.responseRate)}</TableCell>
                 <TableCell className={cn(r.low > 0 && "text-destructive")}>{formatNumber(r.low)}</TableCell>
+                <TableCell>{formatNumber(r.commented)}</TableCell>
                 <TableCell
                   className={cn(
                     t?.tone === "up" && "text-green-600",

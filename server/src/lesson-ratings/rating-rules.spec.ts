@@ -28,7 +28,8 @@ describe('ratingQuestion', () => {
     });
     expect(text).toBe(
       "📚 <b>Ali</b>, bugungi «A1 &lt;3&gt;» darsi qanday o'tdi?\n" +
-        'Ustoz: Anna Schmidt, Vali Karimov\n\nBaho bering:',
+        'Ustoz: Anna Schmidt, Vali Karimov\n\nBaho bering:\n' +
+        "🔒 Baho to'liq anonim: hech kimga ismingiz ko'rinmaydi.",
     );
   });
 

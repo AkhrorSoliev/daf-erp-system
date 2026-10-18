@@ -4,6 +4,8 @@ export interface RatingTotals {
   delivered: number;
   responseRate: number | null;
   low: number;
+  /** Izoh yozilgan baholar soni. */
+  commented: number;
 }
 
 export interface RatingTeacherRow extends RatingTotals {
@@ -40,12 +42,12 @@ export interface TeacherRatings {
   comments: {
     date: string;
     groupName: string;
-    studentId: number;
-    studentName: string;
     score: number;
     comment: string;
   }[];
 }
+
+export type CommentState = "WRITTEN" | "PENDING" | "NOT_WRITTEN";
 
 export interface LowRating {
   id: string;
@@ -53,10 +55,9 @@ export interface LowRating {
   groupId: string;
   groupName: string;
   teacherNames: string[];
-  studentId: number;
-  studentName: string;
   score: number;
   comment: string | null;
+  commentState: CommentState;
 }
 
 export interface Paged<T> {

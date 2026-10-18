@@ -226,7 +226,8 @@ Ikkalasi ham yon jadval: asosiy jadvalga tegmaydi, ustidan qoplama bo'lib turadi
 **Dars bahosi** — o'quvchining darsdan keyin Telegram'da qo'ygan 1–5 bahosi
 (va 1–3 da ixtiyoriy izoh). Bitta dars, bitta o'quvchi — bitta qator; faqat
 CEO ko'radi. Xabar yetmagan qator (`messageId` yo'q) hisobotda «yetkazilmagan».
-`server/src/lesson-ratings/`, `docs/adr/0091-dars-bahosi-faqat-ceo-telegram-darhol.md`
+`server/src/lesson-ratings/`, `docs/adr/0091-dars-bahosi-faqat-ceo-telegram-darhol.md`,
+`docs/adr/0111-dars-baholari-togri-anonim.md`
 
 **Bayram kaskadi (holiday cascade)** — bayram e'lon qilinganda, unga tushgan
 darslar guruh oxiriga surib qo'yiladi. Yurish `MAX_WALK_ITERATIONS = 400` bilan

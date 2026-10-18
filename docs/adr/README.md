@@ -177,6 +177,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0108](0108-auditoriya-hisoboti-jins-va-yosh.md) | «Auditoriya» hisoboti: hozir o'qiyotganlar jinsi va yoshi (kurs va filial kesimida), mavjud maydonlardan; noma'lum foizga kirmaydi va alohida ko'rsatiladi, 5 dan kam ma'lumotda foiz yo'q, yosh Toshkent kuni bilan bitta funksiyadan | Qabul qilindi | 2026-10-17 |
 | [0109](0109-marketing-kanal-boyicha.md) | Marketing hisoboti kanal bo'yicha: marketing xarajati lid manbasiga bog'lanadi (`Expense.leadSourceId`, faqat MARKETING); kanal qatori = oydagi lid kohorti, 1 o'quvchi narxi = sarf ÷ to'lagan odamlar, samara = ularning to'lovi ÷ sarf; kanalsiz sarf «Hammasi»da, kanal qatorlarida emas | Qabul qilindi | 2026-10-18 |
 | [0110](0110-lugat-alohida-chunk.md) | Lug'at sahifa payload'iga qo'shilmaydi: layout faqat tilni beradi, `I18nProvider` lug'atni `use()` bilan keshlangan, xeshli chunk'dan o'qiydi (server HTML tarjima qilingan holda chiqadi); yuklash xatosi 3 s keshda qolib error boundary'ga boradi | Qabul qilindi | 2026-10-18 |
+| [0111](0111-dars-baholari-togri-anonim.md) | Dars baholari hisoboti to'liq anonim: o'quvchi ismi/id'si hech bir javobda yo'q, «Ko'rsatish» yo'q, bot «hech kimga ismingiz ko'rinmaydi» deydi; `studentId` faqat takrorni oldini olish uchun bazada | Qabul qilindi | 2026-10-18 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 
