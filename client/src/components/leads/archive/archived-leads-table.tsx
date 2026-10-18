@@ -32,6 +32,8 @@ export function ArchivedLeadsTable({
   pageSize,
   filtered,
   canRestore,
+  openId,
+  onOpen,
   onRestore,
   onPage,
   onPageSize,
@@ -42,6 +44,9 @@ export function ArchivedLeadsTable({
   pageSize: number;
   filtered: boolean;
   canRestore: boolean;
+  /** The lead whose side panel is open. */
+  openId: string;
+  onOpen: (id: string) => void;
   onRestore: (lead: ArchivedLead) => void;
   onPage: (page: number) => void;
   onPageSize: (size: number) => void;
@@ -83,7 +88,24 @@ export function ArchivedLeadsTable({
               onClear={onClear}
             />
             {rows.map((lead, index) => (
-              <TableRow key={lead.id}>
+              <TableRow
+                key={lead.id}
+                tabIndex={0}
+                role="button"
+                aria-label={`${lead.firstName} ${lead.lastName} — ma'lumotni ochish`}
+                className={cn(
+                  "cursor-pointer hover:bg-muted/40",
+                  openId === lead.id && "bg-muted/50",
+                )}
+                onClick={() => onOpen(lead.id)}
+                onKeyDown={(e) => {
+                  if (e.target !== e.currentTarget) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onOpen(lead.id);
+                  }
+                }}
+              >
                 <TableCell className="border-r text-muted-foreground">
                   {(page - 1) * pageSize + index + 1}
                 </TableCell>
@@ -123,7 +145,10 @@ export function ArchivedLeadsTable({
                   {deletedByName(lead.deletedBy)}
                 </TableCell>
                 {canRestore && (
-                  <TableCell>
+                  <TableCell
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
                     <RestoreMenu onRestore={() => onRestore(lead)} />
                   </TableCell>
                 )}

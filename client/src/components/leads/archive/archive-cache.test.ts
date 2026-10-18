@@ -17,6 +17,12 @@ describe("withoutRow", () => {
       pageSize: 10,
     });
   });
+  it("leaves a single-lead detail object (same cache prefix) alone", () => {
+    const detail = { id: "a", firstName: "Aziz" } as unknown as Paged<{
+      id: string;
+    }>;
+    expect(withoutRow(detail, "a")).toBe(detail);
+  });
   it("leaves a page without that row alone", () => {
     expect(withoutRow(page, "zzz")).toBe(page);
     expect(withoutRow(undefined, "a")).toBeUndefined();
