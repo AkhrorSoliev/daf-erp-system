@@ -177,6 +177,19 @@ export const STRICT_FILES: string[] = [
   "components/groups/group-delete-dialog.tsx",
   "components/groups/group-delete-copy.ts",
   "components/groups/covering-badge.tsx",
+  "components/groups/edit-group-form.tsx",
+  "components/groups/edit-group-drawer.tsx",
+  "components/groups/group-course-select.tsx",
+  "components/groups/group-level-select.tsx",
+  "components/groups/group-teacher-select.tsx",
+  "components/groups/group-room-select.tsx",
+  "components/groups/group-days-picker.tsx",
+  "components/groups/group-lesson-duration-select.tsx",
+  "components/groups/lesson-date-select.tsx",
+  "components/groups/select-empty-state.tsx",
+  "components/groups/group-form-empty-hints.ts",
+  "lib/lesson-dates.ts",
+  "lib/schemas/group-schema.ts",
 ];
 
 function walk(dir: string): string[] {

@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { useT } from "@/i18n/context";
 
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
@@ -22,12 +23,13 @@ export function GroupLevelSelect({
   onChange,
   error,
 }: GroupLevelSelectProps) {
+  const t = useT();
   return (
     <div className="space-y-2">
-      <Label>Daraja</Label>
+      <Label>{t("Daraja")}</Label>
       <Select value={value || ""} onValueChange={onChange}>
         <SelectTrigger className="w-full">
-          <SelectValue placeholder="Darajani tanlang" />
+          <SelectValue placeholder={t("Darajani tanlang")} />
         </SelectTrigger>
         <SelectContent
           position="popper"

@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useEditGroup } from "@/hooks/use-edit-group";
+import { useT } from "@/i18n/context";
 import { EditGroupForm } from "./edit-group-form";
 import type { GroupData } from "@/hooks/use-edit-group";
 
@@ -18,6 +19,7 @@ interface EditGroupDrawerProps {
 }
 
 export function EditGroupDrawer({ onSaved }: EditGroupDrawerProps) {
+  const t = useT();
   const { open, mode, group, submitting, hasConflict, closeDrawer } = useEditGroup();
   const isAdd = mode === "add";
 
@@ -32,12 +34,12 @@ export function EditGroupDrawer({ onSaved }: EditGroupDrawerProps) {
       >
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle className="text-lg">
-            {isAdd ? "Yangi guruh qo'shish" : "Guruhni tahrirlash"}
+            {isAdd ? t("Yangi guruh qo'shish") : t("Guruhni tahrirlash")}
           </SheetTitle>
           <SheetDescription>
             {isAdd
-              ? "Yangi guruh ma'lumotlarini kiriting"
-              : "Guruh ma'lumotlarini o'zgartirish"}
+              ? t("Yangi guruh ma'lumotlarini kiriting")
+              : t("Guruh ma'lumotlarini o'zgartirish")}
           </SheetDescription>
         </SheetHeader>
 
@@ -54,10 +56,10 @@ export function EditGroupDrawer({ onSaved }: EditGroupDrawerProps) {
         <SheetFooter className="border-t px-6 py-4">
           <div className="flex w-full justify-end gap-3">
             <Button type="button" variant="outline" onClick={closeDrawer}>
-              Bekor qilish
+              {t("Bekor qilish")}
             </Button>
             <Button type="submit" form="edit-group-form" disabled={submitting || hasConflict}>
-              {submitting ? "Saqlanmoqda..." : isAdd ? "Qo'shish" : "Saqlash"}
+              {submitting ? t("Saqlanmoqda...") : isAdd ? t("Qo'shish") : t("Saqlash")}
             </Button>
           </div>
         </SheetFooter>

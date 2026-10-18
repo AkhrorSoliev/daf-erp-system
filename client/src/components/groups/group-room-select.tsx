@@ -10,6 +10,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/context";
 import type { AvailableRoom } from "@/hooks/use-schedule-availability";
 
 interface GroupRoomSelectProps {
@@ -25,6 +26,7 @@ export function GroupRoomSelect({
   rooms,
   emptyState,
 }: GroupRoomSelectProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -47,7 +49,7 @@ export function GroupRoomSelect({
     return (
       emptyState ?? (
         <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-sm">
-          Hozircha xona yo&apos;q
+          {t("Hozircha xona yo'q")}
         </p>
       )
     );
@@ -75,7 +77,7 @@ export function GroupRoomSelect({
                 {selectedRoom.capacity ? ` (${selectedRoom.capacity})` : ""}
               </span>
             ) : (
-              "Xonani tanlang"
+              t("Xonani tanlang")
             )}
             <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
           </Button>
@@ -97,7 +99,7 @@ export function GroupRoomSelect({
           <div className="relative">
             <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
             <Input
-              placeholder="Qidirish..."
+              placeholder={t("Qidirish...")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8"
@@ -131,7 +133,7 @@ export function GroupRoomSelect({
                 </span>
                 {!r.available && r.busyGroup && (
                   <span className="text-[10px] text-muted-foreground shrink-0">
-                    {r.busyGroup} band
+                    {t("{group} band", { group: r.busyGroup })}
                   </span>
                 )}
               </button>
@@ -139,7 +141,7 @@ export function GroupRoomSelect({
           })}
           {filteredRooms.length === 0 && (
             <p className="text-muted-foreground px-2 py-1.5 text-sm">
-              Xonalar topilmadi
+              {t("Xonalar topilmadi")}
             </p>
           )}
         </div>

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import {
   Select,
   SelectContent,
@@ -12,12 +14,12 @@ import {
 } from "@/components/ui/select";
 
 const WEEKDAYS = [
-  { value: "monday", label: "Du" },
-  { value: "tuesday", label: "Se" },
-  { value: "wednesday", label: "Chor" },
-  { value: "thursday", label: "Pay" },
-  { value: "friday", label: "Ju" },
-  { value: "saturday", label: "Sha" },
+  { value: "monday", label: msg("Du") },
+  { value: "tuesday", label: msg("Se") },
+  { value: "wednesday", label: msg("Chor") },
+  { value: "thursday", label: msg("Pay") },
+  { value: "friday", label: msg("Ju") },
+  { value: "saturday", label: msg("Sha") },
 ];
 
 export const ODD_DAYS = ["monday", "wednesday", "friday"];
@@ -44,11 +46,12 @@ export function GroupDaysPicker({
   onChange,
   error,
 }: GroupDaysPickerProps) {
+  const t = useT();
   const [preset, setPreset] = useState(() => detectDayPreset(value));
 
   return (
     <div className="space-y-2">
-      <Label>Dars kunlari</Label>
+      <Label>{t("Dars kunlari")}</Label>
       <Select
         value={preset}
         onValueChange={(v) => {
@@ -60,16 +63,16 @@ export function GroupDaysPicker({
         }}
       >
         <SelectTrigger className="w-full">
-          <SelectValue placeholder="Kunlarni tanlang" />
+          <SelectValue placeholder={t("Kunlarni tanlang")} />
         </SelectTrigger>
         <SelectContent
           position="popper"
           className="w-(--radix-select-trigger-width)"
         >
-          <SelectItem value="odd">Toq kunlar (Du, Chor, Ju)</SelectItem>
-          <SelectItem value="even">Juft kunlar (Se, Pay, Sha)</SelectItem>
-          <SelectItem value="every">Har kun (Du–Ju)</SelectItem>
-          <SelectItem value="custom">Boshqa</SelectItem>
+          <SelectItem value="odd">{t("Toq kunlar (Du, Chor, Ju)")}</SelectItem>
+          <SelectItem value="even">{t("Juft kunlar (Se, Pay, Sha)")}</SelectItem>
+          <SelectItem value="every">{t("Har kun (Du–Ju)")}</SelectItem>
+          <SelectItem value="custom">{t("Boshqa")}</SelectItem>
         </SelectContent>
       </Select>
 
@@ -93,7 +96,7 @@ export function GroupDaysPicker({
                     );
                   }}
                 />
-                {day.label}
+                {t(day.label)}
               </label>
             );
           })}

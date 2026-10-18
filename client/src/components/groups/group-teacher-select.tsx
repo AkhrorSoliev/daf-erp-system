@@ -11,6 +11,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/context";
 import type { AvailableTeacher } from "@/hooks/use-schedule-availability";
 
 interface GroupTeacherSelectProps {
@@ -26,19 +27,20 @@ export function GroupTeacherSelect({
   teachers,
   emptyState,
 }: GroupTeacherSelectProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
   const selectedTeacher = useMemo(
-    () => teachers.find((t) => t.id === value),
+    () => teachers.find((x) => x.id === value),
     [teachers, value],
   );
 
   const filteredTeachers = useMemo(
     () =>
       search.trim()
-        ? teachers.filter((t) =>
-            `${t.firstName} ${t.lastName}`
+        ? teachers.filter((x) =>
+            `${x.firstName} ${x.lastName}`
               .toLowerCase()
               .includes(search.toLowerCase()),
           )
@@ -50,7 +52,7 @@ export function GroupTeacherSelect({
     return (
       emptyState ?? (
         <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-sm">
-          Hozircha o&apos;qituvchi yo&apos;q
+          {t("Hozircha o'qituvchi yo'q")}
         </p>
       )
     );
@@ -88,7 +90,7 @@ export function GroupTeacherSelect({
                 {selectedTeacher.firstName} {selectedTeacher.lastName}
               </span>
             ) : (
-              "O'qituvchini tanlang"
+              t("O'qituvchini tanlang")
             )}
             <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
           </Button>
@@ -110,7 +112,7 @@ export function GroupTeacherSelect({
           <div className="relative">
             <Search className="text-muted-foreground absolute top-2.5 left-2.5 size-4" />
             <Input
-              placeholder="Qidirish..."
+              placeholder={t("Qidirish...")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8"
@@ -118,37 +120,37 @@ export function GroupTeacherSelect({
           </div>
         </div>
         <div className="max-h-52 space-y-1 overflow-y-auto overscroll-contain p-2">
-          {filteredTeachers.map((t) => {
-            const isSelected = value === t.id;
-            const fullName = `${t.firstName} ${t.lastName}`;
+          {filteredTeachers.map((tc) => {
+            const isSelected = value === tc.id;
+            const fullName = `${tc.firstName} ${tc.lastName}`;
             const initials =
-              `${t.firstName[0] ?? ""}${t.lastName[0] ?? ""}`.toUpperCase();
+              `${tc.firstName[0] ?? ""}${tc.lastName[0] ?? ""}`.toUpperCase();
             return (
               <button
-                key={t.id}
+                key={tc.id}
                 type="button"
-                disabled={!t.available}
+                disabled={!tc.available}
                 onClick={() => {
-                  if (!t.available) return;
-                  onChange(isSelected ? undefined : t.id);
+                  if (!tc.available) return;
+                  onChange(isSelected ? undefined : tc.id);
                   setOpen(false);
                   setSearch("");
                 }}
                 className={cn(
                   "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm",
-                  !t.available && "opacity-50 cursor-not-allowed",
-                  t.available && "hover:bg-accent",
+                  !tc.available && "opacity-50 cursor-not-allowed",
+                  tc.available && "hover:bg-accent",
                   isSelected && "bg-accent",
                 )}
               >
                 <Avatar size="sm">
-                  {t.photo && <AvatarImage src={t.photo} alt={fullName} />}
+                  {tc.photo && <AvatarImage src={tc.photo} alt={fullName} />}
                   <AvatarFallback>{initials}</AvatarFallback>
                 </Avatar>
                 <span className="truncate flex-1 text-left">{fullName}</span>
-                {!t.available && t.busyGroup && (
+                {!tc.available && tc.busyGroup && (
                   <span className="text-[10px] text-muted-foreground shrink-0">
-                    {t.busyGroup}
+                    {tc.busyGroup}
                   </span>
                 )}
               </button>
@@ -156,7 +158,7 @@ export function GroupTeacherSelect({
           })}
           {filteredTeachers.length === 0 && (
             <p className="text-muted-foreground px-2 py-1.5 text-sm">
-              O&apos;qituvchilar topilmadi
+              {t("O'qituvchilar topilmadi")}
             </p>
           )}
         </div>

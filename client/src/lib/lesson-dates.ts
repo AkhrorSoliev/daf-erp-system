@@ -4,6 +4,8 @@
  * falls between (inclusive) `groupStartDate`/`groupEndDate`.
  */
 
+import { msg } from "@/i18n/msg";
+
 const WEEKDAY_INDEX: Record<string, number> = {
   // JS Date.getDay(): 0=Sun, 1=Mon, ..., 6=Sat
   sunday: 0,
@@ -16,13 +18,13 @@ const WEEKDAY_INDEX: Record<string, number> = {
 };
 
 const WEEKDAY_LABEL_FULL: Record<number, string> = {
-  0: "Yakshanba",
-  1: "Dushanba",
-  2: "Seshanba",
-  3: "Chorshanba",
-  4: "Payshanba",
-  5: "Juma",
-  6: "Shanba",
+  0: msg("Yakshanba"),
+  1: msg("Dushanba"),
+  2: msg("Seshanba"),
+  3: msg("Chorshanba"),
+  4: msg("Payshanba"),
+  5: msg("Juma"),
+  6: msg("Shanba"),
 };
 
 export function getLessonDatesInRange(opts: {
@@ -67,8 +69,10 @@ function stripTime(d: Date): Date {
   return out;
 }
 
-export function fullWeekdayLabel(date: Date): string {
-  return WEEKDAY_LABEL_FULL[date.getDay()] ?? "";
+/** The Uzbek day name; a page passes its `t` to get it in the page language. */
+export function fullWeekdayLabel(date: Date, t: (source: string) => string = (source) => source): string {
+  const label = WEEKDAY_LABEL_FULL[date.getDay()];
+  return label ? t(label) : "";
 }
 
 export interface LessonDateOption {
