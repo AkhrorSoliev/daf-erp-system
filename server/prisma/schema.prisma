@@ -770,6 +770,8 @@ model Student {
   paymentPromises   PaymentPromise[]
   dafAttempts       DafAttempt[]
   dafStudentDays    DafStudentDay[]
+  dafSetting        DafStudentSetting?
+  dafBadges         DafStudentBadge[]
   appSessions       StudentAppSession[]
   dafLexemeStates   DafLexemeState[]
   dafLessonProgress DafLessonProgress[]
@@ -4313,6 +4315,40 @@ model DafStudentDay {
   @@unique([studentId, day, groupKey])
   @@index([companyId, day])
   @@index([groupKey, day])
+}
+
+/// Kunlik maqsad darajasi. Ballari kodda (`src/daf/uebung/punkte.ts`,
+/// `MAQSAD_BALL`), shuning uchun ularni o'zgartirish deploy bilan.
+enum DafDailyGoal {
+  YENGIL
+  ORTA
+  JIDDIY
+}
+
+/// The student's own choice — NOT derived, cannot be rebuilt (ADR-0115).
+/// No row = ORTA. Written by `PATCH student-portal/lernen/maqsad` (upsert).
+model DafStudentSetting {
+  studentId Int          @id
+  companyId Int
+  dailyGoal DafDailyGoal @default(ORTA)
+  updatedAt DateTime     @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id])
+}
+
+/// A badge the student earned: given once, NEVER taken back (ADR-0115).
+/// Only the catalogue key is stored (`src/daf/nishon/nishon-katalogi.ts`).
+/// One writer: `grantBadges` (`src/daf/nishon/nishon-berish.ts`).
+model DafStudentBadge {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  companyId Int
+  key       String
+  earnedAt  DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, key])
 }
 
 /// Bitta mashq seansi. Klient uuid yaratadi; server birinchi urinishda

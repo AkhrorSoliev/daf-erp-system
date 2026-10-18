@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
-import { Prisma } from '@prisma/client';
+import { DafDailyGoal, Prisma } from '@prisma/client';
 
 /**
  * Sxema qarorlarini qo'riqlaydigan testlar.
@@ -98,6 +98,34 @@ describe('Daf sxemasi', () => {
         join(__dirname, '..', '..', 'scripts', 'rebuild-daf-student-day.ts'),
       ),
     ).toBe(true);
+  });
+
+  // S2 (ADR-0115). The goal is the student's CHOICE — it cannot be rebuilt
+  // from attempts, so it is stored; one row per student. A badge is earned
+  // once and never taken back: one row per (student, key), and no column
+  // that could revoke it.
+  it('DafStudentSetting is one row per student, DafStudentBadge one per key', () => {
+    const schema = readFileSync(
+      join(__dirname, '..', '..', 'prisma', 'schema.prisma'),
+      'utf8',
+    );
+    const body = (name: string) => {
+      const start = schema.indexOf(`model ${name} {`);
+      expect(start).toBeGreaterThan(-1);
+      const block = schema.slice(start);
+      return block.slice(0, block.indexOf('\n}'));
+    };
+    expect(body('DafStudentSetting')).toMatch(/studentId\s+Int\s+@id/);
+    expect(body('DafStudentSetting')).toMatch(
+      /dailyGoal\s+DafDailyGoal\s+@default\(ORTA\)/,
+    );
+    expect(body('DafStudentBadge')).toMatch(/@@unique\(\[studentId, key\]\)/);
+    expect(fieldsOf('DafStudentBadge')).not.toContain('revokedAt');
+    expect(DafDailyGoal).toEqual({
+      YENGIL: 'YENGIL',
+      ORTA: 'ORTA',
+      JIDDIY: 'JIDDIY',
+    });
   });
 });
 
