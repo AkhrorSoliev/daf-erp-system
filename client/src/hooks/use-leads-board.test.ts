@@ -184,12 +184,14 @@ describe("leadConvertedLabel", () => {
     expect(leadConvertedLabel("CONVERTED", null)).toBe("O'quvchiga aylangan");
     expect(leadConvertedLabel("CONVERTED", "LINKED_TO_EXISTING")).toBe("Mavjud o'quvchiga biriktirilgan");
     expect(leadConvertedLabel("LOST", null)).toBe("Yo'qotilgan");
+    expect(leadConvertedLabel("NEW", null)).toBe("Yangi lid");
   });
 
-  it("translates the converted texts and leaves other statuses to their own label", () => {
+  it("translates the converted texts and every other status label", () => {
     expect(leadConvertedLabel("CONVERTED", null, up)).toBe("O'QUVCHIGA AYLANGAN");
     expect(leadConvertedLabel("CONVERTED", "LINKED_TO_EXISTING", up)).toBe("MAVJUD O'QUVCHIGA BIRIKTIRILGAN");
-    expect(leadConvertedLabel("LOST", null, up)).toBe("Yo'qotilgan");
+    expect(leadConvertedLabel("LOST", null, up)).toBe("YO'QOTILGAN");
+    expect(leadConvertedLabel("NEW", "LINKED_TO_EXISTING", up)).toBe("YANGI LID");
   });
 });
 

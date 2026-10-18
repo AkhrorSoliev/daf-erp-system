@@ -1,9 +1,11 @@
+import { useEffect } from "react";
 import { create } from "zustand";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { registerBranchScopedStore } from "@/lib/branch-scoped-stores";
 import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/use-t";
 import type { LeadOwner } from "@/components/leads/ownership/ownership-format";
 
 // ---------------------------------------------------------------------------
@@ -91,16 +93,17 @@ export const LEAD_LINKED_REASON = "LINKED_TO_EXISTING";
 
 /**
  * Display label for a CONVERTED lead, distinguishing "linked to an existing
- * student" from a fresh conversion. Falls back to the plain converted label for
- * any other status.
+ * student" from a fresh conversion. Any other status gets its own label.
  */
 export function leadConvertedLabel(
   statusEnum: LeadStatus,
   statusChangeReason: string | null | undefined,
   t: (source: string) => string = (source) => source,
 ): string {
-  // The other statuses come back untranslated (their callers draw them).
-  if (statusEnum !== "CONVERTED") return LEAD_STATUS_LABELS[statusEnum];
+  if (statusEnum !== "CONVERTED") {
+    const label = LEAD_STATUS_LABELS[statusEnum];
+    return t(label);
+  }
   return statusChangeReason === LEAD_LINKED_REASON
     ? t("Mavjud o'quvchiga biriktirilgan")
     : t("O'quvchiga aylangan");
@@ -123,11 +126,16 @@ export function leadColumnName(
     : column.name;
 }
 
-// The store's own toast fallbacks are msg() texts; a page that draws the board
-// hands its `t` in with setLeadsBoardTranslator (identity until then).
+// The store's own toast fallbacks are msg() texts; every page root that drives
+// the store calls useLeadsBoardTranslator() to hand its `t` in (identity until
+// then, and on the server, which never runs effects).
 let translate: (source: string) => string = (source) => source;
 export function setLeadsBoardTranslator(fn: (source: string) => string): void {
   translate = fn;
+}
+export function useLeadsBoardTranslator(): void {
+  const t = useT();
+  useEffect(() => setLeadsBoardTranslator(t), [t]);
 }
 const fail = (error: unknown, fallback: string) =>
   toast.error(getErrorMessage(error, translate(fallback)));
@@ -263,7 +271,7 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       set({ board: data, loadingBoard: false });
     } catch (error) {
       set({ loadingBoard: false });
-      fail(error, msg("Lidlar boardini yuklashda xatolik"));
+      fail(error, msg("Lidlar doskasini yuklashda xatolik"));
     }
   },
 

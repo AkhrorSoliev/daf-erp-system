@@ -39,7 +39,11 @@ import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
-import { leadColumnName, useLeadsBoard } from "@/hooks/use-leads-board";
+import {
+  leadColumnName,
+  useLeadsBoard,
+  useLeadsBoardTranslator,
+} from "@/hooks/use-leads-board";
 import {
   customFormError,
   customFormSchema,
@@ -69,6 +73,7 @@ interface Props {
 
 export function FormBuilderClient({ formId }: Props) {
   const t = useT();
+  useLeadsBoardTranslator();
   // The load effect reads t from here: a language switch must not refetch.
   const tRef = useRef(t);
   useEffect(() => {
@@ -140,7 +145,6 @@ export function FormBuilderClient({ formId }: Props) {
 
   useEffect(() => {
     if (!formId) return;
-    const t = tRef.current;
     setLoading(true);
     api
       .get<CustomFormDetail>(`/custom-forms/${formId}`)
@@ -156,6 +160,7 @@ export function FormBuilderClient({ formId }: Props) {
         });
       })
       .catch((error) => {
+        const t = tRef.current;
         toast.error(getErrorMessage(error, t("Formani yuklashda xatolik")));
         router.push("/leads/forms");
       })

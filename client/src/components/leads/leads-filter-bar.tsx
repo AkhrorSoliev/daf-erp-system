@@ -20,7 +20,7 @@ import {
   type MultiSelectOption,
 } from "@/components/ui/multi-select-combobox";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
-import { useLeadsBoard } from "@/hooks/use-leads-board";
+import { leadColumnName, useLeadsBoard } from "@/hooks/use-leads-board";
 import {
   CLEARED_LEAD_FILTERS,
   LEAD_FILTER_SCHEMA,
@@ -147,7 +147,7 @@ export function LeadsFilterBar() {
       />
 
       <MultiSelectCombobox
-        options={columns.map((x) => ({ value: x.id, label: x.name }))}
+        options={columns.map((x) => ({ value: x.id, label: leadColumnName(x, t) }))}
         selected={filters.columnId}
         onChange={(next) => setFilters({ columnId: next, page: 1 })}
         placeholder={t("Barcha ustunlar")}

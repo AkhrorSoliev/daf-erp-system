@@ -45,7 +45,6 @@ import {
   LEAD_STATUS_LABELS,
   leadColumnName,
   leadConvertedLabel,
-  setLeadsBoardTranslator,
   useLeadsBoard,
   type LeadCard,
   type LeadStatus,
@@ -326,9 +325,6 @@ export function LeadDetailDrawer() {
   const tRef = useRef(t);
   useEffect(() => {
     tRef.current = t;
-    // This drawer is mounted on every page that drives the board store (the
-    // board and a form's responses), so it hands the store its toast language.
-    setLeadsBoardTranslator(t);
   }, [t]);
   const leadId = useLeadsUi((s) => s.detailLeadId);
   const closeLeadDetail = useLeadsUi((s) => s.closeLeadDetail);

@@ -3065,7 +3065,7 @@ const de: Dictionary = {
   "Jami: {n} ta lid": "Leads insgesamt: {n}",
   // Leads — detail, add and edit drawers, board store toasts
   "Yangi Lidlar": "Neue Leads",
-  "Lidlar boardini yuklashda xatolik": "Fehler beim Laden des Lead-Boards",
+  "Lidlar doskasini yuklashda xatolik": "Fehler beim Laden des Lead-Boards",
   "Ustun tartibini o'zgartirishda xatolik": "Spaltenreihenfolge konnte nicht geändert werden",
   "Bo'lim tartibini o'zgartirishda xatolik": "Abschnittsreihenfolge konnte nicht geändert werden",
   "Bo'limni ko'chirishda xatolik": "Abschnitt konnte nicht verschoben werden",
@@ -3352,7 +3352,7 @@ const de: Dictionary = {
   "{n} ta javob yuklab olindi": "Heruntergeladene Antworten: {n}",
   "CSV tayyorlashda xatolik": "Fehler beim Erstellen der CSV-Datei",
   "Qo'ng'iroq belgisi olib tashlandi": "Anrufvermerk entfernt",
-  "Telefon qildim": "Angerufen",
+  "Telefon qildim": "Als angerufen markieren",
   "Qo'ng'iroq belgisini olib tashlash": "Anrufvermerk entfernen",
   "Javoblarni yuklab bo'lmadi": "Antworten konnten nicht geladen werden",
   "Hammaga qo'ng'iroq qilindi": "Alle wurden angerufen",
@@ -3368,12 +3368,14 @@ const de: Dictionary = {
   "Manbasiz": "Ohne Quelle",
   "Filtr": "Filter",
   "Ism yoki telefon...": "Name oder Telefon...",
-  "Takroriy": "Wiederholt",
+  "Takroriy": "Wiederkehrend",
   "Bu telefon avval ham lid bo'lgan": "Diese Telefonnummer war schon einmal ein Lead",
   "O'quvchi bo'ldi → #{id}": "Teilnehmer geworden → #{id}",
   "Lid o'chirilgan": "Lead gelöscht",
   "Yo'qotilgan: «{reason}»": "Verloren: „{reason}“",
   "Lidni ochish": "Lead öffnen",
+  // Leads — forms list load error
+  "Formalarni yuklashda xatolik": "Fehler beim Laden der Formulare",
 
 };
 

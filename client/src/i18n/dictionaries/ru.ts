@@ -3065,8 +3065,8 @@ const ru: Dictionary = {
   "Jami: {n} ta lid": "Всего лидов: {n}",
   // Leads — detail, add and edit drawers, board store toasts
   "Yangi Lidlar": "Новые лиды",
-  "Lidlar boardini yuklashda xatolik": "Ошибка при загрузке доски лидов",
-  "Ustun tartibini o'zgartirishda xatolik": "Не удалось изменить порядок столбцов",
+  "Lidlar doskasini yuklashda xatolik": "Ошибка при загрузке доски лидов",
+  "Ustun tartibini o'zgartirishda xatolik": "Не удалось изменить порядок колонок",
   "Bo'lim tartibini o'zgartirishda xatolik": "Не удалось изменить порядок разделов",
   "Bo'limni ko'chirishda xatolik": "Не удалось переместить раздел",
   "Lidni ko'chirishda xatolik": "Не удалось переместить лид",
@@ -3102,7 +3102,7 @@ const ru: Dictionary = {
   "Yangi lid qo'shish": "Добавить новый лид",
   "Potensial o'quvchi ma'lumotlarini kiriting": "Введите данные потенциального ученика",
   "Avval bo'lim yarating": "Сначала создайте раздел",
-  "Lid qo'shish uchun ustunlardan birida kamida bitta bo'lim bo'lishi kerak.": "Чтобы добавить лид, хотя бы в одном столбце должен быть раздел.",
+  "Lid qo'shish uchun ustunlardan birida kamida bitta bo'lim bo'lishi kerak.": "Чтобы добавить лид, хотя бы в одной колонке должен быть раздел.",
   "Ism kiritilishi shart": "Введите имя",
   "Familiya kiritilishi shart": "Введите фамилию",
   "Telefon raqami": "Номер телефона",
@@ -3352,7 +3352,7 @@ const ru: Dictionary = {
   "{n} ta javob yuklab olindi": "Скачано ответов: {n}",
   "CSV tayyorlashda xatolik": "Ошибка при подготовке CSV",
   "Qo'ng'iroq belgisi olib tashlandi": "Отметка о звонке снята",
-  "Telefon qildim": "Звонок сделан",
+  "Telefon qildim": "Отметить звонок",
   "Qo'ng'iroq belgisini olib tashlash": "Снять отметку о звонке",
   "Javoblarni yuklab bo'lmadi": "Не удалось загрузить ответы",
   "Hammaga qo'ng'iroq qilindi": "Всем уже позвонили",
@@ -3368,12 +3368,14 @@ const ru: Dictionary = {
   "Manbasiz": "Без источника",
   "Filtr": "Фильтр",
   "Ism yoki telefon...": "Имя или телефон...",
-  "Takroriy": "Повтор",
+  "Takroriy": "Повторный",
   "Bu telefon avval ham lid bo'lgan": "Этот телефон уже был лидом",
   "O'quvchi bo'ldi → #{id}": "Теперь ученик → #{id}",
   "Lid o'chirilgan": "Лид удалён",
   "Yo'qotilgan: «{reason}»": "Потерян: «{reason}»",
   "Lidni ochish": "Открыть лид",
+  // Leads — forms list load error
+  "Formalarni yuklashda xatolik": "Ошибка при загрузке форм",
 
 };
 

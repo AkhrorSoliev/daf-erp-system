@@ -169,7 +169,7 @@ export function LeadColumn({
             variant="ghost"
             size="sm"
             className="h-7 px-2 text-xs"
-            onClick={() => openCreateSection(column.id, column.name)}
+            onClick={() => openCreateSection(column.id, leadColumnName(column, t))}
           >
             <FolderPlus className="size-3.5" />
             {t("Bo'lim")}
@@ -246,7 +246,7 @@ export function LeadColumn({
               variant="outline"
               size="sm"
               data-tour="lead-section-add"
-              onClick={() => openCreateSection(column.id, column.name)}
+              onClick={() => openCreateSection(column.id, leadColumnName(column, t))}
             >
               <FolderPlus className="size-3.5" />
               {t("Birinchi bo'limni yarating")}

@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Archive, Columns3, FileEdit, Megaphone, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import { useLeadsBoard } from "@/hooks/use-leads-board";
+import { useLeadsBoard, useLeadsBoardTranslator } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
 import { useT } from "@/i18n/context";
 import { LEAD_FILTER_SCHEMA, leadFiltersActive } from "./lead-filter-schema";
@@ -29,6 +29,7 @@ import { LeadOwnersStrip } from "./ownership/lead-owners-strip";
 
 export function LeadsBoardClient() {
   const t = useT();
+  useLeadsBoardTranslator();
   const fetchBoard = useLeadsBoard((s) => s.fetchBoard);
   const openAddLead = useLeadsUi((s) => s.openAddLead);
   const openCreateColumn = useLeadsUi((s) => s.openCreateColumn);

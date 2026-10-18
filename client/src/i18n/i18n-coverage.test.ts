@@ -233,6 +233,7 @@ export const STRICT_FILES: string[] = [
   "components/students/student-mock-exams-tab.tsx",
   "lib/weekdays.ts",
   "hooks/use-leads-board.ts",
+  "hooks/use-custom-forms.ts",
   "components/students/enroll-to-group-dialog.tsx",
   "components/students/enroll-preview-block.tsx",
   "components/students/student-remove-from-group-dialog.tsx",
