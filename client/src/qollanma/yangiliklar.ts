@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-18",
+    sarlavha: "Sozlamalar tartibga keltirildi",
+    matn: "Sozlamalar sahifasi endi mavzu bo'yicha: Markaz, Jamoa va ruxsatlar, O'quv jarayoni, To'lov va lidlar, Telegram va arxiv. Ko'p sahifa ko'rinadigan rolda tepada qidiruv bor («/» tugmasi ham ishlaydi). Kichik sozlamalar bir sahifaga yig'ildi: «O'quv qoidalari» (avtomatik pauza, DaF normasi, qatnashganlik hujjati), «Lidlar va KPI» (lidlar egaligi, KPI narxlari) va «Telegram» (guruhlar va kunlik hisobot varaqlari). Eski havolalar o'zi yangi joyga olib boradi; kim nimani o'zgartira olishi avvalgidek.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "boshlash", sahifa: "interfeys" },
+  },
+  {
+    sana: "2026-10-18",
     sarlavha: "Marketing kanal bo'yicha: bitta o'quvchi qancha turadi",
     matn: "Marketing xarajatini yozayotganda endi «Kanal» tanlanadi (Instagram, Telegram, tavsiya...). Hisobotlar → «Marketing» sahifasining tepasida «Kanallar bo'yicha» jadvali paydo bo'ldi: har kanal uchun sarf, lid, o'quvchi bo'lganlar, bitta o'quvchi narxi, ular hozirgacha to'lagan pul va samara. Butun markaz bo'yicha jami pastga tushdi. Kanal belgilanmagan sarf «Hammasi» qatorida bor, lekin birorta kanalga kirmaydi; ilgari yozilgan xarajatlar «Umumiy» bo'lib qolgan, kanalini «Tahrirlash» orqali qo'yish mumkin.",
     rollar: [1, 2],

@@ -93,9 +93,9 @@ export const hisobotlar: QollanmaSahifa[] = [
       "Administrator egasi bo'lgan lid birinchi to'lovni qilganda va u yozgan to'lov va'dasi bajarilganda natija yoziladi. CEO va filial direktori kim qancha natija qilganini, o'sish va kamayishni shu sahifada ko'radi. Hozir kuzatuv: pul berilmaydi.",
     rollar: [1, 2],
     adr: ["0096", "0093"],
-    yollar: ["/reports/xodimlar-kpi", "/settings/kpi"],
+    yollar: ["/reports/xodimlar-kpi", "/settings/leads-kpi"],
     kalitSozlar: ["KPI", "xodim natijasi", "administrator", "lid to'lov qildi", "va'da bajarildi", "mukofot", "kuzatuv"],
-    yangilangan: "2026-10-17",
+    yangilangan: "2026-10-18",
   },
   {
     bolim: "hisobotlar",
@@ -105,8 +105,8 @@ export const hisobotlar: QollanmaSahifa[] = [
       "Kunlik hisobot CEO tanlagan xodimlarning shaxsiy Telegram chatiga, har biriga o'z vaqti, filiallari, bo'limlari va ko'rinishi bilan boradi.",
     rollar: [1],
     adr: ["0095", "0097"],
-    yollar: ["/settings/telegram-report"],
+    yollar: ["/settings/telegram"],
     kalitSozlar: ["telegram", "kunlik hisobot", "shaxsiy hisobot", "bot", "hisobot vaqti", "filial", "jadval"],
-    yangilangan: "2026-10-17",
+    yangilangan: "2026-10-18",
   },
 ];

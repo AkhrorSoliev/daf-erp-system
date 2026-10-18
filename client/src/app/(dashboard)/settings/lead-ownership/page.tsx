@@ -1,10 +1,6 @@
-import { Suspense } from "react";
-import { LeadOwnershipSettingsClient } from "@/components/settings/lead-ownership-settings-client";
+import { redirect } from "next/navigation";
 
-export default function LeadOwnershipSettingsPage() {
-  return (
-    <Suspense>
-      <LeadOwnershipSettingsClient />
-    </Suspense>
-  );
+// Eski manzil: sahifa «Lidlar va KPI» ga qo'shildi.
+export default function LeadOwnershipRedirect() {
+  redirect("/settings/leads-kpi#lidlar");
 }

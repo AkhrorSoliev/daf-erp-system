@@ -181,7 +181,7 @@ export const oquvchilar: QollanmaSahifa[] = [
       "muzlatilgan puli",
       "qaytgan kun",
     ],
-    yangilangan: "2026-10-10",
+    yangilangan: "2026-10-18",
   },
   {
     bolim: "oquvchilar",
@@ -286,9 +286,9 @@ export const oquvchilar: QollanmaSahifa[] = [
       "Administrator lidni «Band qilish» bilan oladi va band qilingan lidni boshqasi ololmaydi. Muddatida qo'ng'iroq, izoh yoki topshiriq bo'lmasa, lid umumiy ro'yxatga o'zi qaytadi; CEO va filial direktori lidni boshqa xodimga beradi.",
     rollar: [1, 2, 3, 5],
     adr: ["0093"],
-    yollar: ["/leads", "/settings/lead-ownership"],
+    yollar: ["/leads", "/settings/leads-kpi"],
     kalitSozlar: ["lid", "band qilish", "mas'ul", "lid egasi", "muddat", "KPI"],
-    yangilangan: "2026-10-16",
+    yangilangan: "2026-10-18",
   },
   {
     bolim: "oquvchilar",
@@ -298,8 +298,8 @@ export const oquvchilar: QollanmaSahifa[] = [
       "O'quvchi darajani tugatgach, «Hujjatlar» tabidan qatnashganlik hujjati beriladi: davomat kamida 80% va kamida 20 ta dars bo'lishi, kech qolish 20% dan oshmasligi, yakuniy sinovlardan o'tgan va qarzi yo'q bo'lishi kerak; ilovada ochiq dars bo'lsa, u ham tugatilgan bo'lishi kerak. Hujjatda QR bor, u hujjat haqiqiyligini ko'rsatadi.",
     rollar: [1, 2, 3],
     adr: ["0100", "0104", "0107"],
-    yollar: ["/students/profile/*", "/settings/participation"],
+    yollar: ["/students/profile/*", "/settings/rules"],
     kalitSozlar: ["hujjat", "qatnashganlik", "daraja", "davomat", "QR", "PDF", "istisno"],
-    yangilangan: "2026-10-17",
+    yangilangan: "2026-10-18",
   },
 ];
