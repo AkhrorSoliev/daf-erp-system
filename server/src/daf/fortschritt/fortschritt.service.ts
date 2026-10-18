@@ -7,11 +7,15 @@ import {
 } from '../../common/date/tashkent';
 import { currentGroupId } from '../shared/student-scope';
 import {
+  maqsadDarajasi,
+  maqsadHolati,
   serieAus,
   stufeFuer,
   wochenStartTag,
   wochenStartUtc,
+  type MaqsadHolati,
 } from '../uebung/punkte';
+import { bugunBoshmi } from './maqsad';
 
 export interface Fortschritt {
   gesamt: number;
@@ -30,6 +34,8 @@ export interface Fortschritt {
    * javob beradi — taxmin emas.
    */
   faelligeWoerter: number;
+  /** Kunlik maqsad (spec S2 1.3): daraja, maqsad balli, bugungi ball, holat. */
+  maqsad: MaqsadHolati;
 }
 
 export interface ReytingZeile {
@@ -61,6 +67,9 @@ interface OquvchiRaqamlari {
   gesamt: number;
   tage: string[];
   heuteAttempts: number;
+  heutePunkte: number;
+  /** `DafStudentSetting.dailyGoal`, qator yo'q bo'lsa `null`. */
+  dailyGoal: string | null;
 }
 
 /** Haftalik jadvaldan qaytadigan bitta qatorning umumlashgan shakli. */
@@ -171,14 +180,15 @@ export class FortschrittService {
     // Hamma so'rov BIR bosqichda: 50 o'quvchi bir vaqtda kelganda har
     // ketma-ket bosqich ulanishlar navbatiga qaytadan turadi (S1 yuklama
     // sinovi). Guruh zanjiri faqat `groupId` ga bog'liq.
-    const [faelligeWoerter, oz, wochePlatzGruppe] = await Promise.all([
+    const faelligeP = this.prisma.dafLexemeState.count({
+      where: { studentId, dueAt: { lte: hozir } },
+    } as any);
+    const [faelligeWoerter, oz, wochePlatzGruppe, bosh] = await Promise.all([
       // `uebung.wiederholung()` bilan BIR XIL predikat (`dueAt <= hozir`)
       // — bu shu o'quvchi uchun so'ragan `student`ga tegishli qatorlar
       // ustida ishlaydi, deyarli bepul (`DafLexemeState` studentId bo'yicha
       // indekslangan).
-      this.prisma.dafLexemeState.count({
-        where: { studentId, dueAt: { lte: hozir } },
-      } as any),
+      faelligeP,
       // Markaz o'rni `zentrumHaftaCte` orqali hisoblanadi — xuddi shu
       // bo'lak `reyting('zentrum')` jadvalini quradi. Guruh uchun
       // qilingan tuzatish (pastdagi izohga qarang) markazga tegishli emas
@@ -202,6 +212,10 @@ export class FortschrittService {
       // populyatsiyasi bilan hisoblangan eski versiya butun rosterni
       // emas, faqat urinish qilganlarni ko'rgan).
       this.gruppePlatz(studentId, companyId, montag),
+      // Kam yo'l: so'z bor bo'lsa so'rovsiz `false` (spec S2 1.3); so'z yo'q
+      // bo'lsa dars so'rovi sanash bilan ketma-ket, lekin qolgan so'rovlar
+      // bilan PARALLEL — kritik yo'l uzaymaydi.
+      faelligeP.then((n) => bugunBoshmi(this.prisma, studentId, n)),
     ]);
 
     const gesamt = oz.gesamt;
@@ -218,6 +232,7 @@ export class FortschrittService {
       wochePlatzGruppe,
       wochePlatzZentrum: oz.hozir,
       faelligeWoerter,
+      maqsad: maqsadHolati(maqsadDarajasi(oz.dailyGoal), oz.heutePunkte, bosh),
     };
   }
 
@@ -443,6 +458,11 @@ export class FortschrittService {
    *   "mashq qilingan kun" bo'yicha, "tugatilgan seans" emas: seansni
    *   boshlab tugatmagan o'quvchi ham seriyasini saqlaydi.
    * - `heuteAttempts` — bugungi (Toshkent) urinishlar soni.
+   * - `heutePunkte` — bugungi (Toshkent) ball, hamma `groupKey` (kunlik
+   *   maqsad, spec S2 1.1).
+   * - `dailyGoal` — `DafStudentSetting` dagi tanlov yoki `null`. Shu so'rovga
+   *   CTE sifatida qo'shilgan: alohida `findUnique` 50 parallel o'quvchida
+   *   ulanish navbatiga yana bir joy olardi.
    *
    * Guruh tomonidagi `gruppeHaftaligi` tuzatishi markazga ham tegishli:
    * mashq qilmagan o'quvchi ham o'rin oladi, va jadvalda ham shu o'rin
@@ -468,6 +488,10 @@ export class FortschrittService {
         WHERE "studentId" = ${studentId}
       ),
       q AS (SELECT "studentId" AS id, p FROM t WHERE "studentId" = ${studentId}),
+      sozlama AS (
+        SELECT "dailyGoal"::text AS g FROM "DafStudentSetting"
+        WHERE "studentId" = ${studentId}
+      ),
       o AS (SELECT id, p, GREATEST(p - ${minus}::int, 0) AS op FROM q),
       r AS (
         SELECT o.p AS punkte,
@@ -477,14 +501,20 @@ export class FortschrittService {
             AND (t.p > o.op OR (t.p = o.op AND t."studentId" < o.id))))::int AS oldin
         FROM t CROSS JOIN o
         GROUP BY o.id, o.p, o.op
+      ),
+      bugun AS (
+        SELECT COALESCE(SUM(points), 0)::int AS p,
+               COALESCE(SUM(attempts), 0)::int AS a
+        FROM mine WHERE day = ${heuteTag}::date
       )
       SELECT r.punkte, r.hozir, r.oldin,
         (SELECT COALESCE(SUM(points), 0)::int FROM mine) AS gesamt,
         ARRAY(
           SELECT DISTINCT to_char(day, 'YYYY-MM-DD') FROM mine WHERE attempts > 0
         ) AS tage,
-        (SELECT COALESCE(SUM(attempts), 0)::int FROM mine
-          WHERE day = ${heuteTag}::date) AS "heuteAttempts"
+        (SELECT a FROM bugun) AS "heuteAttempts",
+        (SELECT p FROM bugun) AS "heutePunkte",
+        (SELECT g FROM sozlama) AS "dailyGoal"
       FROM r`,
     );
     return satr;

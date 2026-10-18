@@ -19,7 +19,7 @@ export type KunQatori = {
  * the week = the company's rows from the Monday, summed per student, the
  * caller added with 0 when absent, ordered by points DESC then studentId ASC;
  * the lifetime total = all the caller's rows; the streak days = the caller's
- * days with attempts > 0; today's attempts = the caller's rows of today.
+ * days with attempts > 0; today's attempts = the caller's rows of today. Today's points likewise; the goal level is the caller's DafStudentSetting row (null = none).
  *
  * Bound values are read the way the service binds them:
  * `[companyId, montagTag, studentId, …]`, and last the TOP limit (top) or
@@ -28,7 +28,10 @@ export type KunQatori = {
  * The real SQL is checked against a brute-force ranking on the load-test
  * database by `scripts/load/daf-yuklama-paritet.ts`.
  */
-export function zentrumQueryRaw(rows: () => KunQatori[]) {
+export function zentrumQueryRaw(
+  rows: () => KunQatori[],
+  dailyGoal: () => string | null = () => null,
+) {
   return jest.fn((sql: Prisma.Sql) => Promise.resolve(answer(sql)));
 
   function answer(sql: Prisma.Sql): unknown[] {
@@ -70,6 +73,10 @@ export function zentrumQueryRaw(rows: () => KunQatori[]) {
           heuteAttempts: mine
             .filter((r) => r.day === heuteTag)
             .reduce((s, r) => s + r.attempts, 0),
+          heutePunkte: mine
+            .filter((r) => r.day === heuteTag)
+            .reduce((s, r) => s + r.points, 0),
+          dailyGoal: dailyGoal(),
         },
       ];
     }

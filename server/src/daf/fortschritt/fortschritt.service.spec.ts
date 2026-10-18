@@ -1,6 +1,7 @@
 import { FortschrittService } from './fortschritt.service';
 import { KunQatori, zentrumQueryRaw } from './zentrum-sql.fake-spec';
 import { wochenStartTag } from '../uebung/punkte';
+import { tashkentDateStr } from '../../common/date/tashkent';
 
 /**
  * `week` — the centre's week (one row each, dated this Monday); `extra` —
@@ -9,13 +10,17 @@ import { wochenStartTag } from '../uebung/punkte';
 function fakePrisma(
   week: { studentId: number; points: number }[] = [],
   extra: KunQatori[] = [],
+  dailyGoal: string | null = null,
 ) {
   const montag = wochenStartTag(new Date());
   return {
-    $queryRaw: zentrumQueryRaw(() => [
-      ...week.map((w) => ({ ...w, companyId: 1, day: montag, attempts: 1 })),
-      ...extra,
-    ]),
+    $queryRaw: zentrumQueryRaw(
+      () => [
+        ...week.map((w) => ({ ...w, companyId: 1, day: montag, attempts: 1 })),
+        ...extra,
+      ],
+      () => dailyGoal,
+    ),
     dafStudentDay: {
       // Only the group table still uses groupBy.
       groupBy: jest.fn(async () => []),
@@ -27,6 +32,8 @@ function fakePrisma(
     student: { findMany: jest.fn(async () => []) },
     // Fix 5: Takrorlash tugmasi shu songa qarab faol/xira bo'ladi.
     dafLexemeState: { count: jest.fn(async () => 0) },
+    // `bosh`: an open lesson exists unless a test says otherwise.
+    dafLesson: { findFirst: jest.fn(async () => ({ id: 1 })) },
   } as any;
 }
 
@@ -99,6 +106,62 @@ describe('uebersicht', () => {
     expect(f.wochePlatzGruppe).toBeNull();
     expect(f.wochePlatzZentrum).toBe(1);
     expect(f.wochePunkte).toBe(40);
+  });
+
+  describe('maqsad (S2)', () => {
+    const bugun = (points: number): KunQatori => ({
+      studentId: 55,
+      companyId: 1,
+      day: tashkentDateStr(new Date()),
+      points,
+      attempts: 1,
+    });
+
+    it("sozlama yo'q — O'RTA, bugungi ball bugungi qatorlardan", async () => {
+      const prisma = fakePrisma(
+        [],
+        [bugun(30), { ...bugun(0), day: '2026-01-05', points: 500 }],
+      );
+      const f = await new FortschrittService(prisma).uebersicht(55, 1);
+      expect(f.maqsad).toEqual({
+        daraja: 'ORTA',
+        ball: 80,
+        hozir: 30,
+        bajarildi: false,
+        bosh: false,
+      });
+    });
+
+    it('tanlangan daraja o`qiladi', async () => {
+      const prisma = fakePrisma([], [bugun(160)], 'JIDDIY');
+      const f = await new FortschrittService(prisma).uebersicht(55, 1);
+      expect(f.maqsad).toMatchObject({
+        daraja: 'JIDDIY',
+        ball: 160,
+        bajarildi: true,
+      });
+    });
+
+    it("qo'shimcha so'rov yo'q: bitta SQL, sozlama alohida o'qilmaydi", async () => {
+      const prisma = fakePrisma([], [bugun(10)], 'YENGIL');
+      prisma.dafLexemeState.count = jest.fn(async () => 3);
+      await new FortschrittService(prisma).uebersicht(55, 1);
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+      expect(prisma.dafLesson.findFirst).not.toHaveBeenCalled();
+      expect(prisma.dafStudentSetting).toBeUndefined();
+    });
+
+    it("so'z ham, ochiq dars ham yo'q — bosh, 0 ballda ham bajarildi", async () => {
+      const prisma = fakePrisma();
+      prisma.dafLesson.findFirst = jest.fn(async () => null);
+      const f = await new FortschrittService(prisma).uebersicht(55, 1);
+      expect(f.maqsad).toMatchObject({ hozir: 0, bajarildi: true, bosh: true });
+    });
+
+    it("so'z yo'q, lekin ochiq dars bor — bosh emas", async () => {
+      const f = await new FortschrittService(fakePrisma()).uebersicht(55, 1);
+      expect(f.maqsad).toMatchObject({ bajarildi: false, bosh: false });
+    });
   });
 });
 
