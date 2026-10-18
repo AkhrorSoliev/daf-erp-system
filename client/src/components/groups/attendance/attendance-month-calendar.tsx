@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
-import { uz } from "date-fns/locale";
+import type { Locale } from "date-fns";
 import {
   ArrowRight,
   ChevronLeft,
@@ -20,6 +20,9 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { UnmarkedLessonInfo } from "@/lib/unmarked-lesson";
+import { dateFnsLocale } from "@/lib/date-fns-locale";
+import { useLocale, useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 
 export type LessonCalendarCellType =
   | "regular"
@@ -71,6 +74,9 @@ export function AttendanceMonthCalendar({
   onMonthChange,
   initialMonth,
 }: AttendanceMonthCalendarProps) {
+  const t = useT();
+  const { locale } = useLocale();
+  const dfLocale = dateFnsLocale(locale);
   const [month, setMonth] = useState<Date>(() => initialMonth ?? new Date());
   const todayStr = dateKey(new Date());
 
@@ -90,7 +96,7 @@ export function AttendanceMonthCalendar({
     [cells],
   );
 
-  const monthLabel = format(month, "LLLL yyyy", { locale: uz });
+  const monthLabel = format(month, "LLLL yyyy", { locale: dfLocale });
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -113,7 +119,7 @@ export function AttendanceMonthCalendar({
           </div>
         ) : sortedCells.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            Bu oyda dars kunlari yo&apos;q
+            {t("Bu oyda dars kunlari yo'q")}
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
@@ -124,6 +130,7 @@ export function AttendanceMonthCalendar({
                 isToday={cell.date === todayStr}
                 isPast={cell.date < todayStr}
                 onSelect={onSelectDate}
+                dfLocale={dfLocale}
               />
             ))}
           </div>
@@ -140,9 +147,23 @@ interface LessonCardProps {
   isToday: boolean;
   isPast: boolean;
   onSelect: (date: string) => void;
+  dfLocale: Locale;
 }
 
-function LessonCard({ cell, isToday, isPast, onSelect }: LessonCardProps) {
+/** A date-fns weekday name with a capital first letter (ru and uz-Cyrl give lower case). */
+function weekdayName(date: string, dfLocale: Locale): string {
+  const name = format(parseDateKey(date), "EEEE", { locale: dfLocale });
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+function LessonCard({
+  cell,
+  isToday,
+  isPast,
+  onSelect,
+  dfLocale,
+}: LessonCardProps) {
+  const t = useT();
   const isClickable =
     cell.type === "regular" || cell.type === "rescheduledTo";
 
@@ -185,40 +206,45 @@ function LessonCard({ cell, isToday, isPast, onSelect }: LessonCardProps) {
         <span className="text-lg font-semibold tabular-nums">
           {parseDateKey(cell.date).getDate()}{" "}
           <span className="text-sm font-medium lowercase">
-            {format(parseDateKey(cell.date), "LLL", { locale: uz })}
+            {format(parseDateKey(cell.date), "LLL", { locale: dfLocale })}
           </span>
         </span>
-        <span className="text-xs opacity-80">{cell.dayName}</span>
+        <span className="text-xs opacity-80">
+          {weekdayName(cell.date, dfLocale)}
+        </span>
       </div>
       <div className="flex items-center gap-1 text-xs opacity-90">
         {cell.type === "rescheduledTo" && (
           <>
             <ArrowRight className="size-3" />
-            <span>Ko&apos;chirib kelingan</span>
+            <span>{t("Ko'chirib kelingan")}</span>
           </>
         )}
         {cell.type === "rescheduledFrom" && (
           <>
             <RotateCcw className="size-3" />
-            <span>Ko&apos;chirilgan</span>
+            <span>{t("Ko'chirilgan")}</span>
           </>
         )}
         {cell.type === "cancelled" && (
           <>
             <XCircle className="size-3" />
-            <span>Bekor qilingan</span>
+            <span>{t("Bekor qilingan")}</span>
           </>
         )}
         {cell.type === "regular" && cell.hasAttendance && (
           <span>
-            Davomat: {cell.presentCount + cell.lateCount}/{cell.totalStudents}
+            {t("Davomat: {n}/{total}", {
+              n: cell.presentCount + cell.lateCount,
+              total: cell.totalStudents,
+            })}
           </span>
         )}
         {cell.type === "regular" && !cell.hasAttendance && isPast && (
-          <span>Olinmagan</span>
+          <span>{t("Olinmagan")}</span>
         )}
         {cell.type === "regular" && !cell.hasAttendance && !isPast && (
-          <span>Kelgusi dars</span>
+          <span>{t("Kelgusi dars")}</span>
         )}
       </div>
     </button>
@@ -228,50 +254,63 @@ function LessonCard({ cell, isToday, isPast, onSelect }: LessonCardProps) {
     <Tooltip>
       <TooltipTrigger asChild>{inner}</TooltipTrigger>
       <TooltipContent side="top" className="max-w-xs">
-        <CellTooltipContent cell={cell} />
+        <CellTooltipContent cell={cell} dfLocale={dfLocale} />
       </TooltipContent>
     </Tooltip>
   );
 }
 
 const TYPE_LABEL: Record<LessonCalendarCellType, string> = {
-  regular: "Dars",
-  rescheduledTo: "Ko'chirib kelingan dars",
-  rescheduledFrom: "Bu kungi dars boshqa kunga ko'chirilgan",
-  cancelled: "Bekor qilingan dars",
+  regular: msg("Dars"),
+  rescheduledTo: msg("Ko'chirib kelingan dars"),
+  rescheduledFrom: msg("Bu kungi dars boshqa kunga ko'chirilgan"),
+  cancelled: msg("Bekor qilingan dars"),
 };
 
-function CellTooltipContent({ cell }: { cell: LessonCalendarCell }) {
+function CellTooltipContent({
+  cell,
+  dfLocale,
+}: {
+  cell: LessonCalendarCell;
+  dfLocale: Locale;
+}) {
+  const t = useT();
+  const typeLabel = TYPE_LABEL[cell.type];
+  const counts = [t("{n} keldi", { n: cell.presentCount })];
+  if (cell.lateCount > 0) counts.push(t("{n} kech", { n: cell.lateCount }));
+  if (cell.absentCount > 0) {
+    counts.push(t("{n} kelmadi", { n: cell.absentCount }));
+  }
+  if (cell.excusedCount > 0) {
+    counts.push(t("{n} sababli", { n: cell.excusedCount }));
+  }
   return (
     <div className="space-y-1 text-xs">
       <div className="font-medium">
-        {formatDDMM(cell.date)} — {cell.dayName}
+        {formatDDMM(cell.date)} — {weekdayName(cell.date, dfLocale)}
       </div>
-      <div>{TYPE_LABEL[cell.type]}</div>
+      <div>{t(typeLabel)}</div>
       {cell.type === "rescheduledTo" && cell.movedFrom && (
         <div className="text-muted-foreground">
-          Asl sana: {formatDDMM(cell.movedFrom)}
+          {t("Asl sana: {date}", { date: formatDDMM(cell.movedFrom) })}
         </div>
       )}
       {cell.type === "rescheduledFrom" && cell.movedTo && (
         <div className="text-muted-foreground">
-          Yangi sana: {formatDDMM(cell.movedTo)}
+          {t("Yangi sana: {date}", { date: formatDDMM(cell.movedTo) })}
         </div>
       )}
       {cell.type === "cancelled" && cell.cancellationReason && (
         <div className="text-muted-foreground">
-          Sabab: {cell.cancellationReason}
+          {t("Sabab: {reason}", { reason: cell.cancellationReason })}
         </div>
       )}
       {(cell.type === "regular" || cell.type === "rescheduledTo") &&
         cell.hasAttendance && (
           <div className="text-muted-foreground">
-            {cell.presentCount} keldi
-            {cell.lateCount > 0 ? `, ${cell.lateCount} kech` : ""}
-            {cell.absentCount > 0 ? `, ${cell.absentCount} kelmadi` : ""}
-            {cell.excusedCount > 0 ? `, ${cell.excusedCount} sababli` : ""}
+            {counts.join(", ")}
             {" / "}
-            {cell.totalStudents} jami
+            {t("{n} jami", { n: cell.totalStudents })}
           </div>
         )}
     </div>
@@ -279,19 +318,29 @@ function CellTooltipContent({ cell }: { cell: LessonCalendarCell }) {
 }
 
 function Legend() {
+  const t = useT();
   return (
     <div className="flex flex-wrap gap-x-3 gap-y-1.5 border-t pt-3 text-xs text-muted-foreground">
-      <LegendDot className="bg-blue-200 dark:bg-blue-800" label="Kelgusi dars" />
+      <LegendDot
+        className="bg-blue-200 dark:bg-blue-800"
+        label={t("Kelgusi dars")}
+      />
       <LegendDot
         className="bg-emerald-200 dark:bg-emerald-800"
-        label="Davomat olingan"
+        label={t("Davomat olingan")}
       />
       <LegendDot
         className="bg-amber-200 dark:bg-amber-800"
-        label="Olinmagan / ko'chirib kelingan"
+        label={t("Olinmagan / ko'chirib kelingan")}
       />
-      <LegendDot className="bg-muted" label="Boshqa kunga ko'chirilgan" />
-      <LegendDot className="bg-red-200 dark:bg-red-800" label="Bekor qilingan" />
+      <LegendDot
+        className="bg-muted"
+        label={t("Boshqa kunga ko'chirilgan")}
+      />
+      <LegendDot
+        className="bg-red-200 dark:bg-red-800"
+        label={t("Bekor qilingan")}
+      />
     </div>
   );
 }

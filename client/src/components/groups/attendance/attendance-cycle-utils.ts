@@ -1,3 +1,4 @@
+import { msg } from "@/i18n/msg";
 import type { UnmarkedLessonInfo } from "@/lib/unmarked-lesson";
 
 export interface LessonDate {
@@ -14,28 +15,28 @@ export interface LessonDate {
 }
 
 export const DAY_SHORT: Record<string, string> = {
-  Dushanba: "Du",
-  Seshanba: "Se",
-  Chorshanba: "Ch",
-  Payshanba: "Pa",
-  Juma: "Ju",
-  Shanba: "Sh",
-  Yakshanba: "Ya",
+  Dushanba: msg("Du"),
+  Seshanba: msg("Se"),
+  Chorshanba: msg("Ch"),
+  Payshanba: msg("Pa"),
+  Juma: msg("Ju"),
+  Shanba: msg("Sh"),
+  Yakshanba: msg("Ya"),
 };
 
 export const MONTH_NAMES: Record<number, string> = {
-  1: "Yanvar",
-  2: "Fevral",
-  3: "Mart",
-  4: "Aprel",
-  5: "May",
-  6: "Iyun",
-  7: "Iyul",
-  8: "Avgust",
-  9: "Sentabr",
-  10: "Oktabr",
-  11: "Noyabr",
-  12: "Dekabr",
+  1: msg("Yanvar"),
+  2: msg("Fevral"),
+  3: msg("Mart"),
+  4: msg("Aprel"),
+  5: msg("May"),
+  6: msg("Iyun"),
+  7: msg("Iyul"),
+  8: msg("Avgust"),
+  9: msg("Sentabr"),
+  10: msg("Oktabr"),
+  11: msg("Noyabr"),
+  12: msg("Dekabr"),
 };
 
 /** Intensiv courses run a 20-lesson cycle; standard courses run 12. */

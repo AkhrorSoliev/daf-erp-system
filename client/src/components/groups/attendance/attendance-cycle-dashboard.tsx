@@ -8,6 +8,7 @@ import { tashkentNow } from "@/lib/tashkent-time";
 import type { UnmarkedLessonInfo } from "@/lib/unmarked-lesson";
 import { useCan } from "@/hooks/use-permissions";
 import type { GroupData } from "@/hooks/use-edit-group";
+import { useT } from "@/i18n/context";
 import {
   AttendanceMonthCalendar,
   type LessonCalendarCell,
@@ -56,6 +57,7 @@ export function AttendanceCycleDashboard({
   group,
   onSelectDate,
 }: AttendanceCycleDashboardProps) {
+  const t = useT();
   const isAdmin = useCan("attendance.fix");
 
   // "Today" is the Tashkent calendar date (not the browser's local date) —
@@ -202,16 +204,19 @@ export function AttendanceCycleDashboard({
         <div className="space-y-2 rounded-lg border p-3">
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
             <span className="text-emerald-600 dark:text-emerald-400">
-              Olingan: {summary.taken}/{summary.total}
+              {t("Olingan: {n}/{total}", {
+                n: summary.taken,
+                total: summary.total,
+              })}
             </span>
             {summary.missed > 0 && (
               <span className="text-amber-600 dark:text-amber-400">
-                Olinmagan: {summary.missed}
+                {t("Olinmagan: {n}", { n: summary.missed })}
               </span>
             )}
             {summary.upcoming > 0 && (
               <span className="text-muted-foreground">
-                Kelgusi: {summary.upcoming}
+                {t("Kelgusi: {n}", { n: summary.upcoming })}
               </span>
             )}
           </div>

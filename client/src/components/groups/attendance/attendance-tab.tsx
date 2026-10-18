@@ -6,13 +6,15 @@ import { Info } from "lucide-react";
 import { AttendanceCycleDashboard } from "./attendance-cycle-dashboard";
 import { AttendanceForm } from "./attendance-form";
 import type { GroupData } from "@/hooks/use-edit-group";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 
 const STATUS_LABELS: Record<string, string> = {
-  FORMING: "Shakllanmoqda",
-  PAUSED: "To'xtatilgan",
-  COMPLETED: "Tugallangan",
-  CANCELLED: "Bekor qilingan",
-  ARCHIVED: "Arxivlangan",
+  FORMING: msg("Shakllanmoqda"),
+  PAUSED: msg("To'xtatilgan"),
+  COMPLETED: msg("Tugallangan"),
+  CANCELLED: msg("Bekor qilingan"),
+  ARCHIVED: msg("Arxivlangan"),
 };
 
 /** Set when this tab pushed the form's history entry, so «orqaga» can pop it. */
@@ -31,6 +33,7 @@ interface AttendanceTabProps {
  * leaving the group, and a reload keeps the place.
  */
 export function AttendanceTab({ group }: AttendanceTabProps) {
+  const t = useT();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -72,10 +75,13 @@ export function AttendanceTab({ group }: AttendanceTabProps) {
 
   // Guruh faol bo'lmasa davomat olish mumkin emas
   if (group.statusEnum !== "ACTIVE") {
+    const label = STATUS_LABELS[group.statusEnum];
     return (
       <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
         <Info className="size-4 shrink-0" />
-        Guruh faol emas ({STATUS_LABELS[group.statusEnum] ?? group.statusEnum}). Davomat olish mumkin emas.
+        {t("Guruh faol emas ({status}). Davomat olish mumkin emas.", {
+          status: label ? t(label) : group.statusEnum,
+        })}
       </div>
     );
   }

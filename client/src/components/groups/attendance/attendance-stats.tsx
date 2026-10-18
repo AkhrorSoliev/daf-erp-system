@@ -19,6 +19,8 @@ import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 import { useCan } from "@/hooks/use-permissions";
 import type { GroupData } from "@/hooks/use-edit-group";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 
 interface AttendanceNote {
   date: string;
@@ -63,23 +65,24 @@ function getPercentageColor(pct: number): string {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  PRESENT: { label: "Keldi", color: "text-green-600 dark:text-green-400" },
-  ABSENT: { label: "Kelmadi", color: "text-red-600 dark:text-red-400" },
-  LATE: { label: "Kechikdi", color: "text-amber-600 dark:text-amber-400" },
-  EXCUSED: { label: "Sababli", color: "text-blue-600 dark:text-blue-400" },
+  PRESENT: { label: msg("Keldi"), color: "text-green-600 dark:text-green-400" },
+  ABSENT: { label: msg("Kelmadi"), color: "text-red-600 dark:text-red-400" },
+  LATE: { label: msg("Kechikdi"), color: "text-amber-600 dark:text-amber-400" },
+  EXCUSED: { label: msg("Sababli"), color: "text-blue-600 dark:text-blue-400" },
 };
 
 const COL_COUNT = 9;
 
 const GROUP_STATUS_LABELS: Record<string, string> = {
-  FORMING: "Shakllanmoqda",
-  PAUSED: "To'xtatilgan",
-  COMPLETED: "Tugallangan",
-  CANCELLED: "Bekor qilingan",
-  ARCHIVED: "Arxivlangan",
+  FORMING: msg("Shakllanmoqda"),
+  PAUSED: msg("To'xtatilgan"),
+  COMPLETED: msg("Tugallangan"),
+  CANCELLED: msg("Bekor qilingan"),
+  ARCHIVED: msg("Arxivlangan"),
 };
 
 export function AttendanceStats({ group }: AttendanceStatsProps) {
+  const t = useT();
   const now = new Date();
   const defaultStart = group.startDate
     ? new Date(group.startDate)
@@ -92,6 +95,7 @@ export function AttendanceStats({ group }: AttendanceStatsProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const isAdmin = useCan("attendance.fix");
+  const groupStatus = GROUP_STATUS_LABELS[group.statusEnum];
 
   const fetchStats = useCallback(async () => {
     setLoading(true);
@@ -137,7 +141,7 @@ export function AttendanceStats({ group }: AttendanceStatsProps) {
           <DatePicker
             value={startDate}
             onChange={(d) => d && setStartDate(d)}
-            placeholder="Boshlanish"
+            placeholder={t("Boshlanish")}
             maxDate={endDate}
             defaultMonth={endDate}
           />
@@ -145,14 +149,14 @@ export function AttendanceStats({ group }: AttendanceStatsProps) {
           <DatePicker
             value={endDate}
             onChange={(d) => d && setEndDate(d)}
-            placeholder="Tugash"
+            placeholder={t("Tugash")}
             minDate={startDate}
             defaultMonth={startDate}
           />
         </div>
         {stats && (
           <span className="ml-auto text-sm text-muted-foreground">
-            Jami darslar: {stats.totalLessons}
+            {t("Jami darslar: {n}", { n: stats.totalLessons })}
           </span>
         )}
       </div>
@@ -161,7 +165,9 @@ export function AttendanceStats({ group }: AttendanceStatsProps) {
       {group.statusEnum !== "ACTIVE" && (
         <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
           <Info className="size-4 shrink-0" />
-          Guruh faol emas ({GROUP_STATUS_LABELS[group.statusEnum] ?? group.statusEnum})
+          {t("Guruh faol emas ({status})", {
+            status: groupStatus ? t(groupStatus) : group.statusEnum,
+          })}
         </div>
       )}
 
@@ -176,10 +182,10 @@ export function AttendanceStats({ group }: AttendanceStatsProps) {
         <div className="flex h-24 items-center justify-center rounded-md border">
           <p className="text-sm text-muted-foreground">
             {group.statusEnum !== "ACTIVE" && stats?.totalLessons === 0
-              ? "Guruh hali boshlanmagan. Davomat ma\u2019lumotlari mavjud emas"
+              ? t("Guruh hali boshlanmagan. Davomat ma'lumotlari mavjud emas")
               : stats?.totalLessons === 0
-                ? "Hali davomat olinmagan"
-                : "Davomat ma\u2019lumotlari mavjud emas"}
+                ? t("Hali davomat olinmagan")
+                : t("Davomat ma'lumotlari mavjud emas")}
           </p>
         </div>
       ) : (
@@ -188,14 +194,14 @@ export function AttendanceStats({ group }: AttendanceStatsProps) {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12 border-r">#</TableHead>
-                <TableHead className="w-10">Rasm</TableHead>
-                <TableHead className="min-w-30">Ism familiya</TableHead>
-                <TableHead className="w-16 text-center">Keldi</TableHead>
-                <TableHead className="w-16 text-center">Kelmadi</TableHead>
-                <TableHead className="w-16 text-center">Kechikdi</TableHead>
-                <TableHead className="w-16 text-center">Sababli</TableHead>
-                <TableHead className="w-16 text-center">Foiz</TableHead>
-                {isAdmin && <TableHead className="w-12 text-center">Izoh</TableHead>}
+                <TableHead className="w-10">{t("Rasm")}</TableHead>
+                <TableHead className="min-w-30">{t("Ism familiya")}</TableHead>
+                <TableHead className="w-16 text-center">{t("Keldi")}</TableHead>
+                <TableHead className="w-16 text-center">{t("Kelmadi")}</TableHead>
+                <TableHead className="w-16 text-center">{t("Kechikdi")}</TableHead>
+                <TableHead className="w-16 text-center">{t("Sababli")}</TableHead>
+                <TableHead className="w-16 text-center">{t("Foiz")}</TableHead>
+                {isAdmin && <TableHead className="w-12 text-center">{t("Izoh")}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -288,7 +294,7 @@ export function AttendanceStats({ group }: AttendanceStatsProps) {
                                     {format(new Date(n.date + "T00:00:00"), "dd.MM.yyyy")}
                                   </span>
                                   <span className={cn("shrink-0 font-medium", sl?.color)}>
-                                    {sl?.label ?? n.status}
+                                    {sl ? t(sl.label) : n.status}
                                   </span>
                                   <span className="text-purple-700 dark:text-purple-300">
                                     {n.note}
@@ -310,7 +316,7 @@ export function AttendanceStats({ group }: AttendanceStatsProps) {
               <TableRow className="bg-muted/40 font-medium">
                 <TableCell className="border-r" />
                 <TableCell />
-                <TableCell className="font-semibold">JAMI</TableCell>
+                <TableCell className="font-semibold">{t("JAMI")}</TableCell>
                 <TableCell className="text-center text-green-600 dark:text-green-400">
                   {totals.present}
                 </TableCell>

@@ -3,6 +3,8 @@
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { lateMinutesText } from "@/lib/late-minutes";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import {
   Tooltip,
   TooltipContent,
@@ -16,10 +18,10 @@ import {
 export type DotStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED" | null;
 
 export const STATUS_LABEL: Record<Exclude<DotStatus, null>, string> = {
-  PRESENT: "Keldi",
-  LATE: "Kech",
-  EXCUSED: "Sababli",
-  ABSENT: "Kelmadi",
+  PRESENT: msg("Keldi"),
+  LATE: msg("Kech"),
+  EXCUSED: msg("Sababli"),
+  ABSENT: msg("Kelmadi"),
 };
 
 export function getDotClass(status: DotStatus): string {
@@ -72,14 +74,17 @@ export function AttendanceDot({
   enrolled = true,
   lateMinutes,
 }: AttendanceDotProps) {
-  const late = status === "LATE" ? lateMinutesText(lateMinutes) : null;
+  const t = useT();
+  const late = status === "LATE" ? lateMinutesText(lateMinutes, t) : null;
   // Bo'sh nuqta + a'zo emas → "Guruhda bo'lmagan" (Belgilanmagan'dan farqli).
   const notEnrolled = status === null && !enrolled;
-  const statusLabel = status
-    ? STATUS_LABEL[status]
+  const known = status ? STATUS_LABEL[status] : null;
+  const statusLabel = known
+    ? t(known)
     : notEnrolled
-      ? "Guruhda bo'lmagan"
-      : "Belgilanmagan";
+      ? t("Guruhda bo'lmagan")
+      : t("Belgilanmagan");
+  const substitute = t("O'rinbosar ustoz");
   const formatted = format(new Date(date + "T00:00:00"), "dd.MM.yyyy");
   return (
     <Tooltip>
@@ -94,7 +99,7 @@ export function AttendanceDot({
               "ring-2 ring-blue-500/70 ring-offset-1 ring-offset-background",
           )}
           aria-label={`${formatted} — ${late ?? statusLabel}${
-            hasOverride ? " — O'rinbosar ustoz" : ""
+            hasOverride ? ` — ${substitute}` : ""
           }${cycleLabel ? ` — ${cycleLabel}` : ""}`}
         />
       </TooltipTrigger>
@@ -104,7 +109,7 @@ export function AttendanceDot({
         {late ?? statusLabel}
         {hasOverride && (
           <span className="text-blue-600 dark:text-blue-400">
-            {" • O'rinbosar ustoz"}
+            {` • ${substitute}`}
           </span>
         )}
         {cycleLabel && (
