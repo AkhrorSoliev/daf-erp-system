@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { CalendarDays, Clock, DoorOpen, Users } from "lucide-react";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { TranslatedStatusBadge } from "@/components/shared/translated-status-badge";
 import { formatWeekdays } from "@/lib/weekdays";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { CoveringBadge } from "./covering-badge";
 import { LevelBadge } from "./level-badge";
+import { useT } from "@/i18n/context";
 
 /** `2026-11-03T00:00:00.000Z` → `03.11.2026`. The date is the first ten characters. */
 export function startDateLabel(startDate: string | null): string | null {
@@ -21,10 +22,11 @@ export function startDateLabel(startDate: string | null): string | null {
  * started yet says when it starts.
  */
 export function GroupsCards({ groups }: { groups: GroupData[] }) {
+  const t = useT();
   if (groups.length === 0) {
     return (
       <div className="text-muted-foreground flex h-40 items-center justify-center rounded-md border">
-        Guruhlar topilmadi
+        {t("Guruhlar topilmadi")}
       </div>
     );
   }
@@ -33,7 +35,7 @@ export function GroupsCards({ groups }: { groups: GroupData[] }) {
     <ul className="space-y-3">
       {groups.map((group) => {
         const status = group.statusEnum || "FORMING";
-        const days = group.exactDays?.length ? formatWeekdays(group.exactDays) : null;
+        const days = group.exactDays?.length ? formatWeekdays(group.exactDays, t) : null;
         const time =
           group.lessonStartTime && group.lessonEndTime
             ? `${group.lessonStartTime}–${group.lessonEndTime}`
@@ -57,7 +59,7 @@ export function GroupsCards({ groups }: { groups: GroupData[] }) {
                     <span className="truncate">{group.course.name}</span>
                   </div>
                 </div>
-                <StatusBadge entityType="groups" status={status} />
+                <TranslatedStatusBadge entityType="groups" status={status} />
               </div>
 
               <dl className="text-muted-foreground mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
@@ -75,13 +77,13 @@ export function GroupsCards({ groups }: { groups: GroupData[] }) {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Users className="size-3.5 shrink-0" />
-                  <dd>{group.studentCount} ta o&apos;quvchi</dd>
+                  <dd>{t("{n} ta o'quvchi", { n: group.studentCount })}</dd>
                 </div>
               </dl>
 
               {starts && (
                 <p className="mt-3 rounded-md bg-muted px-3 py-1.5 text-sm">
-                  Boshlanishi: <span className="font-medium">{starts}</span>
+                  {t("Boshlanishi:")} <span className="font-medium">{starts}</span>
                 </p>
               )}
             </Link>

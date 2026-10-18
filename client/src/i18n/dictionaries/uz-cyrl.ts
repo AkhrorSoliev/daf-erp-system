@@ -8,6 +8,8 @@ import type { Dictionary } from "../translate";
 const uzCyrl: Dictionary = {
   // The rules give «Профил»; this loanword keeps its soft sign.
   "Profil": "Профиль",
+  // An all-caps word reads as an acronym and stays Latin; this one is Uzbek.
+  "JAMI": "ЖАМИ",
 };
 
 export default uzCyrl;

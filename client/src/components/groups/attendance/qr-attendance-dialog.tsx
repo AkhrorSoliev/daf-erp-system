@@ -16,6 +16,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 
@@ -44,6 +46,12 @@ export function QrAttendanceDialog({
   onOpenChange,
   onClose,
 }: QrAttendanceDialogProps) {
+  const t = useT();
+  // startSession runs from the open effect: a language switch must not restart it.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(45);
@@ -73,7 +81,7 @@ export function QrAttendanceDialog({
       setScannedStudents([]);
     } catch (err) {
       const raw = (err as any)?.response?.data?.message;
-      toast.error(Array.isArray(raw) ? raw[0] : (raw || "QR sessiya boshlashda xatolik"));
+      toast.error(Array.isArray(raw) ? raw[0] : (raw || tRef.current(msg("QR sessiya boshlashda xatolik"))));
       onOpenChange(false);
     } finally {
       setStarting(false);
@@ -259,10 +267,13 @@ export function QrAttendanceDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>QR davomat — {groupName}</DialogTitle>
+          <DialogTitle>
+            {t("QR davomat — {group}", { group: groupName })}
+          </DialogTitle>
           <DialogDescription>
-            O&apos;quvchilar ushbu QR kodni skanerlash orqali davomatga
-            belgilanadi
+            {t(
+              "O'quvchilar ushbu QR kodni skanerlash orqali davomatga belgilanadi",
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -321,14 +332,14 @@ export function QrAttendanceDialog({
                 ) : (
                   <VolumeX className="mr-1.5 size-4" />
                 )}
-                {soundEnabled ? "Ovoz yoqilgan" : "Ovoz o'chirilgan"}
+                {soundEnabled ? t("Ovoz yoqilgan") : t("Ovoz o'chirilgan")}
               </Button>
             </div>
 
             {/* Kelgan o'quvchilar */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="font-medium">Kelgan o&apos;quvchilar</span>
+                <span className="font-medium">{t("Kelgan o'quvchilar")}</span>
                 <span className="inline-flex items-center gap-1 text-green-600 dark:text-green-400">
                   <UserCheck className="size-3.5" />
                   {scannedStudents.length}/{totalStudents}
@@ -338,7 +349,7 @@ export function QrAttendanceDialog({
               {scannedStudents.length === 0 ? (
                 <div className="flex h-16 items-center justify-center rounded-lg border border-dashed">
                   <p className="text-xs text-muted-foreground">
-                    Hali hech kim skanerlagan emas
+                    {t("Hali hech kim skanerlagan emas")}
                   </p>
                 </div>
               ) : (

@@ -16,6 +16,7 @@ import {
   getEffectiveLessonDates,
   type LessonDateOption,
 } from "@/lib/lesson-dates";
+import { useT } from "@/i18n/context";
 
 interface Props {
   exactDays: string[];
@@ -59,10 +60,11 @@ export function LessonDateSelect({
   disabled,
   pastDays = 30,
   futureDays = 60,
-  placeholder = "Dars sanasini tanlang",
+  placeholder,
   rescheduleDestinations,
   excludeDates,
 }: Props) {
+  const t = useT();
   const today = useMemo(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -118,19 +120,19 @@ export function LessonDateSelect({
       disabled={disabled}
     >
       <SelectTrigger>
-        <SelectValue placeholder={placeholder} />
+        <SelectValue placeholder={placeholder ?? t("Dars sanasini tanlang")} />
       </SelectTrigger>
       <SelectContent className="max-h-80">
         {total === 0 ? (
           <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-            Bu davrda dars sanalari topilmadi
+            {t("Bu davrda dars sanalari topilmadi")}
           </div>
         ) : (
           <>
             {upcoming.length > 0 && (
               <SelectGroup>
                 <SelectLabel className="text-xs text-muted-foreground">
-                  Bugun va kelgusi darslar
+                  {t("Bugun va kelgusi darslar")}
                 </SelectLabel>
                 {upcoming.map((o) => (
                   <DateItem key={o.date.toISOString()} option={o} />
@@ -140,7 +142,7 @@ export function LessonDateSelect({
             {past.length > 0 && (
               <SelectGroup>
                 <SelectLabel className="text-xs text-muted-foreground">
-                  O&apos;tgan darslar
+                  {t("O'tgan darslar")}
                 </SelectLabel>
                 {past.map((o) => (
                   <DateItem key={o.date.toISOString()} option={o} />
@@ -155,15 +157,16 @@ export function LessonDateSelect({
 }
 
 function DateItem({ option }: { option: LessonDateOption }) {
+  const t = useT();
   return (
     <SelectItem value={format(option.date, "yyyy-MM-dd")}>
       <span className="tabular-nums">{format(option.date, "dd.MM.yyyy")}</span>
       <span className="text-muted-foreground ml-2 text-xs">
-        {fullWeekdayLabel(option.date)}
+        {fullWeekdayLabel(option.date, t)}
       </span>
       {option.isRescheduleDestination && (
         <span className="ml-2 rounded bg-amber-100 dark:bg-amber-950/50 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-400">
-          ko&apos;chirilgan
+          {t("ko'chirilgan")}
         </span>
       )}
     </SelectItem>

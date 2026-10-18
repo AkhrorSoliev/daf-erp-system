@@ -224,7 +224,7 @@ export function KursBolimi({ data }: { data: OquvchiFaolligi }) {
                 <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex items-center justify-between gap-2 text-xs tabular-nums text-muted-foreground">
                     <span>
-                      {t("{n}/{capacity} dars", { n: d.tugatilgan, capacity: d.jami })}
+                      {t("{done}/{total} dars", { done: d.tugatilgan, total: d.jami })}
                     </span>
                     {d.tugatilganSana && <span>{formatSanaToshkent(d.tugatilganSana)}</span>}
                   </div>

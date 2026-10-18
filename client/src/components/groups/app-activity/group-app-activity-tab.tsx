@@ -5,6 +5,7 @@ import { BookOpenCheck, Clock, Radio, Target, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ActivityError, KpiCard, PeriodToggle, usePeriodParam } from "./activity-ui";
 import { formatDavomiylik, foizRangi } from "./activity-format";
+import { useT } from "@/i18n/context";
 import { DifficultItems } from "./difficult-items";
 import { GroupActivityTable } from "./group-activity-table";
 import { ActivityExplainer } from "./activity-explainer";
@@ -29,6 +30,7 @@ function TabSkeleton() {
 }
 
 export function GroupAppActivityTab({ groupId }: { groupId: string }) {
+  const t = useT();
   const [davr, setDavr] = usePeriodParam();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const { data, isLoading, isError, refetch } = useGuruhFaolligi(groupId, davr);
@@ -37,8 +39,8 @@ export function GroupAppActivityTab({ groupId }: { groupId: string }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-base font-semibold">O&apos;quvchilarning ilovadagi faolligi</h3>
-          <p className="text-sm text-muted-foreground">Veb, Android va iOS bir xil qoida bilan sanaladi</p>
+          <h3 className="text-base font-semibold">{t("O'quvchilarning ilovadagi faolligi")}</h3>
+          <p className="text-sm text-muted-foreground">{t("Veb, Android va iOS bir xil qoida bilan sanaladi")}</p>
         </div>
         <PeriodToggle value={davr} onChange={setDavr} />
       </div>
@@ -49,7 +51,7 @@ export function GroupAppActivityTab({ groupId }: { groupId: string }) {
         <ActivityError onRetry={() => void refetch()} />
       ) : data.oquvchilar.length === 0 ? (
         <div className="flex h-24 items-center justify-center rounded-md border">
-          <p className="text-sm text-muted-foreground">Guruhda faol o&apos;quvchi yo&apos;q</p>
+          <p className="text-sm text-muted-foreground">{t("Guruhda faol o'quvchi yo'q")}</p>
         </div>
       ) : (
         <>
@@ -61,45 +63,45 @@ export function GroupAppActivityTab({ groupId }: { groupId: string }) {
               <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
                 <KpiCard
                   icon={Users}
-                  label="Ilovaga kirdi"
+                  label={t("Ilovaga kirdi")}
                   value={`${k.kirganlar} / ${k.oquvchilar}`}
                   hint={
                     akkauntsiz > 0
-                      ? `${akkauntsiz} nafarida akkaunt yo'q`
+                      ? t("{n} nafarida akkaunt yo'q", { n: akkauntsiz })
                       : kirmaganlar > 0
-                        ? `${kirmaganlar} nafari kirmagan`
-                        : "Hammasi kirgan"
+                        ? t("{n} nafari kirmagan", { n: kirmaganlar })
+                        : t("Hammasi kirgan")
                   }
-                  tooltip="Tanlangan davrda kamida 10 soniya faol bo'lgan o'quvchilar."
+                  tooltip={t("Tanlangan davrda kamida 10 soniya faol bo'lgan o'quvchilar.")}
                 />
                 <KpiCard
                   icon={Clock}
-                  label="O'rtacha faol vaqt"
-                  value={k.ortachaFaolSoniya === null ? "—" : formatDavomiylik(k.ortachaFaolSoniya)}
-                  hint="kirganlar orasida, bir o'quvchiga"
-                  tooltip="Faol vaqt: ilova ekranda ochiq va o'quvchi oxirgi 2 daqiqada biror harakat qilgan. Radio bunga kirmaydi."
+                  label={t("O'rtacha faol vaqt")}
+                  value={k.ortachaFaolSoniya === null ? "—" : formatDavomiylik(k.ortachaFaolSoniya, t)}
+                  hint={t("kirganlar orasida, bir o'quvchiga")}
+                  tooltip={t("Faol vaqt: ilova ekranda ochiq va o'quvchi oxirgi 2 daqiqada biror harakat qilgan. Radio bunga kirmaydi.")}
                 />
                 <KpiCard
                   icon={Target}
-                  label="To'g'ri javob"
+                  label={t("To'g'ri javob")}
                   value={k.foiz === null ? "—" : `${k.foiz}%`}
                   valueClassName={foizRangi(k.foiz)}
-                  hint={`birinchi urinishda · ${k.savollar} savol`}
-                  tooltip="Har bir savol birinchi so'ralganda to'g'ri topilgani. Xatodan keyin qayta so'ralgandagi javob bu foizga kirmaydi."
+                  hint={t("birinchi urinishda · {n} savol", { n: k.savollar })}
+                  tooltip={t("Har bir savol birinchi so'ralganda to'g'ri topilgani. Xatodan keyin qayta so'ralgandagi javob bu foizga kirmaydi.")}
                 />
                 <KpiCard
                   icon={BookOpenCheck}
-                  label="Tugatilgan darslar"
+                  label={t("Tugatilgan darslar")}
                   value={String(k.tugatilganDarslar)}
-                  hint="davrda, har dars bir marta"
-                  tooltip="Davrda oxirigacha ishlangan turli darslar. Bitta darsni qayta ishlash qo'shimcha sanalmaydi."
+                  hint={t("davrda, har dars bir marta")}
+                  tooltip={t("Davrda oxirigacha ishlangan turli darslar. Bitta darsni qayta ishlash qo'shimcha sanalmaydi.")}
                 />
                 <KpiCard
                   icon={Radio}
-                  label="Radio"
-                  value={formatDavomiylik(k.radioSoniya)}
-                  hint={`${k.radioTinglaganlar} o'quvchi tingladi`}
-                  tooltip="Ovoz haqiqatan yangragan vaqt. Ekran yopiq bo'lsa ham sanaladi, lekin faol vaqtga qo'shilmaydi."
+                  label={t("Radio")}
+                  value={formatDavomiylik(k.radioSoniya, t)}
+                  hint={t("{n} o'quvchi tingladi", { n: k.radioTinglaganlar })}
+                  tooltip={t("Ovoz haqiqatan yangragan vaqt. Ekran yopiq bo'lsa ham sanaladi, lekin faol vaqtga qo'shilmaydi.")}
                 />
               </div>
             );

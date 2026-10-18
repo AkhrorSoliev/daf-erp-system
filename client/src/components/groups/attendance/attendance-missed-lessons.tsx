@@ -2,6 +2,7 @@
 
 import { ChevronRight as GoIcon } from "lucide-react";
 import { UnmarkedLessonPrompt } from "@/components/attendance/unmarked/unmarked-lesson-prompt";
+import { useT } from "@/i18n/context";
 import {
   DAY_SHORT,
   formatShortDate,
@@ -25,6 +26,7 @@ export function AttendanceMissedLessons({
   group,
   onSelectDate,
 }: AttendanceMissedLessonsProps) {
+  const t = useT();
   const missedLessons = cycleLessons
     .filter(
       (l) =>
@@ -38,11 +40,16 @@ export function AttendanceMissedLessons({
   return (
     <div className="space-y-2">
       <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
-        Davomat olinmagan darslar:
+        {t("Davomat olinmagan darslar:")}
       </p>
       {missedLessons.map((lesson) => {
         const lessonIndex = cycleLessons.indexOf(lesson);
-        const title = `${lessonIndex + 1}-dars (${formatShortDate(lesson.date)}, ${DAY_SHORT[lesson.dayName] ?? lesson.dayName})`;
+        const short = DAY_SHORT[lesson.dayName];
+        const title = t("{n}-dars ({date}, {day})", {
+          n: lessonIndex + 1,
+          date: formatShortDate(lesson.date),
+          day: short ? t(short) : lesson.dayName,
+        });
         if (lesson.unmarked?.status === "PENDING") {
           return (
             <div
@@ -52,7 +59,7 @@ export function AttendanceMissedLessons({
               <div>
                 <p className="text-sm font-medium">{title}</p>
                 <p className="text-xs text-amber-600 dark:text-amber-400">
-                  Dars tugagan, davomat olinmagan
+                  {t("Dars tugagan, davomat olinmagan")}
                 </p>
               </div>
               <UnmarkedLessonPrompt
@@ -80,7 +87,7 @@ export function AttendanceMissedLessons({
             <div>
               <p className="text-sm font-medium">{title}</p>
               <p className="text-xs text-amber-600 dark:text-amber-400">
-                Davomat olinmagan
+                {t("Davomat olinmagan")}
               </p>
             </div>
             <GoIcon className="size-4 text-amber-500" />

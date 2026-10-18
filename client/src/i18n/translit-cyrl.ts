@@ -21,6 +21,7 @@ export const KEEP_LATIN: ReadonlySet<string> = new Set([
   "sprachzentrum",
   "goethe",
   "deutsch",
+  "ios",
 ]);
 
 const LETTERS: Record<string, string> = {

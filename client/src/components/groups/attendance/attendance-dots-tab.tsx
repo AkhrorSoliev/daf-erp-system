@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 import type { GroupData } from "@/hooks/use-edit-group";
+import { useT } from "@/i18n/context";
 import {
   AttendanceDot,
   getDotClass,
@@ -68,6 +69,7 @@ function AttendanceDots({
   expectedCount: number;
   overrideDateSet: Set<string>;
 }) {
+  const t = useT();
   const placeholders = Math.max(0, expectedCount - dots.length);
 
   return (
@@ -90,10 +92,10 @@ function AttendanceDots({
                 "inline-block size-3 rounded-full border",
                 getDotClass(null),
               )}
-              aria-label="Kelajakdagi dars"
+              aria-label={t("Kelajakdagi dars")}
             />
           </TooltipTrigger>
-          <TooltipContent>Kelajakdagi dars</TooltipContent>
+          <TooltipContent>{t("Kelajakdagi dars")}</TooltipContent>
         </Tooltip>
       ))}
     </div>
@@ -101,6 +103,7 @@ function AttendanceDots({
 }
 
 export function AttendanceDotsTab({ group }: AttendanceDotsTabProps) {
+  const t = useT();
   // react-query so reschedule / cancellation / override mutations elsewhere
   // can `invalidateQueries(["attendance-lesson-sequence", id])` and refresh
   // this view automatically.
@@ -130,7 +133,7 @@ export function AttendanceDotsTab({ group }: AttendanceDotsTabProps) {
     return (
       <div className="flex h-24 items-center justify-center rounded-md border">
         <p className="text-sm text-muted-foreground">
-          Davomat ma&apos;lumotlari mavjud emas
+          {t("Davomat ma'lumotlari mavjud emas")}
         </p>
       </div>
     );
@@ -140,34 +143,34 @@ export function AttendanceDotsTab({ group }: AttendanceDotsTabProps) {
     <TooltipProvider>
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          <span className="font-medium">Belgilar:</span>
+          <span className="font-medium">{t("Belgilar:")}</span>
           <span className="flex items-center gap-1.5">
             <span className="inline-block size-3 rounded-full bg-emerald-500" />
-            Keldi
+            {t("Keldi")}
           </span>
           <span className="flex items-center gap-1.5">
             <span className="inline-block size-3 rounded-full bg-amber-500" />
-            Kech
+            {t("Kech")}
           </span>
           <span className="flex items-center gap-1.5">
             <span className="inline-block size-3 rounded-full bg-sky-400" />
-            Sababli
+            {t("Sababli")}
           </span>
           <span className="flex items-center gap-1.5">
             <span className="inline-block size-3 rounded-full bg-red-500" />
-            Kelmadi
+            {t("Kelmadi")}
           </span>
           <span className="flex items-center gap-1.5">
             <span className="inline-block size-3 rounded-full border border-dashed border-muted-foreground/50" />
-            Belgilanmagan / Kelajakdagi
+            {t("Belgilanmagan / Kelajakdagi")}
           </span>
           <span className="flex items-center gap-1.5">
             <span className="inline-block size-3 rounded-full border border-dotted border-muted-foreground/25 bg-muted/30 opacity-50" />
-            Guruhda bo&apos;lmagan
+            {t("Guruhda bo'lmagan")}
           </span>
           <span className="flex items-center gap-1.5">
             <span className="inline-block size-3 rounded-full bg-emerald-500 ring-2 ring-blue-500/70 ring-offset-1 ring-offset-background" />
-            O&apos;rinbosar ustoz
+            {t("O'rinbosar ustoz")}
           </span>
         </div>
 
@@ -176,12 +179,12 @@ export function AttendanceDotsTab({ group }: AttendanceDotsTabProps) {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12 border-r">#</TableHead>
-                <TableHead className="w-10">Rasm</TableHead>
-                <TableHead className="min-w-40">Ism familiya</TableHead>
+                <TableHead className="w-10">{t("Rasm")}</TableHead>
+                <TableHead className="min-w-40">{t("Ism familiya")}</TableHead>
                 <TableHead className="min-w-60">
-                  Darslar ketma-ketligi
+                  {t("Darslar ketma-ketligi")}
                 </TableHead>
-                <TableHead className="w-20 text-center">Kelgan</TableHead>
+                <TableHead className="w-20 text-center">{t("Kelgan")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -196,7 +199,9 @@ export function AttendanceDotsTab({ group }: AttendanceDotsTabProps) {
                       href={`/students/profile/${student.id}`}
                       className="inline-block shrink-0 rounded-full"
                       linkClassName="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      aria-label={`${student.firstName} ${student.lastName} profilini ochish`}
+                      aria-label={t("{name} profilini ochish", {
+                        name: `${student.firstName} ${student.lastName}`,
+                      })}
                     >
                       <Avatar className="size-8">
                         <AvatarImage

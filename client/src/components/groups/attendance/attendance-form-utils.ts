@@ -6,6 +6,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { msg } from "@/i18n/msg";
+import { interpolate, type Params } from "@/i18n/translate";
 import { formatShortDate, MONTH_NAMES } from "./attendance-cycle-utils";
 
 export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
@@ -106,19 +107,35 @@ export interface DebtorMonthCoverage {
   paidThrough: string | null;
 }
 
+/** The page's `t` from `useT()`; without it the Uzbek source is read as written. */
+type Translate = (source: string, params?: Params) => string;
+
 /** The «Shu oy» cell of a monthly group's debtor (ADR-0062); `month` is 'YYYY-MM'. */
 export function monthCoverageText(
   month: string,
   coverage: DebtorMonthCoverage | null | undefined,
+  t: Translate = interpolate,
 ): string {
-  const name = MONTH_NAMES[Number(month.slice(5, 7))] ?? month;
-  if (!coverage) return `${name}: hisob hali yozilmagan`;
-  if (coverage.paid === 0) return `${name}: to'lanmagan`;
-  if (coverage.paid >= coverage.lessons) return `${name}: to'langan`;
-  const through = coverage.paidThrough
-    ? ` (${formatShortDate(coverage.paidThrough)} gacha)`
-    : "";
-  return `${name}: ${coverage.lessons} darsdan ${coverage.paid} tasi to'langan${through}`;
+  const known = MONTH_NAMES[Number(month.slice(5, 7))];
+  const word = known ? t(known) : month;
+  const name = word.charAt(0).toUpperCase() + word.slice(1);
+  if (!coverage) return t("{month}: hisob hali yozilmagan", { month: name });
+  if (coverage.paid === 0) return t("{month}: to'lanmagan", { month: name });
+  if (coverage.paid >= coverage.lessons) {
+    return t("{month}: to'langan", { month: name });
+  }
+  return coverage.paidThrough
+    ? t("{month}: {lessons} darsdan {paid} tasi to'langan ({date} gacha)", {
+        month: name,
+        lessons: coverage.lessons,
+        paid: coverage.paid,
+        date: formatShortDate(coverage.paidThrough),
+      })
+    : t("{month}: {lessons} darsdan {paid} tasi to'langan", {
+        month: name,
+        lessons: coverage.lessons,
+        paid: coverage.paid,
+      });
 }
 
 export interface AttendanceEntry {
@@ -128,14 +145,20 @@ export interface AttendanceEntry {
 }
 
 export const DAY_NAMES: Record<number, string> = {
-  0: "Yakshanba",
-  1: "Dushanba",
-  2: "Seshanba",
-  3: "Chorshanba",
-  4: "Payshanba",
-  5: "Juma",
-  6: "Shanba",
+  0: msg("Yakshanba"),
+  1: msg("Dushanba"),
+  2: msg("Seshanba"),
+  3: msg("Chorshanba"),
+  4: msg("Payshanba"),
+  5: msg("Juma"),
+  6: msg("Shanba"),
 };
+
+/** The weekday name (a `msg()` text) of a 'YYYY-MM-DD' day, read off the date itself. */
+export function dayNameOf(date: string): string {
+  const [y, m, d] = date.split("-").map(Number);
+  return DAY_NAMES[new Date(y, m - 1, d).getDay()] ?? "";
+}
 
 export interface StatusOption {
   value: AttendanceStatus;

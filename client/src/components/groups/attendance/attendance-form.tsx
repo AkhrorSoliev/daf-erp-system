@@ -51,8 +51,9 @@ import {
   markableStudents,
   suggestedPaymentAmount,
 } from "./attendance-admission";
+import { useT } from "@/i18n/context";
 import {
-  DAY_NAMES,
+  dayNameOf,
   STATUS_CONFIG,
   type AttendanceEntry,
   type AttendanceStatus,
@@ -74,6 +75,7 @@ export function AttendanceForm({
   onBack,
   onSaved,
 }: AttendanceFormProps) {
+  const t = useT();
   const isAdmin = useCan("attendance.fix");
   const canCollect = useCan("payments.create");
 
@@ -119,8 +121,8 @@ export function AttendanceForm({
   } | null>(null);
 
   const [y, m, d] = date.split("-");
-  const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
-  const dayName = DAY_NAMES[dateObj.getDay()] ?? "";
+  const dayKey = dayNameOf(date);
+  const dayName = dayKey ? t(dayKey) : "";
   const formattedDate = `${d}.${m}.${y}`;
 
   // All time logic runs in Tashkent (UTC+5) — backend validates against the
@@ -147,16 +149,25 @@ export function AttendanceForm({
     if (nowMinutes < windowStart)
       return {
         status: "before" as const,
-        message: `Dars ${lessonStartTime} da boshlanadi (Toshkent vaqti). Davomat dars boshlanishidan ${opensMinutesBefore} daqiqa oldin ochiladi`,
+        message: t(
+          "Dars {start} da boshlanadi (Toshkent vaqti). Davomat dars boshlanishidan {n} daqiqa oldin ochiladi",
+          { start: lessonStartTime, n: opensMinutesBefore },
+        ),
       };
     if (nowMinutes >= end)
       return {
         status: "after" as const,
-        message: `Dars vaqti tugagan (${lessonStartTime} – ${lessonEndTime}, Toshkent vaqti). Davomat olish yopilgan`,
+        message: t(
+          "Dars vaqti tugagan ({start} – {end}, Toshkent vaqti). Davomat olish yopilgan",
+          { start: lessonStartTime, end: lessonEndTime },
+        ),
       };
     return {
       status: "during" as const,
-      message: `Dars davom etmoqda (${lessonStartTime} – ${lessonEndTime}, Toshkent vaqti)`,
+      message: t("Dars davom etmoqda ({start} – {end}, Toshkent vaqti)", {
+        start: lessonStartTime,
+        end: lessonEndTime,
+      }),
     };
   })();
 
@@ -268,7 +279,9 @@ export function AttendanceForm({
       setDebtorStudents(data.debtorStudents ?? []);
     } catch {
       toast.error(
-        "To'lov qabul qilindi, lekin ro'yxatni yangilab bo'lmadi. Sahifani qayta yuklang",
+        t(
+          "To'lov qabul qilindi, lekin ro'yxatni yangilab bo'lmadi. Sahifani qayta yuklang",
+        ),
       );
     }
   };
@@ -347,9 +360,9 @@ export function AttendanceForm({
         }
         return next;
       });
-      toast.success("Oldindan belgilandi");
+      toast.success(t("Oldindan belgilandi"));
     } catch (err) {
-      toast.error(getErrorMessage(err, "Belgilashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("Belgilashda xatolik yuz berdi")));
     } finally {
       setPlanSubmitting(null);
     }
@@ -385,9 +398,9 @@ export function AttendanceForm({
         }
         return next;
       });
-      toast.success("Oldindan belgilash o'chirildi");
+      toast.success(t("Oldindan belgilash o'chirildi"));
     } catch (err) {
-      toast.error(getErrorMessage(err, "O'chirishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("O'chirishda xatolik yuz berdi")));
     } finally {
       setPlanSubmitting(null);
     }
@@ -401,7 +414,10 @@ export function AttendanceForm({
   const handleSave = async () => {
     if (unmarkedStudents.length > 0) {
       toast.error(
-        `Barcha o'quvchilarning holati belgilanishi shart. Belgilanmagan: ${unmarkedStudents.length} ta`,
+        t(
+          "Barcha o'quvchilarning holati belgilanishi shart. Belgilanmagan: {n} ta",
+          { n: unmarkedStudents.length },
+        ),
       );
       return;
     }
@@ -416,10 +432,12 @@ export function AttendanceForm({
             note: e.note,
           })),
       });
-      toast.success("Davomat muvaffaqiyatli saqlandi");
+      toast.success(t("Davomat muvaffaqiyatli saqlandi"));
       onSaved();
     } catch (err) {
-      toast.error(getErrorMessage(err, "Davomatni saqlashda xatolik yuz berdi"));
+      toast.error(
+        getErrorMessage(err, t("Davomatni saqlashda xatolik yuz berdi")),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -468,7 +486,7 @@ export function AttendanceForm({
               disabled={submitting}
             >
               <ArrowLeft className="mr-1.5 size-4" />
-              Orqaga
+              {t("Orqaga")}
             </Button>
           )}
           <div>
@@ -498,8 +516,9 @@ export function AttendanceForm({
       {alreadyTakenForTeacher && (
         <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm text-green-700 dark:border-green-800 dark:bg-green-950/30 dark:text-green-400">
           <Check className="size-4 shrink-0" />
-          Davomat olib bo&apos;lingan. Tahrirlash uchun administratorga murojaat
-          qiling
+          {t(
+            "Davomat olib bo'lingan. Tahrirlash uchun administratorga murojaat qiling",
+          )}
         </div>
       )}
 
@@ -530,9 +549,9 @@ export function AttendanceForm({
         (attendanceWindow === "ENDED" || date < tashkent.dateStr) && (
           <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
             <Clock className="size-4 shrink-0" />
-            Dars tugagan — davomat olish yopilgan. Dars bo&apos;lgan-bo&apos;lmaganini
-            «Davomat olinmagan darslar» ro&apos;yxatida, «Jadval» yoki «Topshiriqlar»da
-            belgilang.
+            {t(
+              "Dars tugagan — davomat olish yopilgan. Dars bo'lgan-bo'lmaganini «Davomat olinmagan darslar» ro'yxatida, «Jadval» yoki «Topshiriqlar»da belgilang.",
+            )}
           </div>
         )}
 
@@ -542,10 +561,9 @@ export function AttendanceForm({
           <div className="flex items-start gap-2">
             <CalendarClock className="mt-0.5 size-4 shrink-0" />
             <span>
-              Oldindan belgilash rejimi — bugun kelmaydigan o&apos;quvchini
-              hozir belgilang. Dars vaqtida ustoz davomatni oladi; belgilangan
-              o&apos;quvchilar &quot;Sababli&quot; bo&apos;lib turadi (pul
-              yechilmaydi).
+              {t(
+                "Oldindan belgilash rejimi — bugun kelmaydigan o'quvchini hozir belgilang. Dars vaqtida ustoz davomatni oladi; belgilangan o'quvchilar \"Sababli\" bo'lib turadi (pul yechilmaydi).",
+              )}
             </span>
           </div>
           {attendanceWindow === "OPEN" && (
@@ -555,7 +573,7 @@ export function AttendanceForm({
               onClick={() => setForceFinalizeMode(true)}
               className="shrink-0"
             >
-              Hozir to&apos;liq davomat olish
+              {t("Hozir to'liq davomat olish")}
             </Button>
           )}
         </div>
@@ -575,11 +593,11 @@ export function AttendanceForm({
                   className="text-green-700 dark:text-green-400"
                 >
                   <UserCheck className="mr-1.5 size-4" />
-                  Barchasiga — Keldi
+                  {t("Barchasiga — Keldi")}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                Barcha o&apos;quvchilarni &quot;Keldi&quot; deb belgilash
+                {t("Barcha o'quvchilarni \"Keldi\" deb belgilash")}
               </TooltipContent>
             </Tooltip>
 
@@ -593,10 +611,10 @@ export function AttendanceForm({
                   className="text-primary"
                 >
                   <QrCode className="mr-1.5 size-4" />
-                  QR davomat
+                  {t("QR davomat")}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>QR kod orqali davomat olish</TooltipContent>
+              <TooltipContent>{t("QR kod orqali davomat olish")}</TooltipContent>
             </Tooltip>
           </div>
 
@@ -613,7 +631,7 @@ export function AttendanceForm({
                     opt.value === "EXCUSED" && "text-blue-500",
                   )}
                 />
-                {opt.label}
+                {t(opt.label)}
               </span>
             ))}
           </div>
@@ -641,7 +659,7 @@ export function AttendanceForm({
       ) : students.length === 0 ? (
         <div className="flex h-24 items-center justify-center rounded-md border">
           <p className="text-sm text-muted-foreground">
-            Bu guruhda faol o&apos;quvchilar yo&apos;q
+            {t("Bu guruhda faol o'quvchilar yo'q")}
           </p>
         </div>
       ) : (
@@ -683,7 +701,7 @@ export function AttendanceForm({
             disabled={submitting}
           >
             <ArrowLeft className="mr-1.5 size-4" />
-            Orqaga
+            {t("Orqaga")}
           </Button>
           <Button
             className="flex-[2]"
@@ -696,7 +714,10 @@ export function AttendanceForm({
             }
           >
             {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
-            Saqlash · {markedCount}/{markedCount + unmarkedStudents.length}
+            {t("Saqlash · {done}/{total}", {
+              done: markedCount,
+              total: markedCount + unmarkedStudents.length,
+            })}
           </Button>
         </div>
       )}
@@ -704,7 +725,7 @@ export function AttendanceForm({
         <div className="sticky bottom-4 flex items-center justify-end gap-3 pt-2">
           {unmarkedStudents.length > 0 && !isLocked && (
             <span className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 shadow-sm dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
-              Belgilanmagan: {unmarkedStudents.length} ta
+              {t("Belgilanmagan: {n} ta", { n: unmarkedStudents.length })}
             </span>
           )}
           <Button
@@ -719,7 +740,7 @@ export function AttendanceForm({
             className="min-w-36 shadow-lg"
           >
             {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
-            Saqlash
+            {t("Saqlash")}
           </Button>
         </div>
       )}
@@ -771,13 +792,13 @@ export function AttendanceForm({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Saqlanmagan o&apos;zgarishlar bor</AlertDialogTitle>
+            <AlertDialogTitle>{t("Saqlanmagan o'zgarishlar bor")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Belgilangan davomat saqlanmagan. Chiqsangiz, belgilar yo&apos;qoladi.
+              {t("Belgilangan davomat saqlanmagan. Chiqsangiz, belgilar yo'qoladi.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Qolish</AlertDialogCancel>
+            <AlertDialogCancel>{t("Qolish")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
@@ -786,7 +807,7 @@ export function AttendanceForm({
                 leave?.();
               }}
             >
-              Chiqish
+              {t("Saqlamasdan chiqish")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

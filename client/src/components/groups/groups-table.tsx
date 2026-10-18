@@ -11,7 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { TranslatedStatusBadge } from "@/components/shared/translated-status-badge";
+import { useT } from "@/i18n/context";
 import { GroupRowActions } from "./group-row-actions";
 import { LevelBadge } from "./level-badge";
 import { CoveringBadge } from "./covering-badge";
@@ -42,6 +43,7 @@ export function GroupsTable({
   const canManage = useCan("groups.manage");
   const user = useAuth((s) => s.user);
   const isMobile = useIsMobile();
+  const t = useT();
 
   // A teacher on a phone gets cards: the table would hide their days, time,
   // room and student count (the Telegram cabinet opens on this list).
@@ -52,7 +54,7 @@ export function GroupsTable({
   if (groups.length === 0) {
     return (
       <div className="text-muted-foreground flex h-40 items-center justify-center rounded-md border">
-        Guruhlar topilmadi
+        {t("Guruhlar topilmadi")}
       </div>
     );
   }
@@ -63,18 +65,18 @@ export function GroupsTable({
         <TableHeader>
           <TableRow>
             <TableHead className="min-w-16 border-r">#</TableHead>
-            <TableHead className="min-w-28">Nomi</TableHead>
+            <TableHead className="min-w-28">{t("Nomi")}</TableHead>
             <TableHead className="hidden min-w-32 sm:table-cell">
-              Daraja / Kurs
+              {t("Daraja / Kurs")}
             </TableHead>
             <TableHead className="hidden min-w-28 md:table-cell">
-              O&apos;qituvchi
+              {t("O'qituvchi")}
             </TableHead>
-            <TableHead className="hidden md:table-cell">Xona</TableHead>
-            <TableHead className="hidden lg:table-cell">Kun / Vaqt</TableHead>
-            <TableHead className="min-w-24">Holat</TableHead>
+            <TableHead className="hidden md:table-cell">{t("Xona")}</TableHead>
+            <TableHead className="hidden lg:table-cell">{t("Kun / Vaqt")}</TableHead>
+            <TableHead className="min-w-24">{t("Holat")}</TableHead>
             <TableHead className="hidden sm:table-cell">
-              O&apos;quvchilar
+              {t("O'quvchilar")}
             </TableHead>
             {canManage && <TableHead className="w-10" />}
           </TableRow>
@@ -84,7 +86,7 @@ export function GroupsTable({
             const groupStatusEnum = group.statusEnum || "FORMING";
             const daysLabel =
               group.exactDays?.length > 0
-                ? formatWeekdays(group.exactDays)
+                ? formatWeekdays(group.exactDays, t)
                 : null;
             const timeLabel =
               group.lessonStartTime && group.lessonEndTime
@@ -118,16 +120,16 @@ export function GroupsTable({
                 <TableCell className="hidden md:table-cell">
                   {group.teachers.length > 0 ? (
                     <div className="flex flex-col gap-1.5">
-                      {group.teachers.map((t) => {
-                        const fullName = `${t.firstName} ${t.lastName}`;
+                      {group.teachers.map((teacher) => {
+                        const fullName = `${teacher.firstName} ${teacher.lastName}`;
                         const initials =
-                          `${t.firstName[0] ?? ""}${t.lastName[0] ?? ""}`.toUpperCase();
+                          `${teacher.firstName[0] ?? ""}${teacher.lastName[0] ?? ""}`.toUpperCase();
                         return (
-                          <div key={t.id} className="flex items-center gap-2">
-                            <AvatarWithPreview src={t.photo} alt={fullName}>
+                          <div key={teacher.id} className="flex items-center gap-2">
+                            <AvatarWithPreview src={teacher.photo} alt={fullName}>
                               <Avatar className="size-6">
                                 <AvatarImage
-                                  src={t.photo ?? undefined}
+                                  src={teacher.photo ?? undefined}
                                   alt={fullName}
                                 />
                                 <AvatarFallback className="text-[10px]">
@@ -157,7 +159,7 @@ export function GroupsTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <StatusBadge entityType="groups" status={groupStatusEnum} />
+                  <TranslatedStatusBadge entityType="groups" status={groupStatusEnum} />
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   {group.studentCount}

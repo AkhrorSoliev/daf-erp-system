@@ -32,6 +32,7 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import {
   editGroupSchema,
   addGroupSchema,
+  groupFormError,
   type EditGroupFormValues,
 } from "@/lib/schemas/group-schema";
 import { useEditGroup, type GroupData } from "@/hooks/use-edit-group";
@@ -40,6 +41,7 @@ import { useScheduleAvailability } from "@/hooks/use-schedule-availability";
 import { usePermissions } from "@/hooks/use-permissions";
 import { groupFormEmptyHints, type EmptyHint } from "./group-form-empty-hints";
 import { SelectEmptyState } from "./select-empty-state";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 
@@ -58,6 +60,7 @@ export function EditGroupForm({
   onSaved,
   formId,
 }: EditGroupFormProps) {
+  const t = useT();
   const { setSubmitting, setHasConflict } = useEditGroup();
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
 
@@ -132,7 +135,7 @@ export function EditGroupForm({
 
   useEffect(() => {
     if (watchedTeacherId && smartTeachers.length > 0) {
-      const teacher = smartTeachers.find((t) => t.id === watchedTeacherId);
+      const teacher = smartTeachers.find((x) => x.id === watchedTeacherId);
       if (teacher && !teacher.available) {
         form.setValue("teacherId", undefined);
       }
@@ -221,7 +224,7 @@ export function EditGroupForm({
       };
       if (isAdd) {
         if (!selectedBranch?.id) {
-          toast.error("Filial tanlanmagan — yuqoridan filialni tanlang");
+          toast.error(t("Filial tanlanmagan — yuqoridan filialni tanlang"));
           return;
         }
         payload.branchId = selectedBranch.id;
@@ -244,16 +247,16 @@ export function EditGroupForm({
         const companyId = localStorage.getItem("companyId");
         if (companyId) payload.companyId = Number(companyId);
         const { data } = await api.post("/groups", payload);
-        toast.success("Guruh muvaffaqiyatli qo'shildi");
+        toast.success(t("Guruh muvaffaqiyatli qo'shildi"));
         onSaved?.(data);
       } else if (group) {
         const { data } = await api.patch(`/groups/${group.id}`, payload);
-        toast.success("Guruh muvaffaqiyatli yangilandi");
+        toast.success(t("Guruh muvaffaqiyatli yangilandi"));
         onSaved?.(data);
       }
       onClose();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Saqlashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Saqlashda xatolik yuz berdi")));
     } finally {
       setSubmitting(false);
     }
@@ -275,7 +278,7 @@ export function EditGroupForm({
     >
       {/* Asosiy ma'lumotlar */}
       <div className="space-y-4">
-        <h3 className="text-sm font-medium">Asosiy ma&apos;lumotlar</h3>
+        <h3 className="text-sm font-medium">{t("Asosiy ma'lumotlar")}</h3>
 
         {/* Daraja select */}
         <Controller
@@ -285,7 +288,7 @@ export function EditGroupForm({
             <GroupLevelSelect
               value={field.value ?? ""}
               onChange={field.onChange}
-              error={form.formState.errors.level?.message}
+              error={groupFormError(t, form.formState.errors.level?.message)}
             />
           )}
         />
@@ -293,11 +296,11 @@ export function EditGroupForm({
         {/* Suggested name */}
         {suggestedName && (
           <div className="space-y-2">
-            <Label>Guruh nomi</Label>
+            <Label>{t("Guruh nomi")}</Label>
             <div className="bg-muted flex h-9 items-center rounded-md border px-3 text-sm font-medium">
               {suggestedName}
               <span className="text-muted-foreground ml-2 text-xs font-normal">
-                (avtomatik)
+                {t("(avtomatik)")}
               </span>
             </div>
           </div>
@@ -306,7 +309,7 @@ export function EditGroupForm({
         {/* Edit mode: show existing name */}
         {!isAdd && group?.name && !suggestedName && (
           <div className="space-y-2">
-            <Label>Guruh nomi</Label>
+            <Label>{t("Guruh nomi")}</Label>
             <div className="bg-muted text-muted-foreground flex h-9 items-center rounded-md border px-3 text-sm">
               {group.name}
             </div>
@@ -322,7 +325,7 @@ export function EditGroupForm({
               value={field.value}
               onChange={field.onChange}
               courses={courses}
-              error={form.formState.errors.courseId?.message}
+              error={groupFormError(t, form.formState.errors.courseId?.message)}
               emptyState={renderEmpty(emptyHints.course)}
             />
           )}
@@ -347,7 +350,7 @@ export function EditGroupForm({
 
       {/* Jadval */}
       <div className="space-y-4">
-        <h3 className="text-sm font-medium">Jadval</h3>
+        <h3 className="text-sm font-medium">{t("Jadval")}</h3>
 
         <Controller
           name="exactDays"
@@ -356,13 +359,13 @@ export function EditGroupForm({
             <GroupDaysPicker
               value={field.value ?? []}
               onChange={field.onChange}
-              error={form.formState.errors.exactDays?.message}
+              error={groupFormError(t, form.formState.errors.exactDays?.message)}
             />
           )}
         />
 
         <div className="space-y-2">
-          <Label>Dars boshlanish vaqti</Label>
+          <Label>{t("Dars boshlanish vaqti")}</Label>
           <Controller
             name="lessonStartTime"
             control={form.control}
@@ -370,7 +373,7 @@ export function EditGroupForm({
               <TimePicker
                 value={field.value || undefined}
                 onChange={field.onChange}
-                placeholder="Boshlanish vaqtini tanlang"
+                placeholder={t("Boshlanish vaqtini tanlang")}
                 minTime={branchStartTime}
                 maxTime={startTimeMax}
               />
@@ -378,18 +381,18 @@ export function EditGroupForm({
           />
           {form.formState.errors.lessonStartTime && (
             <p className="text-destructive text-sm">
-              {form.formState.errors.lessonStartTime.message}
+              {groupFormError(t, form.formState.errors.lessonStartTime.message)}
             </p>
           )}
         </div>
 
         {watchedStartTime && effectiveLessonMinutes && (
           <div className="space-y-2">
-            <Label>Tugash vaqti</Label>
+            <Label>{t("Tugash vaqti")}</Label>
             <div className="bg-muted text-muted-foreground flex h-9 items-center rounded-md border px-3 text-sm">
               {calcEndTime(watchedStartTime, effectiveLessonMinutes)}
               <span className="ml-2 text-xs">
-                (avtomatik — {effectiveLessonMinutes} daqiqa)
+                {t("(avtomatik — {n} daqiqa)", { n: effectiveLessonMinutes })}
               </span>
             </div>
           </div>
@@ -397,7 +400,7 @@ export function EditGroupForm({
 
         {/* Smart Xona select */}
         <div className="space-y-2">
-          <Label>Xona</Label>
+          <Label>{t("Xona")}</Label>
           <Controller
             name="roomId"
             control={form.control}
@@ -414,7 +417,7 @@ export function EditGroupForm({
 
         {/* Smart O'qituvchi select */}
         <div className="space-y-2">
-          <Label>O&apos;qituvchi</Label>
+          <Label>{t("O'qituvchi")}</Label>
           <Controller
             name="teacherId"
             control={form.control}
@@ -430,7 +433,7 @@ export function EditGroupForm({
           {teacherChanged && (
             <div className="space-y-2 rounded-md border bg-muted/30 p-3">
               <Label className="text-xs text-muted-foreground">
-                Ustoz o&apos;zgartirilmoqda — sababi (ixtiyoriy)
+                {t("Ustoz o'zgartirilmoqda — sababi (ixtiyoriy)")}
               </Label>
               <Select
                 value={changeReasonId ?? "__none__"}
@@ -439,11 +442,11 @@ export function EditGroupForm({
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Sabab tanlang" />
+                  <SelectValue placeholder={t("Sabab tanlang")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">
-                    Sababsiz (ko&apos;rsatilmagan)
+                    {t("Sababsiz (ko'rsatilmagan)")}
                   </SelectItem>
                   {changeReasonOptions.map((r) => (
                     <SelectItem key={r.id} value={r.id}>
@@ -459,10 +462,10 @@ export function EditGroupForm({
 
       {/* Sana */}
       <div className="space-y-4">
-        <h3 className="text-sm font-medium">Sana</h3>
+        <h3 className="text-sm font-medium">{t("Sana")}</h3>
 
         <div className="space-y-2">
-          <Label>Boshlanish sanasi</Label>
+          <Label>{t("Boshlanish sanasi")}</Label>
           <Controller
             name="startDate"
             control={form.control}
@@ -470,7 +473,7 @@ export function EditGroupForm({
               <DatePicker
                 value={field.value}
                 onChange={field.onChange}
-                placeholder="Sanani tanlang"
+                placeholder={t("Sanani tanlang")}
               />
             )}
           />
@@ -478,10 +481,10 @@ export function EditGroupForm({
 
 
         <div className="space-y-2">
-          <Label htmlFor="comment">Izoh</Label>
+          <Label htmlFor="comment">{t("Izoh")}</Label>
           <Textarea
             id="comment"
-            placeholder="Qo'shimcha izoh..."
+            placeholder={t("Qo'shimcha izoh...")}
             rows={3}
             {...form.register("comment")}
           />
