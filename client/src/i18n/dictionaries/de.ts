@@ -1652,7 +1652,7 @@ const de: Dictionary = {
   "O'qituvchini o'chirish": "Lehrkraft löschen",
   "\"{name}\" arxivga o'tkaziladi. Keyinchalik arxivdan tiklash mumkin.": "„{name}“ wird archiviert. Später kann die Lehrkraft aus dem Archiv wiederhergestellt werden.",
   "Ko'rsatkichlar": "Kennzahlen",
-  "Taymlayn": "Verlauf",
+  "Taymlayn": "Zeitachse",
   "Baholar": "Bewertungen",
   "Tarix ma'lumotlari mavjud emas": "Keine Verlaufsdaten vorhanden",
   "Guruhlar hali ulanmagan": "Noch keine Gruppen zugeordnet",
@@ -1712,7 +1712,7 @@ const de: Dictionary = {
   "(o'quvchi)": "(Teilnehmer)",
   "Profilga o'tish": "Zum Profil",
   "Arxivlandi": "Archiviert",
-  "+{n} ta maydon": "+ Felder: {n}",
+  "+{n} ta maydon": "weitere Felder: {n}",
   "To'liq o'qish": "Vollständig lesen",
   "O'zgarishlar tafsiloti": "Details der Änderungen",
   "Davomat yangilandi": "Anwesenheit aktualisiert",
@@ -1785,6 +1785,9 @@ const de: Dictionary = {
   "{n} o'quvchi": "Teilnehmer: {n}",
   "kurs {price} so'm": "Kurs {price} Sum",
   "Bu xodim uchun oylik konfiguratsiyasi belgilanmagan. Moliya bo'limidan sozlang.": "Für diese Person ist kein Gehalt eingerichtet. Richten Sie es im Bereich Finanzen ein.",
+  // Teacher portal — lesson cards and bottom bar
+  "Boshlanadi": "Demnächst",
+  "Asosiy navigatsiya": "Hauptnavigation",
 };
 
 export default de;

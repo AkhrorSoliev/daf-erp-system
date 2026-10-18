@@ -186,7 +186,7 @@ export function TeacherStatsCharts({ endpoint }: { endpoint: string }) {
             <Area
               type="monotone"
               dataKey="activeStudents"
-              name={t("Faol")}
+              name={t("Faol o'quvchilar")}
               stroke={BLUE}
               strokeWidth={2}
               fill={BLUE}

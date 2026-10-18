@@ -1679,7 +1679,7 @@ const ru: Dictionary = {
   "{month} uchun oylik ma'lumoti yo'q — boshqa oyni tanlab ko'ring.": "Нет данных о зарплате за {month} — выберите другой месяц.",
   "To'lanishi kerak": "К выплате",
   "Bu oy uchun to'lanishi kerak bo'lgan sof summa: to'liq ishlangan (markaz qo'shimchasi bilan) − avans. Hisoblab bo'lingan oylar uchun haqiqiy to'langan summa ko'rsatiladi.": "Чистая сумма к выплате за этот месяц: заработано полностью (с доплатой центра) − аванс. Для рассчитанных месяцев показана фактически выплаченная сумма.",
-  "Oylik (belgilangan)": "Оклад (установленный)",
+  "Oylik (belgilangan)": "Оклад (фиксированный)",
   "Avans": "Аванс",
   "To'liq ishlangan": "Заработано полностью",
   "O'quvchilar to'lagan": "Оплатили ученики",
@@ -1712,7 +1712,7 @@ const ru: Dictionary = {
   "(o'quvchi)": "(ученик)",
   "Profilga o'tish": "Перейти в профиль",
   "Arxivlandi": "Архивировано",
-  "+{n} ta maydon": "+ полей: {n}",
+  "+{n} ta maydon": "ещё полей: {n}",
   "To'liq o'qish": "Читать полностью",
   "O'zgarishlar tafsiloti": "Подробности изменений",
   "Davomat yangilandi": "Посещаемость обновлена",
@@ -1779,12 +1779,15 @@ const ru: Dictionary = {
   "Oyni tanlang": "Выберите месяц",
   "Tanlangan oyni bekor qilish": "Сбросить выбранный месяц",
   "Batafsil ma'lumotlar": "Подробнее",
-  "Berilmadi — davomat olinmagan darslar ({count})": "Не засчитано — занятия без отметки посещаемости ({count})",
+  "Berilmadi — davomat olinmagan darslar ({count})": "Не оплачено — занятия без отметки посещаемости ({count})",
   "{n} ta dars": "занятий: {n}",
   "Dars tugaguncha davomat olinmagan. Bu darslar uchun ish haqi yozilmaydi: summa — o'sha kuni to'lagan o'quvchilar bo'yicha ustoz ulushi.": "Посещаемость не была отмечена до конца занятия. За эти занятия зарплата не начисляется: сумма — доля преподавателя от учеников, оплативших в тот день.",
   "{n} o'quvchi": "учеников: {n}",
   "kurs {price} so'm": "курс {price} сум",
   "Bu xodim uchun oylik konfiguratsiyasi belgilanmagan. Moliya bo'limidan sozlang.": "Для этого сотрудника не настроена зарплата. Настройте её в разделе «Финансы».",
+  // Teacher portal — lesson cards and bottom bar
+  "Boshlanadi": "Скоро",
+  "Asosiy navigatsiya": "Основная навигация",
 };
 
 export default ru;

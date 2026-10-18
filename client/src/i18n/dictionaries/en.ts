@@ -1656,7 +1656,7 @@ const en: Dictionary = {
   "Baholar": "Ratings",
   "Tarix ma'lumotlari mavjud emas": "No history data",
   "Guruhlar hali ulanmagan": "No groups assigned yet",
-  "{n} nafar": "{n} pers.",
+  "{n} nafar": "{n} students",
   "Ko'rsatkichlarni yuklab bo'lmadi. Sahifani yangilang.": "Could not load the metrics. Refresh the page.",
   "Oylik dinamikasi": "Salary trend",
   "{month}: {amount}": "{month}: {amount}",
@@ -1664,7 +1664,7 @@ const en: Dictionary = {
   "Har oy to'liq ishlangan pul — «Ish haqi» bo'limidagi raqamning o'zi.\nJoriy oy hali tugamagan: raqam oy oxirigacha o'sadi.": "Money fully earned each month — the same figure as in the “Salary” section.\nThe current month is not over yet: the figure grows until the end of the month.",
   "Bu oylarda oylik yo'q": "No salary in these months",
   "Oylik": "Salary",
-  "Hozir: {n} nafar": "Now: {n} pers.",
+  "Hozir: {n} nafar": "Now: {n} students",
   "Har oy oxirida ustoz guruhlarida o'qiyotgan o'quvchilar soni.\nGuruh boshqa ustozga o'tgan oydan boshlab sanalmaydi.": "Number of students studying in the teacher's groups at the end of each month.\nThey are not counted from the month the group passes to another teacher.",
   "Kelganlar va ketganlar": "Joined and left",
   "{month}: +{joined} qo'shildi, −{left} ketdi": "{month}: +{joined} joined, −{left} left",
@@ -1712,7 +1712,7 @@ const en: Dictionary = {
   "(o'quvchi)": "(student)",
   "Profilga o'tish": "Open profile",
   "Arxivlandi": "Archived",
-  "+{n} ta maydon": "+ fields: {n}",
+  "+{n} ta maydon": "+{n} more fields",
   "To'liq o'qish": "Read in full",
   "O'zgarishlar tafsiloti": "Change details",
   "Davomat yangilandi": "Attendance updated",
@@ -1785,6 +1785,9 @@ const en: Dictionary = {
   "{n} o'quvchi": "students: {n}",
   "kurs {price} so'm": "course {price} UZS",
   "Bu xodim uchun oylik konfiguratsiyasi belgilanmagan. Moliya bo'limidan sozlang.": "No salary is set up for this employee. Set it up in the Finance section.",
+  // Teacher portal — lesson cards and bottom bar
+  "Boshlanadi": "Upcoming",
+  "Asosiy navigatsiya": "Main navigation",
 };
 
 export default en;

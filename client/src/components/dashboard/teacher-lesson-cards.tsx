@@ -20,7 +20,7 @@ export function canOfferAttendance(isToday: boolean, att: DashboardLesson["atten
 const STATUS_LABEL = {
   past: msg("Tugagan"),
   current: msg("Davom etmoqda"),
-  upcoming: msg("Kutilmoqda"),
+  upcoming: msg("Boshlanadi"),
 } as const;
 
 /**

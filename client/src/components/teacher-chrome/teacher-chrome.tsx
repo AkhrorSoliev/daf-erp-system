@@ -77,7 +77,7 @@ function TeacherBars() {
           {/* Keeps the page's last lines above the fixed bar. */}
           <div aria-hidden className="h-[calc(4.25rem+env(safe-area-inset-bottom))]" />
           <nav
-            aria-label={t("Asosiy")}
+            aria-label={t("Asosiy navigatsiya")}
             className="bg-background fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)]"
           >
             {mode === "group" ? <GroupBar /> : <GlobalBar />}

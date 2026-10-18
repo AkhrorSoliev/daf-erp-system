@@ -12,6 +12,12 @@ const uzCyrl: Dictionary = {
   "JAMI": "ЖАМИ",
   // Key names stay as printed on the keyboard.
   "Esc — bekor, Ctrl+Enter — saqlash": "Esc — бекор, Ctrl+Enter — сақлаш",
+  // Month names: Cyrillic Uzbek writes «я» here, which the rules cannot know.
+  "Sentabr": "Сентябр",
+  "Oktabr": "Октябр",
+  "Iyn": "Июн",
+  "Iyl": "Июл",
+  "Noy": "Ноя",
 };
 
 export default uzCyrl;

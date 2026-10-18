@@ -100,7 +100,6 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
     return (
       <div className="space-y-2">
         <h1 className="text-2xl font-bold">{t("O'qituvchi topilmadi")}</h1>
-        {error && <p className="text-muted-foreground">{t("O'qituvchi topilmadi")}</p>}
       </div>
     );
   }
