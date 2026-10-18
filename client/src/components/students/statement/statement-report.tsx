@@ -1,5 +1,6 @@
 import { AlertTriangle } from "lucide-react";
 import type { ReactNode } from "react";
+import { useT } from "@/i18n/context";
 import type { CorrectablePayment } from "../correct-payment-dialog";
 import { StatementMonthsTable } from "./statement-months-table";
 import { StatementPayments } from "./statement-payments";
@@ -29,6 +30,7 @@ export function StatementReport({
   onCorrect: (p: CorrectablePayment) => void;
   ledger?: ReactNode;
 }) {
+  const t = useT();
   const { view, model } = data;
   const lessonDays: Record<string, LessonDay[]> = {};
   for (const m of model.months) lessonDays[m.key] = m.lessonDays;
@@ -49,7 +51,7 @@ export function StatementReport({
       <StatementSummary answer={view.answer} equation={model.equation} />
 
       <section className="space-y-2">
-        <h3 className="text-sm font-semibold">To&apos;lovlar</h3>
+        <h3 className="text-sm font-semibold">{t("To'lovlar")}</h3>
         <StatementPayments
           rows={view.payments}
           total={view.paidTotal}
@@ -60,7 +62,7 @@ export function StatementReport({
       </section>
 
       <section className="space-y-2">
-        <h3 className="text-sm font-semibold">Oylar bo&apos;yicha</h3>
+        <h3 className="text-sm font-semibold">{t("Oylar bo'yicha")}</h3>
         <StatementMonthsTable
           dues={view.dues}
           total={view.duesTotal}
@@ -71,8 +73,8 @@ export function StatementReport({
       </section>
 
       <section className="space-y-2">
-        <h3 className="text-sm font-semibold">Batafsil</h3>
-        <StatementSection title="Izohlar">
+        <h3 className="text-sm font-semibold">{t("Batafsil")}</h3>
+        <StatementSection title={t("Hisob izohlari")}>
           <div className="space-y-2 text-sm">
             <p>
               <Segments segments={view.equation} />

@@ -8,13 +8,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useT } from "@/i18n/context";
 import { issuedDay, revokedState } from "./certificate-rules";
 import type { IssuedCertificate } from "./certificate-types";
 
 /**
  * The issued documents of one level. A cancelled row keeps its number (struck
  * through), says why, and has no PDF; a standing row has the PDF and, for a
- * caller who may cancel, a ⋯ menu with «Bekor qilish».
+ * caller who may cancel, a ⋯ menu with «Hujjatni bekor qilish».
  */
 export function IssuedDocumentsList({
   rows,
@@ -27,10 +28,11 @@ export function IssuedDocumentsList({
   onDownload: (row: IssuedCertificate) => void;
   onRevoke: (row: IssuedCertificate) => void;
 }) {
+  const t = useT();
   return (
     <ul className="divide-y rounded-md border text-sm">
       {rows.map((row) => {
-        const gone = revokedState(row);
+        const gone = revokedState(row, t);
         return (
           <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
             <span className={gone ? "font-medium text-muted-foreground line-through" : "font-medium"}>
@@ -38,7 +40,12 @@ export function IssuedDocumentsList({
             </span>
             <span className="text-muted-foreground">
               {issuedDay(row.issuedAt)}
-              {row.exempt && " · istisno bilan"}
+              {row.exempt && (
+                <>
+                  {" · "}
+                  {t("istisno bilan")}
+                </>
+              )}
             </span>
             {gone ? (
               <div className="flex basis-full flex-wrap items-center gap-x-2 gap-y-1">
@@ -59,7 +66,7 @@ export function IssuedDocumentsList({
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon">
                         <MoreHorizontal className="size-4" />
-                        <span className="sr-only">Amallar</span>
+                        <span className="sr-only">{t("Amallar")}</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -71,7 +78,7 @@ export function IssuedDocumentsList({
                         }}
                       >
                         <Ban className="mr-2 size-4" />
-                        Bekor qilish
+                        {t("Hujjatni bekor qilish")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

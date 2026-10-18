@@ -92,11 +92,14 @@ export const LEAD_LINKED_REASON = "LINKED_TO_EXISTING";
 export function leadConvertedLabel(
   statusEnum: LeadStatus,
   statusChangeReason: string | null | undefined,
+  t: (source: string) => string = (source) => source,
 ): string {
+  // The other statuses stay Uzbek: `LEAD_STATUS_LABELS` is not translated yet
+  // (its «Yangi» would clash with the dictionary's «Yangi» = creating).
   if (statusEnum !== "CONVERTED") return LEAD_STATUS_LABELS[statusEnum];
   return statusChangeReason === LEAD_LINKED_REASON
-    ? "Mavjud o'quvchiga biriktirilgan"
-    : "O'quvchiga aylangan";
+    ? t("Mavjud o'quvchiga biriktirilgan")
+    : t("O'quvchiga aylangan");
 }
 
 // ---------------------------------------------------------------------------

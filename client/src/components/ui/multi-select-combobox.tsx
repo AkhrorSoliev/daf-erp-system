@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+// The light import: filters built on this also render outside the dashboard.
+import { useT } from "@/i18n/use-t";
 
 export interface MultiSelectOption {
   value: string;
@@ -50,12 +52,13 @@ export function MultiSelectCombobox({
   selected,
   onChange,
   placeholder,
-  searchPlaceholder = "Qidirish...",
+  searchPlaceholder,
   countSuffix,
   className,
   contentClassName,
   disabled,
 }: MultiSelectComboboxProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -78,7 +81,7 @@ export function MultiSelectCombobox({
     if (selected.length === 1) {
       return options.find((o) => o.value === selected[0])?.label ?? placeholder;
     }
-    return `${selected.length} ta tanlangan`;
+    return t("{n} ta tanlangan", { n: selected.length });
   })();
 
   return (
@@ -108,7 +111,7 @@ export function MultiSelectCombobox({
               <span
                 role="button"
                 tabIndex={0}
-                aria-label="Tozalash"
+                aria-label={t("Tozalash")}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -139,7 +142,7 @@ export function MultiSelectCombobox({
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={searchPlaceholder}
+            placeholder={searchPlaceholder ?? t("Qidirish...")}
             className="h-8"
           />
         </div>
@@ -164,7 +167,7 @@ export function MultiSelectCombobox({
         <div className="max-h-[260px] overflow-y-auto overscroll-contain py-1">
           {filtered.length === 0 ? (
             <div className="px-3 py-6 text-center text-xs text-muted-foreground">
-              Topilmadi
+              {t("Topilmadi")}
             </div>
           ) : (
             filtered.map((option, index) => {

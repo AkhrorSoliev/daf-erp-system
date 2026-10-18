@@ -14,7 +14,7 @@ describe("studentPhoneRows", () => {
     ).toEqual([
       {
         key: "phone",
-        label: "Asosiy",
+        label: "Asosiy raqam",
         phone: "901234567",
         signIn: true,
         telHref: "tel:+998901234567",
@@ -42,7 +42,7 @@ describe("studentPhoneRows", () => {
     ).toEqual([
       {
         key: "phone",
-        label: "Asosiy",
+        label: "Asosiy raqam",
         phone: "901234567",
         signIn: true,
         telHref: "tel:+998901234567",

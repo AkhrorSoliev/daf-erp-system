@@ -1,6 +1,7 @@
 // Shared helpers for the salary page (matrix + period workflow views).
 
 import { formatNumber } from "@/lib/format-utils";
+import { msg } from "@/i18n/msg";
 
 /**
  * The unit a rate is written in: «month» — per student per MONTH, «cycle» —
@@ -118,18 +119,18 @@ export function positionLabel(user: {
 }
 
 const UZ_MONTHS = [
-  "Yanvar",
-  "Fevral",
-  "Mart",
-  "Aprel",
-  "May",
-  "Iyun",
-  "Iyul",
-  "Avgust",
-  "Sentabr",
-  "Oktabr",
-  "Noyabr",
-  "Dekabr",
+  msg("Yanvar"),
+  msg("Fevral"),
+  msg("Mart"),
+  msg("Aprel"),
+  msg("May"),
+  msg("Iyun"),
+  msg("Iyul"),
+  msg("Avgust"),
+  msg("Sentabr"),
+  msg("Oktabr"),
+  msg("Noyabr"),
+  msg("Dekabr"),
 ];
 
 const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
@@ -140,16 +141,24 @@ export function monthKeyOf(iso: string): string {
   return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-/** "2026-06" → "Iyun 2026". */
-export function monthLabel(key: string): string {
+/** "2026-06" → "Iyun 2026". `t` translates the month name (default: the Uzbek text). */
+export function monthLabel(
+  key: string,
+  t: (source: string) => string = (source) => source,
+): string {
   const [y, m] = key.split("-").map(Number);
-  return `${UZ_MONTHS[(m - 1 + 12) % 12]} ${y}`;
+  const month = UZ_MONTHS[(m - 1 + 12) % 12];
+  return `${t(month)} ${y}`;
 }
 
-/** "2026-06" → "Iyun" (no year). */
-export function monthShort(key: string): string {
+/** "2026-06" → "Iyun" (no year). `t` translates the month name (default: the Uzbek text). */
+export function monthShort(
+  key: string,
+  t: (source: string) => string = (source) => source,
+): string {
   const [, m] = key.split("-").map(Number);
-  return UZ_MONTHS[(m - 1 + 12) % 12];
+  const month = UZ_MONTHS[(m - 1 + 12) % 12];
+  return t(month);
 }
 
 /** Current Tashkent month key. */

@@ -6,6 +6,7 @@ import {
   getDelegate,
   getDetailInclude,
   getInclude,
+  getOmit,
   getSearchFilter,
   parseId,
 } from './shared/archive-meta';
@@ -82,6 +83,7 @@ export class ArchiveReadService {
     }
 
     const include = getInclude(entityType);
+    const omit = getOmit(entityType);
 
     const [data, total] = await Promise.all([
       delegate.findMany({
@@ -90,6 +92,7 @@ export class ArchiveReadService {
         take: pageSize,
         orderBy: { deletedAt: 'desc' },
         ...(include && { include }),
+        ...(omit && { omit }),
       }),
       delegate.count({ where }),
     ]);
@@ -104,6 +107,7 @@ export class ArchiveReadService {
   ) {
     const delegate = getDelegate(this.prisma, entityType);
     const include = getDetailInclude(entityType);
+    const omit = getOmit(entityType);
     const parsedId = parseId(entityType, id);
 
     const record = await delegate.findFirst({
@@ -113,6 +117,7 @@ export class ArchiveReadService {
         ...archiveScope(entityType, companyId),
       },
       ...(include && { include }),
+      ...(omit && { omit }),
     });
 
     if (!record) {

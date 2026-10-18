@@ -21,7 +21,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { TranslatedStatusBadge } from "@/components/shared/translated-status-badge";
+import { useT } from "@/i18n/context";
 import { formatPrice } from "@/lib/format-utils";
 import {
   freezePreviewLists,
@@ -85,6 +86,7 @@ export function ChangeStatusDialog({
   onStatusChanged,
   initialStatus,
 }: ChangeStatusDialogProps) {
+  const t = useT();
   const [selectedStatus, setSelectedStatus] = useState(initialStatus ?? "");
   const [reason, setReason] = useState("");
   const [reasonId, setReasonId] = useState<string | null>(null);
@@ -201,7 +203,7 @@ export function ChangeStatusDialog({
             reasonId: reasonId ?? undefined,
           },
         });
-        toast.success("Muvaffaqiyatli arxivlandi");
+        toast.success(t("Muvaffaqiyatli arxivlandi"));
       } else {
         await api.patch(`${apiPath}/${entityId}/status`, {
           status: selectedStatus,
@@ -219,14 +221,14 @@ export function ChangeStatusDialog({
               )
             : {}),
         });
-        toast.success("Status muvaffaqiyatli o'zgartirildi");
+        toast.success(t("Status muvaffaqiyatli o'zgartirildi"));
       }
       onStatusChanged?.(selectedStatus);
       handleClose(false);
     } catch (error) {
       const fallback = isArchiving
-        ? "Arxivlashda xatolik"
-        : "Statusni o'zgartirishda xatolik";
+        ? t("Arxivlashda xatolik")
+        : t("Statusni o'zgartirishda xatolik");
       toast.error(getErrorMessage(error, fallback));
     } finally {
       setSubmitting(false);
@@ -245,42 +247,62 @@ export function ChangeStatusDialog({
   };
 
   const isTerminal = allowedStatuses.length === 0;
+  // The name is bold inside a sentence whose word order differs by language:
+  // translate with a marker, then cut the sentence around it.
+  const [introBefore, introAfter] = t("{name} uchun yangi statusni tanlang", { name: "\u0001" }).split("\u0001");
+
+  // The two bold phrases sit inside a sentence whose word order differs by
+  // language: the markers mark where they go, whatever order a translation has.
+  const archiveBold: Record<string, string> = {
+    "\u0001": t("xato, duplikat yoki test yozuvlar"),
+    "\u0002": `\u201C${t("Chetlatilgan")}\u201D`,
+  };
+  const archiveWarning = t(
+    "Arxivlash faqat {what} uchun — yozuv ro'yxatdan ko'rinmay qoladi. Agar o'quvchi real chetlatilayotgan bo'lsa, {status} holatni tanlang.",
+    { what: "\u0001", status: "\u0002" },
+  )
+    .split(/([\u0001\u0002])/)
+    .map((part, i) => (part === "\u0001" || part === "\u0002" ? <strong key={i}>{archiveBold[part]}</strong> : part));
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Statusni o&apos;zgartirish</DialogTitle>
+          <DialogTitle>{t("Statusni o'zgartirish")}</DialogTitle>
           <DialogDescription>
-            <strong>{entityName}</strong> uchun yangi statusni tanlang
+            {introBefore}
+            <strong>{entityName}</strong>
+            {introAfter}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           {/* Hozirgi status */}
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Hozirgi:</span>
-            <StatusBadge entityType={entityType} status={currentStatus} />
+            <span className="text-sm text-muted-foreground">{t("Hozirgi:")}</span>
+            <TranslatedStatusBadge entityType={entityType} status={currentStatus} />
           </div>
 
           {/* Terminal status — o'zgartirish mumkin emas */}
           {isTerminal ? (
             <div className="rounded-lg border border-dashed p-4 text-center">
               <p className="text-sm text-muted-foreground">
-                Bu statusdan boshqa statusga o&apos;tish mumkin emas
+                {t("Bu statusdan boshqa statusga o'tish mumkin emas")}
               </p>
             </div>
           ) : (
             <>
               {/* Status cards grid */}
               <div className="space-y-2">
-                <span className="text-sm font-medium">Yangi statusni tanlang</span>
+                <span className="text-sm font-medium">{t("Yangi statusni tanlang")}</span>
                 <div className="grid grid-cols-2 gap-2">
                   {allowedStatuses.map((status) => {
                     const config = getCardConfig(status);
                     const colors = COLOR_CLASSES[config.color] || COLOR_CLASSES.gray;
                     const Icon = config.icon;
                     const isSelected = selectedStatus === status;
+                    // An unknown status code is data: it is drawn as it came.
+                    const known = config.label !== status;
 
                     return (
                       <button
@@ -302,10 +324,10 @@ export function ChangeStatusDialog({
                           <p className={`text-sm font-medium leading-tight ${
                             isSelected ? colors.text : "text-foreground"
                           }`}>
-                            {config.label}
+                            {known ? t(config.label) : config.label}
                           </p>
                           <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
-                            {config.description}
+                            {config.description ? t(config.description) : ""}
                           </p>
                         </div>
                       </button>
@@ -317,7 +339,7 @@ export function ChangeStatusDialog({
               {/* Arxivlash uchun qo'shimcha ogohlantirish */}
               {isArchiving && (
                 <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs leading-relaxed text-red-900 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">
-                  Arxivlash faqat <strong>xato, duplikat yoki test yozuvlar</strong> uchun — yozuv ro&apos;yxatdan ko&apos;rinmay qoladi. Agar o&apos;quvchi real chetlatilayotgan bo&apos;lsa, <strong>&ldquo;Chetlatilgan&rdquo;</strong> holatni tanlang.
+                  {archiveWarning}
                 </div>
               )}
 
@@ -329,7 +351,7 @@ export function ChangeStatusDialog({
               {isFreezingStudent && prepaidEnrollments.length > 0 && (
                 <div className="space-y-3 rounded-md border border-blue-200 bg-blue-50/60 p-3 dark:border-blue-900/40 dark:bg-blue-950/20">
                   <div className="text-xs font-medium text-blue-900 dark:text-blue-300">
-                    Pul qaytarish — qolgan darslar avtomatik balansga qaytariladi
+                    {t("Pul qaytarish — qolgan darslar avtomatik balansga qaytariladi")}
                   </div>
                   <div className="space-y-2">
                     {prepaidEnrollments.map((enr) => {
@@ -349,7 +371,7 @@ export function ChangeStatusDialog({
                           >
                             {enr.groupName}
                             <span className="ml-1 text-muted-foreground">
-                              · {formatPrice(enr.perLessonCost)} so&apos;m/dars
+                              · {t("{price} so'm/dars", { price: formatPrice(enr.perLessonCost) })}
                             </span>
                           </span>
                           <Input
@@ -371,18 +393,16 @@ export function ChangeStatusDialog({
                             }
                             className="h-7 w-16 text-xs tabular-nums"
                           />
-                          <span className="text-muted-foreground">dars</span>
+                          <span className="text-muted-foreground">{t("dars")}</span>
                           <span className="w-24 text-right font-mono tabular-nums font-medium">
-                            {formatPrice(value * enr.perLessonCost)} so&apos;m
+                            {t("{amount} so'm", { amount: formatPrice(value * enr.perLessonCost) })}
                           </span>
                         </div>
                       );
                     })}
                   </div>
                   <p className="text-[11px] leading-relaxed text-blue-800/80 dark:text-blue-300/70">
-                    Oldindan to&apos;langan darslardan ko&apos;proq tanlasangiz,
-                    qo&apos;shimcha o&apos;tib bo&apos;lgan darslar bekor qilinadi va
-                    ustozdan mos oylik chiqariladi.
+                    {t("Oldindan to'langan darslardan ko'proq tanlasangiz, qo'shimcha o'tib bo'lgan darslar bekor qilinadi va ustozdan mos oylik chiqariladi.")}
                   </p>
                 </div>
               )}
@@ -393,7 +413,7 @@ export function ChangeStatusDialog({
               {isFreezingStudent && monthlyReleases.length > 0 && (
                 <div className="space-y-2 rounded-md border border-blue-200 bg-blue-50/60 p-3 dark:border-blue-900/40 dark:bg-blue-950/20">
                   <div className="text-xs font-medium text-blue-900 dark:text-blue-300">
-                    Oylik to&apos;lov — o&apos;tmagan darslar puli avtomatik qaytadi
+                    {t("Oylik to'lov — o'tmagan darslar puli avtomatik qaytadi")}
                   </div>
                   {monthlyReleases.map((row) => (
                     <div key={row.enrollmentId} className="text-xs">
@@ -401,7 +421,7 @@ export function ChangeStatusDialog({
                         {row.groupName}
                       </div>
                       <div className="tabular-nums text-muted-foreground">
-                        {monthlyReleaseLabel(row)}
+                        {monthlyReleaseLabel(row, t)}
                       </div>
                     </div>
                   ))}
@@ -412,7 +432,7 @@ export function ChangeStatusDialog({
               {selectedStatus && isReasonRequired && (
                 <div className="space-y-2">
                   <span className="text-sm font-medium">
-                    Sabab <span className="text-destructive">*</span>
+                    {t("Sabab")} <span className="text-destructive">*</span>
                   </span>
                   {useDropdown ? (
                     <>
@@ -425,10 +445,10 @@ export function ChangeStatusDialog({
                           {reasonsLoading ? (
                             <span className="flex items-center gap-2 text-muted-foreground">
                               <Loader2 className="size-3.5 animate-spin" />
-                              Sabablar yuklanmoqda...
+                              {t("Sabablar yuklanmoqda...")}
                             </span>
                           ) : (
-                            <SelectValue placeholder="Sababni tanlang" />
+                            <SelectValue placeholder={t("Sababni tanlang")} />
                           )}
                         </SelectTrigger>
                         <SelectContent>
@@ -442,8 +462,8 @@ export function ChangeStatusDialog({
                       <Textarea
                         placeholder={
                           commentMissing
-                            ? "Nima sababdan? (majburiy)"
-                            : "Qo'shimcha izoh (ixtiyoriy)"
+                            ? t("Nima sababdan? (majburiy)")
+                            : t("Qo'shimcha izoh (ixtiyoriy)")
                         }
                         value={reason}
                         onChange={(e) => setReason(e.target.value)}
@@ -452,15 +472,13 @@ export function ChangeStatusDialog({
                       />
                       {commentMissing && (
                         <p className="text-xs text-destructive">
-                          «Boshqa sabab» tanlandi — nima sababdan ekanini
-                          yozing (kamida{" "}
-                          {EXIT_REASON_COMMENT_MIN_LENGTH} belgi).
+                          {t("«Boshqa sabab» tanlandi — nima sababdan ekanini yozing (kamida {n} belgi).", { n: EXIT_REASON_COMMENT_MIN_LENGTH })}
                         </p>
                       )}
                     </>
                   ) : (
                     <Textarea
-                      placeholder={isArchiving ? "Masalan: duplikat yozuv, xato kiritilgan..." : "Sabab yozing..."}
+                      placeholder={isArchiving ? t("Masalan: duplikat yozuv, xato kiritilgan...") : t("Sabab yozing...")}
                       value={reason}
                       onChange={(e) => setReason(e.target.value)}
                       rows={3}
@@ -487,7 +505,7 @@ export function ChangeStatusDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => handleClose(false)} disabled={submitting}>
-            {isTerminal ? "Yopish" : "Bekor qilish"}
+            {isTerminal ? t("Yopish") : t("Bekor qilish")}
           </Button>
           {!isTerminal && (
             <Button
@@ -501,8 +519,8 @@ export function ChangeStatusDialog({
               variant={isArchiving ? "destructive" : "default"}
             >
               {submitting
-                ? isArchiving ? "Arxivlanmoqda..." : "O'zgartirilmoqda..."
-                : isArchiving ? "Arxivlash" : "O'zgartirish"}
+                ? isArchiving ? t("Arxivlanmoqda...") : t("O'zgartirilmoqda...")
+                : isArchiving ? t("Arxivlash") : t("O'zgartirish")}
             </Button>
           )}
         </DialogFooter>

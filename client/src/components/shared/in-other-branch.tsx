@@ -3,6 +3,7 @@
 import { Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useT } from "@/i18n/context";
 import type { OtherBranch } from "@/lib/other-branch";
 
 /**
@@ -11,15 +12,14 @@ import type { OtherBranch } from "@/lib/other-branch";
  * which then loads the record there.
  */
 export function InOtherBranch({
-  title,
   what,
   branch,
 }: {
-  title: string;
-  /** "guruh", "o'quvchi" — fills «Bu … filialiga tegishli». */
-  what: string;
+  /** Which record it is; the title and the sentence are its own (no word is glued into another language). */
+  what: "guruh" | "o'quvchi";
   branch: OtherBranch;
 }) {
+  const t = useT();
   const target = useBranchSwitcher((s) =>
     s.branches.find((b) => b.id === branch.id),
   );
@@ -28,16 +28,17 @@ export function InOtherBranch({
   return (
     <div className="space-y-4">
       <h1 className="font-heading text-2xl font-bold tracking-tight">
-        {title}
+        {what === "guruh" ? t("Guruh boshqa filialda") : t("O'quvchi boshqa filialda")}
       </h1>
       <p className="text-muted-foreground">
-        Bu {what} «{branch.name}» filialiga tegishli. Uni ko&apos;rish uchun shu
-        filialni tanlang.
+        {what === "guruh"
+          ? t("Bu guruh «{branch}» filialiga tegishli. Uni ko'rish uchun shu filialni tanlang.", { branch: branch.name })
+          : t("Bu o'quvchi «{branch}» filialiga tegishli. Uni ko'rish uchun shu filialni tanlang.", { branch: branch.name })}
       </p>
       {target && (
         <Button onClick={() => selectBranch(target)}>
           <Building2 className="size-4" />
-          {branch.name}ga o&apos;tish
+          {t("{branch}ga o'tish", { branch: branch.name })}
         </Button>
       )}
     </div>

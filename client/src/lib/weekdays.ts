@@ -1,3 +1,5 @@
+import { msg } from "@/i18n/msg";
+
 /** Canonical weekday order: Monday → Saturday */
 const WEEKDAY_ORDER: string[] = [
   "monday",
@@ -9,12 +11,12 @@ const WEEKDAY_ORDER: string[] = [
 ];
 
 const WEEKDAY_SHORT: Record<string, string> = {
-  monday: "Du",
-  tuesday: "Se",
-  wednesday: "Chor",
-  thursday: "Pay",
-  friday: "Ju",
-  saturday: "Sha",
+  monday: msg("Du"),
+  tuesday: msg("Se"),
+  wednesday: msg("Chor"),
+  thursday: msg("Pay"),
+  friday: msg("Ju"),
+  saturday: msg("Sha"),
 };
 
 const WEEKDAY_LABELS: Record<string, string> = {
@@ -40,11 +42,15 @@ export function sortWeekdays(days: string[]): string[] {
 
 /**
  * Sort and format weekdays into short Uzbek labels (Du, Se, Chor, Pay, Ju, Sha).
- * Accepts both lowercase and uppercase day names.
+ * Accepts both lowercase and uppercase day names. `t` translates the short names
+ * (default: the Uzbek text unchanged), so a page with a language passes its own.
  */
-export function formatWeekdays(days: string[]): string {
+export function formatWeekdays(days: string[], t: (source: string) => string = (source) => source): string {
   return sortWeekdays(days)
-    .map((d) => WEEKDAY_SHORT[d.toLowerCase()] ?? d)
+    .map((d) => {
+      const short = WEEKDAY_SHORT[d.toLowerCase()];
+      return short ? t(short) : d;
+    })
     .join(", ");
 }
 

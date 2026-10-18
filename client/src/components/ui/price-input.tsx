@@ -3,6 +3,8 @@
 import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+// use-t, not context: this input also works on pages without a login (no api/auth in the bundle).
+import { useT } from "@/i18n/use-t";
 
 /**
  * Formats a raw digit string with Uzbek thousands separators (space).
@@ -32,6 +34,7 @@ interface PriceInputProps extends Omit<
 
 const PriceInput = React.forwardRef<HTMLInputElement, PriceInputProps>(
   ({ className, value = "", onChange, name, ...props }, ref) => {
+    const t = useT();
     const [display, setDisplay] = React.useState(() => formatPriceValue(value));
 
     React.useEffect(() => {
@@ -60,7 +63,7 @@ const PriceInput = React.forwardRef<HTMLInputElement, PriceInputProps>(
           {...props}
         />
         <span className="inline-flex items-center rounded-r-md border border-l-0 bg-muted px-3 text-sm text-muted-foreground">
-          so&apos;m
+          {t("so'm")}
         </span>
       </div>
     );

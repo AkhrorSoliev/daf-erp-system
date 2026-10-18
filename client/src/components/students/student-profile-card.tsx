@@ -44,14 +44,16 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
 import toast from "react-hot-toast";
 
-function formatBalance(balance: number): string {
+// `unit` is the translated «so'm»; the comma-grouped figure keeps its format.
+function formatBalance(balance: number, unit: string): string {
   const abs = Math.abs(balance)
     .toString()
     .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  if (balance < 0) return `-${abs} so'm`;
-  return `${abs} so'm`;
+  if (balance < 0) return `-${abs} ${unit}`;
+  return `${abs} ${unit}`;
 }
 
 function formatDate(iso: string): string {
@@ -72,6 +74,7 @@ interface StudentProfileCardProps {
 }
 
 export function StudentProfileCard({ student, commentKey, onEnrollClick, onHistoryClick, onPaymentClick, onPaymentHistoryClick, onRefundClick, onWithdrawalClick, onInitialBalanceClick, onStatusChanged }: StudentProfileCardProps) {
+  const t = useT();
   const { openDrawer } = useEditStudent();
   const router = useRouter();
   const canSeeDetails = useCan("students.details");
@@ -89,10 +92,10 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
       await api.delete(`/students/${student.id}`, {
         data: { reason: deleteReason.trim() },
       });
-      toast.success("O'quvchi arxivga o'tkazildi");
+      toast.success(t("O'quvchi arxivga o'tkazildi"));
       router.push("/students");
     } catch (error) {
-      toast.error(getErrorMessage(error, "Arxivlashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Arxivlashda xatolik yuz berdi")));
     } finally {
       setDeleting(false);
       setDeleteReason("");
@@ -146,7 +149,7 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
           <h2 className="text-xl font-bold">
             {student.firstName} {student.lastName}
           </h2>
-          <p className="text-sm text-muted-foreground">(id: {student.id})</p>
+          <p className="text-sm text-muted-foreground">{t("(id: {id})", { id: student.id })}</p>
         </div>
 
         <StudentStatusBadge student={student} />
@@ -165,7 +168,7 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
                     : "bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400"
               )}
             >
-              {formatBalance(student.balance)} balans
+              {t("{amount} balans", { amount: formatBalance(student.balance, t("so'm")) })}
             </Badge>
           );
         })()}
@@ -188,13 +191,13 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
             <Tooltip>
               <TooltipTrigger asChild>
                 <span tabIndex={0} className="text-muted-foreground">
-                  {row.label}:
+                  {t(row.label)}:
                 </span>
               </TooltipTrigger>
               <TooltipContent>
                 {row.signIn
-                  ? "Bu raqam bilan tizimga kiradi"
-                  : "Kirish uchun ishlatilmaydi"}
+                  ? t("Bu raqam bilan tizimga kiradi")
+                  : t("Kirish uchun ishlatilmaydi")}
               </TooltipContent>
             </Tooltip>
             <a
@@ -217,24 +220,24 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
         </div>
         {student.gender && (
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Jinsi:</span>
-            <span>{student.gender === "MALE" ? "Erkak" : "Ayol"}</span>
+            <span className="text-muted-foreground">{t("Jinsi")}:</span>
+            <span>{student.gender === "MALE" ? t("Erkak") : t("Ayol")}</span>
           </div>
         )}
         {student.date_of_birth && (
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Tug&apos;ilgan sana:</span>
+            <span className="text-muted-foreground">{t("Tug'ilgan sana")}:</span>
             <span>
               {formatDate(student.date_of_birth)}{" "}
               <span className="text-muted-foreground">
-                ({ageFromStoredDate(student.date_of_birth)} yosh)
+                {t("({n} yosh)", { n: ageFromStoredDate(student.date_of_birth) })}
               </span>
             </span>
           </div>
         )}
         <div className="flex items-start gap-2">
           <span className="shrink-0 text-muted-foreground">
-            Qo&apos;shilgan sana:
+            {t("Qo'shilgan sana")}:
           </span>
           <span>{formatDate(student.createdAt)}</span>
         </div>
@@ -248,27 +251,27 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" className="flex-1" onClick={onEnrollClick}>
               <UserPlus className="mr-1.5 size-4" />
-              {student.groups.length > 0 ? "Guruhni o'zgartirish" : "Guruhga qo'shish"}
+              {student.groups.length > 0 ? t("Guruhni o'zgartirish") : t("Guruhga qo'shish")}
             </Button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="flex-1">
                   <CreditCard className="mr-1.5 size-4" />
-                  To&apos;lov
+                  {t("To'lov")}
                   <ChevronDown className="ml-1.5 size-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={onPaymentClick}>To&apos;lov qo&apos;shish</DropdownMenuItem>
-                <DropdownMenuItem onClick={onPaymentHistoryClick}>To&apos;lov tarixi</DropdownMenuItem>
-                <DropdownMenuItem onClick={onRefundClick}>Pulni qaytarish</DropdownMenuItem>
+                <DropdownMenuItem onClick={onPaymentClick}>{t("To'lov qo'shish")}</DropdownMenuItem>
+                <DropdownMenuItem onClick={onPaymentHistoryClick}>{t("To'lov tarixi")}</DropdownMenuItem>
+                <DropdownMenuItem onClick={onRefundClick}>{t("Pulni qaytarish")}</DropdownMenuItem>
                 {onWithdrawalClick && (
-                  <DropdownMenuItem onClick={onWithdrawalClick}>Yechib olish</DropdownMenuItem>
+                  <DropdownMenuItem onClick={onWithdrawalClick}>{t("Yechib olish")}</DropdownMenuItem>
                 )}
                 {canSetInitialBalance && onInitialBalanceClick && (
                   <DropdownMenuItem onClick={onInitialBalanceClick}>
-                    Boshlang&apos;ich balans
+                    {t("Boshlang'ich balans")}
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
@@ -288,7 +291,7 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
                   <Pencil className="size-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Tahrirlash</TooltipContent>
+              <TooltipContent>{t("Tahrirlash")}</TooltipContent>
             </Tooltip>
 
             <Tooltip>
@@ -302,7 +305,7 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
                   <RefreshCw className="size-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Status o&apos;zgartirish</TooltipContent>
+              <TooltipContent>{t("Status o'zgartirish")}</TooltipContent>
             </Tooltip>
 
             <Tooltip>
@@ -316,7 +319,7 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
                   <Clock className="size-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Tarix</TooltipContent>
+              <TooltipContent>{t("Tarix")}</TooltipContent>
             </Tooltip>
 
             <Tooltip>
@@ -330,7 +333,7 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
                   <Trash2 className="size-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>O&apos;chirish</TooltipContent>
+              <TooltipContent>{t("O'chirish")}</TooltipContent>
             </Tooltip>
           </div>
         </>
@@ -342,12 +345,13 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <Archive className="size-5 text-destructive" />
-              Arxivga o&apos;tkazish
+              {t("Arxivga o'tkazish")}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 <div>
-                  <strong>{student.firstName} {student.lastName}</strong> ro&apos;yxatdan butunlay yo&apos;qoladi. Bu o&apos;chirish emas — yozuv arxivlanadi.
+                  <strong>{student.firstName} {student.lastName}</strong>{" "}
+                  {t("ro'yxatdan butunlay yo'qoladi. Bu o'chirish emas — yozuv arxivlanadi.")}
                 </div>
               </div>
             </AlertDialogDescription>
@@ -358,33 +362,32 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
             {isStudentActive && (
               <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
                 <p className="mb-1 font-medium">
-                  ⚠️ Bu o&apos;quvchi hozir <strong>FAOL</strong> holatda.
+                  {t("⚠️ Bu o'quvchi hozir FAOL holatda.")}
                 </p>
                 <p>
-                  Agar o&apos;qishni tashlagan bo&apos;lsa — <strong>Status</strong> ni{" "}
-                  <strong>&ldquo;Chetlatildi&rdquo;</strong> ga o&apos;zgartiring. Arxivlash faqat <strong>xato yoki duplikat</strong> yozuv uchun.
+                  {t("Agar o'qishni tashlagan bo'lsa — Status ni “Chetlatildi” ga o'zgartiring. Arxivlash faqat xato yoki duplikat yozuv uchun.")}
                 </p>
               </div>
             )}
 
             {/* What happens */}
             <div className="rounded-md border bg-muted/40 p-3 text-xs leading-relaxed">
-              <p className="mb-2 font-medium">Nima bo&apos;ladi:</p>
+              <p className="mb-2 font-medium">{t("Nima bo'ladi:")}</p>
               <ul className="list-disc space-y-1 pl-4 text-muted-foreground">
-                <li>Talaba barcha ro&apos;yxatlardan yashiriladi (faqat CEO arxivdan ko&apos;radi)</li>
-                <li>Aktiv guruhlardan chiqariladi, oldindan to&apos;langan pul balansga qaytariladi</li>
-                <li>Keyinroq CEO orqali tiklash mumkin</li>
+                <li>{t("Talaba barcha ro'yxatlardan yashiriladi (faqat CEO arxivdan ko'radi)")}</li>
+                <li>{t("Aktiv guruhlardan chiqariladi, oldindan to'langan pul balansga qaytariladi")}</li>
+                <li>{t("Keyinroq CEO orqali tiklash mumkin")}</li>
               </ul>
             </div>
 
             {/* Mandatory reason */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium">
-                Sabab <span className="text-destructive">*</span>{" "}
-                <span className="text-muted-foreground">(kamida 3 belgi)</span>
+                {t("Sabab")} <span className="text-destructive">*</span>{" "}
+                <span className="text-muted-foreground">{t("(kamida 3 belgi)")}</span>
               </label>
               <Textarea
-                placeholder="Masalan: xato kiritilgan, duplikat yozuv, ..."
+                placeholder={t("Masalan: xato kiritilgan, duplikat yozuv, ...")}
                 value={deleteReason}
                 onChange={(e) => setDeleteReason(e.target.value)}
                 rows={2}
@@ -394,13 +397,13 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Bekor qilish</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{t("Bekor qilish")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleting || !deleteReasonValid}
               variant="destructive"
             >
-              {deleting ? "Arxivlanmoqda..." : "Arxivga o'tkazish"}
+              {deleting ? t("Arxivlanmoqda...") : t("Arxivga o'tkazish")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -425,20 +428,20 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Flag className="size-4 text-muted-foreground" />
-              <span className="text-sm font-medium">So&apos;nggi izoh</span>
+              <span className="text-sm font-medium">{t("So'nggi izoh")}</span>
             </div>
             {latestComment ? (
               <div className="rounded-lg bg-muted/40 px-3 py-2.5 space-y-1.5">
                 <p className="text-sm leading-relaxed line-clamp-3">{latestComment.content}</p>
                 <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <span className="font-medium">{latestComment.author ? `${latestComment.author.firstName} ${latestComment.author.lastName}` : "Tizim"}</span>
+                  <span className="font-medium">{latestComment.author ? `${latestComment.author.firstName} ${latestComment.author.lastName}` : t("Tizim (avtomatik)")}</span>
                   <span>&middot;</span>
                   <span>{format(new Date(latestComment.createdAt), "dd.MM.yyyy, HH:mm")}</span>
                 </div>
               </div>
             ) : (
               <p className="text-sm text-muted-foreground italic">
-                {student.comment || "Izoh mavjud emas"}
+                {student.comment || t("Izoh mavjud emas")}
               </p>
             )}
           </div>

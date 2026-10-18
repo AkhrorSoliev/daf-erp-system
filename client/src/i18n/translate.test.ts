@@ -33,6 +33,13 @@ describe("translate", () => {
     expect(translate("uz-Cyrl", {}, "{n} ta o'quvchi", { n: 5 })).toBe("5 та ўқувчи");
   });
 
+  it("returns an empty text for a non-string source (an unmapped code) instead of throwing", () => {
+    for (const locale of ["uz", "uz-Cyrl", "ru"] as const) {
+      expect(translate(locale, ru, undefined as unknown as string)).toBe("");
+      expect(translate(locale, ru, 5 as unknown as string)).toBe("");
+    }
+  });
+
   it("uses the real uz-Cyrl overrides: «Profil» keeps its soft sign", () => {
     expect(translate("uz-Cyrl", {}, "Profil")).toBe("Профил");
     expect(translate("uz-Cyrl", uzCyrl, "Profil")).toBe("Профиль");

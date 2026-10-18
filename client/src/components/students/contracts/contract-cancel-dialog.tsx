@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
 import type { ContractView } from "./contract-types";
 
 interface Props {
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export function ContractCancelDialog({ contract, onClose, onCancelled }: Props) {
+  const t = useT();
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
   const ready = reason.trim().length >= 3;
@@ -44,11 +46,11 @@ export function ContractCancelDialog({ contract, onClose, onCancelled }: Props) 
       const { data } = await api.post<ContractView>(`/contract-documents/${contract.id}/cancel`, {
         reason: reason.trim(),
       });
-      toast.success(`Shartnoma ${data.number} bekor qilindi`);
+      toast.success(t("Shartnoma {number} bekor qilindi", { number: data.number }));
       setReason("");
       onCancelled(data);
     } catch (err) {
-      toast.error(getErrorMessage(err, "Shartnomani bekor qilishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("Shartnomani bekor qilishda xatolik yuz berdi")));
     } finally {
       setSaving(false);
     }
@@ -58,15 +60,18 @@ export function ContractCancelDialog({ contract, onClose, onCancelled }: Props) 
     <AlertDialog open={contract !== null} onOpenChange={(open) => !open && close()}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Shartnoma № {contract?.number} bekor qilinsinmi?</AlertDialogTitle>
+          <AlertDialogTitle>
+            {t("Shartnoma № {number} bekor qilinsinmi?", { number: contract?.number ?? "" })}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            Shartnomadagi kurslar shartnomasiz bo&apos;lib qoladi va ular uchun yangi shartnoma
-            tuzish mumkin bo&apos;ladi. Bekor qilingan shartnoma ro&apos;yxatda qoladi, PDF&apos;i
-            «BEKOR QILINGAN» yozuvi bilan chiqadi.
+            {/* «BEKOR QILINGAN» is the stamp the server prints into the PDF: every translation keeps it as it is. */}
+            {t(
+              "Shartnomadagi kurslar shartnomasiz bo'lib qoladi va ular uchun yangi shartnoma tuzish mumkin bo'ladi. Bekor qilingan shartnoma ro'yxatda qoladi, PDF'i «BEKOR QILINGAN» yozuvi bilan chiqadi.",
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-1.5">
-          <Label htmlFor="contract-cancel-reason">Sabab</Label>
+          <Label htmlFor="contract-cancel-reason">{t("Sabab")}</Label>
           <Textarea
             id="contract-cancel-reason"
             value={reason}
@@ -76,10 +81,10 @@ export function ContractCancelDialog({ contract, onClose, onCancelled }: Props) 
           />
         </div>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={saving}>Ortga</AlertDialogCancel>
+          <AlertDialogCancel disabled={saving}>{t("Ortga")}</AlertDialogCancel>
           <AlertDialogAction variant="destructive" onClick={confirm} disabled={!ready || saving}>
             {saving && <Loader2 className="mr-2 size-4 animate-spin" />}
-            Bekor qilish
+            {t("Shartnomani bekor qilish")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
