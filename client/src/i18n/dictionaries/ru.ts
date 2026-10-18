@@ -642,6 +642,17 @@ const ru: Dictionary = {
   "Chegirma 0 dan kichik bo'lishi mumkin emas": "Скидка не может быть меньше 0",
   "Chegirma 100 dan katta bo'lishi mumkin emas": "Скидка не может быть больше 100",
   "«Qayerdan bildi?» maydonini tanlang": "Выберите значение в поле «Как узнали о нас?»",
+
+  // Lead source picker
+  "Manbani tanlang": "Выберите источник",
+  "Yangi manba nomi": "Название нового источника",
+  "Qo'shish": "Добавить",
+  "Bekor": "Отмена",
+  "+ Yangi manba qo'shish": "+ Добавить новый источник",
+  "Manba qo'shildi": "Источник добавлен",
+  "Manba qo'shishda xatolik": "Не удалось добавить источник",
+  "Manbalar ro'yxati yuklanmadi": "Список источников не загрузился",
+  "Manba nomini kiriting (eng ko'pi {n} belgi)": "Введите название источника (не более {n} символов)",
 };
 
 export default ru;

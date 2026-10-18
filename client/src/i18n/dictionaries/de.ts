@@ -642,6 +642,17 @@ const de: Dictionary = {
   "Chegirma 0 dan kichik bo'lishi mumkin emas": "Der Rabatt darf nicht kleiner als 0 sein",
   "Chegirma 100 dan katta bo'lishi mumkin emas": "Der Rabatt darf nicht größer als 100 sein",
   "«Qayerdan bildi?» maydonini tanlang": "Bitte füllen Sie das Feld «Wie aufmerksam geworden?» aus",
+
+  // Lead source picker
+  "Manbani tanlang": "Quelle auswählen",
+  "Yangi manba nomi": "Name der neuen Quelle",
+  "Qo'shish": "Hinzufügen",
+  "Bekor": "Abbrechen",
+  "+ Yangi manba qo'shish": "+ Neue Quelle hinzufügen",
+  "Manba qo'shildi": "Quelle hinzugefügt",
+  "Manba qo'shishda xatolik": "Quelle konnte nicht hinzugefügt werden",
+  "Manbalar ro'yxati yuklanmadi": "Die Liste der Quellen wurde nicht geladen",
+  "Manba nomini kiriting (eng ko'pi {n} belgi)": "Geben Sie den Namen der Quelle ein (höchstens {n} Zeichen)",
 };
 
 export default de;

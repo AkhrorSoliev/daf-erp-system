@@ -33,8 +33,8 @@ const STUDENT_FORM_TEXTS = new Set<string>([
 export function studentFormError(
   t: (source: string) => string,
   message: string | undefined,
-): string {
-  if (!message) return "";
+): string | undefined {
+  if (!message) return message;
   return STUDENT_FORM_TEXTS.has(message) ? t(message) : message;
 }
 

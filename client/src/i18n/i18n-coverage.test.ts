@@ -101,6 +101,7 @@ export const STRICT_FILES: string[] = [
   "components/students/edit-student-drawer.tsx",
   "components/students/edit-student-additional-fields.tsx",
   "lib/schemas/student-schema.ts",
+  "components/leads/lead-source-picker.tsx",
 ];
 
 function walk(dir: string): string[] {

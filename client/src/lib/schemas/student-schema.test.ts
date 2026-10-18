@@ -47,7 +47,7 @@ describe("studentFormError", () => {
     expect(studentFormError(upper, "Invalid input")).toBe("Invalid input");
   });
 
-  it("gives an empty text when there is no message", () => {
-    expect(studentFormError(upper, undefined)).toBe("");
+  it("keeps a missing message missing", () => {
+    expect(studentFormError(upper, undefined)).toBeUndefined();
   });
 });

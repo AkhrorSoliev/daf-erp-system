@@ -642,6 +642,17 @@ const en: Dictionary = {
   "Chegirma 0 dan kichik bo'lishi mumkin emas": "The discount cannot be less than 0",
   "Chegirma 100 dan katta bo'lishi mumkin emas": "The discount cannot be more than 100",
   "«Qayerdan bildi?» maydonini tanlang": "Choose a value for «How did they hear about us?»",
+
+  // Lead source picker
+  "Manbani tanlang": "Choose a source",
+  "Yangi manba nomi": "New source name",
+  "Qo'shish": "Add",
+  "Bekor": "Cancel",
+  "+ Yangi manba qo'shish": "+ Add a new source",
+  "Manba qo'shildi": "Source added",
+  "Manba qo'shishda xatolik": "Could not add the source",
+  "Manbalar ro'yxati yuklanmadi": "The list of sources did not load",
+  "Manba nomini kiriting (eng ko'pi {n} belgi)": "Enter the source name (at most {n} characters)",
 };
 
 export default en;
