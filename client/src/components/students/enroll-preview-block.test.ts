@@ -325,7 +325,7 @@ describe("EnrollPreviewBlock in Russian", () => {
 
     expect(text).toContain("Дата начала (с какого занятия)");
     expect(text).toContain("Цена за месяц: " + norm(formatPrice(405000)) + " сум");
-    expect(text).toContain("За октябрь (8/13 занятий) · скидка 10%: " + money(249231).replace("so'm", "сум"));
+    expect(text).toContain("За октябрь (8/13 зан.) · скидка 10%: " + money(249231).replace("so'm", "сум"));
     expect(text).toContain("Баланс ученика: " + norm(formatBalance(50000, "сум")));
     expect(text).toContain("К оплате (примерно): " + norm(formatPrice(199231)) + " сум");
     expect(text).not.toContain("so'm");
@@ -334,7 +334,7 @@ describe("EnrollPreviewBlock in Russian", () => {
   it("translates the pack lines and the word for enough", async () => {
     const text = await answered(pack({ discountPercent: 10, balance: 900000, payable: 0 }), {}, newClient(), true);
 
-    expect(text).toContain("Цена курса (12 занятий): " + norm(formatPrice(400000)) + " сум Скидка: 10%");
+    expect(text).toContain("Цена курса (занятий: 12): " + norm(formatPrice(400000)) + " сум Скидка: 10%");
     expect(text).toContain("К оплате (примерно): Достаточно");
   });
 

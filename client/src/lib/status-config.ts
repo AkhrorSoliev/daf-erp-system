@@ -1,5 +1,7 @@
 import { msg } from "@/i18n/msg";
 
+// Only the student, user (teacher) and group labels are `msg()`-translated; the other entities' labels are still raw Uzbek.
+
 type BadgeVariant = "default" | "secondary" | "destructive" | "outline" | "ghost";
 
 interface StatusConfig {

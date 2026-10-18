@@ -55,7 +55,7 @@ const signed = (n: number) => (n > 0 ? `+${formatNumber(n)}` : formatNumber(n));
 /**
  * One ledger line. A cancelled row keeps its place (the balance column is a
  * running total and needs it) but is struck through and says when it was
- * cancelled; the row that cancelled it is labelled «Bekor qilish» and names
+ * cancelled; the row that cancelled it is labelled «Bekor qilish yozuvi» and names
  * the row it undid.
  */
 export function LedgerTableRow({ row: r, index }: { row: LedgerRow; index: number }) {
@@ -77,7 +77,7 @@ export function LedgerTableRow({ row: r, index }: { row: LedgerRow; index: numbe
         <div className="flex flex-wrap items-center gap-1">
           {undo ? (
             <Badge variant="secondary" className="text-[10px]">
-              {t("Bekor qilish")}
+              {t("Bekor qilish yozuvi")}
             </Badge>
           ) : (
             <Badge
@@ -99,7 +99,7 @@ export function LedgerTableRow({ row: r, index }: { row: LedgerRow; index: numbe
               </TooltipTrigger>
               <TooltipContent className="max-w-64">
                 {t(
-                  "Bu yozuv keyinroq bekor qilingan. Uni ro'yxatdagi «Bekor qilish» yozuvi qaytargan, balansda ikkalasi bir-birini yopadi.",
+                  "Bu yozuv keyinroq bekor qilingan. Uni ro'yxatdagi «Bekor qilish yozuvi» qaytargan, balansda ikkalasi bir-birini yopadi.",
                 )}
               </TooltipContent>
             </Tooltip>

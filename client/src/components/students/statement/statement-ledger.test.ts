@@ -45,7 +45,7 @@ describe("Barcha yozuvlar row", () => {
     expect(html).toMatch(/class="[^"]*line-through[^"]*">-37 500/);
   });
 
-  it("labels the undo «Bekor qilish» and names the charge it undid", () => {
+  it("labels the undo «Bekor qilish yozuvi» and names the charge it undid", () => {
     const html = render({
       id: "undo",
       type: "LESSON_DEDUCTION",
@@ -60,7 +60,7 @@ describe("Barcha yozuvlar row", () => {
         reason,
       },
     });
-    expect(html).toContain("Bekor qilish");
+    expect(html).toContain("Bekor qilish yozuvi");
     expect(html).not.toContain("Darsga yechildi");
     expect(html).toContain(`18.09.2026 dagi -37 500 so'm bekor qilindi: ${reason}`);
     expect(html).not.toContain("line-through");

@@ -285,10 +285,10 @@ describe("the texts in another language", () => {
 
   it("draws the summary lines in the page language, with the server's figures untouched", () => {
     expect(levelSummary(base, -250000, tRu)).toEqual([
-      { label: "Посещаемость", value: "91% · 21 из 23 занятий", hint: "порог 80%" },
+      { label: "Посещаемость", value: "91% · 21/23 зан.", hint: "порог 80%" },
       { label: "Количество занятий", value: "23", hint: "минимум 20" },
-      { label: "Опоздания", value: "2 из 21 занятий (10%)", hint: "порог 20%" },
-      { label: "Приложение", value: "100% · 80 из 80 занятий", hint: "порог 100%" },
+      { label: "Опоздания", value: "2 из 21 зан. (10%)", hint: "порог 20%" },
+      { label: "Приложение", value: "100% · 80/80 зан.", hint: "порог 100%" },
       { label: "Итоговые тесты", value: "5 / 5", hint: "нужны все" },
       { label: "Долг", value: formatBalance(250000, "сум"), hint: null },
       { label: "Пробный экзамен", value: "72 / 100 · 07.10.2026", hint: null },

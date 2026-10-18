@@ -8,7 +8,7 @@ export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-18",
     sarlavha: "O'quvchilar bo'limi tarjima qilindi",
-    matn: "O'quvchilar bo'limi endi tanlangan tilda ochiladi: o'quvchilar ro'yxati (jadval, filtrlar, statistika, qator amallari, holat belgilari), o'quvchi qo'shish va tahrirlash oynalari, o'quvchi profili (kartochka, yorliqlar, guruhga qo'shish va chiqarish, ketganda pul hisobi, to'lov oynalari, dars izi, SMS, hisob-kitob varaqasi, qatnashganlik hujjatlari va shartnomalar). Ismlar, nomlar va serverdan keladigan matnlar o'zgarishsiz qoladi. Boshqa sahifalar hali o'zbekcha.",
+    matn: "O'quvchilar bo'limi endi tanlangan tilda ochiladi: o'quvchilar ro'yxati (jadval, filtrlar, statistika, qator amallari, holat belgilari), o'quvchi qo'shish va tahrirlash oynalari, o'quvchi profili (kartochka, yorliqlar, guruhga qo'shish va chiqarish, ketganda pul hisobi, to'lov oynalari, dars izi, SMS, hisob-kitob varaqasi, qatnashganlik hujjatlari va shartnomalar). Ismlar, nomlar va serverdan keladigan matnlar o'zgarishsiz qoladi. Boshqa sahifalar asosan o'zbekcha; ularda ham umumiy oynalar va filtrlar tarjima qilingan bo'lishi mumkin.",
     rollar: [1, 2, 3, 4, 5],
     sahifa: { bolim: "boshlash", sahifa: "interfeys" },
   },

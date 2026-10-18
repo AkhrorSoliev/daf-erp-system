@@ -27,7 +27,7 @@ import type {
 const REASON_INFO: Record<CallReason, { label: string; className: string }> = {
   ABSENCE: { label: msg("Kelmagan"), className: "bg-amber-100 text-amber-800" },
   DEBT: { label: msg("Qarz"), className: "bg-red-100 text-red-700" },
-  REMOVAL: { label: msg("Chiqarish"), className: "bg-orange-100 text-orange-800" },
+  REMOVAL: { label: msg("Guruhdan chiqarish"), className: "bg-orange-100 text-orange-800" },
   OTHER: { label: msg("Boshqa"), className: "bg-slate-100 text-slate-700" },
 };
 
