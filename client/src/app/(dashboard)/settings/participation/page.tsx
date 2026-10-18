@@ -1,10 +1,6 @@
-import { Suspense } from "react";
-import { ParticipationSettingsClient } from "@/components/settings/participation-settings-client";
+import { redirect } from "next/navigation";
 
-export default function ParticipationSettingsPage() {
-  return (
-    <Suspense>
-      <ParticipationSettingsClient />
-    </Suspense>
-  );
+// Eski manzil: sahifa «O'quv qoidalari» ga qo'shildi.
+export default function ParticipationRedirect() {
+  redirect("/settings/rules#hujjat");
 }

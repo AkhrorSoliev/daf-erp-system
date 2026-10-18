@@ -1,10 +1,6 @@
-import { Suspense } from "react";
-import { KpiSettingsClient } from "@/components/settings/kpi-settings-client";
+import { redirect } from "next/navigation";
 
-export default function KpiSettingsPage() {
-  return (
-    <Suspense>
-      <KpiSettingsClient />
-    </Suspense>
-  );
+// Eski manzil: sahifa «Lidlar va KPI» ga qo'shildi.
+export default function KpiRedirect() {
+  redirect("/settings/leads-kpi#kpi");
 }

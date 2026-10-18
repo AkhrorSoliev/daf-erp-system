@@ -32,7 +32,7 @@ export const routeLabels: Record<string, string> = {
   "xodimlar-kpi": msg("Xodimlar KPI"),
   profile: msg("Profil"),
   settings: msg("Sozlamalar"),
-  general: msg("Umumiy sozlamalar"),
+  general: msg("Kompaniya ma'lumotlari"),
   courses: msg("Kurslar"),
   // /settings/payment — "To'lov" sozlamalar bo'limi (defaultModel, sababli
   // dars krediti, hisob-kitob kuni). "payments" (ko'plik) esa /payments —
@@ -47,17 +47,16 @@ export const routeLabels: Record<string, string> = {
   // `/daf/oquvchilar` sahifasi allaqachon bor; yorliq shu yerda turadi, chunki
   // breadcrumb jadvali bitta fayl va uni ikki marta ochish keraksiz.
   oquvchilar: msg("O'quvchilar"),
-  "absence-pause": msg("Avtomatik pauza"),
+  // /settings/rules — «O'quv qoidalari»: avtomatik pauza, DaF normasi va
+  // qatnashganlik hujjati bir sahifada. Eski /settings/absence-pause, /daf,
+  // /participation manzillari shu yerga yo'naltiriladi.
+  rules: msg("O'quv qoidalari"),
   // /settings/permissions — «Ruxsatlar», CEO only (ADR-0087).
   permissions: msg("Ruxsatlar"),
-  // /settings/lead-ownership — «Lidlar egaligi», CEO only (ADR-0093).
-  "lead-ownership": msg("Lidlar egaligi"),
-  // /settings/kpi — «KPI sozlamalari», CEO only (ADR-0096).
-  kpi: msg("KPI sozlamalari"),
-  // /settings/participation — «Qatnashganlik hujjati», CEO only.
-  participation: msg("Qatnashganlik hujjati"),
-  // /settings/telegram-report — «Telegram hisobot», CEO only (ADR-0095).
-  "telegram-report": msg("Telegram hisobot"),
+  // /settings/leads-kpi — «Lidlar va KPI», CEO only (ADR-0093, ADR-0096).
+  "leads-kpi": msg("Lidlar va KPI"),
+  // /settings/telegram — guruhlar va kunlik hisobot (hisobot: CEO only, ADR-0095).
+  telegram: msg("Telegram"),
   tasks: msg("Topshiriqlar"),
   notifications: msg("Bildirishnomalar"),
   archive: msg("Arxiv"),

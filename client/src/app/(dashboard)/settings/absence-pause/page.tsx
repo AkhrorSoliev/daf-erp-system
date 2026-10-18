@@ -1,10 +1,7 @@
-import { Suspense } from "react";
-import { AbsencePauseSettingsClient } from "@/components/settings/absence-pause-settings-client";
+import { redirect } from "next/navigation";
 
-export default function AbsencePauseSettingsPage() {
-  return (
-    <Suspense>
-      <AbsencePauseSettingsClient />
-    </Suspense>
-  );
+// Eski manzil: sahifa «O'quv qoidalari» ga qo'shildi. Havolalar (bildirishnoma,
+// qo'llanma, xabarlar) buzilmasin.
+export default function AbsencePauseRedirect() {
+  redirect("/settings/rules#pauza");
 }
