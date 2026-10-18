@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-18",
+    sarlavha: "Xodim oyligini qo'lda to'g'rilash",
+    matn: "Oy o'rtasidan kelgan yoki ketgan xodimning oyligi stavkadan kunlarga proporsional hisoblanadi, kelishilgan summa esa boshqacha bo'lishi mumkin. Ish haqi sahifasida xodim oynasidagi «Oylik hisobi» blokida endi «To'g'rilash» tugmasi bor: CEO oy uchun o'z summasini va sababini kiritadi. Stavka va uning tarixi o'zgarmaydi; qo'lda summa jadvalda «qo'lda» belgisi bilan, hisobotlarda va Excelda shu oyning oyligi sifatida ko'rinadi. Hisoblangan oylik yangi summaga qayta hisoblanadi.",
+    rollar: [1],
+    sahifa: { bolim: "tolovlar", sahifa: "ish-haqi" },
+  },
+  {
+    sana: "2026-10-18",
     sarlavha: "Dars baholari to'liq anonim, izoh holati ko'rinadi",
     matn: "Dars baholari hisobotida o'quvchining ismi endi hech qayerda ko'rinmaydi, botda ham o'quvchiga shunday deyiladi. Past baholar ro'yxatida izoh holati bor: Yozdi, Yozmadi yoki Kutilmoqda, va faqat izohlilarni ko'rsatadigan tugma. Uzun izoh «Ko'proq o'qish» bilan ochiladi. Kartalar ixchamlashdi: taqsimot va eng yaxshi, eng past ustoz bitta kartada, ustozlar jadvalida «Izohlar» ustuni qo'shildi.",
     rollar: [1],
