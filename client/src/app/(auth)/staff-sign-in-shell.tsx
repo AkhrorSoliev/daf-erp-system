@@ -4,7 +4,6 @@ import { SignInCover } from "@/components/auth/sign-in-cover";
 import { SignInHeading } from "@/components/auth/sign-in-heading";
 import { I18nProvider } from "@/i18n/context";
 import { languageBootScript } from "@/i18n/document-language";
-import { loadDictionary } from "@/i18n/load-dictionary";
 import { currentLocale } from "@/i18n/server";
 import { type PortalType, getPortalConfig } from "@/lib/portal";
 import { LoginFooter } from "./login/login-footer";
@@ -27,9 +26,8 @@ interface StaffSignInShellProps {
  */
 export async function StaffSignInShell({ portal, languageMenu = false, children }: StaffSignInShellProps) {
   const locale = await currentLocale();
-  const dictionary = await loadDictionary(locale);
   return (
-    <I18nProvider initialLocale={locale} initialDictionary={dictionary}>
+    <I18nProvider initialLocale={locale}>
       {/* Sets <html lang> while the page is parsed (the dashboard layout does
           the same); `locale` is whitelisted by `localeOrDefault`. */}
       <script dangerouslySetInnerHTML={{ __html: languageBootScript(locale) }} />
