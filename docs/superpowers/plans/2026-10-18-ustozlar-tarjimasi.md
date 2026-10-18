@@ -43,6 +43,14 @@
 
 ---
 
+### Task 3b: Shared pieces still in Uzbek on the profile pages
+
+**Files:** `components/shared/entity-history-table.tsx` (the «Tarix» tab of student, group, teacher, employee pages: action badges, column headers, old → new texts, empty and error states; entity field names that the client maps to words are client texts, values from the server are data), `components/shared/comment-list.tsx` and `comment-form.tsx` (+ helpers such as `comment-list-helpers.tsx`; the last one also uses date-fns locale → `dateFnsLocale(locale)`), `components/ui/month-picker.tsx` / `MonthPicker` and `MonthStepper` (wherever they live; month names from a fixed list are `msg()`), `MobileProfileHeader`, `SalaryMissedLessons`, `TeacherGroupsRateList` (find their paths with grep); dictionaries and `i18n-coverage.test.ts`.
+
+- [ ] **Step 1: same procedure.** These are shared by many pages, so every page that uses them now follows the language; Uzbek output stays identical outside a provider. Components in `components/ui/` import `useT`/`useLocale` from `@/i18n/use-t`. Commit message: `feat(client): translate the shared history, comments, month pickers and profile header into ru, de, en`.
+
+---
+
 ### Task 4: Docs and final checks
 
 **Files:** `client/CLAUDE.md` («Pages translated so far» / «Not translated yet»: add the teachers section and the teacher blocks, remove `teacher-lesson-cards` / `upcoming-groups` from the not-translated list; mention shared files that now follow the language).
