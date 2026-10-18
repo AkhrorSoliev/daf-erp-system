@@ -145,6 +145,8 @@ describe('kunlik maqsad', () => {
   it("tanlov yo'q yoki noma'lum qiymat — O'RTA", () => {
     expect(maqsadDarajasi(null)).toBe('ORTA');
     expect(maqsadDarajasi(undefined)).toBe('ORTA');
+    expect(maqsadDarajasi('constructor')).toBe('ORTA');
+    expect(maqsadDarajasi('__proto__')).toBe('ORTA');
     expect(maqsadDarajasi('KATTA')).toBe('ORTA');
     expect(maqsadDarajasi('JIDDIY')).toBe('JIDDIY');
   });

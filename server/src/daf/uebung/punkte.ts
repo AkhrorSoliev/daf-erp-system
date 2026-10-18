@@ -132,7 +132,9 @@ export const MAQSAD_BALL: Record<DafDailyGoal, number> = {
 
 /** Bazadagi tanlov (yoki uning yo'qligi) — tanlov yo'q bo'lsa O'RTA. */
 export function maqsadDarajasi(raw: string | null | undefined): DafDailyGoal {
-  return raw != null && raw in MAQSAD_BALL ? (raw as DafDailyGoal) : 'ORTA';
+  return raw != null && Object.hasOwn(MAQSAD_BALL, raw)
+    ? (raw as DafDailyGoal)
+    : 'ORTA';
 }
 
 export interface MaqsadHolati {
