@@ -16,6 +16,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuthService } from '../auth.service';
 import { getAllowedRoleIds } from '../portal-roles.config';
 import { checkInitData } from './telegram-init-data';
+import type { SessionMeta } from '../../common/auth/user-session';
 
 /**
  * Parol bilan kirish yo'li qaytaradigan sessiya shakli — qo'lda yozilmagan,
@@ -101,6 +102,7 @@ export class TelegramWebAppService {
   async signIn(
     initData: string,
     studentId?: number,
+    meta?: SessionMeta,
   ): Promise<TelegramWebAppResult> {
     const telegramUserId = this.verifiedTelegramUserId(initData);
 
@@ -155,7 +157,10 @@ export class TelegramWebAppService {
 
     // Rol, bloklangan holat va yopilgan karta (ADR-0033) tekshiruvlari —
     // native ilova kirishi bilan bitta funksiya.
-    const session = await this.authService.buildStudentSession(chosen.userId);
+    const session = await this.authService.buildStudentSession(
+      chosen.userId,
+      meta,
+    );
     return { status: 'authenticated', ...session };
   }
 
@@ -174,6 +179,7 @@ export class TelegramWebAppService {
   async signInStaff(
     initData: string,
     origin: string | undefined,
+    meta?: SessionMeta,
   ): Promise<TelegramWebAppStaffResult> {
     const telegramUserId = this.verifiedTelegramUserId(initData);
 
@@ -201,7 +207,12 @@ export class TelegramWebAppService {
       throw new UnauthorizedException(STAFF_SIGN_IN_DISABLED_MESSAGE);
     }
 
-    const session = await this.authService.login(account, origin);
+    const session = await this.authService.login(
+      account,
+      origin,
+      undefined,
+      meta,
+    );
     return { status: 'authenticated', ...session };
   }
 

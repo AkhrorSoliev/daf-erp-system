@@ -181,9 +181,12 @@ describe('AuthController — otp/poll delegatsiyasi', () => {
       {} as any,
     );
 
-    await controller.pollLogin('req-123');
+    await controller.pollLogin('req-123', {});
 
-    expect(auth.pollLoginRequest).toHaveBeenCalledWith('req-123');
+    expect(auth.pollLoginRequest).toHaveBeenCalledWith(
+      'req-123',
+      expect.objectContaining({ userAgent: null }),
+    );
   });
 });
 
@@ -336,9 +339,13 @@ describe('telegram/callback', () => {
     );
     const res = { redirect: jest.fn() };
 
-    await local.telegramCallback({ code: 'c', state: 's' }, res as any);
+    await local.telegramCallback({ code: 'c', state: 's' }, res as any, {});
 
-    expect(oauth.handleCallback).toHaveBeenCalledWith('c', 's');
+    expect(oauth.handleCallback).toHaveBeenCalledWith(
+      'c',
+      's',
+      expect.objectContaining({ userAgent: null }),
+    );
     expect(res.redirect).toHaveBeenCalledWith(
       302,
       'https://admin.dafzentrum.uz/auth/telegram/callback?handoff=abc',
@@ -361,7 +368,7 @@ describe('telegram/callback', () => {
     );
     const res = { redirect: jest.fn() };
 
-    await local.telegramCallback({ code: 'c', state: 's' }, res as any);
+    await local.telegramCallback({ code: 'c', state: 's' }, res as any, {});
 
     expect(res.redirect).toHaveBeenCalledWith(
       302,
@@ -380,9 +387,11 @@ describe('telegram/callback', () => {
     );
 
     await expect(
-      local.telegramCallback({ error: 'access_denied' }, {
-        redirect: jest.fn(),
-      } as any),
+      local.telegramCallback(
+        { error: 'access_denied' },
+        { redirect: jest.fn() } as any,
+        {},
+      ),
     ).rejects.toThrow();
     expect(oauth.handleCallback).not.toHaveBeenCalled();
   });

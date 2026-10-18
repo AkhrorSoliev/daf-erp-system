@@ -86,6 +86,7 @@ export class StudentPortalController {
   async changePassword(
     @CurrentUser('id') userId: number,
     @CurrentUser('studentId') studentId: number,
+    @CurrentUser('sid') sid: string | undefined,
     @Body() dto: ChangePortalPasswordDto,
   ) {
     const { sessionVersion, ...result } =
@@ -95,7 +96,7 @@ export class StudentPortalController {
     // keeps the student signed in here.
     return {
       ...result,
-      ...(await this.authService.issueSession(userId, sessionVersion)),
+      ...(await this.authService.issueSession(userId, sessionVersion, sid)),
     };
   }
 

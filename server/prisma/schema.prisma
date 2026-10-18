@@ -507,8 +507,30 @@ model User {
 
   rolePermissionUpdates RolePermission[] @relation("RolePermissionUpdatedBy")
 
+  sessions UserSession[]
+
   @@index([deletedAt])
   @@index([status])
+}
+
+/// Bitta kirish = bitta qator (ADR-0113). Token `sid` sifatida shu id'ni
+/// ko'taradi; qator o'chsa, qurilma `refresh` da to'xtaydi va Redis belgisi
+/// access token'ni ham keyingi so'rovdayoq to'xtatadi.
+model UserSession {
+  id             String   @id @default(uuid())
+  userId         Int
+  /// Qator yaratilgan paytdagi `User.sessionVersion`. Parol o'zgarsa hisob
+  /// versiyasi oshadi va eski qatorlar ro'yxatdan o'zi tushib qoladi.
+  sessionVersion Int
+  userAgent      String?
+  ip             String?
+  createdAt      DateTime @default(now())
+  /// Oxirgi refresh (yoki kirish) vaqti — «oxirgi faollik».
+  lastUsedAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, lastUsedAt])
 }
 
 model UserRole {

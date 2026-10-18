@@ -669,6 +669,8 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       "`@CurrentUser('id')` and never from the request, so there is no " +
       'other account it could reach and a branch check would gate nothing.',
     routes: [
+      'DELETE /users/sessions/:sid',
+      'GET /users/sessions',
       'PATCH /users/password',
       'PATCH /users/phone',
       'PATCH /users/profile',

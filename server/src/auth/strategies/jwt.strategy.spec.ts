@@ -17,6 +17,17 @@ describe('JwtStrategy.validate', () => {
     });
   });
 
+  it('puts the device row id (sid) on request.user, and nothing when absent or malformed', () => {
+    const base = { sub: 7, roles: ['Teacher'], companyId: 1001, sv: 4 };
+
+    expect(strategy.validate({ ...base, sid: 'sid-1' })).toMatchObject({
+      sid: 'sid-1',
+    });
+    expect(strategy.validate(base)).not.toHaveProperty('sid');
+    // A non-string would reach Redis keys and Prisma filters as-is.
+    expect(strategy.validate({ ...base, sid: 5 })).not.toHaveProperty('sid');
+  });
+
   it('counts a pre-deploy token without sv as version 0', () => {
     expect(
       strategy.validate({ sub: 7, roles: ['Teacher'], companyId: 1001 })
