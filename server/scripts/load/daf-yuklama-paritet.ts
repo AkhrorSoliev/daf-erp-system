@@ -21,7 +21,7 @@ import {
   tashkentDateStr,
   utcMidnightFromDateStr,
 } from '../../src/common/date/tashkent';
-import { wochenStartTag } from '../../src/daf/uebung/punkte';
+import { serieAus, wochenStartTag } from '../../src/daf/uebung/punkte';
 
 assertLocalDb();
 
@@ -31,6 +31,7 @@ type Sample = {
   groupId: string | null;
   sessionId: string;
   minus: number;
+  attempts: number;
 };
 
 const shuffle = <T>(xs: T[]) =>
@@ -105,6 +106,7 @@ run(async (prisma) => {
       groupId: groupOf.get(id) ?? null,
       sessionId: randomUUID(),
       minus: 0,
+      attempts: 0,
     };
     if (withRows.has(id)) {
       const n = 1 + Math.floor(Math.random() * 3);
@@ -120,6 +122,7 @@ run(async (prisma) => {
           sessionId: s.sessionId,
         });
         s.minus += points;
+        s.attempts += 1;
       }
     }
     samples.push(s);
@@ -159,9 +162,41 @@ run(async (prisma) => {
     const f = await svc.uebersicht(s.id, s.companyId);
     check(s.id, 'wochePunkte', f.wochePunkte, own);
     check(s.id, 'wochePlatzZentrum', f.wochePlatzZentrum, place(list));
+    // Lifetime total and streak, the old Prisma reads.
+    const heute = tashkentDateStr(new Date());
+    const [jamiy, kunlar, bugun] = await Promise.all([
+      prisma.dafStudentDay.aggregate({
+        where: { studentId: s.id },
+        _sum: { points: true },
+      }),
+      prisma.dafStudentDay.findMany({
+        where: { studentId: s.id, attempts: { gt: 0 } },
+        select: { day: true },
+        distinct: ['day'],
+      }),
+      prisma.dafStudentDay.aggregate({
+        where: { studentId: s.id, day: utcMidnightFromDateStr(heute) },
+        _sum: { attempts: true },
+      }),
+    ]);
+    const serie = serieAus(
+      kunlar.map((k) => k.day.toISOString().slice(0, 10)),
+      heute,
+    );
+    check(s.id, 'gesamt', f.gesamt, jamiy._sum.points ?? 0);
+    check(s.id, 'serie', f.serie, serie);
 
     const n = await svc.seansNatijasi(s.sessionId, s.id, s.companyId);
     const oldin = place(sorted(totals, s.id, Math.max(0, own - s.minus)));
+    check(s.id, 'seans.serie', n.serie, serie);
+    // Every session attempt was written today, so it is today's first
+    // practice exactly when today's attempts are the session's.
+    check(
+      s.id,
+      'seans.serieYangi',
+      n.serieYangi,
+      s.attempts > 0 && (bugun._sum.attempts ?? 0) === s.attempts,
+    );
     check(s.id, 'seans.zentrum', n.orin.zentrum, {
       oldin,
       hozir: place(list),

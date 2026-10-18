@@ -349,46 +349,58 @@ servis darajasida, Prisma pool — prod'dagidek (10 ulanish). Skriptlar:
 `daf-yuklama-paritet.ts`; faqat lokal bazada, `assertLocalDb`).
 
 **Natija (ms).** Mashina boshqa ishlar bilan band edi — o'lchov paytida
-load average 9,3–10,3 (10 yadro); 10 daqiqa kutilganda ham 4 dan
-tushmadi. Raqamlar shu sharoitda:
+load average 6–8 (10 yadro), 4 dan tushmadi. Oxirgi o'lchov (kod
+`12d792da`, indeks qo'shilmagan, load 7,3–7,8):
 
 | Amal | p50 | p95 | Chegara (p95) | Holat |
 | --- | --- | --- | --- | --- |
-| `uebersicht` (fortschritt) | 123 | 252 | 200 | **o'tmadi** |
-| `reyting zentrum` | 90 | 105 | 200 | o'tdi |
-| `reyting gruppe` | 26 | 31 | 200 | o'tdi |
-| `recordAttempt` | 15 | 65 | 200 | o'tdi |
-| `seansNatijasi` | 120 | 131 | 300 | o'tdi |
+| `uebersicht` (fortschritt) | 110 | 193 | 200 | o'tdi |
+| `reyting zentrum` | 86 | 91 | 200 | o'tdi |
+| `reyting gruppe` | 25 | 30 | 200 | o'tdi |
+| `recordAttempt` | 14 | 56 | 200 | o'tdi |
+| `seansNatijasi` | 106 | 116 | 300 | o'tdi |
 
-Birinchi o'lchovda (tuzatishdan oldin): fortschritt 459, reyting zentrum
-324, seansNatijasi 349 — uchalasi o'tmagan edi.
+Shu kod bilan undan oldingi o'lchovda (load 5,7–6,7) `uebersicht` p95 202
+bo'lgan — chegara yonida, zaxira kam. Birinchi o'lchovda (tuzatishdan
+oldin): fortschritt 459, reyting zentrum 324, seansNatijasi 349.
+
+**A/B** (bir xil 50 o'quvchi, bir xil raundlar, navbat bilan): `uebersicht`
+p95 121 (yangi) / 171 (oldingi kommit), `seansNatijasi` 126 / 132.
+
+**Qamrab oluvchi indeks sinovi** (`("companyId", day) INCLUDE
+("studentId", points)`, faqat sinov bazasida, keyin o'chirildi): `Index
+Only Scan`; fortschritt p95 168, reyting zentrum 79, seansNatijasi 104 —
+hammasi o'tadi, zaxira kattaroq. Migratsiya QO'SHILMAGAN — qaror
+nazoratchida.
 
 **Tuzatish.** Markaz reytingi endi Postgres'da hisoblanadi: bitta umumiy CTE
 (`zentrumHaftaCte`) haftani o'quvchi bo'yicha yig'adi va so'ragan
 o'quvchini 0 ball bilan qo'shadi; jadval `row_number()` bilan TOP 50 + o'z
 qatorini oladi, chip va seans oxiri esa oldindagilar sonini sanaydi.
-Ilgari har chaqiruv ~5 000 qatorni Node'ga olib saralardi. O'rin so'rovi
-bitta o'tishda (`COUNT FILTER`) yoziladi — korrelyatsiyali subso'rov reja
+Ilgari har chaqiruv ~5 000 qatorni Node'ga olib saralardi. O'quvchining o'z raqamlari (umumiy ball, seriya kunlari, bugungi urinishlar,
+haftalik bal va o'rin) bitta so'rovda keladi — `uebersicht` 7 so'rovdan 5
+taga tushdi. O'rin so'rovi bitta o'tishda (`COUNT FILTER`) yoziladi — korrelyatsiyali subso'rov reja
 narxini `jit_above_cost` dan oshirib, har chaqiruvda ~20 ms JIT
 kompilyatsiyaga sabab bo'lardi. Saralash qoidasi o'zgarmadi; moslik
 skripti 200 o'quvchida (30 tasi shu hafta qatorsiz, 170 tasida sun'iy
-seans) eski JS algoritmi bilan solishtirdi — **0 farq**.
+seans) eski JS algoritmi va eski Prisma o'qishlari bilan solishtirdi
+(jadval, o'rin, haftalik/umumiy ball, seriya, `serieYangi`, oldin/hozir) —
+**0 farq**.
 
 **EXPLAIN.** Haftalik yig'indi: `Bitmap Index Scan on
 DafStudentDay_companyId_day_idx` → `Bitmap Heap Scan` (49 361 qator) →
 `HashAggregate` (5 000), 13 ms. `DafAttempt` bo'ylab `Seq Scan` yo'q.
-Guruh so'rovi `DafStudentDay_groupKey_day_idx` dan, 0,7 ms. O'rin so'rovi
-18–25 ms (JIT yo'q), TOP 50 so'rovi ≈16 ms.
+Guruh so'rovi `DafStudentDay_groupKey_day_idx` dan, 0,7 ms. O'z raqamlari
+so'rovi ≈17 ms (narx 12,5k, JIT yo'q; o'quvchi qatorlari
+`DafStudentDay_studentId_day_groupKey_key` dan), TOP 50 so'rovi ≈16 ms.
 
 **Bir qatorga 50 parallel yozish** (`recordAttempt`, bir o'quvchi, bir kun,
-bir guruh): `ON CONFLICT` hech narsa yo'qotmadi — ball 1 465 = 1 465,
-urinishlar 80 = 80.
+bir guruh): `ON CONFLICT` hech narsa yo'qotmadi — har o'lchovda farq 0
+(oxirgisi: ball 1 465 = 1 465, urinishlar 77 = 77).
 
-**Ochiq:** `uebersicht` p95 chegaradan yuqori (252 > 200). Har chaqiruv
-bitta og'ir so'rov (haftalik yig'indi) + oltita yengil so'rov; 50 parallel
-o'quvchida 350 so'rov 10 ulanish navbatida turadi. Yechim nazoratchi
-qarori bilan shu bosqichda tanlanadi (variantlar hisobotda).
-
+**Ochiq:** `uebersicht` p95 chegara yonida (193 / 202, band mashinada).
+Qamrab oluvchi indeks uni 168 ga tushiradi — migratsiya sifatida qo'shish
+nazoratchi qarori.
 ---
 
 ## 11. Bu bosqichda QILINMAYDI
