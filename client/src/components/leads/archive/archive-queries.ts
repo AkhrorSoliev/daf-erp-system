@@ -4,6 +4,7 @@ import type { ArchiveParams } from "./archive-url";
 import type {
   ArchiveSummary,
   ArchivedLead,
+  ArchivedLeadDetail,
   ArchivedSection,
   BoardColumn,
   Paged,
@@ -63,5 +64,17 @@ export function useBoardColumns(enabled: boolean) {
     queryFn: async () => (await api.get<BoardColumn[]>("/leads/board")).data,
     enabled,
     staleTime: 60_000,
+  });
+}
+
+/** One archived lead for the side panel; `staleTime: 0` so it is fresh on each open. */
+export function useArchivedLeadDetail(id: string) {
+  return useQuery({
+    queryKey: [...archiveKeys.leads, "detail", id],
+    queryFn: async () =>
+      (await api.get<ArchivedLeadDetail>(`/leads/archive/leads/${id}`)).data,
+    enabled: !!id,
+    staleTime: 0,
+    retry: false,
   });
 }

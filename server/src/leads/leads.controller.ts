@@ -95,6 +95,16 @@ export class LeadsController {
     return this.archiveReadService.listLeads(companyId, scope, query);
   }
 
+  @Get('archive/leads/:id')
+  @Can('leads.view')
+  getArchivedLead(
+    @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.archiveReadService.getArchivedLead(id, companyId, scope);
+  }
+
   @Get('archive/sections')
   @Can('leads.view')
   listArchivedSections(

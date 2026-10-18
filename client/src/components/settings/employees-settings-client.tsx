@@ -124,14 +124,15 @@ export function EmployeesSettingsClient() {
   }, 300);
 
   const fetchEmployees = useCallback(async () => {
-    if (!branchLoaded || !selectedBranch) return;
+    if (!branchLoaded) return;
     setLoading(true);
     try {
+      // «Barcha filiallar» (selectedBranch null) — branch_id yuborilmaydi
       const params: Record<string, any> = {
         page: filters.page,
         pageSize: filters.pageSize,
-        branch_id: selectedBranch.id,
       };
+      if (selectedBranch) params.branch_id = selectedBranch.id;
       if (filters.search.trim()) params.search = filters.search.trim();
       // Server `user_type` ni vergulli ro'yxat sifatida qabul qiladi.
       params.user_type = listParam(filters.role);

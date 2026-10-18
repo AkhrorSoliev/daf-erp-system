@@ -19,9 +19,10 @@ import {
 } from "@/components/ui/table";
 import api from "@/lib/api";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import type {
-  TodayAbsenteesResponse,
-  TodayAbsenteeItem,
+import {
+  CALL_OUTCOME_INFO,
+  type TodayAbsenteesResponse,
+  type TodayAbsenteeItem,
 } from "./outreach-types";
 import type { LogCallPrefill } from "./log-call-dialog";
 import { TablePagination } from "./table-pagination";
@@ -126,6 +127,7 @@ export function TodayAbsenteesTab({
                   <TableHead>Dars vaqti</TableHead>
                   <TableHead>O&apos;qituvchi</TableHead>
                   <TableHead>Izoh</TableHead>
+                  <TableHead>Natija</TableHead>
                   <TableHead className="w-60">Amal</TableHead>
                 </TableRow>
               </TableHeader>
@@ -201,6 +203,15 @@ function Row({
       </TableCell>
       <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
         {row.note || "—"}
+      </TableCell>
+      <TableCell>
+        {row.callOutcome ? (
+          <Badge className={CALL_OUTCOME_INFO[row.callOutcome].className}>
+            {CALL_OUTCOME_INFO[row.callOutcome].label}
+          </Badge>
+        ) : (
+          "—"
+        )}
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">

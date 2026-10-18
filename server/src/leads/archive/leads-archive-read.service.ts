@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -129,6 +129,99 @@ export class LeadsArchiveReadService {
       total,
       page,
       pageSize,
+    };
+  }
+
+  /** One archived lead for the side panel: who phoned, who owned it, why it left. */
+  async getArchivedLead(id: string, companyId: number, scope: ReportBranchIds) {
+    const lead = await this.prisma.lead.findFirst({
+      where: {
+        AND: [
+          {
+            id,
+            ...this.leadBase(companyId, scope),
+            deletedAt: { not: null },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        extraPhone: true,
+        statusEnum: true,
+        convertedStudentId: true,
+        statusChangeReason: true,
+        lostReason: true,
+        createdAt: true,
+        calledAt: true,
+        calledBy: DELETED_BY_SELECT,
+        ownerId: true,
+        owner: DELETED_BY_SELECT,
+        ownedAt: true,
+        source: { select: { id: true, name: true } },
+        section: {
+          select: {
+            id: true,
+            name: true,
+            column: { select: { id: true, name: true } },
+          },
+        },
+        deletedAt: true,
+        deletedBy: DELETED_BY_SELECT,
+        ownershipLogs: {
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          take: 30,
+          select: {
+            id: true,
+            kind: true,
+            fromUserId: true,
+            toUserId: true,
+            actorId: true,
+            reason: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+    if (!lead) throw new NotFoundException('Arxivda lid topilmadi');
+
+    const { ownershipLogs, ownerId, ...rest } = lead;
+    const ids = [
+      ...new Set(
+        ownershipLogs
+          .flatMap((l) => [l.fromUserId, l.toUserId, l.actorId])
+          .filter((u): u is number => u !== null),
+      ),
+    ];
+    const users = ids.length
+      ? await this.prisma.user.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, firstName: true, lastName: true },
+        })
+      : [];
+    const names = new Map(
+      users.map((u) => [u.id, `${u.firstName} ${u.lastName}`.trim()]),
+    );
+    const nameOf = (u: number | null) =>
+      u === null ? null : (names.get(u) ?? null);
+    return {
+      ...rest,
+      notes: restoreNotes({
+        statusEnum: lead.statusEnum,
+        convertedStudentId: lead.convertedStudentId,
+        ownerId,
+      }),
+      ownershipLog: ownershipLogs.map((l) => ({
+        id: l.id,
+        kind: l.kind,
+        from: nameOf(l.fromUserId),
+        to: nameOf(l.toUserId),
+        actor: nameOf(l.actorId),
+        reason: l.reason,
+        createdAt: l.createdAt,
+      })),
     };
   }
 
