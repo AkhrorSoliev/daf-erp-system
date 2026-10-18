@@ -8,6 +8,7 @@ import { formatNumber } from "@/lib/format-utils";
 import { useT } from "@/i18n/context";
 import { useTeacherRatings } from "./queries";
 import { averageText, dayText } from "./rating-format";
+import { ExpandableText } from "./expandable-text";
 
 /** Bitta ustozning baholari: 6 oy, guruhlar, izohlar (spec §6.3–6.4). */
 export function TeacherRatingsPanel({ teacherId, month }: { teacherId: number; month: string }) {
@@ -59,16 +60,13 @@ export function TeacherRatingsPanel({ teacherId, month }: { teacherId: number; m
         ) : (
           <ul className="space-y-2">
             {comments.map((c, i) => (
-              <li key={`${c.studentId}-${c.date}-${i}`} className="rounded-md border p-3 text-sm">
+              <li key={`${c.date}-${i}`} className="rounded-md border p-3 text-sm">
                 <div className="mb-1 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
                   <span>{dayText(c.date)}</span>
                   <span>{c.groupName}</span>
-                  <Link href={`/students/profile/${c.studentId}`} className="hover:underline">
-                    {c.studentName}
-                  </Link>
                   <span>{c.score} ⭐</span>
                 </div>
-                <p>{c.comment}</p>
+                <ExpandableText text={c.comment} />
               </li>
             ))}
           </ul>

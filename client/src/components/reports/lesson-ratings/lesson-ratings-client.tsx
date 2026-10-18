@@ -4,6 +4,8 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Alert } from "@/components/ui/alert";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sheet,
@@ -28,6 +30,7 @@ import { TeacherRatingsPanel } from "./teacher-ratings-panel";
 const FILTERS = {
   month: { type: "string" as const, defaultValue: "" },
   ustoz: { type: "number" as const, defaultValue: 0 },
+  izoh: { type: "number" as const, defaultValue: 0 },
 };
 
 /** «Dars baholari» (spec 2026-10-13 §6.3). Faqat CEO. */
@@ -41,6 +44,8 @@ export function LessonRatingsClient() {
   const [pageSize, setPageSize] = useState(10);
   const lastPage = Math.max(1, Math.ceil((summary.data?.teachers.length ?? 0) / pageSize));
   const safePage = Math.min(page, lastPage);
+  const commented = filters.izoh === 1;
+  const onCommented = (on: boolean) => setFilter("izoh", on ? 1 : 0);
   const openTeacher = filters.ustoz || null;
   const openName = summary.data?.teachers.find((t) => t.teacherId === openTeacher)?.name;
 
@@ -81,6 +86,10 @@ export function LessonRatingsClient() {
         </div>
       </div>
 
+      <Alert className="border-green-300 bg-green-50 text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
+        🔒 Baholar ANONIM: o&apos;quvchining ismi hech qayerda ko&apos;rsatilmaydi.
+      </Alert>
+
       {summary.isPending ? (
         <BlockSkeleton className="h-64" />
       ) : summary.isError ? (
@@ -109,8 +118,22 @@ export function LessonRatingsClient() {
             />
           </section>
           <section className="space-y-3">
-            <h3 className="font-medium">Past baholar (1–3)</h3>
-            <RatingLowSection key={month} month={month} />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-medium">Past baholar va izohlar</h3>
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                size="sm"
+                spacing={0}
+                value={commented ? "izoh" : "all"}
+                onValueChange={(v) => v && onCommented(v === "izoh")}
+                aria-label="Past baholarni saralash"
+              >
+                <ToggleGroupItem value="all">Hammasi</ToggleGroupItem>
+                <ToggleGroupItem value="izoh">Faqat izohlilar</ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+            <RatingLowSection key={`${month}-${commented}`} month={month} commented={commented} />
           </section>
         </>
       )}
@@ -132,11 +155,11 @@ export function LessonRatingsClient() {
   );
 }
 
-/** Owns the low-ratings page; `key={month}` in the caller returns it to page 1. */
-function RatingLowSection({ month }: { month: string }) {
+/** Owns the low-ratings page; `key` (month + filter) in the caller returns it to page 1. */
+function RatingLowSection({ month, commented }: { month: string; commented: boolean }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const q = useLowRatings(month, page, pageSize);
+  const q = useLowRatings(month, page, pageSize, commented);
 
   if (q.isPending) return <Skeleton className="h-40 w-full" />;
   if (q.isError) return <BlockError title="Past baholar" onRetry={() => q.refetch()} />;
@@ -146,6 +169,7 @@ function RatingLowSection({ month }: { month: string }) {
       page={page}
       pageSize={pageSize}
       total={q.data.total}
+      commentedOnly={commented}
       onPageChange={setPage}
       onPageSizeChange={(s) => {
         setPageSize(s);

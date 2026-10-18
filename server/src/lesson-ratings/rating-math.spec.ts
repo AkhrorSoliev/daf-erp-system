@@ -32,6 +32,7 @@ describe('totalsOf', () => {
       delivered: 4,
       responseRate: 75,
       low: 1,
+      commented: 0,
     });
   });
 
@@ -42,7 +43,15 @@ describe('totalsOf', () => {
       delivered: 0,
       responseRate: null,
       low: 0,
+      commented: 0,
     });
+  });
+});
+
+describe('totalsOf commented', () => {
+  it('counts rows flagged commented', () => {
+    const c = (commented: boolean): RatingRow => ({ ...row(2), commented });
+    expect(totalsOf([c(true), c(false), c(true), row(5)]).commented).toBe(2);
   });
 });
 

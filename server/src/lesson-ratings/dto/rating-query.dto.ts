@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsInt,
@@ -31,6 +31,14 @@ export class RatingLowQueryDto extends RatingMonthDto {
   @Min(1)
   @Max(50)
   pageSize?: number = 10;
+
+  /** `?commented=1|true` — faqat izohli baholar. */
+  @IsOptional()
+  @Transform(({ value }) =>
+    value === '1' || value === 'true' || value === true ? true : undefined,
+  )
+  @IsBoolean()
+  commented?: boolean;
 }
 
 export class RatingSettingsDto {

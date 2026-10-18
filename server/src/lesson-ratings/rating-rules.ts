@@ -10,9 +10,13 @@ export const COMMENT_MAX = 500;
 /** Shu va undan past baho — «past baho»: izoh so'raladi, ro'yxatga tushadi. */
 export const LOW_SCORE_MAX = 3;
 
-export const ASK_COMMENT =
-  'Nima yoqmadi? Shu xabarga javob qilib yozing (ixtiyoriy).';
-export const COMMENT_SAVED = 'Rahmat, fikringiz yetkazildi.';
+/** O'quvchiga va'da: ism hech kimga ko'rinmaydi (hisobotda o'quvchi ismi yo'q). */
+export const ANONYMOUS_NOTE =
+  "🔒 Baho to'liq anonim: hech kimga ismingiz ko'rinmaydi.";
+export const ANONYMOUS_COMMENT_NOTE = "🔒 Fikringiz ham to'liq anonim.";
+
+export const ASK_COMMENT = `Nima yoqmadi? Shu xabarga javob qilib yozing (ixtiyoriy).\n\n${ANONYMOUS_COMMENT_NOTE}`;
+export const COMMENT_SAVED = 'Rahmat, fikringiz qabul qilindi.';
 export const COMMENT_ALREADY = 'Fikringiz allaqachon yozilgan.';
 export const NOT_YOURS = "Bu so'rov sizga emas";
 export const EXPIRED = "Baho berish muddati o'tgan";
@@ -38,7 +42,7 @@ export function ratingQuestion(a: {
   if (a.teacherNames.length > 0) {
     lines.push(`Ustoz: ${a.teacherNames.map(escapeHtml).join(', ')}`);
   }
-  return `${lines.join('\n')}\n\nBaho bering:`;
+  return `${lines.join('\n')}\n\nBaho bering:\n${ANONYMOUS_NOTE}`;
 }
 
 export function ratingKeyboard(ratingId: string) {
