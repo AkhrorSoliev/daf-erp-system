@@ -7,6 +7,12 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-18",
+    sarlavha: "Lidlar arxivi yangilandi",
+    matn: "Lidlar arxivida endi «Lidlar» va «Bo'limlar» yorliqlari bor, jadvallar sahifalarga bo'lingan (10 dan 50 tagacha). Ism, telefon yoki sabab bo'yicha qidirish, «Kim tomonidan» va sana oralig'i bo'yicha filtr qo'shildi; filtrlar havolada saqlanadi. Har qatorda arxivlangan sana ko'rinadi. Lidni tiklash oynasi lidning eski joyini oldindan tanlaydi va tiklash nimani o'zgartirishini (bosqich, mas'ul) yozib turadi. Tiklash tugmasi faqat lidlarni boshqarish huquqi borlarga ko'rinadi. Tiklangan qator darrov ro'yxatdan yo'qoladi.",
+    rollar: [1, 2, 3],
+  },
+  {
+    sana: "2026-10-18",
     sarlavha: "Sozlamalar tartibga keltirildi",
     matn: "Sozlamalar sahifasi endi mavzu bo'yicha: Markaz, Jamoa va ruxsatlar, O'quv jarayoni, To'lov va lidlar, Telegram va arxiv. Ko'p sahifa ko'rinadigan rolda tepada qidiruv bor («/» tugmasi ham ishlaydi). Kichik sozlamalar bir sahifaga yig'ildi: «O'quv qoidalari» (avtomatik pauza, DaF normasi, qatnashganlik hujjati), «Lidlar va KPI» (lidlar egaligi, KPI narxlari) va «Telegram» (guruhlar va kunlik hisobot varaqlari). Eski havolalar o'zi yangi joyga olib boradi; kim nimani o'zgartira olishi avvalgidek.",
     rollar: [1, 2, 3],

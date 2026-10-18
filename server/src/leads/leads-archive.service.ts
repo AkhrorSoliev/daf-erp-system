@@ -15,13 +15,9 @@ import {
 } from './ownership/lead-ownership.service';
 import { RELEASED_OWNER, restoreRelease } from './ownership/restore-release';
 
-const DELETED_BY_SELECT = {
-  select: { id: true, firstName: true, lastName: true },
-};
-
 /**
- * Leads-owned archive: reads archived leads + sections and restores them back
- * onto the board. Kept separate from the generic CEO-only /archive module
+ * Leads-owned archive: restores archived leads + sections back onto the board
+ * (the paged reads are in `LeadsArchiveReadService`). Kept separate from the generic CEO-only /archive module
  * because leads need a richer restore (pick a target column + section; restore a
  * section with or without its cascade-archived leads) and it is open to
  * CEO / Branch Director / Administrator — not CEO-only.
@@ -33,148 +29,6 @@ export class LeadsArchiveService {
     private entityHistoryService: EntityHistoryService,
     private ownership: LeadOwnershipService,
   ) {}
-
-  /**
-   * Archived leads (column 1) + archived sections (column 2).
-   *
-   * Had NO tenancy filter of any kind — every archived lead and section in the
-   * database, across companies. The restore endpoints below were the same, so
-   * the archive page was a way around every gate on the live board.
-   */
-  async getArchive(companyId: number, scope: ReportBranchIds) {
-    const [leads, sections] = await Promise.all([
-      this.prisma.lead.findMany({
-        where: {
-          deletedAt: { not: null },
-          companyId,
-          ...leadBranchWhere(scope),
-        },
-        orderBy: { deletedAt: 'desc' },
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          phone: true,
-          statusEnum: true,
-          lostReason: true,
-          deletedAt: true,
-          deletedBy: DELETED_BY_SELECT,
-          // Origin label — the section/column may themselves be archived, so we
-          // intentionally do NOT filter them by deletedAt.
-          section: {
-            select: {
-              id: true,
-              name: true,
-              column: { select: { id: true, name: true } },
-            },
-          },
-        },
-      }),
-      this.prisma.leadSection.findMany({
-        // An archived section keeps pointing at its column even when that
-        // column is itself archived, so the branch is still resolvable.
-        where: {
-          deletedAt: { not: null },
-          companyId,
-          column: { ...branchIdWhere(scope) },
-        },
-        orderBy: { deletedAt: 'desc' },
-        select: {
-          id: true,
-          name: true,
-          deletedAt: true,
-          deletionBatchId: true,
-          deletedBy: DELETED_BY_SELECT,
-          column: {
-            select: {
-              id: true,
-              name: true,
-              branchId: true,
-              branch: { select: { id: true, name: true } },
-            },
-          },
-        },
-      }),
-    ]);
-
-    const leadCountBySection =
-      await this.archivedLeadCountsForSections(sections);
-
-    return {
-      leads,
-      sections: sections.map((s) => ({
-        id: s.id,
-        name: s.name,
-        deletedAt: s.deletedAt,
-        deletedBy: s.deletedBy,
-        column: s.column,
-        leadCount: leadCountBySection.get(s.id) ?? 0,
-      })),
-    };
-  }
-
-  /**
-   * For each archived section, how many archived leads "restore with leads"
-   * would bring back: those sharing the section's deletionBatchId, or (legacy
-   * sections deleted before cascade existed) those still pointing at it.
-   */
-  private async archivedLeadCountsForSections(
-    sections: { id: string; deletionBatchId: string | null }[],
-  ): Promise<Map<string, number>> {
-    const result = new Map<string, number>();
-    if (sections.length === 0) return result;
-
-    const batchIds = sections
-      .map((s) => s.deletionBatchId)
-      .filter((b): b is string => !!b);
-    const legacyIds = sections
-      .filter((s) => !s.deletionBatchId)
-      .map((s) => s.id);
-
-    const [byBatch, bySection] = await Promise.all([
-      batchIds.length
-        ? this.prisma.lead.groupBy({
-            by: ['deletionBatchId'],
-            where: {
-              deletedAt: { not: null },
-              deletionBatchId: { in: batchIds },
-            },
-            _count: { _all: true },
-          })
-        : Promise.resolve(
-            [] as {
-              deletionBatchId: string | null;
-              _count: { _all: number };
-            }[],
-          ),
-      legacyIds.length
-        ? this.prisma.lead.groupBy({
-            by: ['sectionId'],
-            where: { deletedAt: { not: null }, sectionId: { in: legacyIds } },
-            _count: { _all: true },
-          })
-        : Promise.resolve(
-            [] as { sectionId: string | null; _count: { _all: number } }[],
-          ),
-    ]);
-
-    const countByBatch = new Map(
-      byBatch.map((b) => [b.deletionBatchId, b._count._all]),
-    );
-    const countBySectionId = new Map(
-      bySection.map((b) => [b.sectionId, b._count._all]),
-    );
-
-    for (const s of sections) {
-      result.set(
-        s.id,
-        s.deletionBatchId
-          ? (countByBatch.get(s.deletionBatchId) ?? 0)
-          : (countBySectionId.get(s.id) ?? 0),
-      );
-    }
-    return result;
-  }
 
   /**
    * The funnel stage a restored lead should land on: a converted lead keeps

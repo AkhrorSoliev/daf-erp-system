@@ -8,6 +8,7 @@ import { LeadSourcesController } from './lead-sources.controller';
 import { LeadsService } from './leads.service';
 import { LeadsBoardService } from './leads-board.service';
 import { LeadsArchiveService } from './leads-archive.service';
+import { LeadsArchiveReadService } from './archive/leads-archive-read.service';
 import { LeadsStatsService } from './leads-stats.service';
 import { LeadColumnsService } from './lead-columns.service';
 import { LeadSectionsService } from './lead-sections.service';
@@ -30,6 +31,7 @@ import { LeadOwnershipCron } from './ownership/lead-ownership.cron';
     LeadsService,
     LeadsBoardService,
     LeadsArchiveService,
+    LeadsArchiveReadService,
     LeadsStatsService,
     LeadColumnsService,
     LeadSectionsService,

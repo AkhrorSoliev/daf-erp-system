@@ -513,7 +513,17 @@
     "Branch Director",
     "CEO"
   ],
-  "GET /leads/archive": [
+  "GET /leads/archive/leads": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /leads/archive/sections": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /leads/archive/summary": [
     "Administrator",
     "Branch Director",
     "CEO"
