@@ -27,10 +27,15 @@ import {
 } from "@/components/ui/select";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { useLeadsBoard, type LeadCard } from "@/hooks/use-leads-board";
+import {
+  leadColumnName,
+  useLeadsBoard,
+  type LeadCard,
+} from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
 import { LeadAdditionalFields } from "./lead-additional-fields";
 import { LeadSourcePicker } from "./lead-source-picker";
+import { useT } from "@/i18n/context";
 
 interface AddLeadValues {
   firstName: string;
@@ -51,6 +56,7 @@ const EMPTY_VALUES: AddLeadValues = {
 };
 
 export function AddLeadDrawer() {
+  const t = useT();
   const { open, sectionId: presetSectionId } = useLeadsUi((s) => s.addLead);
   const closeAddLead = useLeadsUi((s) => s.closeAddLead);
   const board = useLeadsBoard((s) => s.board);
@@ -90,10 +96,10 @@ export function AddLeadDrawer() {
         sourceId: values.sourceId,
       });
       addLead(values.sectionId, data);
-      toast.success("Yangi lid qo'shildi");
+      toast.success(t("Yangi lid qo'shildi"));
       closeAddLead();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Lid qo'shishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Lid qo'shishda xatolik yuz berdi")));
     } finally {
       setSubmitting(false);
     }
@@ -107,18 +113,19 @@ export function AddLeadDrawer() {
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <SheetHeader className="border-b px-6 py-4">
-          <SheetTitle className="text-lg">Yangi lid qo&apos;shish</SheetTitle>
+          <SheetTitle className="text-lg">{t("Yangi lid qo'shish")}</SheetTitle>
           <SheetDescription>
-            Potensial o&apos;quvchi ma&apos;lumotlarini kiriting
+            {t("Potensial o'quvchi ma'lumotlarini kiriting")}
           </SheetDescription>
         </SheetHeader>
 
         {!sectionsExist ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-            <p className="text-sm font-medium">Avval bo&apos;lim yarating</p>
+            <p className="text-sm font-medium">{t("Avval bo'lim yarating")}</p>
             <p className="text-sm text-muted-foreground">
-              Lid qo&apos;shish uchun ustunlardan birida kamida bitta
-              bo&apos;lim bo&apos;lishi kerak.
+              {t(
+                "Lid qo'shish uchun ustunlardan birida kamida bitta bo'lim bo'lishi kerak.",
+              )}
             </p>
           </div>
         ) : (
@@ -130,12 +137,12 @@ export function AddLeadDrawer() {
             >
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="firstName">Ism</Label>
+                  <Label htmlFor="firstName">{t("Ism")}</Label>
                   <Input
                     id="firstName"
                     placeholder="Aziz"
                     {...register("firstName", {
-                      required: "Ism kiritilishi shart",
+                      required: t("Ism kiritilishi shart"),
                     })}
                   />
                   {errors.firstName && (
@@ -145,12 +152,12 @@ export function AddLeadDrawer() {
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="lastName">Familiya</Label>
+                  <Label htmlFor="lastName">{t("Familiya")}</Label>
                   <Input
                     id="lastName"
                     placeholder="Karimov"
                     {...register("lastName", {
-                      required: "Familiya kiritilishi shart",
+                      required: t("Familiya kiritilishi shart"),
                     })}
                   />
                   {errors.lastName && (
@@ -162,13 +169,13 @@ export function AddLeadDrawer() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="add-lead-phone">Telefon raqami</Label>
+                <Label htmlFor="add-lead-phone">{t("Telefon raqami")}</Label>
                 <Controller
                   name="phone"
                   control={control}
                   rules={{
                     validate: (v) =>
-                      v.length === 9 || "Telefon raqamini to'liq kiriting",
+                      v.length === 9 || t("Telefon raqamini to'liq kiriting"),
                   }}
                   render={({ field }) => (
                     <PhoneInput
@@ -186,23 +193,23 @@ export function AddLeadDrawer() {
               </div>
 
               <div className="space-y-1.5">
-                <Label>Bo&apos;lim</Label>
+                <Label>{t("Bo'lim")}</Label>
                 <Controller
                   name="sectionId"
                   control={control}
-                  rules={{ required: "Bo'limni tanlang" }}
+                  rules={{ required: t("Bo'limni tanlang") }}
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Bo'limni tanlang" />
+                        <SelectValue placeholder={t("Bo'limni tanlang")} />
                       </SelectTrigger>
                       <SelectContent>
                         {columnsWithSections.map((column) => (
                           <SelectGroup key={column.id}>
                             <SelectLabel>
                               {showBranch && column.branch
-                                ? `${column.branch.name} · ${column.name}`
-                                : column.name}
+                                ? `${column.branch.name} · ${leadColumnName(column, t)}`
+                                : leadColumnName(column, t)}
                             </SelectLabel>
                             {column.sections.map((section) => (
                               <SelectItem key={section.id} value={section.id}>
@@ -225,17 +232,17 @@ export function AddLeadDrawer() {
               <Controller
                 name="sourceId"
                 control={control}
-                rules={{ required: "Lid manbasini tanlang" }}
+                rules={{ required: t("Lid manbasini tanlang") }}
                 render={({ field }) => (
                   <LeadSourcePicker
                     open={open}
                     value={field.value}
                     onChange={field.onChange}
-                    label="Qayerdan bildi?"
+                    label={t("Qayerdan bildi?")}
                     required
                     error={errors.sourceId?.message}
                     id="add-lead-sourceId"
-                    loadErrorMessage="Manbalar ro'yxati yuklanmadi — lid qo'shish uchun sahifani yangilang"
+                    loadErrorMessage={t("Manbalar ro'yxati yuklanmadi — lid qo'shish uchun sahifani yangilang")}
                   />
                 )}
               />
@@ -245,7 +252,7 @@ export function AddLeadDrawer() {
                 control={control}
                 rules={{
                   validate: (v) =>
-                    !v || v.length === 9 || "Telefon raqamini to'liq kiriting",
+                    !v || v.length === 9 || t("Telefon raqamini to'liq kiriting"),
                 }}
                 render={({ field }) => (
                   <LeadAdditionalFields
@@ -267,7 +274,7 @@ export function AddLeadDrawer() {
               onClick={closeAddLead}
               disabled={submitting}
             >
-              Bekor qilish
+              {t("Bekor qilish")}
             </Button>
             <Button
               type="submit"
@@ -275,7 +282,7 @@ export function AddLeadDrawer() {
               disabled={submitting || !sectionsExist}
             >
               {submitting && <Loader2 className="size-4 animate-spin" />}
-              Saqlash
+              {t("Saqlash")}
             </Button>
           </div>
         </SheetFooter>

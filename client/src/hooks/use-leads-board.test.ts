@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  leadColumnName,
   leadConvertedLabel,
   useLeadsBoard,
   type LeadBoardColumn,
@@ -189,5 +190,17 @@ describe("leadConvertedLabel", () => {
     expect(leadConvertedLabel("CONVERTED", null, up)).toBe("O'QUVCHIGA AYLANGAN");
     expect(leadConvertedLabel("CONVERTED", "LINKED_TO_EXISTING", up)).toBe("MAVJUD O'QUVCHIGA BIRIKTIRILGAN");
     expect(leadConvertedLabel("LOST", null, up)).toBe("Yo'qotilgan");
+  });
+});
+
+describe("leadColumnName", () => {
+  const up = (source: string) => source.toUpperCase();
+
+  it("translates only the system NEW column, and only under its stored name", () => {
+    expect(leadColumnName({ name: "Yangi Lidlar", systemKey: "NEW" })).toBe("Yangi Lidlar");
+    expect(leadColumnName({ name: "Yangi Lidlar", systemKey: "NEW" }, up)).toBe("YANGI LIDLAR");
+    expect(leadColumnName({ name: "Yangi Lidlar", systemKey: null }, up)).toBe("Yangi Lidlar");
+    expect(leadColumnName({ name: "Kechki", systemKey: "NEW" }, up)).toBe("Kechki");
+    expect(leadColumnName({ name: "Yangi Lidlar" }, up)).toBe("Yangi Lidlar");
   });
 });

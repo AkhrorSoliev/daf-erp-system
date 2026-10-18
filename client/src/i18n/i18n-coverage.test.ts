@@ -477,6 +477,10 @@ export const STRICT_FILES: string[] = [
   "components/leads/leads-stats-strip.tsx",
   "components/leads/lead-stats.ts",
   "components/leads/leads-list.tsx",
+  "components/leads/lead-detail-drawer.tsx",
+  "components/leads/add-lead-drawer.tsx",
+  "components/leads/edit-lead-drawer.tsx",
+  "components/leads/lead-additional-fields.tsx",
 ];
 
 function walk(dir: string): string[] {

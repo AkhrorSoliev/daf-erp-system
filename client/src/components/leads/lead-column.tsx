@@ -29,7 +29,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useLeadsBoard, type LeadBoardColumn } from "@/hooks/use-leads-board";
+import {
+  leadColumnName,
+  useLeadsBoard,
+  type LeadBoardColumn,
+} from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
 import { useT } from "@/i18n/context";
 import { LeadSection } from "./lead-section";
@@ -116,7 +120,7 @@ export function LeadColumn({
         </Tooltip>
 
         <span className="min-h-0 select-none overflow-hidden text-sm font-semibold [writing-mode:vertical-lr]">
-          {column.name}
+          {leadColumnName(column, t)}
         </span>
       </div>
     );
@@ -140,7 +144,7 @@ export function LeadColumn({
             </TooltipTrigger>
             <TooltipContent>{t("Ustunni yopish")}</TooltipContent>
           </Tooltip>
-          <h2 className="truncate text-sm font-semibold">{column.name}</h2>
+          <h2 className="truncate text-sm font-semibold">{leadColumnName(column, t)}</h2>
           {showBranch && column.branch && (
             <span className="shrink-0 rounded-full bg-primary/10 px-1.5 text-xs font-medium text-primary">
               {column.branch.name}
