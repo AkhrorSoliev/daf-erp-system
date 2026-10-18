@@ -105,7 +105,7 @@ model DafStudentDay {
 qo'yardi. Bu repoda bir marta bo'lgan (`DailyFinancialSnapshot`,
 server/CLAUDE.md). Bo'sh satr — guruhsiz.
 
-**Hosila, asl yozuv emas.** 06.09 dizayni "progress jadvali ataylab yo'q"
+**Hosila, asl yozuv emas.** Faza 2 dizayni (27.08, D4) "Progress jadvali YO'Q"
 deydi: ball formulasi o'zgarsa, tarix qayta hisoblanishi kerak. Bu qoida
 buzilmaydi:
 
@@ -401,6 +401,7 @@ bir guruh): `ON CONFLICT` hech narsa yo'qotmadi — har o'lchovda farq 0
 
 **Yopildi:** `uebersicht` p95 chegara yonida edi (193 / 202, band mashinada);
 qamrab oluvchi indeks migratsiya sifatida qo'shildi, u 168 ga tushiradi.
+
 ---
 
 ## 11. Bu bosqichda QILINMAYDI
