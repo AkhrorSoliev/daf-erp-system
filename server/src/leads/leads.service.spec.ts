@@ -176,9 +176,56 @@ describe('LeadsService', () => {
         }),
       );
       expect(result).toEqual([
-        { id: 'lead-1', calledAt: null, commentCount: 3, ownerDueAt: null },
-        { id: 'lead-2', calledAt: null, commentCount: 0, ownerDueAt: null },
+        {
+          id: 'lead-1',
+          calledAt: null,
+          commentCount: 3,
+          ownerDueAt: null,
+          linkedStudent: null,
+        },
+        {
+          id: 'lead-2',
+          calledAt: null,
+          commentCount: 0,
+          ownerDueAt: null,
+          linkedStudent: null,
+        },
       ]);
+    });
+
+    it('marks a card whose phone belongs to a live student', async () => {
+      prisma.leadSection.findFirst.mockResolvedValue({ id: 'sec-1' });
+      prisma.lead.findMany.mockResolvedValue([
+        { id: 'lead-1', phone: '901234567' },
+        { id: 'lead-2', phone: '907654321' },
+      ]);
+      prisma.comment.groupBy.mockResolvedValue([]);
+      prisma.student.findMany.mockResolvedValue([
+        {
+          id: 10001,
+          firstName: 'Ali',
+          lastName: 'Valiyev',
+          phone: '901234567',
+        },
+      ]);
+
+      const result = await service.getSectionLeads('sec-1', 1001, null);
+
+      expect(prisma.student.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            phone: { in: ['901234567', '907654321'] },
+            deletedAt: null,
+            companyId: 1001,
+          },
+        }),
+      );
+      expect(result[0].linkedStudent).toEqual({
+        id: 10001,
+        firstName: 'Ali',
+        lastName: 'Valiyev',
+      });
+      expect(result[1].linkedStudent).toBeNull();
     });
 
     it('selects the owner and gives each card its server-computed deadline (ADR-0093)', async () => {
