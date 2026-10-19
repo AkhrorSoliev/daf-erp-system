@@ -36,9 +36,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { formatPrice } from "@/lib/format-utils";
+import { formatNumber, formatPrice } from "@/lib/format-utils";
 import type {
   ExamDetail,
   MockExamParticipant,
@@ -58,10 +60,11 @@ import {
   type MultiSelectOption,
 } from "@/components/ui/multi-select-combobox";
 
+// Labels are `msg()` texts, translated where the filter is drawn.
 const PAID_FILTER_OPTIONS: MultiSelectOption[] = [
-  { value: "paid", label: "To'langan" },
-  { value: "pending", label: "Kutilmoqda" },
-  { value: "cash", label: "Naqd kutilmoqda" },
+  { value: "paid", label: msg("To'langan") },
+  { value: "pending", label: msg("To'lov kutilmoqda") },
+  { value: "cash", label: msg("Naqd kutilmoqda") },
 ];
 
 interface ExamParticipantsTabProps {
@@ -89,6 +92,12 @@ export function ExamParticipantsTab({
   exam,
   onParticipantCountChange,
 }: ExamParticipantsTabProps) {
+  const t = useT();
+  // The fetch reads t from here: a language switch must not refetch.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
   const [data, setData] = useState<MockExamParticipant[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -146,8 +155,9 @@ export function ExamParticipantsTab({
         setPage(resp.page);
       } catch (error) {
         if (requestId !== fetchRef.current) return;
+        const t = tRef.current;
         toast.error(
-          getErrorMessage(error, "Ishtirokchilarni yuklashda xatolik"),
+          getErrorMessage(error, t("Ishtirokchilarni yuklashda xatolik")),
         );
       } finally {
         if (requestId === fetchRef.current) setLoading(false);
@@ -182,8 +192,14 @@ export function ExamParticipantsTab({
       return;
     }
     setData((prev) => prev.filter((p) => p.id !== id));
-    setTotal((t) => Math.max(0, t - 1));
+    setTotal((n) => Math.max(0, n - 1));
   }
+
+  const paidFilterOptions = PAID_FILTER_OPTIONS.map((o) => ({
+    ...o,
+    label: t(o.label),
+  }));
+  const totalLine = t("Jami: {n} ta ishtirokchi", { n: formatNumber(total) });
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const canAddManual =
@@ -194,10 +210,8 @@ export function ExamParticipantsTab({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold">Ishtirokchilar</h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Jami: {total} ta ishtirokchi
-          </p>
+          <h2 className="text-base font-semibold">{t("Ishtirokchilar")}</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">{totalLine}</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -205,14 +219,14 @@ export function ExamParticipantsTab({
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Ism, telefon, username..."
+              placeholder={t("Ism, telefon, username...")}
               className="w-64 pl-9"
             />
           </div>
           {canAddManual && (
             <Button size="sm" onClick={() => setManualOpen(true)}>
               <Plus className="size-4" />
-              Qo&apos;lda qo&apos;shish
+              {t("Qo'lda qo'shish")}
             </Button>
           )}
         </div>
@@ -222,20 +236,23 @@ export function ExamParticipantsTab({
       <div className="flex flex-wrap items-center gap-2">
         {exam.examTimes && exam.examTimes.length > 0 && (
           <MultiSelectCombobox
-            options={exam.examTimes.map((t) => ({ value: t, label: `🕐 ${t}` }))}
+            options={exam.examTimes.map((time) => ({
+              value: time,
+              label: `🕐 ${time}`,
+            }))}
             selected={timeFilter}
             onChange={setTimeFilter}
-            placeholder="Barcha vaqtlar"
-            searchPlaceholder="Vaqt qidirish..."
+            placeholder={t("Barcha vaqtlar")}
+            searchPlaceholder={t("Vaqt qidirish...")}
             className="w-40"
           />
         )}
         <MultiSelectCombobox
-          options={PAID_FILTER_OPTIONS}
+          options={paidFilterOptions}
           selected={paidFilter}
           onChange={setPaidFilter}
-          placeholder="Barcha to'lovlar"
-          searchPlaceholder="To'lov holati qidirish..."
+          placeholder={t("Barcha to'lovlar")}
+          searchPlaceholder={t("To'lov holati qidirish...")}
           className="w-44"
         />
         {exam.offeredLevels && exam.offeredLevels.length > 0 && (
@@ -243,8 +260,8 @@ export function ExamParticipantsTab({
             options={exam.offeredLevels.map((l) => ({ value: l, label: l }))}
             selected={levelFilter}
             onChange={setLevelFilter}
-            placeholder="Barcha darajalar"
-            searchPlaceholder="Daraja qidirish..."
+            placeholder={t("Barcha darajalar")}
+            searchPlaceholder={t("Daraja qidirish...")}
             className="w-36"
           />
         )}
@@ -256,14 +273,14 @@ export function ExamParticipantsTab({
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
               <TableHead className="w-20">ID</TableHead>
-              <TableHead>Ism familiya</TableHead>
-              <TableHead className="w-16">Daraja</TableHead>
-              <TableHead className="w-20">Vaqt</TableHead>
-              <TableHead>Telefon</TableHead>
-              <TableHead className="w-28">To&apos;lov</TableHead>
+              <TableHead>{t("Ism familiya")}</TableHead>
+              <TableHead className="w-16">{t("Daraja")}</TableHead>
+              <TableHead className="w-20">{t("Vaqt")}</TableHead>
+              <TableHead>{t("Telefon")}</TableHead>
+              <TableHead className="w-28">{t("To'lov")}</TableHead>
               <TableHead>Telegram</TableHead>
-              <TableHead>Yozildi</TableHead>
-              <TableHead className="text-right">Natija</TableHead>
+              <TableHead>{t("Yozildi")}</TableHead>
+              <TableHead className="text-right">{t("Natija")}</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
@@ -285,8 +302,8 @@ export function ExamParticipantsTab({
                 >
                   <Users className="mx-auto mb-2 size-6 opacity-40" />
                   {debouncedSearch
-                    ? "Qidiruv bo'yicha hech narsa topilmadi"
-                    : "Hali ishtirokchi yo'q"}
+                    ? t("Qidiruv bo'yicha hech narsa topilmadi")
+                    : t("Hali ishtirokchi yo'q")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -302,7 +319,7 @@ export function ExamParticipantsTab({
                     {p.studentId && (
                       <span
                         className="ml-1 rounded bg-blue-100 px-1 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                        title="DaF o'quvchisi"
+                        title={t("Markaz o'quvchisi")}
                       >
                         DaF
                       </span>
@@ -336,15 +353,17 @@ export function ExamParticipantsTab({
                     {(() => {
                       const fee = participantFee(p, exam.price);
                       if (p.paid) {
-                        const method = paymentMethodSummary(p);
+                        const method = paymentMethodSummary(p, t);
                         return (
                           <div className="flex flex-col gap-0.5">
                             <span className="inline-flex w-fit items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                              ✓ To&apos;langan
+                              ✓ {t("To'langan")}
                             </span>
                             {fee > 0 && (
                               <span className="tabular-nums text-muted-foreground">
-                                {formatPrice(fee)} so&apos;m
+                                {t("{amount} so'm", {
+                                  amount: formatPrice(fee),
+                                })}
                               </span>
                             )}
                             {method && (
@@ -355,7 +374,7 @@ export function ExamParticipantsTab({
                                     <TooltipTrigger asChild>
                                       <MessageSquareText
                                         className="size-3.5 shrink-0"
-                                        aria-label="To'lov izohi"
+                                        aria-label={t("To'lov izohi")}
                                       />
                                     </TooltipTrigger>
                                     <TooltipContent className="max-w-64 whitespace-pre-wrap">
@@ -374,27 +393,31 @@ export function ExamParticipantsTab({
                           <div className="flex flex-col gap-0.5">
                             {cashChosen ? (
                               <span className="inline-flex w-fit items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 font-medium text-orange-700 dark:bg-orange-950 dark:text-orange-300">
-                                💵 Naqd kutilmoqda
+                                💵 {t("Naqd kutilmoqda")}
                               </span>
                             ) : (
                               <span className="inline-flex w-fit items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                                Kutilmoqda
+                                {t("To'lov kutilmoqda")}
                               </span>
                             )}
                             <span className="tabular-nums text-muted-foreground">
-                              {formatPrice(fee)} so&apos;m
+                              {t("{amount} so'm", { amount: formatPrice(fee) })}
                             </span>
                           </div>
                         );
                       }
-                      return <span className="text-muted-foreground">Bepul</span>;
+                      return (
+                        <span className="text-muted-foreground">
+                          {t("Bepul")}
+                        </span>
+                      );
                     })()}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {p.telegramUsername ? (
                       `@${p.telegramUsername}`
                     ) : !p.telegramChatId ? (
-                      <span className="italic">qo&apos;lda</span>
+                      <span className="italic">{t("qo'lda")}</span>
                     ) : (
                       <span className="font-mono">
                         {p.telegramChatId.slice(0, 8)}…
@@ -418,14 +441,14 @@ export function ExamParticipantsTab({
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="size-8">
                           <MoreHorizontal className="size-4" />
-                          <span className="sr-only">Amallar</span>
+                          <span className="sr-only">{t("Amallar")}</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {!p.paid && participantFee(p, exam.price) > 0 && (
                           <DropdownMenuItem onSelect={() => setPayTarget(p)}>
                             <CircleDollarSign className="mr-2 size-4" />
-                            To&apos;lov qabul qilish
+                            {t("To'lov qabul qilish")}
                           </DropdownMenuItem>
                         )}
                         {canEditPayment(p) && (
@@ -433,7 +456,7 @@ export function ExamParticipantsTab({
                             onSelect={() => setEditPayTarget(p)}
                           >
                             <Pencil className="mr-2 size-4" />
-                            To&apos;lovni tahrirlash
+                            {t("To'lovni tahrirlash")}
                           </DropdownMenuItem>
                         )}
                         {p.studentId === null && (
@@ -441,7 +464,7 @@ export function ExamParticipantsTab({
                             onSelect={() => setConvertTarget(p)}
                           >
                             <UserPlus className="mr-2 size-4" />
-                            O&apos;quvchiga aylantirish
+                            {t("O'quvchiga aylantirish")}
                           </DropdownMenuItem>
                         )}
                         <DropdownMenuItem
@@ -449,7 +472,7 @@ export function ExamParticipantsTab({
                           className="text-destructive focus:text-destructive"
                         >
                           <Trash2 className="mr-2 size-4" />
-                          O&apos;chirish
+                          {t("O'chirish")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -463,7 +486,7 @@ export function ExamParticipantsTab({
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>Jami: {total} ta ishtirokchi</span>
+          <span>{totalLine}</span>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -471,7 +494,7 @@ export function ExamParticipantsTab({
               disabled={page <= 1 || loading}
               onClick={() => setPage((p) => p - 1)}
             >
-              Oldingi
+              {t("Oldingi")}
             </Button>
             <span>
               {page} / {totalPages}
@@ -482,7 +505,7 @@ export function ExamParticipantsTab({
               disabled={page >= totalPages || loading}
               onClick={() => setPage((p) => p + 1)}
             >
-              Keyingi
+              {t("Keyingi")}
             </Button>
           </div>
         </div>

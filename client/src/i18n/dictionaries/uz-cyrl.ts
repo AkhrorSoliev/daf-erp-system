@@ -40,6 +40,8 @@ const uzCyrl: Dictionary = {
   "Hisobot dushanba–shanba belgilangan vaqtda keladi; yakshanba va butun markaz bayramida avtomatik bormaydi. Oluvchi botdagi «📊 Hisobot» tugmasi bilan istalgan payt so'ray oladi.": "Ҳисобот душанба–шанба белгиланган вақтда келади; якшанба ва бутун марказ байрамида автоматик бормайди. Олувчи ботдаги «📊 Hisobot» тугмаси билан исталган пайт сўрай олади.",
   // A German exam section name: course content, never transliterated.
   "Masalan: Hören": "Масалан: Hören",
+  // A Telegram username is searched as typed: the word stays Latin.
+  "Ism, telefon, username...": "Исм, телефон, username...",
 };
 
 export default uzCyrl;

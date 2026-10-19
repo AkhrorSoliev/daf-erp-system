@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPrice } from "@/lib/format-utils";
@@ -40,6 +41,7 @@ export function CancelPaymentDialog({
   onClose,
   onCancelled,
 }: CancelPaymentDialogProps) {
+  const t = useT();
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -65,10 +67,12 @@ export function CancelPaymentDialog({
         { reason: reason.trim() },
       );
       onCancelled(data);
-      toast.success("To'lov bekor qilindi");
+      toast.success(t("To'lov bekor qilindi"));
       onClose();
     } catch (error) {
-      toast.error(getErrorMessage(error, "To'lovni bekor qilishda xatolik"));
+      toast.error(
+        getErrorMessage(error, t("To'lovni bekor qilishda xatolik")),
+      );
     } finally {
       setBusy(false);
     }
@@ -81,34 +85,34 @@ export function CancelPaymentDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>To&apos;lovni bekor qilasizmi?</AlertDialogTitle>
+          <AlertDialogTitle>{t("To'lovni bekor qilasizmi?")}</AlertDialogTitle>
           <AlertDialogDescription>
-            &quot;{participant?.firstName} {participant?.lastName}&quot;ning{" "}
-            <span className="font-semibold tabular-nums">
-              {formatPrice(fee)} so&apos;m
-            </span>{" "}
-            to&apos;lovi bekor qilinadi: ishtirokchi yana «to&apos;lanmagan»
-            bo&apos;ladi va bu summa mock daromadidan chiqadi. Ishtirokchi
-            ro&apos;yxatdan o&apos;chmaydi.
+            {t(
+              "\"{name}\"ning {amount} so'm to'lovi bekor qilinadi: ishtirokchi yana «to'lanmagan» bo'ladi va bu summa mock daromadidan chiqadi. Ishtirokchi ro'yxatdan o'chmaydi.",
+              {
+                name: `${participant?.firstName ?? ""} ${participant?.lastName ?? ""}`.trim(),
+                amount: formatPrice(fee),
+              },
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
           <p>
-            Pul olingan bo&apos;lsa, uni odamga qaytaring. Faqat turi yoki izohi
-            xato bo&apos;lsa, bekor qilmang — «To&apos;lovni tahrirlash»da
-            tuzating.
+            {t(
+              "Pul olingan bo'lsa, uni odamga qaytaring. Faqat turi yoki izohi xato bo'lsa, bekor qilmang — «To'lovni tahrirlash»da tuzating.",
+            )}
           </p>
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="cancel-payment-reason">Sabab</Label>
+          <Label htmlFor="cancel-payment-reason">{t("Sabab")}</Label>
           <Textarea
             id="cancel-payment-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Masalan: boshqa ishtirokchi o'rniga belgilangan"
+            placeholder={t("Masalan: boshqa ishtirokchi o'rniga belgilangan")}
             rows={3}
             maxLength={500}
             disabled={busy}
@@ -116,14 +120,14 @@ export function CancelPaymentDialog({
         </div>
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={busy}>Yopish</AlertDialogCancel>
+          <AlertDialogCancel disabled={busy}>{t("Yopish")}</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={busy || !canConfirm}
             variant="destructive"
           >
             {busy && <Loader2 className="mr-2 size-4 animate-spin" />}
-            To&apos;lovni bekor qilish
+            {t("To'lovni bekor qilish")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
