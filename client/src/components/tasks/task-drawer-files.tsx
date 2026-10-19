@@ -9,8 +9,9 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import type { TaskFileView } from "@/hooks/use-tasks";
+import { useT } from "@/i18n/context";
 import { tashkentDayAndTime } from "./task-due";
-import { personName } from "./task-feed-text";
+import { personName, SYSTEM_NAME } from "./task-feed-text";
 import { FILE_URL_REFRESH_MS, formatSize } from "./task-file-rules";
 import { useTaskFiles } from "./use-task-files";
 
@@ -48,10 +49,11 @@ export async function openFresh(e: React.MouseEvent, taskId: string, file: TaskF
 }
 
 function DownloadLink({ file, label }: { file: TaskFileView; label?: string }) {
+  const t = useT();
   return (
     <a
       href={file.downloadUrl}
-      aria-label="Yuklab olish"
+      aria-label={t("Yuklab olish")}
       className={label ? buttonVariants({ variant: "outline", size: "sm" }) : buttonVariants({ variant: "ghost", size: "icon-sm" })}
       onClick={(e) => { if (!isPlainClick(e)) return; e.preventDefault(); void download(file); }}
     >
@@ -61,6 +63,7 @@ function DownloadLink({ file, label }: { file: TaskFileView; label?: string }) {
 }
 
 function ConfirmDelete({ file, onCancel, onDone }: { file: TaskFileView; onCancel: () => void; onDone: () => void }) {
+  const t = useT();
   const remove = useTaskFiles((s) => s.remove);
   const taskId = useTaskFiles((s) => s.taskId);
   const [busy, setBusy] = useState(false);
@@ -76,13 +79,13 @@ function ConfirmDelete({ file, onCancel, onDone }: { file: TaskFileView; onCance
     <AlertDialog open onOpenChange={(open) => { if (!open && !busy) onCancel(); }}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{"Faylni o'chirasizmi?"}</AlertDialogTitle>
-          <AlertDialogDescription>{"Muhokamada «faylni o'chirdi» degan yozuv qoladi."}</AlertDialogDescription>
+          <AlertDialogTitle>{t("Faylni o'chirasizmi?")}</AlertDialogTitle>
+          <AlertDialogDescription>{t("Muhokamada «faylni o'chirdi» degan yozuv qoladi.")}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={busy}>Bekor qilish</AlertDialogCancel>
+          <AlertDialogCancel disabled={busy}>{t("Bekor qilish")}</AlertDialogCancel>
           <AlertDialogAction variant="destructive" disabled={busy} onClick={(e) => { e.preventDefault(); void confirm(); }}>
-            {"O'chirish"}
+            {t("O'chirish")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -94,6 +97,7 @@ function ConfirmDelete({ file, onCancel, onDone }: { file: TaskFileView; onCance
 export function TaskFileViewer({ images, index, onIndex, onClose }: {
   images: TaskFileView[]; index: number; onIndex: (i: number) => void; onClose: () => void;
 }) {
+  const t = useT();
   const [confirming, setConfirming] = useState(false);
   // After a delete the list is shorter for a moment while the index still points past it.
   const at = Math.min(index, images.length - 1);
@@ -124,18 +128,18 @@ export function TaskFileViewer({ images, index, onIndex, onClose }: {
           <DialogFooter className="items-center sm:justify-between">
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" disabled={at === 0} onClick={() => go(at - 1)}>
-                <ChevronLeft className="size-4" />Oldingi
+                <ChevronLeft className="size-4" />{t("Oldingi")}
               </Button>
               <span className="text-xs text-muted-foreground">{at + 1} / {images.length}</span>
               <Button variant="outline" size="sm" disabled={at >= images.length - 1} onClick={() => go(at + 1)}>
-                Keyingi<ChevronRight className="size-4" />
+                {t("Keyingi")}<ChevronRight className="size-4" />
               </Button>
             </div>
             <div className="flex items-center gap-2">
-              <DownloadLink file={image} label="Yuklab olish" />
+              <DownloadLink file={image} label={t("Yuklab olish")} />
               {image.canDelete && (
                 <Button variant="destructive" size="sm" onClick={() => setConfirming(true)}>
-                  <Trash2 className="size-4" />{"O'chirish"}
+                  <Trash2 className="size-4" />{t("O'chirish")}
                 </Button>
               )}
             </div>
@@ -148,18 +152,19 @@ export function TaskFileViewer({ images, index, onIndex, onClose }: {
 }
 
 function DocumentRow({ taskId, file, onDelete }: { taskId: string; file: TaskFileView; onDelete: () => void }) {
+  const t = useT();
   return (
     <li className="flex items-center gap-2 rounded-md border px-2.5 py-2">
       <FileText className="size-5 shrink-0 text-muted-foreground" />
       <div className="min-w-0 flex-1">
         <a href={file.url} target="_blank" rel="noopener noreferrer" onClick={(e) => void openFresh(e, taskId, file)} className="block truncate text-sm font-medium hover:underline">{file.name}</a>
         <p className="truncate text-xs text-muted-foreground">
-          {formatSize(file.size)} · {file.uploadedBy ? personName(file.uploadedBy) : "Tizim"} · {when(file.createdAt)}
+          {formatSize(file.size, t)} · {file.uploadedBy ? personName(file.uploadedBy) : t(SYSTEM_NAME)} · {when(file.createdAt)}
         </p>
       </div>
       <DownloadLink file={file} />
       {file.canDelete && (
-        <Button variant="ghost" size="icon-sm" aria-label={"O'chirish"} onClick={onDelete}>
+        <Button variant="ghost" size="icon-sm" aria-label={t("O'chirish")} onClick={onDelete}>
           <Trash2 className="size-4" />
         </Button>
       )}
@@ -169,6 +174,7 @@ function DocumentRow({ taskId, file, onDelete }: { taskId: string; file: TaskFil
 
 /** The task's pictures (thumbnails) and documents (rows); voices stay in the feed. */
 export function TaskDrawerFiles({ taskId }: { taskId: string }) {
+  const t = useT();
   const files = useTaskFiles((s) => (s.taskId === taskId ? s.files : NONE));
   const enabled = useTaskFiles((s) => s.enabled);
   const ensureFresh = useTaskFiles((s) => s.ensureFresh);
@@ -183,7 +189,7 @@ export function TaskDrawerFiles({ taskId }: { taskId: string }) {
 
   return (
     <section className="space-y-2">
-      <h4 className="text-sm font-semibold">Fayllar</h4>
+      <h4 className="text-sm font-semibold">{t("Fayllar")}</h4>
       {images.length > 0 && (
         <div className="grid grid-cols-4 gap-2">
           {images.map((f, i) => (

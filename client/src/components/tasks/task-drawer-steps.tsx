@@ -6,11 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import api from "@/lib/api";
 import type { TaskAccess, TaskDetail } from "@/hooks/use-tasks";
+import { useT } from "@/i18n/context";
 import { EditableText } from "./task-drawer-editable";
 import { isOpenStatus } from "./task-labels";
 import { useTaskWrite } from "./use-task-write";
 
 export function TaskDrawerSteps({ task, access }: { task: TaskDetail; access: TaskAccess }) {
+  const t = useT();
   const { busy, run } = useTaskWrite();
   const [draft, setDraft] = useState<string | null>(null);
   // The server keeps steps to manual tasks that are still open.
@@ -27,16 +29,16 @@ export function TaskDrawerSteps({ task, access }: { task: TaskDetail; access: Ta
     if (!title || busy) return;
     // The field stays open for the next step (Escape closes it), and keeps what
     // was typed when the request fails. Typing on while it runs is not wiped.
-    if (await run(api.post(base, { title }), "Qadam qo'shishda xatolik yuz berdi")) setDraft((cur) => (cur === draft ? "" : cur));
+    if (await run(api.post(base, { title }), t("Qadam qo'shishda xatolik yuz berdi"))) setDraft((cur) => (cur === draft ? "" : cur));
   };
 
   return (
     <section className="space-y-2">
       <h4 className="flex items-center gap-2 text-sm font-semibold">
-        Kichik qadamlar {total > 0 && <span className="font-normal text-muted-foreground">{done}/{total}</span>}
+        {t("Kichik qadamlar")} {total > 0 && <span className="font-normal text-muted-foreground">{done}/{total}</span>}
       </h4>
       {total > 0 && (
-        <div className="h-1.5 rounded bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done} aria-label="Bajarilgan qadamlar">
+        <div className="h-1.5 rounded bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done} aria-label={t("Bajarilgan qadamlar")}>
           <div className="h-full rounded bg-emerald-500" style={{ width: `${(100 * done) / total}%` }} />
         </div>
       )}
@@ -53,14 +55,14 @@ export function TaskDrawerSteps({ task, access }: { task: TaskDetail; access: Ta
               <EditableText
                 value={s.title}
                 canEdit={canManage && !busy}
-                placeholder="Qadam nomi"
+                placeholder={t("Qadam nomi")}
                 maxLength={200}
                 className="text-sm"
-                onSave={(title) => void run(api.patch(`${base}/${s.id}`, { title }), "Qadam nomini saqlashda xatolik yuz berdi")}
+                onSave={(title) => void run(api.patch(`${base}/${s.id}`, { title }), t("Qadam nomini saqlashda xatolik yuz berdi"))}
               />
             </div>
             {canManage && (
-              <Button variant="ghost" size="icon-xs" aria-label="Qadamni o'chirish" disabled={busy} onClick={() => void run(api.delete(`${base}/${s.id}`), "Qadamni o'chirishda xatolik yuz berdi")}>
+              <Button variant="ghost" size="icon-xs" aria-label={t("Qadamni o'chirish")} disabled={busy} onClick={() => void run(api.delete(`${base}/${s.id}`), t("Qadamni o'chirishda xatolik yuz berdi"))}>
                 <Trash2 className="size-3.5" />
               </Button>
             )}
@@ -68,7 +70,7 @@ export function TaskDrawerSteps({ task, access }: { task: TaskDetail; access: Ta
         ))}
       </ul>
       {canWork && (draft === null ? (
-        <Button variant="ghost" size="sm" onClick={() => setDraft("")}><Plus className="mr-1 size-3" />Qadam qo&apos;shish</Button>
+        <Button variant="ghost" size="sm" onClick={() => setDraft("")}><Plus className="mr-1 size-3" />{t("Qadam qo'shish")}</Button>
       ) : (
         <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); void add(); }}>
           <Input
@@ -77,9 +79,9 @@ export function TaskDrawerSteps({ task, access }: { task: TaskDetail; access: Ta
             onChange={(e) => setDraft(e.target.value)}
             maxLength={200}
             className="h-8"
-            placeholder="Qadam nomi"
+            placeholder={t("Qadam nomi")}
           />
-          <Button type="submit" size="sm" className="h-8" disabled={busy || !draft.trim()}>Qo&apos;shish</Button>
+          <Button type="submit" size="sm" className="h-8" disabled={busy || !draft.trim()}>{t("Qo'shish")}</Button>
         </form>
       ))}
     </section>

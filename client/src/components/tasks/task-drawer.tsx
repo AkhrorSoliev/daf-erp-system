@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { UnmarkedLessonPrompt } from "@/components/attendance/unmarked/unmarked-lesson-prompt";
 import api from "@/lib/api";
 import { useTasks, type TaskDetailPayload } from "@/hooks/use-tasks";
+import { useT } from "@/i18n/context";
 import { TaskDrawerBatch } from "./task-drawer-batch";
 import { EditableText } from "./task-drawer-editable";
 import { TaskDrawerFiles } from "./task-drawer-files";
@@ -17,7 +18,7 @@ import { TaskDrawerProperties } from "./task-drawer-properties";
 import { TaskDrawerRecurrence } from "./task-drawer-recurrence";
 import { TaskDrawerSteps } from "./task-drawer-steps";
 import { JoinRequestPanel } from "./join-request/join-request-panel";
-import { isOpenStatus, KIND_LABEL } from "./task-labels";
+import { isOpenStatus, kindText, SYSTEM_LABEL } from "./task-labels";
 import { TaskSourceCard } from "./task-source-card";
 import { TaskStatusPill } from "./task-status-pill";
 import { FILE_URL_REFRESH_MS } from "./task-file-rules";
@@ -59,6 +60,7 @@ function useOwnsDrawer(): boolean {
 }
 
 function DrawerBody({ detail, onClose }: { detail: TaskDetailPayload; onClose: () => void }) {
+  const t = useT();
   const { task, events, access, batch, source, recurrence } = detail;
   const { run } = useTaskWrite();
   const system = task.kind !== "MANUAL";
@@ -73,33 +75,34 @@ function DrawerBody({ detail, onClose }: { detail: TaskDetailPayload; onClose: (
     const files = useTaskFiles.getState();
     void files.loadConfig();
     void files.load(task.id);
-    const t = window.setInterval(() => void useTaskFiles.getState().load(task.id), FILE_URL_REFRESH_MS);
-    return () => window.clearInterval(t);
+    const timer = window.setInterval(() => void useTaskFiles.getState().load(task.id), FILE_URL_REFRESH_MS);
+    return () => window.clearInterval(timer);
   }, [task.id, task.eventsCount]);
+  const kind = kindText(task.kind, t);
 
   return (
     <>
       <div className="flex items-center gap-2 border-b px-4 py-3">
         <TaskStatusPill status={task.status} />
         {system && (
-          <span className="inline-flex items-center gap-1 rounded bg-foreground px-1.5 py-0.5 text-[10px] font-medium text-background"><Bot className="size-3" />Tizim</span>
+          <span className="inline-flex items-center gap-1 rounded bg-foreground px-1.5 py-0.5 text-[10px] font-medium text-background"><Bot className="size-3" />{t(SYSTEM_LABEL)}</span>
         )}
-        {system && KIND_LABEL[task.kind] && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">{KIND_LABEL[task.kind]}</span>}
+        {system && kind && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">{kind}</span>}
         <div className="ml-auto flex items-center gap-1">
           <TaskDrawerMenu task={task} access={access} />
-          <Button variant="ghost" size="icon-sm" onClick={onClose}><X className="size-4" /><span className="sr-only">Yopish</span></Button>
+          <Button variant="ghost" size="icon-sm" onClick={onClose}><X className="size-4" /><span className="sr-only">{t("Yopish")}</span></Button>
         </div>
       </div>
 
       <div className="flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4">
         <SheetTitle asChild>
           <h2 className="text-lg leading-snug font-semibold">
-            <EditableText value={task.title} canEdit={canEdit} placeholder="Sarlavha" maxLength={200} onSave={(title) => patch({ title })} />
+            <EditableText value={task.title} canEdit={canEdit} placeholder={t("Sarlavha")} maxLength={200} onSave={(title) => patch({ title })} />
           </h2>
         </SheetTitle>
         {system && (
           <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
-            Bu topshiriqni tizim berdi. Sababi hal bo&apos;lgach, u o&apos;zi yopiladi.
+            {t("Bu topshiriqni tizim berdi. Sababi hal bo'lgach, u o'zi yopiladi.")}
           </p>
         )}
         {system && source && <TaskSourceCard task={task} source={source} />}
@@ -125,12 +128,12 @@ function DrawerBody({ detail, onClose }: { detail: TaskDetailPayload; onClose: (
         {recurrence && <TaskDrawerRecurrence taskId={task.id} rule={recurrence} />}
         {(task.description || canEdit) && (
           <section className="space-y-1.5">
-            <h4 className="text-sm font-semibold">Tavsif</h4>
+            <h4 className="text-sm font-semibold">{t("Tavsif")}</h4>
             <EditableText
               value={task.description ?? ""}
               canEdit={canEdit}
               multiline
-              placeholder="Tavsif qo'shish"
+              placeholder={t("Tavsif qo'shish")}
               maxLength={5000}
               className="text-sm"
               onSave={(description) => patch({ description })}
@@ -149,12 +152,13 @@ function DrawerBody({ detail, onClose }: { detail: TaskDetailPayload; onClose: (
 }
 
 function DrawerSkeleton({ onClose }: { onClose: () => void }) {
+  const t = useT();
   return (
     <>
-      <SheetTitle className="sr-only">Topshiriq</SheetTitle>
+      <SheetTitle className="sr-only">{t("Topshiriq")}</SheetTitle>
       <div className="flex items-center gap-2 border-b px-4 py-3">
         <Skeleton className="h-5 w-20 rounded-full" />
-        <Button variant="ghost" size="icon-sm" className="ml-auto" onClick={onClose}><X className="size-4" /><span className="sr-only">Yopish</span></Button>
+        <Button variant="ghost" size="icon-sm" className="ml-auto" onClick={onClose}><X className="size-4" /><span className="sr-only">{t("Yopish")}</span></Button>
       </div>
       <div className="space-y-4 px-4 py-4">
         <Skeleton className="h-6 w-3/4" />

@@ -1,4 +1,5 @@
 import type { TaskAccess, TaskDetail } from "@/hooks/use-tasks";
+import { msg } from "@/i18n/msg";
 
 export interface FooterActions {
   /** «Boshladim»: NEW -> IN_PROGRESS. */
@@ -8,11 +9,11 @@ export interface FooterActions {
   /** «Qabul qilish» / «Qaytarish»: the author's review of a task in IN_REVIEW. */
   accept: boolean;
   return: boolean;
-  /** A line instead of a button: the viewer is waiting for someone else. */
+  /** A line instead of a button: the viewer is waiting for someone else. A `msg()` text: draw it with `t()`. */
   label: string | null;
 }
 
-export const WAITING_LABEL = "Beruvchi tekshirmoqda";
+export const WAITING_LABEL = msg("Beruvchi tekshirmoqda");
 const NONE: FooterActions = { start: false, done: null, accept: false, return: false, label: null };
 
 /**

@@ -84,6 +84,8 @@ export function useTasksTranslator(): void {
   const t = useT();
   useEffect(() => setTasksTranslator(t), [t]);
 }
+/** A `msg()` text in the language handed in by useTasksTranslator(); for the sibling file store (`use-task-files.ts`). */
+export const tasksText = (source: string): string => translate(source);
 
 interface TasksState {
   view: StoreView;
