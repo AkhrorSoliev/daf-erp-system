@@ -13,6 +13,7 @@ import { KursSeedService } from './kurs/kurs-seed.service';
 import { InhaltSeedService } from './inhalt/inhalt-seed.service';
 import { UebungService } from './uebung/uebung.service';
 import { FortschrittService } from './fortschritt/fortschritt.service';
+import { LigaCron } from './liga/liga.cron';
 
 @Module({
   controllers: [DafPortalController, DafMediaController],
@@ -29,6 +30,7 @@ import { FortschrittService } from './fortschritt/fortschritt.service';
     InhaltSeedService,
     UebungService,
     FortschrittService,
+    LigaCron,
   ],
   exports: [DafSeedService, FortschrittService],
 })
