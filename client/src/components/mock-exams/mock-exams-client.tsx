@@ -28,10 +28,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatPrice } from "@/lib/format-utils";
+import { useT } from "@/i18n/context";
 import {
   MOCK_EXAM_STATUS_COLORS,
   MOCK_EXAM_STATUS_LABELS,
   useMockExamsBoard,
+  useMockExamsBoardTranslator,
   type MockExamStatus,
 } from "@/hooks/use-mock-exams-board";
 import {
@@ -40,20 +42,11 @@ import {
 } from "./create-exam-drawer";
 import { MockKpiCard } from "./mock-kpi-card";
 
-const STATUS_FILTERS: MultiSelectOption[] = (
-  [
-    "REGISTRATION_OPEN",
-    "REGISTRATION_CLOSED",
-    "IN_PROGRESS",
-    "GRADING",
-    "ANNOUNCED",
-    "ARCHIVED",
-  ] as MockExamStatus[]
-)
-  .filter((v) => MOCK_EXAM_STATUS_LABELS[v] !== undefined)
-  .map((value) => ({ value, label: MOCK_EXAM_STATUS_LABELS[value] }));
+const STATUS_VALUES = Object.keys(MOCK_EXAM_STATUS_LABELS) as MockExamStatus[];
 
 export function MockExamsClient() {
+  const t = useT();
+  useMockExamsBoardTranslator();
   const router = useRouter();
   const exams = useMockExamsBoard((s) => s.exams);
   const loading = useMockExamsBoard((s) => s.loading);
@@ -68,6 +61,14 @@ export function MockExamsClient() {
   // Filters — section grouping is intentionally not surfaced (backend
   // auto-assigns a default section; UX treats exams as a flat list).
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const statusText = (status: MockExamStatus) => {
+    const label = MOCK_EXAM_STATUS_LABELS[status];
+    return t(label);
+  };
+  const statusOptions: MultiSelectOption[] = STATUS_VALUES.map((value) => ({
+    value,
+    label: statusText(value),
+  }));
   const [search, setSearch] = useState("");
 
   // Revenue summary KPIs
@@ -124,27 +125,27 @@ export function MockExamsClient() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <MockKpiCard
             icon={<Wallet className="size-4" />}
-            label="Mock daromad"
+            label={t("Mock daromad")}
             value={
               <span>
                 {formatPrice(revenue.totalRevenue)}{" "}
-                <span className="text-xs text-muted-foreground">so&apos;m</span>
+                <span className="text-xs text-muted-foreground">{t("so'm")}</span>
               </span>
             }
           />
           <MockKpiCard
             icon={<CheckCircle2 className="size-4" />}
-            label="To'langan ro'yxatlar"
+            label={t("To'langan ro'yxatlar")}
             value={`${revenue.totalPaid}`}
           />
           <MockKpiCard
             icon={<Users className="size-4" />}
-            label="Jami ishtirokchilar"
+            label={t("Jami ishtirokchilar")}
             value={`${revenue.totalParticipants}`}
           />
           <MockKpiCard
             icon={<ClipboardCheck className="size-4" />}
-            label="Jami imtihonlar"
+            label={t("Jami imtihonlar")}
             value={`${revenue.totalExams}`}
           />
         </div>
@@ -152,7 +153,7 @@ export function MockExamsClient() {
 
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Mock imtihonlar — sanasi bo&apos;yicha yangidan eskigacha
+          {t("Mock imtihonlar — sanasi bo'yicha yangidan eskigacha")}
         </p>
         <Button
           size="sm"
@@ -161,7 +162,7 @@ export function MockExamsClient() {
           }
         >
           <Plus className="size-4" />
-          Yangi imtihon
+          {t("Yangi imtihon")}
         </Button>
       </div>
 
@@ -169,15 +170,15 @@ export function MockExamsClient() {
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Nom bo'yicha qidirish..."
+          placeholder={t("Nom bo'yicha qidirish...")}
           className="w-64"
         />
         <MultiSelectCombobox
-          options={STATUS_FILTERS}
+          options={statusOptions}
           selected={statusFilter}
           onChange={setStatusFilter}
-          placeholder="Barcha holatlar"
-          searchPlaceholder="Holat qidirish..."
+          placeholder={t("Barcha holatlar")}
+          searchPlaceholder={t("Holat qidirish...")}
           className="w-48"
         />
       </div>
@@ -193,8 +194,8 @@ export function MockExamsClient() {
           <ClipboardCheck className="mx-auto size-8 text-muted-foreground opacity-50" />
           <p className="mt-2 text-sm font-medium">
             {exams.length === 0
-              ? "Hali imtihon yo'q"
-              : "Filtr bo'yicha hech narsa topilmadi"}
+              ? t("Hali imtihon yo'q")
+              : t("Filtr bo'yicha hech narsa topilmadi")}
           </p>
           {exams.length === 0 && (
             <Button
@@ -204,7 +205,7 @@ export function MockExamsClient() {
               }
             >
               <Plus className="size-4" />
-              Birinchi imtihonni yaratish
+              {t("Birinchi imtihonni yaratish")}
             </Button>
           )}
         </div>
@@ -214,14 +215,14 @@ export function MockExamsClient() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12 border-r">#</TableHead>
-                <TableHead className="w-36">Olinish sanasi</TableHead>
-                <TableHead>Imtihon nomi</TableHead>
-                <TableHead className="w-36">Holat</TableHead>
-                <TableHead className="w-36 text-right">Ishtirokchilar</TableHead>
-                <TableHead className="w-24 text-right">To&apos;lagan</TableHead>
-                <TableHead className="w-36 text-right">Tushum</TableHead>
-                <TableHead className="w-28 text-right">Narxi</TableHead>
-                <TableHead className="w-32">Yaratilgan</TableHead>
+                <TableHead className="w-36">{t("Olinish sanasi")}</TableHead>
+                <TableHead>{t("Imtihon nomi")}</TableHead>
+                <TableHead className="w-36">{t("Holat")}</TableHead>
+                <TableHead className="w-36 text-right">{t("Ishtirokchilar")}</TableHead>
+                <TableHead className="w-24 text-right">{t("To'lagan")}</TableHead>
+                <TableHead className="w-36 text-right">{t("Tushum")}</TableHead>
+                <TableHead className="w-28 text-right">{t("Narxi")}</TableHead>
+                <TableHead className="w-32">{t("Yaratilgan")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -258,7 +259,7 @@ export function MockExamsClient() {
                         MOCK_EXAM_STATUS_COLORS[e.status]
                       }`}
                     >
-                      {MOCK_EXAM_STATUS_LABELS[e.status]}
+                      {statusText(e.status)}
                     </span>
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
@@ -278,7 +279,7 @@ export function MockExamsClient() {
                   <TableCell className="text-right text-xs tabular-nums">
                     {(e.revenue ?? 0) > 0 ? (
                       <span className="font-medium">
-                        {formatPrice(e.revenue ?? 0)} so&apos;m
+                        {t("{amount} so'm", { amount: formatPrice(e.revenue ?? 0) })}
                       </span>
                     ) : (
                       <span className="text-muted-foreground">—</span>
@@ -287,10 +288,10 @@ export function MockExamsClient() {
                   <TableCell className="text-right text-xs tabular-nums">
                     {e.price > 0 ? (
                       <span className="font-medium">
-                        {formatPrice(e.price)} so&apos;m
+                        {t("{amount} so'm", { amount: formatPrice(e.price) })}
                       </span>
                     ) : (
-                      <span className="text-muted-foreground">Bepul</span>
+                      <span className="text-muted-foreground">{t("Bepul")}</span>
                     )}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground tabular-nums">

@@ -3,17 +3,19 @@
 import { Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import {
   MOCK_EXAM_TRANSITION_INFO,
   type MockExamStatus,
 } from "@/hooks/use-mock-exams-board";
 
 const STEPS: { status: MockExamStatus; label: string }[] = [
-  { status: "REGISTRATION_OPEN", label: "Ro'yxat ochiq" },
-  { status: "REGISTRATION_CLOSED", label: "Ro'yxat yopiq" },
-  { status: "GRADING", label: "Baholash" },
-  { status: "ANNOUNCED", label: "E'lon qilingan" },
-  { status: "ARCHIVED", label: "Arxiv" },
+  { status: "REGISTRATION_OPEN", label: msg("Ro'yxat ochiq") },
+  { status: "REGISTRATION_CLOSED", label: msg("Ro'yxat yopiq") },
+  { status: "GRADING", label: msg("Baholash") },
+  { status: "ANNOUNCED", label: msg("E'lon qilingan") },
+  { status: "ARCHIVED", label: msg("Arxiv") },
 ];
 
 function indexOfStatus(status: MockExamStatus): number {
@@ -33,6 +35,7 @@ export function ExamStatusStepper({
   onAdvance,
   onRollback,
 }: ExamStatusStepperProps) {
+  const t = useT();
   const currentIdx = indexOfStatus(status);
   const isTerminal = currentIdx === STEPS.length - 1;
   const nextStep = currentIdx >= 0 ? STEPS[currentIdx + 1] : null;
@@ -88,7 +91,7 @@ export function ExamStatusStepper({
                     state === "future" && "text-muted-foreground",
                   )}
                 >
-                  {step.label}
+                  {t(step.label)}
                 </span>
               </div>
               {!isLast && (
@@ -109,7 +112,7 @@ export function ExamStatusStepper({
       {forwardInfo ? (
         <div className="mt-5 flex flex-col items-center gap-2 border-t pt-5">
           <p className="text-xs text-muted-foreground">
-            {forwardInfo.description}
+            {t(forwardInfo.description)}
           </p>
           <Button
             size="lg"
@@ -118,7 +121,7 @@ export function ExamStatusStepper({
             className="min-w-[260px]"
           >
             {busy && <Loader2 className="size-4 animate-spin" />}
-            Keyingi: {forwardInfo.label}
+            {t("Keyingi: {action}", { action: t(forwardInfo.label) })}
           </Button>
           {rollbackInfo && (
             <button
@@ -127,13 +130,13 @@ export function ExamStatusStepper({
               disabled={busy}
               className="text-xs text-muted-foreground underline-offset-4 hover:underline disabled:opacity-50"
             >
-              Yoki: {rollbackInfo.label}
+              {t("Yoki: {action}", { action: t(rollbackInfo.label) })}
             </button>
           )}
         </div>
       ) : (
         <div className="mt-5 border-t pt-5 text-center text-xs text-muted-foreground">
-          Imtihon jarayoni yakunlandi.
+          {t("Imtihon jarayoni yakunlandi.")}
         </div>
       )}
     </div>

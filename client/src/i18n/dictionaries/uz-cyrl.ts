@@ -38,6 +38,8 @@ const uzCyrl: Dictionary = {
   // Bot commands and button names are typed in Latin: they stay as the bot shows them.
   "botda /xodim kerak": "ботда /xodim керак",
   "Hisobot dushanba–shanba belgilangan vaqtda keladi; yakshanba va butun markaz bayramida avtomatik bormaydi. Oluvchi botdagi «📊 Hisobot» tugmasi bilan istalgan payt so'ray oladi.": "Ҳисобот душанба–шанба белгиланган вақтда келади; якшанба ва бутун марказ байрамида автоматик бормайди. Олувчи ботдаги «📊 Hisobot» тугмаси билан исталган пайт сўрай олади.",
+  // A German exam section name: course content, never transliterated.
+  "Masalan: Hören": "Масалан: Hören",
 };
 
 export default uzCyrl;
