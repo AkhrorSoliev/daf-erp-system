@@ -323,29 +323,38 @@ export function useMaqsadOzgartir() {
 
 /**
  * Telegram eslatmalari almashtirgichi (spec S4 §7): darrov ko'rinadi
- * (`onMutate`), xato bo'lsa eski holatga qaytadi, muvaffaqiyatda server
- * javobi yoziladi. Alohida funksiya — test uni `MutationObserver` bilan
- * hooksiz yurgizadi.
+ * (`onMutate`), xato bo'lsa FAQAT `eslatmalar` maydoni qaytadi (boshqa
+ * maydonlar — `maqsad`, qayta yuklash — o'zgarmaydi). Bir nechta tez bosish
+ * bo'lsa oraliq yozuvlar o'tkazib yuboriladi, oxirgi so'rov tugagach holatni
+ * server beradi (`onSettled`). Alohida funksiya — test uni `MutationObserver`
+ * bilan hooksiz yurgizadi.
  */
 export function eslatmalarMutation(
   qc: QueryClient,
-): UseMutationOptions<EslatmalarJavob, unknown, boolean, { oldin?: Fortschritt }> {
+): UseMutationOptions<EslatmalarJavob, unknown, boolean, { oldin?: boolean }> {
   const KEY = ["lernen", "fortschritt"];
-  const yoz = (eslatmalar: boolean) =>
+  const MUTATION_KEY = ["lernen", "eslatmalar"];
+  const yoz = (eslatmalar: boolean | undefined) =>
     qc.setQueryData<Fortschritt>(KEY, (old) => (old ? { ...old, eslatmalar } : old));
+  // Mutatsiya o'zi `onSuccess`/`onError`/`onSettled` paytida ham "pending" — shuning uchun `<= 1`.
+  const oxirgisi = () => qc.isMutating({ mutationKey: MUTATION_KEY }) <= 1;
   return {
+    mutationKey: MUTATION_KEY,
     mutationFn: (yoqilgan) =>
       api.patch<EslatmalarJavob>(`${BASE}/eslatmalar`, { yoqilgan }).then((r) => r.data),
     onMutate: async (yoqilgan) => {
       await qc.cancelQueries({ queryKey: KEY });
-      const oldin = qc.getQueryData<Fortschritt>(KEY);
+      const oldin = qc.getQueryData<Fortschritt>(KEY)?.eslatmalar;
       yoz(yoqilgan);
       return { oldin };
     },
     onError: (_err, _yoqilgan, ctx) => {
-      if (ctx?.oldin) qc.setQueryData(KEY, ctx.oldin);
+      if (oxirgisi() && ctx?.oldin !== undefined) yoz(ctx.oldin);
     },
-    onSuccess: (javob) => yoz(javob.eslatmalar),
+    onSuccess: (javob) => {
+      if (oxirgisi()) yoz(javob.eslatmalar);
+    },
+    onSettled: () => (oxirgisi() ? qc.invalidateQueries({ queryKey: KEY }) : undefined),
   };
 }
 

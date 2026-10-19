@@ -23,6 +23,10 @@ describe("eslatmaHolati", () => {
     expect(eslatmaHolati({ eslatmalar: true })).toBeNull();
   });
 
+  it("xato matni aynan shu", () => {
+    expect(SAQLANMADI).toBe("Saqlab bo'lmadi. Qayta urinib ko'ring");
+  });
+
   it("matnlar — lotin o'zbekcha, inglizcha so'z yo'q", () => {
     expect([ESLATMA_SARLAVHA, ESLATMA_IZOH, ULANMAGAN_IZOH]).toEqual([
       "Telegram eslatmalari",

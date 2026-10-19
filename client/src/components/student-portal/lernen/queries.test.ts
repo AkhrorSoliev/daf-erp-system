@@ -12,7 +12,7 @@ import {
   uebungSeansQuery,
   wiederholungQuery,
 } from "./queries";
-import type { Fortschritt, PublicFrage } from "./types";
+import type { Fortschritt, Maqsad, PublicFrage } from "./types";
 
 const frage = { index: 0 } as PublicFrage;
 const gcTick = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -97,6 +97,52 @@ describe("eslatmalarMutation — almashtirgich darrov saqlanadi (spec S4 §7)", 
     qc.setQueryData(KEY, boshlangich);
     vi.mocked(api.patch).mockRejectedValueOnce(new Error("network"));
     await new MutationObserver(qc, eslatmalarMutation(qc)).mutate(false).catch(() => undefined);
+    expect(qc.getQueryData<Fortschritt>(KEY)?.eslatmalar).toBe(true);
+  });
+});
+
+describe("eslatmalarMutation — poyga va tor qaytarish (fix round 1)", () => {
+  const KEY = ["lernen", "fortschritt"];
+  const server = { eslatmalar: true, telegramUlangan: true } as Fortschritt;
+
+  it("ikki tez bosish, ikkalasi xato — kesh serverdagi asl qiymatda qoladi", async () => {
+    const qc = new QueryClient();
+    qc.setQueryData(KEY, server);
+    // The server never changed: a refetch returns the original value.
+    const observer = new QueryObserver(qc, {
+      queryKey: KEY,
+      queryFn: async () => server,
+      staleTime: Infinity,
+    });
+    const unsubscribe = observer.subscribe(() => undefined);
+    vi.mocked(api.patch).mockRejectedValue(new Error("network"));
+    const a = new MutationObserver(qc, eslatmalarMutation(qc)).mutate(false).catch(() => undefined);
+    const b = new MutationObserver(qc, eslatmalarMutation(qc)).mutate(true).catch(() => undefined);
+    await Promise.all([a, b]);
+    unsubscribe();
+    vi.mocked(api.patch).mockReset();
+    expect(qc.getQueryData<Fortschritt>(KEY)?.eslatmalar).toBe(true);
+  });
+
+  it("so'rov paytidagi boshqa maydon (maqsad) qaytarishdan keyin ham saqlanadi", async () => {
+    const qc = new QueryClient();
+    qc.setQueryData(KEY, server);
+    const yangiMaqsad: Maqsad = { daraja: "ORTA", ball: 20, hozir: 5, bajarildi: false, bosh: false };
+    vi.mocked(api.patch).mockImplementationOnce((async () => {
+      qc.setQueryData<Fortschritt>(KEY, (old) => old && { ...old, maqsad: yangiMaqsad });
+      throw new Error("network");
+    }) as never);
+    await new MutationObserver(qc, eslatmalarMutation(qc)).mutate(false).catch(() => undefined);
+    const keshda = qc.getQueryData<Fortschritt>(KEY);
+    expect(keshda?.eslatmalar).toBe(true);
+    expect(keshda?.maqsad).toEqual(yangiMaqsad);
+  });
+
+  it("server so'ralganidan boshqa qiymat qaytarsa — keshda server qiymati", async () => {
+    const qc = new QueryClient();
+    qc.setQueryData(KEY, server);
+    vi.mocked(api.patch).mockResolvedValueOnce({ data: { eslatmalar: true } } as never);
+    await new MutationObserver(qc, eslatmalarMutation(qc)).mutate(false);
     expect(qc.getQueryData<Fortschritt>(KEY)?.eslatmalar).toBe(true);
   });
 });
