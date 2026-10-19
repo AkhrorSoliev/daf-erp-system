@@ -7,6 +7,12 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-18",
+    sarlavha: "O'quvchi ilovasida haftalik liga va guruhlar jadvali",
+    matn: "«Reyting» endi to'rt tab: Liga, Guruhim, Guruhlar, Darajam. Har o'quvchi o'z ligasida (Bronza, Kumush, Oltin, Yoqut, Olmos) 30 kishigacha xonada bellashadi; xonaga haftaning birinchi mashqidan keyin qo'shiladi. Dushanba kuni xonaning birinchi 5 tasi (kamida 50 ball, xonada kamida 15 kishi bo'lsa) keyingi ligaga ko'tariladi; liga hech qachon pasaymaydi. «Guruhlar» tabida markazning haftalik guruhlar jadvali — guruh a'zolarining o'rtacha bali (kamida 3 kishilik faol guruhlar). Eski «Markaz» ro'yxati Liga ichidagi «Butun markaz» tugmasida. Liga va g'oliblik uchun nishonlar ham bor.",
+    rollar: [1, 2, 3, 4],
+  },
+  {
+    sana: "2026-10-18",
     sarlavha: "O'quvchi ilovasida kunlik maqsad va nishonlar",
     matn: "O'quvchi «Ta'lim» bo'limida kunlik maqsadni o'zi tanlaydi: Yengil (40 ball), O'rta (80) yoki Jiddiy (160); tanlamasa — O'rta. Yo'l tepasidagi halqa bugungi ballni ko'rsatadi; bugun qiladigan mashq qolmagan bo'lsa maqsad bajarilgan hisoblanadi. Seans oxirida maqsad bajarilsa va yangi nishon olinsa, shu haqda qator chiqadi. Nishonlar — ketma-ket mashq kunlari (3, 7, 14, 30, 60, 100) va o'rganilgan so'zlar (50, 150, 300, A1 dagi hammasi) uchun; «Reyting → Darajam» tabida ko'rinadi. Nishon olib qo'yilmaydi, maqsad bajarilmasa jazo yo'q.",
     rollar: [1, 2, 3, 4],
