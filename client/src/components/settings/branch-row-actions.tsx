@@ -14,8 +14,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useEditBranch, type Branch } from "@/hooks/use-edit-branch";
+import { useT } from "@/i18n/context";
 
 export function BranchRowActions({ branch }: { branch: Branch }) {
+  const t = useT();
   const { openDrawer } = useEditBranch();
 
   return (
@@ -29,20 +31,20 @@ export function BranchRowActions({ branch }: { branch: Branch }) {
               onClick={(e) => e.stopPropagation()}
             >
               <MoreHorizontal className="size-4" />
-              <span className="sr-only">Amallar</span>
+              <span className="sr-only">{t("Amallar")}</span>
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent>Amallar</TooltipContent>
+        <TooltipContent>{t("Amallar")}</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
         <DropdownMenuItem onClick={() => openDrawer(branch)}>
           <Pencil className="mr-2 size-4" />
-          Tahrirlash
+          {t("Tahrirlash")}
         </DropdownMenuItem>
         <DropdownMenuItem className="text-destructive">
           <Trash2 className="mr-2 size-4" />
-          O&apos;chirish
+          {t("O'chirish")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

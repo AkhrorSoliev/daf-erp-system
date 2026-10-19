@@ -6,7 +6,6 @@ import { ArrowLeft, Building2, Check, CircleDot, Clock, Copy, DoorOpen, Graduati
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Tooltip,
   TooltipContent,
@@ -24,6 +23,8 @@ import {
   TELEGRAM_BOT_NOT_CONFIGURED,
 } from "@/lib/telegram-link";
 import { useTeacherRegistrationLink } from "@/hooks/use-teacher-registration-link";
+import { useT } from "@/i18n/context";
+import { TranslatedStatusBadge } from "@/components/shared/translated-status-badge";
 
 function formatPhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -38,6 +39,7 @@ interface BranchDetailClientProps {
 }
 
 export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
+  const t = useT();
   const router = useRouter();
   const openDrawer = useEditBranch((s) => s.openDrawer);
   const setName = useBreadcrumbName((s) => s.setName);
@@ -65,13 +67,13 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
     try {
       const url = await copyPendingText(reloadLink());
       if (!url) {
-        toast.error(TELEGRAM_BOT_NOT_CONFIGURED);
+        toast.error(t(TELEGRAM_BOT_NOT_CONFIGURED));
         return;
       }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Havolani nusxalab bo'lmadi");
+      toast.error(t("Havolani nusxalab bo'lmadi"));
     } finally {
       setCopying(false);
     }
@@ -108,10 +110,10 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
     return (
       <div className="space-y-6">
         <h1 className="font-heading text-2xl font-bold tracking-tight">
-          Filial topilmadi
+          {t("Filial topilmadi")}
         </h1>
         <p className="text-muted-foreground">
-          ID: {branchId} bo&apos;yicha filial mavjud emas
+          {t("ID: {id} bo'yicha filial mavjud emas", { id: branchId })}
         </p>
       </div>
     );
@@ -132,16 +134,16 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Orqaga</TooltipContent>
+          <TooltipContent>{t("Orqaga")}</TooltipContent>
         </Tooltip>
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-semibold tracking-tight">
               {branch.name}
             </h2>
-            <StatusBadge entityType="branches" status={branch.status} />
+            <TranslatedStatusBadge entityType="branches" status={branch.status} />
           </div>
-          <p className="text-sm text-muted-foreground">ID: {branch.id}</p>
+          <p className="text-sm text-muted-foreground">{t("ID: {id}", { id: branch.id })}</p>
         </div>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -152,10 +154,10 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
               onClick={() => openDrawer(branch)}
             >
               <Pencil className="mr-1.5 h-4 w-4" />
-              Tahrirlash
+              {t("Tahrirlash")}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Filialni tahrirlash</TooltipContent>
+          <TooltipContent>{t("Filialni tahrirlash")}</TooltipContent>
         </Tooltip>
       </div>
 
@@ -164,35 +166,35 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
         <div className="rounded-lg border bg-card p-4">
           <div className="flex items-center gap-2 text-muted-foreground">
             <UsersRound className="size-4" />
-            <p className="text-sm">Guruhlar</p>
+            <p className="text-sm">{t("Guruhlar")}</p>
           </div>
           <p className="mt-1 text-2xl font-bold">{stats.groups}</p>
         </div>
         <div className="rounded-lg border bg-card p-4">
           <div className="flex items-center gap-2 text-muted-foreground">
             <GraduationCap className="size-4" />
-            <p className="text-sm">O&apos;quvchilar</p>
+            <p className="text-sm">{t("O'quvchilar")}</p>
           </div>
           <p className="mt-1 text-2xl font-bold">{stats.students}</p>
         </div>
         <div className="rounded-lg border bg-card p-4">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Users className="size-4" />
-            <p className="text-sm">Ustozlar</p>
+            <p className="text-sm">{t("Ustozlar")}</p>
           </div>
           <p className="mt-1 text-2xl font-bold">{stats.teachers}</p>
         </div>
         <div className="rounded-lg border bg-card p-4">
           <div className="flex items-center gap-2 text-muted-foreground">
             <DoorOpen className="size-4" />
-            <p className="text-sm">Xonalar</p>
+            <p className="text-sm">{t("Xonalar")}</p>
           </div>
           <p className="mt-1 text-2xl font-bold">{stats.rooms}</p>
         </div>
         <div className="rounded-lg border bg-card p-4">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Building2 className="size-4" />
-            <p className="text-sm">Kurslar</p>
+            <p className="text-sm">{t("Kurslar")}</p>
           </div>
           <p className="mt-1 text-2xl font-bold">{stats.courses}</p>
         </div>
@@ -201,14 +203,14 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
       {/* Ma'lumotlar */}
       <div className="rounded-lg border bg-card p-6">
         <h3 className="text-lg font-semibold mb-4">
-          Filial ma&apos;lumotlari
+          {t("Filial ma'lumotlari")}
         </h3>
 
         <div className="grid gap-x-8 gap-y-3 sm:grid-cols-3">
           <div>
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Phone className="size-3.5" />
-              <p className="text-sm">Telefon</p>
+              <p className="text-sm">{t("Telefon")}</p>
             </div>
             {branch.phone ? (
               <a
@@ -219,7 +221,7 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
               </a>
             ) : (
               <p className="mt-0.5 text-sm italic text-muted-foreground">
-                Ko&apos;rsatilmagan
+                {t("Ko'rsatilmagan")}
               </p>
             )}
           </div>
@@ -227,7 +229,7 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
           <div>
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Clock className="size-3.5" />
-              <p className="text-sm">Ish vaqti</p>
+              <p className="text-sm">{t("Ish vaqti")}</p>
             </div>
             {branch.startOfWorkingDay && branch.endOfWorkingDay ? (
               <p className="mt-0.5 text-sm font-medium">
@@ -235,7 +237,7 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
               </p>
             ) : (
               <p className="mt-0.5 text-sm italic text-muted-foreground">
-                Ko&apos;rsatilmagan
+                {t("Ish vaqti ko'rsatilmagan")}
               </p>
             )}
           </div>
@@ -243,9 +245,9 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
           <div>
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <CircleDot className="size-3.5" />
-              <p className="text-sm">Holat</p>
+              <p className="text-sm">{t("Holat")}</p>
             </div>
-            <StatusBadge
+            <TranslatedStatusBadge
               entityType="branches"
               status={branch.status}
               className="mt-1"
@@ -257,12 +259,10 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
       {/* O'qituvchi ro'yxatdan o'tish havolasi */}
       <div className="rounded-lg border bg-card p-6">
         <h3 className="text-lg font-semibold mb-2">
-          O&apos;qituvchi ro&apos;yxatdan o&apos;tish havolasi
+          {t("O'qituvchi ro'yxatdan o'tish havolasi")}
         </h3>
         <p className="text-sm text-muted-foreground mb-3">
-          Bu havolani o&apos;qituvchilarga yuboring. Ular Telegram orqali
-          ro&apos;yxatdan o&apos;tadi va avtomatik ravishda ushbu filialga
-          biriktiriladi.
+          {t("Bu havolani o'qituvchilarga yuboring. Ular Telegram orqali ro'yxatdan o'tadi va avtomatik ravishda ushbu filialga biriktiriladi.")}
         </p>
         <div className="flex items-center gap-2">
           <div className="flex-1 rounded-md border bg-muted/50 px-3 py-2">
@@ -274,7 +274,7 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
                 <Skeleton className="h-5 w-full" />
               ) : (
                 <span className="text-muted-foreground text-sm">
-                  {TELEGRAM_BOT_NOT_CONFIGURED}
+                  {t(TELEGRAM_BOT_NOT_CONFIGURED)}
                 </span>
               )}
             </div>
@@ -295,20 +295,20 @@ export function BranchDetailClient({ branchId }: BranchDetailClientProps) {
                   ) : (
                     <Copy className="mr-1.5 h-4 w-4" />
                   )}
-                  {copied ? "Nusxalandi" : "Nusxalash"}
+                  {copied ? t("Nusxalandi") : t("Nusxalash")}
                 </Button>
               </span>
             </TooltipTrigger>
             <TooltipContent>
               {isTelegramBotConfigured
-                ? "Havolani nusxalash"
-                : TELEGRAM_BOT_NOT_CONFIGURED}
+                ? t("Havolani nusxalash")
+                : t(TELEGRAM_BOT_NOT_CONFIGURED)}
             </TooltipContent>
           </Tooltip>
         </div>
         {registrationLink ? (
           <p className="mt-2 text-xs text-muted-foreground">
-            Havola 3 kun amal qiladi.
+            {t("Havola {n} kun amal qiladi.", { n: 3 })}
           </p>
         ) : null}
       </div>

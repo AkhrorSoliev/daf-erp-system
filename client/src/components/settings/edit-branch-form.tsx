@@ -8,6 +8,7 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { TimePicker } from "@/components/ui/time-picker";
 import { useEditBranch, type Branch } from "@/hooks/use-edit-branch";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import {
   branchUpdateBody,
@@ -30,6 +31,7 @@ export function EditBranchForm({
   formId,
   isAdd,
 }: EditBranchFormProps) {
+  const t = useT();
   const setSubmitting = useEditBranch((s) => s.setSubmitting);
   const refetchBranches = useBranchSwitcher((s) => s.refetchBranches);
 
@@ -66,7 +68,7 @@ export function EditBranchForm({
 
         const created = toBranch(data);
 
-        toast.success("Yangi filial muvaffaqiyatli qo'shildi");
+        toast.success(t("Yangi filial muvaffaqiyatli qo'shildi"));
         onSaved?.(created);
         refetchBranches();
       } else {
@@ -78,7 +80,7 @@ export function EditBranchForm({
 
         const updated = toBranch(data);
 
-        toast.success("Filial muvaffaqiyatli yangilandi");
+        toast.success(t("Filial muvaffaqiyatli yangilandi"));
         onSaved?.(updated);
         refetchBranches();
       }
@@ -86,8 +88,8 @@ export function EditBranchForm({
     } catch {
       toast.error(
         isAdd
-          ? "Filial qo'shishda xatolik yuz berdi"
-          : "Filialni yangilashda xatolik yuz berdi",
+          ? t("Filial qo'shishda xatolik yuz berdi")
+          : t("Filialni yangilashda xatolik yuz berdi"),
       );
     } finally {
       setSubmitting(false);
@@ -102,16 +104,16 @@ export function EditBranchForm({
     >
       <section className="space-y-5 px-6 py-5">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Filial ma&apos;lumotlari
+          {t("Filial ma'lumotlari")}
         </h3>
 
         <div className="space-y-1.5">
-          <Label htmlFor="name">Filial nomi</Label>
+          <Label htmlFor="name">{t("Filial nomi")}</Label>
           <Input
             id="name"
-            placeholder="Filial nomi"
+            placeholder={t("Filial nomi")}
             {...form.register("name", {
-              required: "Filial nomi kiritilishi shart",
+              required: t("Filial nomi kiritilishi shart"),
             })}
           />
           {form.formState.errors.name && (
@@ -122,7 +124,7 @@ export function EditBranchForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label>Telefon</Label>
+          <Label>{t("Telefon")}</Label>
           <Controller
             control={form.control}
             name="phone"
@@ -134,7 +136,7 @@ export function EditBranchForm({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>Ish boshlanish vaqti</Label>
+            <Label>{t("Ish boshlanish vaqti")}</Label>
             <Controller
               control={form.control}
               name="startOfWorkingDay"
@@ -142,13 +144,13 @@ export function EditBranchForm({
                 <TimePicker
                   value={field.value || undefined}
                   onChange={field.onChange}
-                  placeholder="Boshlanish vaqti"
+                  placeholder={t("Boshlanish vaqti")}
                 />
               )}
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Ish tugash vaqti</Label>
+            <Label>{t("Ish tugash vaqti")}</Label>
             <Controller
               control={form.control}
               name="endOfWorkingDay"
@@ -156,7 +158,7 @@ export function EditBranchForm({
                 <TimePicker
                   value={field.value || undefined}
                   onChange={field.onChange}
-                  placeholder="Tugash vaqti"
+                  placeholder={t("Tugash vaqti")}
                 />
               )}
             />
@@ -167,46 +169,45 @@ export function EditBranchForm({
       <section className="space-y-5 border-t px-6 py-5">
         <div>
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Shartnoma uchun
+            {t("Shartnoma uchun")}
           </h3>
           <p className="mt-1 text-xs text-muted-foreground">
-            Bu maydonlar o&apos;quvchi shartnomasiga chiqadi. To&apos;ldirilmaguncha
-            filial o&apos;quvchilariga shartnoma tuzilmaydi.
+            {t("Bu maydonlar o'quvchi shartnomasiga chiqadi. To'ldirilmaguncha filial o'quvchilariga shartnoma tuzilmaydi.")}
           </p>
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="address">Manzil</Label>
+          <Label htmlFor="address">{t("Manzil")}</Label>
           <Input
             id="address"
-            placeholder="Masalan: Namangan sh., Istiqlol ko'chasi, 48"
+            placeholder={t("Masalan: Namangan sh., Istiqlol ko'chasi, 48")}
             {...form.register("address")}
           />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="city">Shahar</Label>
+            <Label htmlFor="city">{t("Shahar")}</Label>
             <Input id="city" placeholder="Namangan" {...form.register("city")} />
             <p className="text-xs text-muted-foreground">
-              «shahri» so&apos;zi shartnomada o&apos;zi qo&apos;shiladi
+              {t("«shahri» so'zi shartnomada o'zi qo'shiladi")}
             </p>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="representativePosition">Vakil lavozimi</Label>
+            <Label htmlFor="representativePosition">{t("Vakil lavozimi")}</Label>
             <Input
               id="representativePosition"
-              placeholder="Direktor"
+              placeholder={t("Direktor")}
               {...form.register("representativePosition")}
             />
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="representativeName">Vakil F.I.O.</Label>
+          <Label htmlFor="representativeName">{t("Vakil F.I.O.")}</Label>
           <Input
             id="representativeName"
-            placeholder="Familiya Ism Otasining ismi"
+            placeholder={t("Familiya Ism Otasining ismi")}
             {...form.register("representativeName")}
           />
         </div>

@@ -578,6 +578,13 @@ export const STRICT_FILES: string[] = [
   "components/settings/settings-blocks.tsx",
   "components/settings/settings-form-parts.tsx",
   "components/settings/general-settings-client.tsx",
+  "components/settings/branches-settings-client.tsx",
+  "components/settings/branch-row-actions.tsx",
+  "components/settings/branch-detail-client.tsx",
+  "components/settings/edit-branch-drawer.tsx",
+  "components/settings/edit-branch-form.tsx",
+  "app/(dashboard)/settings/branches/page.tsx",
+  "app/(dashboard)/settings/branches/[id]/page.tsx",
 ];
 
 function walk(dir: string): string[] {
