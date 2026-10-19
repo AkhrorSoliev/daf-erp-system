@@ -772,6 +772,8 @@ model Student {
   dafStudentDays    DafStudentDay[]
   dafSetting        DafStudentSetting?
   dafBadges         DafStudentBadge[]
+  dafLeague         DafStudentLeague?
+  dafLeagueEntries  DafLeagueEntry[]
   appSessions       StudentAppSession[]
   dafLexemeStates   DafLexemeState[]
   dafLessonProgress DafLessonProgress[]
@@ -1561,6 +1563,7 @@ model Group {
   monthlyCharges         EnrollmentMonthlyCharge[]
   unmarkedLessons        UnmarkedLesson[]          @relation("UnmarkedLessonGroup")
   lessonRatings          LessonRating[]
+  dafWeeks               DafGroupWeek[]
 
   @@unique([name, branchId])
   @@index([deletedAt])
@@ -4349,6 +4352,75 @@ model DafStudentBadge {
   student Student @relation(fields: [studentId], references: [id])
 
   @@unique([studentId, key])
+}
+
+/// Doimiy liga darajasi (ADR-0116): o'quvchiga bitta qator, faqat o'sadi
+/// (`GREATEST`). Qator yo'q = Bronza (0); migratsiyada hech narsa
+/// to'ldirilmaydi. Yozuvchi: `settleWeek` (`src/daf/liga/liga-hisob.ts`).
+model DafStudentLeague {
+  studentId Int      @id
+  companyId Int
+  tier      Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id])
+}
+
+/// Haftalik liga xonasi (ADR-0116). `settledAt` — hafta hisoblangan payt:
+/// hisob xonani `UPDATE … WHERE "settledAt" IS NULL RETURNING` bilan oladi,
+/// shuning uchun ikkinchi hisob hech narsa olmaydi.
+/// Yozuvchilar: `src/daf/liga/liga-xona.ts`, `src/daf/liga/liga-hisob.ts`.
+model DafLeagueRoom {
+  id        Int       @id @default(autoincrement())
+  companyId Int
+  weekStart DateTime  @db.Date
+  tier      Int
+  number    Int
+  settledAt DateTime?
+
+  leagueEntries DafLeagueEntry[]
+
+  @@unique([companyId, weekStart, tier, number])
+  @@index([companyId, settledAt])
+}
+
+/// Xonadagi a'zolik: hafta ichida bitta xona. `place`, `points`, `promoted`
+/// hafta hisoblangach yoziladi — tarix va nishonlar shulardan o'qiydi; hafta
+/// davomida ball bu yerda saqlanmaydi (`DafStudentDay` dan yig'iladi).
+model DafLeagueEntry {
+  id        Int      @id @default(autoincrement())
+  roomId    Int
+  studentId Int
+  companyId Int
+  weekStart DateTime @db.Date
+  tier      Int
+  place     Int?
+  points    Int?
+  promoted  Boolean  @default(false)
+
+  room    DafLeagueRoom @relation(fields: [roomId], references: [id])
+  student Student       @relation(fields: [studentId], references: [id])
+
+  @@unique([weekStart, studentId])
+  @@index([roomId])
+  @@index([studentId])
+}
+
+/// Guruhlar jadvalining hafta natijasi (ADR-0116), hafta oxirida bir marta
+/// yoziladi. Jonli jadval o'qishda hisoblanadi (`src/daf/liga/guruhlar-jadvali.ts`).
+model DafGroupWeek {
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  weekStart DateTime @db.Date
+  groupId   String
+  place     Int
+  average   Float
+  members   Int
+  points    Int
+
+  group Group @relation(fields: [groupId], references: [id])
+
+  @@unique([weekStart, groupId])
 }
 
 /// Bitta mashq seansi. Klient uuid yaratadi; server birinchi urinishda

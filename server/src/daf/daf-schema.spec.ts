@@ -127,6 +127,38 @@ describe('Daf sxemasi', () => {
       JIDDIY: 'JIDDIY',
     });
   });
+
+  // S3 (ADR-0116). The tier is permanent and only rises — one row per
+  // student, no column that could take it back. A room is weekly and a
+  // student is in one room per week. A group's week result is written once.
+  it('liga: doimiy daraja, haftalik xona, haftada bitta a`zolik, guruh haftasi bir marta', () => {
+    const schema = readFileSync(
+      join(__dirname, '..', '..', 'prisma', 'schema.prisma'),
+      'utf8',
+    );
+    const body = (name: string) => {
+      const start = schema.indexOf(`model ${name} {`);
+      expect(start).toBeGreaterThan(-1);
+      const block = schema.slice(start);
+      return block.slice(0, block.indexOf('\n}'));
+    };
+    expect(body('DafStudentLeague')).toMatch(/studentId\s+Int\s+@id/);
+    expect(body('DafStudentLeague')).toMatch(/tier\s+Int\s+@default\(0\)/);
+    expect(fieldsOf('DafStudentLeague')).not.toContain('demotedAt');
+    expect(body('DafLeagueRoom')).toMatch(
+      /@@unique\(\[companyId, weekStart, tier, number\]\)/,
+    );
+    expect(body('DafLeagueRoom')).toMatch(/weekStart\s+DateTime\s+@db\.Date/);
+    expect(body('DafLeagueRoom')).toMatch(/settledAt\s+DateTime\?/);
+    expect(body('DafLeagueEntry')).toMatch(
+      /@@unique\(\[weekStart, studentId\]\)/,
+    );
+    expect(body('DafLeagueEntry')).toMatch(
+      /promoted\s+Boolean\s+@default\(false\)/,
+    );
+    expect(body('DafGroupWeek')).toMatch(/@@unique\(\[weekStart, groupId\]\)/);
+    expect(body('DafGroupWeek')).toMatch(/average\s+Float/);
+  });
 });
 
 describe('A1 strukturasi', () => {
