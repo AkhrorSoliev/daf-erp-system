@@ -159,6 +159,32 @@ describe('Daf sxemasi', () => {
     expect(body('DafGroupWeek')).toMatch(/@@unique\(\[weekStart, groupId\]\)/);
     expect(body('DafGroupWeek')).toMatch(/average\s+Float/);
   });
+
+  // S4 (ADR-0117). The log is claimed before the send: one row per (student,
+  // kind, Tashkent day), so a second cron instance claims nothing. The
+  // opt-out is the student's own choice on their settings row, on by default.
+  it('eslatma: jurnal o`quvchi, tur va kun bo`yicha yagona; eslatmalar standart yoqilgan', () => {
+    const schema = readFileSync(
+      join(__dirname, '..', '..', 'prisma', 'schema.prisma'),
+      'utf8',
+    );
+    const body = (name: string) => {
+      const start = schema.indexOf(`model ${name} {`);
+      expect(start).toBeGreaterThan(-1);
+      const block = schema.slice(start);
+      return block.slice(0, block.indexOf('\n}'));
+    };
+    expect(body('DafReminderLog')).toMatch(
+      /@@unique\(\[studentId, kind, sentOn\]\)/,
+    );
+    expect(body('DafReminderLog')).toMatch(/sentOn\s+DateTime\s+@db\.Date/);
+    expect(body('DafReminderLog')).toMatch(/@@index\(\[companyId, sentOn\]\)/);
+    expect(body('DafStudentSetting')).toMatch(
+      /remindersEnabled\s+Boolean\s+@default\(true\)/,
+    );
+    expect(schema).toMatch(/enum DafReminderKind \{\s*EVENING\s+WEEKLY\s*\}/);
+    expect(schema).toMatch(/enum DafReminderStatus \{\s*SENT\s+FAILED\s*\}/);
+  });
 });
 
 describe('A1 strukturasi', () => {

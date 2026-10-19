@@ -774,6 +774,7 @@ model Student {
   dafBadges         DafStudentBadge[]
   dafLeague         DafStudentLeague?
   dafLeagueEntries  DafLeagueEntry[]
+  dafReminders      DafReminderLog[]
   appSessions       StudentAppSession[]
   dafLexemeStates   DafLexemeState[]
   dafLessonProgress DafLessonProgress[]
@@ -4329,12 +4330,15 @@ enum DafDailyGoal {
 }
 
 /// The student's own choice — NOT derived, cannot be rebuilt (ADR-0115).
-/// No row = ORTA. Written by `PATCH student-portal/lernen/maqsad` (upsert).
+/// No row = ORTA, reminders on. Written by `PATCH student-portal/lernen/maqsad`
+/// (`dailyGoal`) and `eslatmalarniSaqla` (`remindersEnabled`, ADR-0117), both upsert.
 model DafStudentSetting {
-  studentId Int          @id
-  companyId Int
-  dailyGoal DafDailyGoal @default(ORTA)
-  updatedAt DateTime     @updatedAt
+  studentId        Int          @id
+  companyId        Int
+  dailyGoal        DafDailyGoal @default(ORTA)
+  /// S4 (ADR-0117): kechki eslatma va dushanba xulosasi; o'chirish ikkalasini to'xtatadi.
+  remindersEnabled Boolean      @default(true)
+  updatedAt        DateTime     @updatedAt
 
   student Student @relation(fields: [studentId], references: [id])
 }
@@ -4421,6 +4425,38 @@ model DafGroupWeek {
   group Group @relation(fields: [groupId], references: [id])
 
   @@unique([weekStart, groupId])
+}
+
+/// Kechki eslatma (S4 §1) yoki dushanba xulosasi (§2) turi.
+enum DafReminderKind {
+  EVENING
+  WEEKLY
+}
+
+enum DafReminderStatus {
+  SENT
+  FAILED
+}
+
+/// S4 xabarlari jurnali (ADR-0117). Qator yuborishdan OLDIN egallanadi
+/// (`INSERT … ON CONFLICT DO NOTHING RETURNING id`): qatorni yaratgan chaqiruv
+/// yuboradi, ikkinchisi hech narsa qilmaydi. `FAILED` qayta urinilmaydi va
+/// chegaraga sanalmaydi; 90 kundan eski qatorlar o'chiriladi.
+/// Yagona yozuvchi: `src/daf/eslatma/eslatma-jurnali.ts`.
+model DafReminderLog {
+  id        Int               @id @default(autoincrement())
+  companyId Int
+  studentId Int
+  kind      DafReminderKind
+  /// Toshkent kuni.
+  sentOn    DateTime          @db.Date
+  status    DafReminderStatus
+  createdAt DateTime          @default(now())
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, kind, sentOn])
+  @@index([companyId, sentOn])
 }
 
 /// Bitta mashq seansi. Klient uuid yaratadi; server birinchi urinishda
