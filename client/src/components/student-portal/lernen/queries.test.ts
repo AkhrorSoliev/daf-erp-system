@@ -146,3 +146,27 @@ describe("eslatmalarMutation — poyga va tor qaytarish (fix round 1)", () => {
     expect(qc.getQueryData<Fortschritt>(KEY)?.eslatmalar).toBe(true);
   });
 });
+
+describe("eslatmalarMutation — sekin qayta yuklash saqlashni ushlab turmaydi", () => {
+  const KEY = ["lernen", "fortschritt"];
+
+  // Hook darajasidagi `onSettled` qaytargan promise'ni RQ kutadi: `fortschritt` sekin yoki
+  // uzilgan bo'lsa, xato xabari (mutate darajasidagi `onError`) va almashtirgichning
+  // `isPending` i o'sha qayta yuklash tugaguncha kechikardi (backend o'chiq — ~7 s).
+  it("qayta yuklash tugamasa ham saqlash darrov tugaydi (xato xabari kechikmaydi)", async () => {
+    const qc = new QueryClient();
+    qc.setQueryData(KEY, { eslatmalar: true, telegramUlangan: true } as Fortschritt);
+    const observer = new QueryObserver(qc, {
+      queryKey: KEY,
+      queryFn: () => new Promise<Fortschritt>(() => undefined),
+    });
+    const unsubscribe = observer.subscribe(() => undefined);
+    vi.mocked(api.patch).mockRejectedValueOnce(new Error("network"));
+    const tugadi = new MutationObserver(qc, eslatmalarMutation(qc))
+      .mutate(false)
+      .then(() => "tugadi", () => "tugadi");
+    const kechikdi = new Promise((r) => setTimeout(() => r("kechikdi"), 300));
+    expect(await Promise.race([tugadi, kechikdi])).toBe("tugadi");
+    unsubscribe();
+  });
+});

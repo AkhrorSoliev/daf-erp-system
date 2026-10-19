@@ -354,7 +354,11 @@ export function eslatmalarMutation(
     onSuccess: (javob) => {
       if (oxirgisi()) yoz(javob.eslatmalar);
     },
-    onSettled: () => (oxirgisi() ? qc.invalidateQueries({ queryKey: KEY }) : undefined),
+    // `void`: RQ `onSettled` qaytargan promise'ni kutadi — sekin `fortschritt` xato xabarini
+    // va `isPending` ni kechiktirardi.
+    onSettled: () => {
+      if (oxirgisi()) void qc.invalidateQueries({ queryKey: KEY });
+    },
   };
 }
 
