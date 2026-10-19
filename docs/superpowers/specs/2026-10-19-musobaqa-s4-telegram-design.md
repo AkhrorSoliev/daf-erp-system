@@ -324,7 +324,7 @@ ya'ni nazoratning o'zi ham 200 ms dan o'tdi (216). `guruhlar` SQL'ining
 yakka o'zi `EXPLAIN (ANALYZE, BUFFERS)` da 26 ms (hammasi keshda). Xulosa:
 S4 emas, protsessor yetishmasligi. Jadvaldagi og'ir yuk (2 jarayon, load
 5,8 → 9,9; S4 skripti 5,8 → 7,3, S1–S3 skripti 7,3 → 9,9) hammasi
-chegaradan o'tdi. (3) Kechki auditoriya vaqtining ≈ 80% i seriya kichik
+chegara ichida. (3) Kechki auditoriya vaqtining ≈ 80% i seriya kichik
 so'rovida — bu Task 4 dagi bitta `EXPLAIN ANALYZE` (4 marta takror) dan
 olingan raqam, qayta o'lchanmagan. 60 kunlik oyna + 60 kunga yetgan seriya
 uchun to'liq hisob («zaxira») natijani o'zgartirmaydi (3 518 qatorda
@@ -340,7 +340,7 @@ qo'llanadi.
 
 **Ma'lum cheklov / keyingi qadam.** S3 ning `guruhlar` so'rovi (S4 jadvalini
 o'qimaydi) load average ≥ 8 (10 yadroda) bo'lganda 200 ms chegarasi
-oldidagi zaxirasini yo'qotadi: nazoratda ham 199–216 ms. Bu S4 regressiyasi
+oldidagi zaxirasini yo'qotadi: nazoratda ham 164–216 ms. Bu S4 regressiyasi
 emas va S4 da kod o'zgarmaydi. Keyingi qadam: ishga tushgandan keyin prodda
 `GET guruhlar` p95 sini kuzatish; kerak bo'lsa arzon variantlar — kunlik
 kesh yoki qamrab oluvchi indeks.

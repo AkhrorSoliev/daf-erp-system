@@ -6,6 +6,12 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-19",
+    sarlavha: "O'quvchilarga Telegram eslatmasi va dushanba xulosasi",
+    matn: "CEO yoqqan kundan boshlab Ta'lim ilovasida mashq qiladigan o'quvchilar botdan ikki xil yumshoq xabar oladi. Kechki eslatma (19:30, dushanba–shanba) — oxirgi 14 kunda mashq qilgan, lekin bugun hali mashq qilmagan o'quvchiga: ketma-ket ikki kun va haftada 4 tadan ko'p yuborilmaydi, yakshanba va bayram kunida yo'q. Dushanba xulosasi (09:00) — o'tgan haftada ball topganlarga: ball, liga o'rni, guruh o'rni, yangi nishonlar. O'quvchi ikkalasini «Reyting → Darajam» dagi «Telegram eslatmalari» almashtirgichi yoki xabar tagidagi «Eslatmalarni to'xtatish» tugmasi bilan o'chiradi. Botni bloklagan o'quvchiga eslatma yuborilmaydi. Yuborilgan xabarlar o'quvchi kartasining «SMS» tabida ko'rinadi.",
+    rollar: [1, 2, 3, 4],
+  },
+  {
     sana: "2026-10-18",
     sarlavha: "O'quvchi ilovasida haftalik liga va guruhlar jadvali",
     matn: "«Reyting» endi to'rt tab: Liga, Guruhim, Guruhlar, Darajam. Har o'quvchi o'z ligasida (Bronza, Kumush, Oltin, Yoqut, Olmos) 30 kishigacha xonada bellashadi; xonaga haftaning birinchi mashqidan keyin qo'shiladi. Dushanba kuni xonaning birinchi 5 tasi (kamida 50 ball, xonada kamida 15 kishi bo'lsa) keyingi ligaga ko'tariladi; liga hech qachon pasaymaydi. «Guruhlar» tabida markazning haftalik guruhlar jadvali — guruh a'zolarining o'rtacha bali (kamida 3 kishilik faol guruhlar). Eski «Markaz» ro'yxati Liga ichidagi «Butun markaz» tugmasida. Liga va g'oliblik uchun nishonlar ham bor.",
