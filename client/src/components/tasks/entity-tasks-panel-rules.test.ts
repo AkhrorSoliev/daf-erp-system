@@ -7,9 +7,9 @@ describe("taskMeta", () => {
   it("names the assignees by first name and the initial of the last", () => {
     expect(taskMeta({ kind: "MANUAL", assignees: [person("Ali", "Valiyev"), person("Vali", "Karimov")] })).toBe("Ali V., Vali K.");
   });
-  it("says «Tizim» first for a task the system made", () => {
-    expect(taskMeta({ kind: "CALLBACK", assignees: [person("Ali", "Valiyev")] })).toBe("Tizim · Ali V.");
-    expect(taskMeta({ kind: "LESSON_QUESTION", assignees: [] })).toBe("Tizim");
+  it("says «Tizim (avtomatik)» first for a task the system made", () => {
+    expect(taskMeta({ kind: "CALLBACK", assignees: [person("Ali", "Valiyev")] })).toBe("Tizim (avtomatik) · Ali V.");
+    expect(taskMeta({ kind: "LESSON_QUESTION", assignees: [] })).toBe("Tizim (avtomatik)");
   });
   it("is empty for a manual task nobody holds", () => {
     expect(taskMeta({ kind: "MANUAL", assignees: [] })).toBe("");

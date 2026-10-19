@@ -14,8 +14,9 @@ import { TimePicker } from "@/components/ui/time-picker";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useTasks, type TaskPriority } from "@/hooks/use-tasks";
+import { useT } from "@/i18n/context";
 import { TaskAssigneePicker } from "./task-assignee-picker";
-import { PRIORITY_LABEL } from "./task-labels";
+import { priorityText } from "./task-labels";
 import { TaskRecurrenceFields } from "./task-recurrence-fields";
 import { useTaskFiles } from "./use-task-files";
 import { EMPTY_RECURRENCE, recurrenceFormReady, recurrencePayload, type RecurrenceForm } from "@/lib/task-recurrence-rules";
@@ -41,6 +42,7 @@ const PRIORITIES: TaskPriority[] = ["LOW", "MEDIUM", "HIGH", "URGENT"];
 
 /** Mounted once, by `HeaderTaskButton`, so every dashboard page can open it through `useTaskCreate`. */
 export function TaskCreateDialog() {
+  const t = useT();
   const { isOpen, context, close } = useTaskCreate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -86,13 +88,13 @@ export function TaskCreateDialog() {
         separateCopies: separate && assigneeIds.length > 1 ? true : undefined,
         steps: steps.filter((s) => s.trim()).map((s) => ({ title: s.trim() })),
       });
-      toast.success(recurring ? "Takrorlanuvchi topshiriq berildi" : "Topshiriq berildi");
+      toast.success(recurring ? t("Takrorlanuvchi topshiriq berildi") : t("Topshiriq berildi"));
       reset();
       close();
       // Refetching the board also bumps the store's `version`, which the sidebar counts follow.
       void useTasks.getState().fetchBoard();
     } catch (err) {
-      toast.error(getErrorMessage(err, "Topshiriq berishda xatolik"));
+      toast.error(getErrorMessage(err, t("Topshiriq berishda xatolik")));
     } finally {
       setSaving(false);
     }
@@ -101,11 +103,11 @@ export function TaskCreateDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={(o) => { if (!o) dismiss(); }}>
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
-        <DialogHeader className="border-b px-6 py-4"><DialogTitle>Yangi topshiriq</DialogTitle></DialogHeader>
+        <DialogHeader className="border-b px-6 py-4"><DialogTitle>{t("Yangi topshiriq")}</DialogTitle></DialogHeader>
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
           <Input
             autoFocus
-            placeholder="Nima qilish kerak?"
+            placeholder={t("Nima qilish kerak?")}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={200}
@@ -113,24 +115,24 @@ export function TaskCreateDialog() {
             onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void submit(); }}
           />
           <div className="space-y-1.5">
-            <Label>Ijrochi</Label>
-            <TaskAssigneePicker value={assigneeIds} onChange={setAssigneeIds} mode="assignees" placeholder="Ism yozing" />
+            <Label>{t("Ijrochi")}</Label>
+            <TaskAssigneePicker value={assigneeIds} onChange={setAssigneeIds} mode="assignees" placeholder={t("Ism yozing")} />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Muddat</Label>
+              <Label>{t("Muddat")}</Label>
               {recurring ? (
-                <p className="py-2 text-sm text-muted-foreground">{"Muddat «Takrorlash» bo'yicha qo'yiladi"}</p>
+                <p className="py-2 text-sm text-muted-foreground">{t("Muddat «Takrorlanish» bo'yicha qo'yiladi")}</p>
               ) : (
                 <div className="flex gap-2">
-                  <DatePicker value={day} onChange={setDay} disabledDaysOfWeek={[0]} placeholder="Sana" className="flex-1" />
+                  <DatePicker value={day} onChange={setDay} disabledDaysOfWeek={[0]} placeholder={t("Sana")} className="flex-1" />
                   <TimePicker value={time} onChange={setTime} minTime="08:00" maxTime="22:00" className="w-28" />
                 </div>
               )}
             </div>
             <div className="space-y-1.5">
-              <Label>Muhimlik</Label>
-              <div role="radiogroup" aria-label="Muhimlik" className="flex rounded-md border">
+              <Label>{t("Muhimlik")}</Label>
+              <div role="radiogroup" aria-label={t("Muhimlik")} className="flex rounded-md border">
                 {PRIORITIES.map((p) => (
                   <button
                     key={p}
@@ -140,57 +142,57 @@ export function TaskCreateDialog() {
                     onClick={() => setPriority(p)}
                     className={`flex-1 px-2 py-1.5 text-xs ${priority === p ? "bg-primary/10 font-medium text-primary" : "text-muted-foreground"}`}
                   >
-                    {PRIORITY_LABEL[p]}
+                    {priorityText(p, t)}
                   </button>
                 ))}
               </div>
             </div>
           </div>
-          {context.entityLabel && <p className="text-xs text-muted-foreground">Bog&apos;liq: <span className="font-medium text-foreground">{context.entityLabel}</span></p>}
+          {context.entityLabel && <p className="text-xs text-muted-foreground">{t("Bog'liq:")} <span className="font-medium text-foreground">{context.entityLabel}</span></p>}
           {assigneeIds.length > 1 && (
             <label className="flex items-start gap-2 text-sm">
               <Checkbox checked={separate} onCheckedChange={(v) => setSeparate(v === true)} className="mt-0.5" />
               <span>
-                Har biriga alohida
-                <span className="block text-xs text-muted-foreground">Har bir ijrochiga o&apos;z nusxasi yaratiladi va holati alohida yuradi</span>
+                {t("Har biriga alohida")}
+                <span className="block text-xs text-muted-foreground">{t("Har bir ijrochiga o'z nusxasi yaratiladi va holati alohida yuradi")}</span>
               </span>
             </label>
           )}
           {more && (
             <div className="space-y-4 border-t pt-4">
               <div className="space-y-1.5">
-                <Label>Tavsif</Label>
+                <Label>{t("Tavsif")}</Label>
                 <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={5000} />
               </div>
               <div className="space-y-1.5">
-                <Label>Kichik qadamlar</Label>
+                <Label>{t("Kichik qadamlar")}</Label>
                 {steps.map((s, i) => (
                   <div key={i} className="flex gap-2">
                     <Input value={s} onChange={(e) => setSteps(steps.map((x, j) => (j === i ? e.target.value : x)))} maxLength={200} />
-                    <Button type="button" variant="ghost" size="icon" aria-label="Qadamni olib tashlash" onClick={() => setSteps(steps.filter((_, j) => j !== i))}>
+                    <Button type="button" variant="ghost" size="icon" aria-label={t("Qadamni olib tashlash")} onClick={() => setSteps(steps.filter((_, j) => j !== i))}>
                       <X className="size-4" />
                     </Button>
                   </div>
                 ))}
                 <Button type="button" variant="ghost" size="sm" onClick={() => setSteps([...steps, ""])}>
-                  <Plus className="mr-1 size-3" />Qadam qo&apos;shish
+                  <Plus className="mr-1 size-3" />{t("Qadam qo'shish")}
                 </Button>
               </div>
               <div className="space-y-1.5">
-                <Label>Kuzatuvchi</Label>
-                <TaskAssigneePicker value={watcherIds} onChange={setWatcherIds} mode="watchers" placeholder="Ixtiyoriy" />
+                <Label>{t("Kuzatuvchi")}</Label>
+                <TaskAssigneePicker value={watcherIds} onChange={setWatcherIds} mode="watchers" placeholder={t("Ixtiyoriy")} />
               </div>
               {filesOn && !recurring && (
                 <label className="flex items-start gap-2 text-sm">
                   <Checkbox checked={requiresPhoto} onCheckedChange={(v) => setRequiresPhoto(v === true)} className="mt-0.5" />
                   <span>
-                    Rasm bilan tasdiqlansin
-                    <span className="block text-xs text-muted-foreground">{"Ijrochi tekshiruvga yuborishdan oldin ish rasmini qo'shadi"}</span>
+                    {t("Rasm bilan tasdiqlansin")}
+                    <span className="block text-xs text-muted-foreground">{t("Ijrochi tekshiruvga yuborishdan oldin ish rasmini qo'shadi")}</span>
                   </span>
                 </label>
               )}
               <div className="space-y-1.5">
-                <Label>Takrorlash</Label>
+                <Label>{t("Takrorlanish")}</Label>
                 <TaskRecurrenceFields value={recurrence} onChange={setRecurrence} />
               </div>
             </div>
@@ -198,12 +200,12 @@ export function TaskCreateDialog() {
         </div>
         <DialogFooter className="flex-row flex-wrap items-center justify-between border-t px-6 py-4 sm:justify-between">
           <Button type="button" variant="ghost" size="sm" onClick={() => setMore(!more)}>
-            {more ? <>Qisqa ko&apos;rinish<ChevronUp className="ml-1 size-4" /></> : <>Batafsil<ChevronDown className="ml-1 size-4" /></>}
+            {more ? <>{t("Qisqa ko'rinish")}<ChevronUp className="ml-1 size-4" /></> : <>{t("Batafsil")}<ChevronDown className="ml-1 size-4" /></>}
           </Button>
           <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={dismiss} disabled={saving}>Bekor qilish</Button>
+            <Button type="button" variant="outline" onClick={dismiss} disabled={saving}>{t("Bekor qilish")}</Button>
             <Button type="button" onClick={() => void submit()} disabled={!canSubmit}>
-              {saving && <Loader2 className="mr-1 size-4 animate-spin" />}Berish
+              {saving && <Loader2 className="mr-1 size-4 animate-spin" />}{t("Topshiriqni berish")}
             </Button>
           </div>
         </DialogFooter>

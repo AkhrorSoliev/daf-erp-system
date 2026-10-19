@@ -64,6 +64,13 @@ describe("translate", () => {
     );
   });
 
+  it("keeps key names and file-size units Latin in the tasks texts", () => {
+    expect(translate("uz-Cyrl", {}, "Ctrl+Enter — yuborish")).not.toBe("Ctrl+Enter — юбориш");
+    expect(translate("uz-Cyrl", {}, "{n} B", { n: "5" })).not.toBe("5 B");
+    expect(translate("uz-Cyrl", uzCyrl, "Ctrl+Enter — yuborish")).toBe("Ctrl+Enter — юбориш");
+    expect(["{n} B", "{n} KB", "{n} MB"].map((s) => translate("uz-Cyrl", uzCyrl, s, { n: "5" }))).toEqual(["5 B", "5 KB", "5 MB"]);
+  });
+
   it("writes the month lists (full and short) in Uzbek Cyrillic spelling", () => {
     const full = ["Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun", "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"];
     const short = ["Yan", "Fev", "Mar", "Apr", "May", "Iyn", "Iyl", "Avg", "Sen", "Okt", "Noy", "Dek"];

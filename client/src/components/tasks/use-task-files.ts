@@ -3,7 +3,8 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { useTasks, type TaskEvent, type TaskFileView } from "@/hooks/use-tasks";
+import { tasksText, useTasks, type TaskEvent, type TaskFileView } from "@/hooks/use-tasks";
+import { msg } from "@/i18n/msg";
 import { FILE_TOO_BIG, FILE_URL_REFRESH_MS, MAX_FILE_BYTES, MAX_VOICE_BYTES, URL_REFRESH_FAILED, VOICE_TOO_BIG } from "./task-file-rules";
 
 interface TaskFilesState {
@@ -24,6 +25,7 @@ interface TaskFilesState {
   remove: (taskId: string, fileId: string) => Promise<boolean>;
 }
 
+// Toast texts are msg() texts drawn with `tasksText` (the language the task pages hand to `useTasksTranslator()`).
 // A newer load makes an older answer stale.
 let lastLoad = 0;
 
@@ -62,14 +64,14 @@ export const useTaskFiles = create<TaskFilesState>((set, get) => ({
     if (isFresh()) return true;
     await get().load(taskId);
     if (isFresh()) return true;
-    toast.error(URL_REFRESH_FAILED);
+    toast.error(tasksText(URL_REFRESH_FAILED));
     return false;
   },
 
   upload: async (taskId, file, name, durationSec) => {
-    if (file.size > MAX_FILE_BYTES) { toast.error(FILE_TOO_BIG); return false; }
+    if (file.size > MAX_FILE_BYTES) { toast.error(tasksText(FILE_TOO_BIG)); return false; }
     // A voice note (it carries a length) is capped by size too.
-    if (durationSec !== undefined && file.size > MAX_VOICE_BYTES) { toast.error(VOICE_TOO_BIG); return false; }
+    if (durationSec !== undefined && file.size > MAX_VOICE_BYTES) { toast.error(tasksText(VOICE_TOO_BIG)); return false; }
     const form = new FormData();
     // Text parts first: the server reads them with the file. `name` carries the UTF-8
     // original name, because multer decodes the file part's own filename as latin1.
@@ -84,7 +86,7 @@ export const useTaskFiles = create<TaskFilesState>((set, get) => ({
       return true;
     } catch (error) {
       const tooBig = axios.isAxiosError(error) && error.response?.status === 413;
-      toast.error(tooBig ? FILE_TOO_BIG : getErrorMessage(error, "Faylni yuklashda xatolik yuz berdi"));
+      toast.error(tooBig ? tasksText(FILE_TOO_BIG) : getErrorMessage(error, tasksText(msg("Faylni yuklashda xatolik yuz berdi"))));
       return false;
     } finally {
       set((s) => ({ uploading: s.uploading - 1 }));
@@ -98,7 +100,7 @@ export const useTaskFiles = create<TaskFilesState>((set, get) => ({
       await get().load(taskId);
       return true;
     } catch (error) {
-      toast.error(getErrorMessage(error, "Faylni o'chirishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, tasksText(msg("Faylni o'chirishda xatolik yuz berdi"))));
       return false;
     }
   },

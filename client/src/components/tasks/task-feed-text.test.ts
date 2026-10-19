@@ -9,9 +9,9 @@ const ev = (over: Partial<TaskEvent>): TaskEvent => ({
 const line = (over: Partial<TaskEvent>) => { const d = describeEvent(ev(over)); return `${d.actor} ${d.text}`; };
 
 describe("describeEvent", () => {
-  it("names the actor, and «Tizim» for a system row", () => {
+  it("names the actor, and «Tizim (avtomatik)» for a system row", () => {
     expect(line({ type: "CREATED" })).toBe("Aziz Karimov topshiriq berdi");
-    expect(line({ type: "CREATED", actorId: null, actor: null, via: "SYSTEM" })).toBe("Tizim topshiriq berdi");
+    expect(line({ type: "CREATED", actorId: null, actor: null, via: "SYSTEM" })).toBe("Tizim (avtomatik) topshiriq berdi");
   });
 
   it("reads a status change from its target", () => {
@@ -43,35 +43,35 @@ describe("describeEvent", () => {
   });
 
   it("says the system closed a task, whoever's answer it was", () => {
-    expect(line({ type: "AUTO_CLOSED", meta: { reason: "LESSON_ANSWERED" } })).toBe("Tizim yopdi (darsga javob berildi)");
-    expect(line({ type: "AUTO_CLOSED", actorId: null, actor: null, meta: { reason: "GROUP_DELETED" } })).toBe("Tizim yopdi (guruh o'chirildi)");
+    expect(line({ type: "AUTO_CLOSED", meta: { reason: "LESSON_ANSWERED" } })).toBe("Tizim (avtomatik) yopdi (darsga javob berildi)");
+    expect(line({ type: "AUTO_CLOSED", actorId: null, actor: null, meta: { reason: "GROUP_DELETED" } })).toBe("Tizim (avtomatik) yopdi (guruh o'chirildi)");
   });
 
   it("names a join request's outcome, never a lesson answer", () => {
-    expect(line({ type: "AUTO_CLOSED", meta: { reason: "JOIN_APPROVED" } })).toBe("Tizim yopdi (so'rov tasdiqlandi)");
-    expect(line({ type: "AUTO_CLOSED", meta: { reason: "JOIN_REJECTED" } })).toBe("Tizim yopdi (so'rov rad etildi)");
-    expect(line({ type: "AUTO_CLOSED", actorId: null, actor: null, meta: { reason: "JOIN_EXPIRED" } })).toBe("Tizim yopdi (so'rov muddati o'tdi)");
-    expect(line({ type: "AUTO_CLOSED", actorId: null, actor: null, meta: { reason: "JOIN_REPLACED" } })).toBe("Tizim yopdi (yangi so'rov bilan almashtirildi)");
+    expect(line({ type: "AUTO_CLOSED", meta: { reason: "JOIN_APPROVED" } })).toBe("Tizim (avtomatik) yopdi (so'rov tasdiqlandi)");
+    expect(line({ type: "AUTO_CLOSED", meta: { reason: "JOIN_REJECTED" } })).toBe("Tizim (avtomatik) yopdi (so'rov rad etildi)");
+    expect(line({ type: "AUTO_CLOSED", actorId: null, actor: null, meta: { reason: "JOIN_EXPIRED" } })).toBe("Tizim (avtomatik) yopdi (so'rov muddati o'tdi)");
+    expect(line({ type: "AUTO_CLOSED", actorId: null, actor: null, meta: { reason: "JOIN_REPLACED" } })).toBe("Tizim (avtomatik) yopdi (yangi so'rov bilan almashtirildi)");
   });
 
   it("names why the system closed an automatic task", () => {
     const sys = { actorId: null, actor: null };
-    expect(line({ type: "AUTO_CLOSED", ...sys, meta: { reason: "PAYMENT_RECEIVED" } })).toBe("Tizim yopdi (to'lov qilindi)");
-    expect(line({ type: "AUTO_CLOSED", ...sys, meta: { reason: "CALL_LOGGED" } })).toBe("Tizim yopdi (qo'ng'iroq yozildi)");
-    expect(line({ type: "AUTO_CLOSED", ...sys, meta: { reason: "LEAD_CALLED" } })).toBe("Tizim yopdi (lidga qo'ng'iroq qilindi)");
-    expect(line({ type: "AUTO_CLOSED", ...sys, meta: { reason: "LEAD_STATUS_CHANGED" } })).toBe("Tizim yopdi (lid holati o'zgardi)");
-    expect(line({ type: "AUTO_CLOSED", ...sys, meta: { reason: "LEAD_GONE" } })).toBe("Tizim yopdi (lid endi qo'ng'iroq kutmaydi)");
-    expect(line({ type: "AUTO_CLOSED", ...sys, meta: { reason: "STUDENT_GONE" } })).toBe("Tizim yopdi (o'quvchi arxivlandi)");
+    expect(line({ type: "AUTO_CLOSED", ...sys, meta: { reason: "PAYMENT_RECEIVED" } })).toBe("Tizim (avtomatik) yopdi (to'lov qilindi)");
+    expect(line({ type: "AUTO_CLOSED", ...sys, meta: { reason: "CALL_LOGGED" } })).toBe("Tizim (avtomatik) yopdi (qo'ng'iroq yozildi)");
+    expect(line({ type: "AUTO_CLOSED", ...sys, meta: { reason: "LEAD_CALLED" } })).toBe("Tizim (avtomatik) yopdi (lidga qo'ng'iroq qilindi)");
+    expect(line({ type: "AUTO_CLOSED", ...sys, meta: { reason: "LEAD_STATUS_CHANGED" } })).toBe("Tizim (avtomatik) yopdi (lid holati o'zgardi)");
+    expect(line({ type: "AUTO_CLOSED", ...sys, meta: { reason: "LEAD_GONE" } })).toBe("Tizim (avtomatik) yopdi (lid endi qo'ng'iroq kutmaydi)");
+    expect(line({ type: "AUTO_CLOSED", ...sys, meta: { reason: "STUDENT_GONE" } })).toBe("Tizim (avtomatik) yopdi (o'quvchi arxivlandi)");
   });
 
   it("covers the remaining server types", () => {
     expect(line({ type: "ASSIGNEE", meta: { added: [1], removed: [] } })).toBe("Aziz Karimov ijrochilarni o'zgartirdi");
-    expect(line({ type: "REASSIGNED", actorId: null, actor: null, meta: { from: 1, to: [2] } })).toBe("Tizim ishdan ketgani uchun topshiriq o'tkazildi");
+    expect(line({ type: "REASSIGNED", actorId: null, actor: null, meta: { from: 1, to: [2] } })).toBe("Tizim (avtomatik) ishdan ketgani uchun topshiriq o'tkazildi");
   });
 
   it("falls back to a plain line for a type it does not know, not the type's name", () => {
     expect(line({ type: "SOMETHING_NEW" })).toBe("Aziz Karimov yangilanish kiritdi");
-    expect(line({ type: "SOMETHING_NEW", actorId: null, actor: null, via: "SYSTEM" })).toBe("Tizim yangilanish kiritdi");
+    expect(line({ type: "SOMETHING_NEW", actorId: null, actor: null, via: "SYSTEM" })).toBe("Tizim (avtomatik) yangilanish kiritdi");
   });
 
   it("reads a file, a voice message and a deleted file", () => {

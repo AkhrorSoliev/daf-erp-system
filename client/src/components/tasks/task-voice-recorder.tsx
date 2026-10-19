@@ -3,6 +3,8 @@ import { useEffect, useReducer, useRef, useState, useSyncExternalStore } from "r
 import { Loader2, Mic, Send, Square, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/i18n/context";
+import type { Translate } from "./task-labels";
 import { VOICE_LIMIT_SEC, formatDuration, pickVoiceMime, voiceFileName, voiceReducer } from "./task-file-rules";
 import { useTaskFiles } from "./use-task-files";
 
@@ -11,24 +13,25 @@ const noop = () => () => {};
 const useVoiceMime = () =>
   useSyncExternalStore(
     noop,
-    () => (typeof MediaRecorder === "undefined" ? null : pickVoiceMime((t) => MediaRecorder.isTypeSupported(t))),
+    () => (typeof MediaRecorder === "undefined" ? null : pickVoiceMime((type) => MediaRecorder.isTypeSupported(type))),
     () => null,
   );
 
-const releaseMic = (stream: MediaStream | null) => stream?.getTracks().forEach((t) => t.stop());
+const releaseMic = (stream: MediaStream | null) => stream?.getTracks().forEach((track) => track.stop());
 
 /** The microphone, or null (already toasted) when the browser or the user refuses. */
-async function openMic(): Promise<MediaStream | null> {
+async function openMic(t: Translate): Promise<MediaStream | null> {
   try {
     return await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch {
-    toast.error("Mikrofonga ruxsat berilmadi");
+    toast.error(t("Mikrofonga ruxsat berilmadi"));
     return null;
   }
 }
 
 /** Spec screen 15: oddiy → yozilmoqda (stops itself at 3:00) → yuborishga tayyor. */
 export function TaskVoiceRecorder({ taskId }: { taskId: string }) {
+  const t = useT();
   const mime = useVoiceMime();
   const upload = useTaskFiles((s) => s.upload);
   const [state, dispatch] = useReducer(voiceReducer, { kind: "idle" });
@@ -62,7 +65,7 @@ export function TaskVoiceRecorder({ taskId }: { taskId: string }) {
     if (startingRef.current || recRef.current?.state === "recording") return;
     startingRef.current = true;
     setStarting(true);
-    const stream = await openMic();
+    const stream = await openMic(t);
     startingRef.current = false;
     // Left the drawer while the prompt was open: the microphone is released the moment it arrives.
     if (!aliveRef.current) { releaseMic(stream); return; }
@@ -73,7 +76,7 @@ export function TaskVoiceRecorder({ taskId }: { taskId: string }) {
       rec = new MediaRecorder(stream, { mimeType: mime, audioBitsPerSecond: 48_000 });
     } catch {
       releaseMic(stream);
-      toast.error("Bu brauzerda ovoz yozib bo'lmaydi");
+      toast.error(t("Bu brauzerda ovoz yozib bo'lmaydi"));
       return;
     }
     const chunks: Blob[] = [];
@@ -94,9 +97,9 @@ export function TaskVoiceRecorder({ taskId }: { taskId: string }) {
     dispatch({ type: "start", at });
     setNow(at);
     timerRef.current = window.setInterval(() => {
-      const t = Date.now();
-      setNow(t);
-      if (t - at >= VOICE_LIMIT_SEC * 1000 && recRef.current?.state === "recording") recRef.current.stop();
+      const tick = Date.now();
+      setNow(tick);
+      if (tick - at >= VOICE_LIMIT_SEC * 1000 && recRef.current?.state === "recording") recRef.current.stop();
     }, 250);
   };
   const discard = () => {
@@ -118,7 +121,7 @@ export function TaskVoiceRecorder({ taskId }: { taskId: string }) {
       <div className="flex items-center gap-2 text-xs">
         <span className="size-2 animate-pulse rounded-full bg-red-500" />
         <span>{formatDuration((now - state.startedAt) / 1000)} / {formatDuration(VOICE_LIMIT_SEC)}</span>
-        <Button type="button" size="xs" variant="outline" onClick={() => recRef.current?.stop()}><Square className="size-3" />{"To'xtatish"}</Button>
+        <Button type="button" size="xs" variant="outline" onClick={() => recRef.current?.stop()}><Square className="size-3" />{t("To'xtatish")}</Button>
       </div>
     );
   }
@@ -126,15 +129,15 @@ export function TaskVoiceRecorder({ taskId }: { taskId: string }) {
     return (
       <div className="flex flex-wrap items-center gap-2">
         <audio src={state.url} controls className="h-8 max-w-[14rem]" />
-        <Button type="button" size="icon-xs" variant="ghost" aria-label="Bekor qilish" onClick={discard} disabled={sending}><X /></Button>
+        <Button type="button" size="icon-xs" variant="ghost" aria-label={t("Yozuvni bekor qilish")} onClick={discard} disabled={sending}><X /></Button>
         <Button type="button" size="xs" onClick={() => void send()} disabled={sending}>
-          {sending ? <Loader2 className="animate-spin" /> : <Send />}Yuborish
+          {sending ? <Loader2 className="animate-spin" /> : <Send />}{t("Yuborish")}
         </Button>
       </div>
     );
   }
   return (
-    <Button type="button" size="icon-sm" variant="ghost" aria-label="Ovozli xabar yozish" disabled={starting} onClick={() => void start()}>
+    <Button type="button" size="icon-sm" variant="ghost" aria-label={t("Ovozli xabar yozish")} disabled={starting} onClick={() => void start()}>
       <Mic className="size-4" />
     </Button>
   );

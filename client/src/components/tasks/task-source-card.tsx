@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LogCallDialog } from "@/components/outreach/log-call-dialog";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useTasks, type TaskDetail, type TaskSource } from "@/hooks/use-tasks";
+import { useT } from "@/i18n/context";
 import { sourceAction, sourceFacts } from "./task-source-rules";
 
 /**
@@ -16,14 +17,15 @@ import { sourceAction, sourceFacts } from "./task-source-rules";
  * request panel does after a decision.
  */
 export function TaskSourceCard({ task, source }: { task: TaskDetail; source: TaskSource }) {
+  const t = useT();
   const can = usePermissions((s) => s.can);
   const [calling, setCalling] = useState(false);
   const action = sourceAction(task, source, can);
   return (
     <section className="space-y-3 rounded-md border p-3">
-      <h4 className="text-xs font-medium text-muted-foreground">Hozirgi holat</h4>
+      <h4 className="text-xs font-medium text-muted-foreground">{t("Hozirgi holat")}</h4>
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
-        {sourceFacts(source).map((f) => (
+        {sourceFacts(source, t).map((f) => (
           <Fragment key={f.label}>
             <dt className="text-muted-foreground">{f.label}</dt>
             <dd className="min-w-0 break-words">{f.value}</dd>
@@ -33,7 +35,7 @@ export function TaskSourceCard({ task, source }: { task: TaskDetail; source: Tas
       {action?.kind === "call" && (
         <>
           <Button size="sm" className="w-full" onClick={() => setCalling(true)}>
-            <Phone className="mr-1 size-4" />{action.label}
+            <Phone className="mr-1 size-4" />{t(action.label)}
           </Button>
           <LogCallDialog
             open={calling}
@@ -47,7 +49,7 @@ export function TaskSourceCard({ task, source }: { task: TaskDetail; source: Tas
       )}
       {action?.kind === "lead" && (
         <Button size="sm" className="w-full" asChild>
-          <Link href={action.href}><ExternalLink className="mr-1 size-4" />{action.label}</Link>
+          <Link href={action.href}><ExternalLink className="mr-1 size-4" />{t(action.label)}</Link>
         </Button>
       )}
     </section>

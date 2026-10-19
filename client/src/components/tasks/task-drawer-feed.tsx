@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useTasks, type TaskEvent, type TaskFileView } from "@/hooks/use-tasks";
+import { useT } from "@/i18n/context";
 import { tashkentDayAndTime } from "./task-due";
 import { TaskFileViewer, openFresh } from "./task-drawer-files";
 import { describeEvent, viaLabel } from "./task-feed-text";
@@ -27,8 +28,9 @@ const when = (iso: string) => {
 
 /** The avatar, name, channel and time above a bubble. */
 function Message({ ev, children }: { ev: TaskEvent; children: React.ReactNode }) {
-  const { actor } = describeEvent(ev);
-  const via = viaLabel(ev);
+  const t = useT();
+  const { actor } = describeEvent(ev, t);
+  const via = viaLabel(ev, t);
   return (
     <li className="flex gap-2">
       <Avatar size="sm">
@@ -49,13 +51,14 @@ function Message({ ev, children }: { ev: TaskEvent; children: React.ReactNode })
 function Comment({ ev }: { ev: TaskEvent }) {
   return (
     <Message ev={ev}>
-      <p className="mt-1 whitespace-pre-wrap break-words rounded-lg bg-muted px-3 py-2 text-sm">{describeEvent(ev).text}</p>
+      <p className="mt-1 whitespace-pre-wrap break-words rounded-lg bg-muted px-3 py-2 text-sm">{ev.text ?? ""}</p>
     </Message>
   );
 }
 
 /** A picture, a document or a voice message; a muted bubble once the file is gone. */
 function Attachment({ taskId, ev, file, onImage }: { taskId: string; ev: TaskEvent; file: TaskFileView | undefined; onImage: (f: TaskFileView) => void }) {
+  const t = useT();
   let body: React.ReactNode;
   if (file?.kind === "IMAGE") {
     body = (
@@ -67,21 +70,22 @@ function Attachment({ taskId, ev, file, onImage }: { taskId: string; ev: TaskEve
   } else if (file?.kind === "DOCUMENT") {
     body = (
       <a href={file.url} target="_blank" rel="noopener noreferrer" onClick={(e) => void openFresh(e, taskId, file)} className="mt-1 inline-flex max-w-full items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm hover:underline">
-        <FileText className="size-4 shrink-0" /><span className="truncate">{file.name}</span><span className="shrink-0 text-xs text-muted-foreground">{formatSize(file.size)}</span>
+        <FileText className="size-4 shrink-0" /><span className="truncate">{file.name}</span><span className="shrink-0 text-xs text-muted-foreground">{formatSize(file.size, t)}</span>
       </a>
     );
   } else if (file?.kind === "VOICE") {
     body = <div className="mt-1"><TaskVoicePlayer taskId={taskId} fileId={file.id} src={file.url} durationSec={file.durationSec} /></div>;
   } else {
-    const gone = ev.type === "VOICE" ? "Ovozli xabar" : (ev.text ?? "fayl");
-    body = <p className="mt-1 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">{gone} {"(o'chirilgan)"}</p>;
+    const gone = ev.type === "VOICE" ? t("Ovozli xabar") : (ev.text ?? t("fayl"));
+    body = <p className="mt-1 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">{gone} {t("(o'chirilgan)")}</p>;
   }
   return <Message ev={ev}>{body}</Message>;
 }
 
 function Line({ ev }: { ev: TaskEvent }) {
-  const { actor, text } = describeEvent(ev);
-  const via = viaLabel(ev);
+  const t = useT();
+  const { actor, text } = describeEvent(ev, t);
+  const via = viaLabel(ev, t);
   return (
     <li className="break-words text-xs text-muted-foreground">
       <span className="font-medium text-foreground/80">{actor}</span> {text}{via ? ` · ${via}` : ""} · {when(ev.createdAt)}
@@ -90,6 +94,7 @@ function Line({ ev }: { ev: TaskEvent }) {
 }
 
 function Composer({ taskId, canAttach }: { taskId: string; canAttach: boolean }) {
+  const t = useT();
   const appendEvent = useTasks((s) => s.appendEvent);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -114,7 +119,7 @@ function Composer({ taskId, canAttach }: { taskId: string; canAttach: boolean })
       appendEvent(taskId, data);
       requestAnimationFrame(() => endRef.current?.scrollIntoView({ block: "end", behavior: "smooth" }));
     } catch (error) {
-      toast.error(getErrorMessage(error, "Izoh yuborishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Izoh yuborishda xatolik yuz berdi")));
     } finally {
       setSending(false);
     }
@@ -123,8 +128,8 @@ function Composer({ taskId, canAttach }: { taskId: string; canAttach: boolean })
   return (
     <div className="space-y-2">
       <Textarea
-        aria-label="Izoh"
-        placeholder="Izoh yozing…"
+        aria-label={t("Izoh")}
+        placeholder={t("Izoh yozing…")}
         rows={2}
         maxLength={5000}
         value={text}
@@ -136,16 +141,16 @@ function Composer({ taskId, canAttach }: { taskId: string; canAttach: boolean })
           {filesEnabled && canAttach && (
             <>
               <TaskVoiceRecorder taskId={taskId} />
-              <Button type="button" variant="ghost" size="icon-sm" aria-label={"Fayl qo'shish"} disabled={uploading} onClick={() => fileRef.current?.click()}>
+              <Button type="button" variant="ghost" size="icon-sm" aria-label={t("Fayl qo'shish")} disabled={uploading} onClick={() => fileRef.current?.click()}>
                 {uploading ? <Loader2 className="size-4 animate-spin" /> : <Paperclip className="size-4" />}
               </Button>
               <input ref={fileRef} type="file" multiple accept={FILE_ACCEPT} className="hidden" onChange={(e) => void onPick(e)} />
             </>
           )}
-          <span className="text-[11px] text-muted-foreground">Ctrl+Enter — yuborish</span>
+          <span className="text-[11px] text-muted-foreground">{t("Ctrl+Enter — yuborish")}</span>
         </div>
         <Button size="sm" onClick={() => void send()} disabled={!canSend}>
-          {sending && <Loader2 className="mr-1 size-4 animate-spin" />}Yuborish
+          {sending && <Loader2 className="mr-1 size-4 animate-spin" />}{t("Yuborish")}
         </Button>
       </div>
       <div ref={endRef} />
@@ -155,6 +160,7 @@ function Composer({ taskId, canAttach }: { taskId: string; canAttach: boolean })
 
 /** The discussion: comments as bubbles, files and voice messages as attachments, everything else as one grey line, the composer below. */
 export function TaskDrawerFeed({ taskId, events, canAttach }: { taskId: string; events: TaskEvent[]; canAttach: boolean }) {
+  const t = useT();
   const files = useTaskFiles((s) => (s.taskId === taskId ? s.files : NONE));
   const ensureFresh = useTaskFiles((s) => s.ensureFresh);
   const [viewer, setViewer] = useState<number | null>(null);
@@ -173,7 +179,7 @@ export function TaskDrawerFeed({ taskId, events, canAttach }: { taskId: string; 
 
   return (
     <section className="space-y-3">
-      <h4 className="text-sm font-semibold">Muhokama</h4>
+      <h4 className="text-sm font-semibold">{t("Muhokama")}</h4>
       <ul className="space-y-2.5">
         {events.map((ev) =>
           ev.type === "COMMENT" ? <Comment key={ev.id} ev={ev} />
