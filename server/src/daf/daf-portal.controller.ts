@@ -27,6 +27,7 @@ import { UebungService } from './uebung/uebung.service';
 import { FortschrittService } from './fortschritt/fortschritt.service';
 import { ReytingQueryDto } from './dto/reyting-query.dto';
 import { MaqsadDto } from './dto/maqsad.dto';
+import { EslatmalarDto } from './dto/eslatmalar.dto';
 
 /**
  * O'quvchi portalining o'quv bo'limi.
@@ -312,5 +313,23 @@ export class DafPortalController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.fortschritt.guruhlar(studentId, companyId);
+  }
+
+  /**
+   * Telegram eslatmalari (spec S4 §3). `studentId` TOKENDAN — o'quvchi faqat
+   * o'zinikini o'zgartiradi. Yozuvchi bitta (`eslatmalarniSaqla`): bot
+   * tugmasi ham shuni chaqiradi. Javob — `{ eslatmalar }`.
+   */
+  @Patch('eslatmalar')
+  patchEslatmalar(
+    @Body() dto: EslatmalarDto,
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.fortschritt.eslatmalarniOzgartir(
+      studentId,
+      companyId,
+      dto.yoqilgan,
+    );
   }
 }

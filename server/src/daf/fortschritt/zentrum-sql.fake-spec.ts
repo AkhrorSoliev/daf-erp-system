@@ -31,6 +31,11 @@ export type KunQatori = {
 export function zentrumQueryRaw(
   rows: () => KunQatori[],
   dailyGoal: () => string | null = () => null,
+  /** S4: `remindersEnabled` (qator yo'q = true) va kartaning botga ulanganligi. */
+  eslatma: () => { eslatmalar: boolean; telegramUlangan: boolean } = () => ({
+    eslatmalar: true,
+    telegramUlangan: false,
+  }),
 ) {
   return jest.fn((sql: Prisma.Sql) => Promise.resolve(answer(sql)));
 
@@ -77,6 +82,7 @@ export function zentrumQueryRaw(
             .filter((r) => r.day === heuteTag)
             .reduce((s, r) => s + r.points, 0),
           dailyGoal: dailyGoal(),
+          ...eslatma(),
         },
       ];
     }

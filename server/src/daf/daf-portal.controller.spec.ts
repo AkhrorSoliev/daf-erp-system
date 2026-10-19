@@ -86,7 +86,7 @@ function fakeUebungPrisma() {
  * tegadi, ya'ni kelajakdagi reytingga.
  */
 describe('DafPortalController — ruxsat', () => {
-  // The 20 routes of the learning section, found the way Nest finds them: a
+  // The 21 routes of the learning section, found the way Nest finds them: a
   // method that carries route metadata.
   const routes = Object.getOwnPropertyNames(DafPortalController.prototype)
     .filter((name) => name !== 'constructor')
@@ -97,8 +97,8 @@ describe('DafPortalController — ruxsat', () => {
       ),
     );
 
-  it('has the 20 learning routes', () => {
-    expect(routes).toHaveLength(20);
+  it('has the 21 learning routes', () => {
+    expect(routes).toHaveLength(21);
   });
 
   it('every route is student-only, set once at class level', () => {
@@ -345,6 +345,35 @@ describe('DafPortalController — liga va guruhlar (S3)', () => {
     expect(Reflect.getMetadata('path', proto.getGuruhlar)).toBe('guruhlar');
     expect(Reflect.getMetadata('method', proto.getGuruhlar)).toBe(
       RequestMethod.GET,
+    );
+  });
+});
+
+describe('DafPortalController — eslatmalar (S4)', () => {
+  it('PATCH eslatmalar — faqat tokendagi o`quvchiniki', async () => {
+    const fortschritt = {
+      eslatmalarniOzgartir: jest.fn(async () => ({ eslatmalar: false })),
+    };
+    const controller = new DafPortalController(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      fortschritt as any,
+    );
+    expect(
+      await controller.patchEslatmalar({ yoqilgan: false } as any, 55, 1),
+    ).toEqual({ eslatmalar: false });
+    expect(fortschritt.eslatmalarniOzgartir).toHaveBeenCalledWith(55, 1, false);
+  });
+
+  it('yo`l va usul', () => {
+    const proto = DafPortalController.prototype as any;
+    expect(Reflect.getMetadata('path', proto.patchEslatmalar)).toBe(
+      'eslatmalar',
+    );
+    expect(Reflect.getMetadata('method', proto.patchEslatmalar)).toBe(
+      RequestMethod.PATCH,
     );
   });
 });

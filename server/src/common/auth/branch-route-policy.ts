@@ -938,7 +938,9 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       '`GET .../liga` and `GET .../guruhlar` (S3, ADR-0116) are SELF on the same ' +
       "terms as the centre ranking: the caller's own league room (rooms are " +
       'filled centre-wide) and the centre-wide weekly group table — both ' +
-      'deliberately not limited to a branch (06.09 §6.1).',
+      'deliberately not limited to a branch (06.09 §6.1). ' +
+      '`PATCH .../eslatmalar` (S4, ADR-0117) is SELF the ordinary way: the ' +
+      "caller's own reminder switch on their own `DafStudentSetting` row.",
     routes: [
       'GET /student-portal/lernen/fortschritt',
       'GET /student-portal/lernen/reyting',
@@ -946,6 +948,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'PATCH /student-portal/lernen/maqsad',
       'GET /student-portal/lernen/liga',
       'GET /student-portal/lernen/guruhlar',
+      'PATCH /student-portal/lernen/eslatmalar',
     ],
   },
   {

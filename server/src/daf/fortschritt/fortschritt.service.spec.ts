@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { FortschrittService } from './fortschritt.service';
 import { KunQatori, zentrumQueryRaw } from './zentrum-sql.fake-spec';
 import { wochenStartTag } from '../uebung/punkte';
@@ -11,6 +12,7 @@ function fakePrisma(
   week: { studentId: number; points: number }[] = [],
   extra: KunQatori[] = [],
   dailyGoal: string | null = null,
+  eslatma = { eslatmalar: true, telegramUlangan: false },
 ) {
   const montag = wochenStartTag(new Date());
   return {
@@ -20,6 +22,7 @@ function fakePrisma(
         ...extra,
       ],
       () => dailyGoal,
+      () => eslatma,
     ),
     dafStudentDay: {
       // Only the group table still uses groupBy.
@@ -335,4 +338,53 @@ describe('reyting', () => {
       expect(f.wochePlatzZentrum).toBe(3);
     },
   );
+});
+
+describe('eslatmalar (S4)', () => {
+  it("sozlama qatori yo'q — yoqilgan; karta botga ulanmagan", async () => {
+    const f = await new FortschrittService(fakePrisma()).uebersicht(55, 1);
+    expect(f.eslatmalar).toBe(true);
+    expect(f.telegramUlangan).toBe(false);
+  });
+
+  it("o'chirilgan va ulangan holat o'qiladi — qo'shimcha so'rov yo'q", async () => {
+    const prisma = fakePrisma([], [], null, {
+      eslatmalar: false,
+      telegramUlangan: true,
+    });
+    prisma.dafLexemeState.count = jest.fn(async () => 3);
+    const f = await new FortschrittService(prisma).uebersicht(55, 1);
+    expect(f.eslatmalar).toBe(false);
+    expect(f.telegramUlangan).toBe(true);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+  });
+
+  it("SQL: sozlama CTE ga ustun, ulanish shu so'rovda, oxirgi ikki qiymat o'zgarmadi", async () => {
+    const prisma = fakePrisma();
+    await new FortschrittService(prisma).uebersicht(55, 1);
+    const sql = prisma.$queryRaw.mock.calls[0][0] as Prisma.Sql;
+    const matn = sql.strings.join('?');
+    expect(matn).toContain('"remindersEnabled" AS e');
+    expect(matn).toContain(
+      'COALESCE((SELECT e FROM sozlama), true) AS eslatmalar',
+    );
+    expect(matn).toContain('"telegramDisconnectedAt" IS NULL');
+    expect(sql.values.slice(-2)).toEqual([0, tashkentDateStr(new Date())]);
+  });
+
+  it('eslatmalarniOzgartir — yagona yozuvchi orqali', async () => {
+    const prisma = fakePrisma();
+    prisma.dafStudentSetting = {
+      upsert: jest.fn(async () => ({ remindersEnabled: false })),
+    };
+    expect(
+      await new FortschrittService(prisma).eslatmalarniOzgartir(55, 1, false),
+    ).toEqual({ eslatmalar: false });
+    expect(prisma.dafStudentSetting.upsert).toHaveBeenCalledWith({
+      where: { studentId: 55 },
+      create: { studentId: 55, companyId: 1, remindersEnabled: false },
+      update: { remindersEnabled: false },
+      select: { remindersEnabled: true },
+    });
+  });
 });

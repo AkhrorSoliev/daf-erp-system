@@ -25,6 +25,7 @@ import {
 } from '../uebung/punkte';
 import { nishonlarRoyxati, type NishonQatori } from '../nishon/nishonlar';
 import { bugunBoshmi, maqsadniSaqla } from './maqsad';
+import { eslatmalarniSaqla } from '../eslatma/eslatma-sozlama';
 
 export interface Fortschritt {
   gesamt: number;
@@ -45,6 +46,10 @@ export interface Fortschritt {
   faelligeWoerter: number;
   /** Kunlik maqsad (spec S2 1.3): daraja, maqsad balli, bugungi ball, holat. */
   maqsad: MaqsadHolati;
+  /** S4: Telegram eslatmalari yoqilganmi (sozlama qatori yo'q = yoqilgan). */
+  eslatmalar: boolean;
+  /** S4: karta botga ulangan va chat uzilmagan (ADR-0066 belgisi yo'q). */
+  telegramUlangan: boolean;
 }
 
 export interface ReytingZeile {
@@ -88,6 +93,8 @@ interface OquvchiRaqamlari {
   heutePunkte: number;
   /** `DafStudentSetting.dailyGoal`, qator yo'q bo'lsa `null`. */
   dailyGoal: string | null;
+  eslatmalar: boolean;
+  telegramUlangan: boolean;
 }
 
 /** Haftalik jadvaldan qaytadigan bitta qatorning umumlashgan shakli. */
@@ -251,6 +258,8 @@ export class FortschrittService {
       wochePlatzZentrum: oz.hozir,
       faelligeWoerter,
       maqsad: maqsadHolati(maqsadDarajasi(oz.dailyGoal), oz.heutePunkte, bosh),
+      eslatmalar: oz.eslatmalar,
+      telegramUlangan: oz.telegramUlangan,
     };
   }
 
@@ -437,6 +446,15 @@ export class FortschrittService {
     return maqsadniSaqla(this.prisma, studentId, companyId, daraja);
   }
 
+  /** `PATCH .../eslatmalar` — S4: o'quvchi faqat o'z eslatmalarini o'zgartiradi. */
+  eslatmalarniOzgartir(
+    studentId: number,
+    companyId: number,
+    yoqilgan: boolean,
+  ): Promise<{ eslatmalar: boolean }> {
+    return eslatmalarniSaqla(this.prisma, studentId, companyId, yoqilgan);
+  }
+
   /** `GET .../nishonlar` — hamma katalog, o'quvchining o'z nishonlari bilan. Yozmaydi. */
   nishonlar(studentId: number, companyId: number): Promise<NishonQatori[]> {
     return nishonlarRoyxati(this.prisma, studentId, companyId, new Date());
@@ -562,6 +580,10 @@ export class FortschrittService {
    * - `dailyGoal` — `DafStudentSetting` dagi tanlov yoki `null`. Shu so'rovga
    *   CTE sifatida qo'shilgan: alohida `findUnique` 50 parallel o'quvchida
    *   ulanish navbatiga yana bir joy olardi.
+   * - `eslatmalar`, `telegramUlangan` — S4: `remindersEnabled` (qator yo'q =
+   *   true) va kartaning botga ulanganligi; `sozlama` / `ulanish` CTE lari,
+   *   alohida so'rov yo'q. `ulanish` `o` CTE sidan OLDIN turadi: oxirgi ikki
+   *   bog'langan qiymat hamon `minus`, `heuteTag`.
    *
    * Guruh tomonidagi `gruppeHaftaligi` tuzatishi markazga ham tegishli:
    * mashq qilmagan o'quvchi ham o'rin oladi, va jadvalda ham shu o'rin
@@ -588,8 +610,12 @@ export class FortschrittService {
       ),
       q AS (SELECT "studentId" AS id, p FROM t WHERE "studentId" = ${studentId}),
       sozlama AS (
-        SELECT "dailyGoal"::text AS g FROM "DafStudentSetting"
+        SELECT "dailyGoal"::text AS g, "remindersEnabled" AS e FROM "DafStudentSetting"
         WHERE "studentId" = ${studentId}
+      ),
+      ulanish AS (
+        SELECT ("telegramChatId" IS NOT NULL AND "telegramDisconnectedAt" IS NULL) AS u
+        FROM "Student" WHERE id = ${studentId}
       ),
       o AS (SELECT id, p, GREATEST(p - ${minus}::int, 0) AS op FROM q),
       r AS (
@@ -613,7 +639,9 @@ export class FortschrittService {
         ) AS tage,
         (SELECT a FROM bugun) AS "heuteAttempts",
         (SELECT p FROM bugun) AS "heutePunkte",
-        (SELECT g FROM sozlama) AS "dailyGoal"
+        (SELECT g FROM sozlama) AS "dailyGoal",
+        COALESCE((SELECT e FROM sozlama), true) AS eslatmalar,
+        COALESCE((SELECT u FROM ulanish), false) AS "telegramUlangan"
       FROM r`,
     );
     return satr;
