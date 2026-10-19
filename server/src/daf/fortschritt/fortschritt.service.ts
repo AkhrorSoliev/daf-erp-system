@@ -7,6 +7,7 @@ import {
   utcMidnightFromDateStr,
 } from '../../common/date/tashkent';
 import { currentGroupId } from '../shared/student-scope';
+import { reytingIsmi } from '../shared/reyting-ismi';
 import { nishonlarniBerXavfsiz, woerterSoni } from '../nishon/nishon-berish';
 import {
   MAQSAD_BALL,
@@ -641,9 +642,7 @@ export class FortschrittService {
       where: { id: { in: idlar } },
       select: { id: true, firstName: true, lastName: true },
     });
-    const nomMap = new Map(
-      talabalar.map((t) => [t.id, `${t.firstName} ${t.lastName}`]),
-    );
+    const nomMap = new Map(talabalar.map((t) => [t.id, reytingIsmi(t)]));
 
     return qatorlar.map((q) => ({
       studentId: q.studentId,
@@ -663,9 +662,7 @@ export class FortschrittService {
       where: { id: { in: idlar } },
       select: { id: true, firstName: true, lastName: true },
     });
-    const nomMap = new Map(
-      talabalar.map((t) => [t.id, `${t.firstName} ${t.lastName}`]),
-    );
+    const nomMap = new Map(talabalar.map((t) => [t.id, reytingIsmi(t)]));
 
     return saralangan.map((s, i) => ({
       studentId: s.studentId,
