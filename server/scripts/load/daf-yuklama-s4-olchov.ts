@@ -16,7 +16,8 @@
  * Needs `daf-yuklama-s4-seed.ts` from the same Tashkent day; each phase claims
  * the rows, so undo (`daf-yuklama-s4-tiklash.sql`) and seed again between
  * phases. The messages it writes (`SmsMessage`, `EntityHistory`) are removed
- * by id range by the caller (the script prints the baseline ids).
+ * by the caller with `createdAt >= t0` (the script prints `t0`, a UTC ISO
+ * timestamp taken before the first write).
  */
 import { loadavg } from 'os';
 import { Prisma } from '@prisma/client';
@@ -180,6 +181,7 @@ run(async (prisma) => {
       );
       const ms = Math.round(performance.now() - t);
       const yuborildi = net.reduce((a, n) => a + n.yuborildi, 0);
+      const jamiAuditoriya = net.reduce((a, n) => a + n.auditoriya, 0);
       const xato = net.reduce((a, n) => a + n.xato, 0);
       const otkazildi = net.reduce((a, n) => a + n.otkazildi, 0);
       const sent = await sentSoni(tur);
@@ -202,6 +204,7 @@ run(async (prisma) => {
       poygalar.push(qator);
       if (
         yuborildi !== auditoriya ||
+        jamiAuditoriya !== yuborildi + otkazildi + xato ||
         xato !== 0 ||
         yuborilgan - oldin !== auditoriya ||
         sent !== auditoriya ||
@@ -225,9 +228,9 @@ run(async (prisma) => {
     const vaqt = async (tur: Tur) => {
       let birinchi = 0;
       let n = 0;
-      const t0 = performance.now();
+      const bosh = performance.now();
       n = (await audit(tur)).length;
-      birinchi = Math.round(performance.now() - t0);
+      birinchi = Math.round(performance.now() - bosh);
       const xs: number[] = [];
       for (let i = 0; i < OLCHOV; i += 1) {
         const t = performance.now();
@@ -373,6 +376,12 @@ run(async (prisma) => {
         chegara: FORTSCHRITT_CHEGARA_MS,
       })),
     ];
+    for (const [q, xs] of qatlamVaqti) {
+      if (xs.length === 0)
+        xatolar.push(
+          `fortschritt · ${q}: qatlamda o'quvchi yo'q (S4 seedi yurgizilganmi?)`,
+        );
+    }
     console.table(fortschritt);
     natija.fortschritt = fortschritt;
     if (fortschritt[0].p95 >= FORTSCHRITT_CHEGARA_MS) {

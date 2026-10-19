@@ -299,23 +299,48 @@ auditoriyaga 50 parallel yurish): kechki 15 575 ms, 3 518 yuborildi,
 172 382 o'tkazib yuborildi (= 49 × 3 518); dushanba 18 120 ms, 4 372
 yuborildi, 214 228 o'tkazib yuborildi; xato 0, botga xabar = auditoriya,
 `SENT` qator = `SmsMessage` = auditoriya, bir chatga bittadan ortiq xabar yo'q.
+Poyga alohida bosqichda (`--faza=poyga`), qayta seed qilingan bazada, qo'shimcha
+yuksiz o'tdi (load average 5,4 → 7,6). Og'ir yukdagi yurish yengilidan
+tezroq chiqdi: sabab aniqlanmadi, ehtimol kesh isishi (yengil yuk
+sessiyadagi birinchi to'liq yurish edi); 60 ms pauza bilan prod hisobi
+farqni deyarli sezmaydi (222–225 s va 274–279 s).
 
 **Moslik:** yuklamadan keyin `daf-yuklama-s4-paritet.ts` — kechki 3 518,
 dushanba 4 372, farq 0.
 
 **Eslatmalar.** (1) «Birinchi chaqiruv» jarayondagi birinchi chaqiruv;
 Postgres keshi sovutilmadi, shuning uchun haqiqiy sovuq kesh yuqoridagidan
-sekinroq bo'lishi mumkin. (2) Mashina haddan tashqari band bo'lsa (load
-12–14, 8 ta CPU jarayoni) hamma yo'l 2–4 marta sekinlashadi, S4 ga
-tegmaydiganlari ham (`nishonlar` 21 → 92, `liga` 15 → 74 ms) va
-`fortschritt` p95 333–389 ms bo'ladi; S4 ma'lumotisiz nazorat o'lchovi
-load 8–11 da `guruhlar` p95 199 / 216 ms berdi. Bu jadvalga kirmadi: u kod
-emas, protsessor yetishmasligi. (3) Kechki auditoriya vaqtining ≈ 80% i
-seriya kichik so'rovida (har nomzodning butun tarixi o'qiladi). 60 kunlik
-oyna + 60 kunga yetgan seriya uchun to'liq hisob («zaxira») natijani
-o'zgartirmaydi (3 518 qatorda farq 0), lekin bu ma'lumotda sekinroq (211 →
-243 ms: ko'p o'quvchida 105 kunlik seriya, hammasi zaxiraga tushadi); 2 yillik
-tarixli vaqtinchalik nusxada (o'quvchiga 593 qator) tezroq: 800 → 408 ms.
+sekinroq bo'lishi mumkin. (2) Jadvalga kirmagan, ikkita band o'lchov
+(hammasi o'sha S1–S3 skripti, bir xil kod). **8 ta CPU jarayoni** (load
+12 → 14): hamma yo'l 2–4 marta sekinlashdi, S4 ga tegmaydiganlari ham
+(`nishonlar` 21 → 92, `liga` 15 → 74 ms), chegaradan o'tmaganlar:
+`fortschritt` p95 333 (S4 aralashi) va 389 (S1–S3 aralashi), `seansNatijasi`
+363 (chegara 300), `guruhlar` 259 (chegara 200). **3 ta CPU jarayoni**
+(load 8 → 10): `guruhlar` aralash p95 252 ms (chegara 200 dan yuqori),
+qolganlari o'tdi. Shu yukda S4 ma'lumotisiz nazorat (S1–S3 skripti
+yolg'iz, jurnal bo'sh, chat yo'q) ikki marta yurdi: `guruhlar` aralash /
+`guruhlar (DUE)` p95 — 199 / 216 ms (birinchi), 176 / 164 ms (ikkinchi);
+ya'ni nazoratning o'zi ham 200 ms dan o'tdi (216). `guruhlar` SQL'ining
+yakka o'zi `EXPLAIN (ANALYZE, BUFFERS)` da 26 ms (hammasi keshda). Xulosa:
+S4 emas, protsessor yetishmasligi. Jadvaldagi og'ir yuk (2 jarayon, load
+5,8 → 9,9; S4 skripti 5,8 → 7,3, S1–S3 skripti 7,3 → 9,9) hammasi
+chegaradan o'tdi. (3) Kechki auditoriya vaqtining ≈ 80% i seriya kichik
+so'rovida — bu Task 4 dagi bitta `EXPLAIN ANALYZE` (4 marta takror) dan
+olingan raqam, qayta o'lchanmagan. 60 kunlik oyna + 60 kunga yetgan seriya
+uchun to'liq hisob («zaxira») natijani o'zgartirmaydi (3 518 qatorda
+farq 0), lekin bu ma'lumotda sekinroq (211 → 243 ms: ko'p o'quvchida 105
+kunlik seriya, hammasi zaxiraga tushadi); 2 yillik tarixli vaqtinchalik
+nusxada (o'quvchiga 593 qator) tezroq: 800 → 408 ms. Bu to'rt raqam
+`psql` da qo'lda, har biri 5 marta takrorlab (`\timing`, `EXPLAIN`siz)
+olingan bitta o'lchov; Node skriptining p50/p95 lari bilan bir-biriga
+to'g'ridan-to'g'ri taqqoslanmaydi (SQL'lar `task-12-report.md` da).
 Chegaradan (2 000 ms) ancha past, shuning uchun **hozir qo'llanmaydi**;
 auditoriya p95 si prodda 1 000 ms dan oshsa yoki tarix 2 yildan oshsa
 qo'llanadi.
+
+**Ma'lum cheklov / keyingi qadam.** S3 ning `guruhlar` so'rovi (S4 jadvalini
+o'qimaydi) load average ≥ 8 (10 yadroda) bo'lganda 200 ms chegarasi
+oldidagi zaxirasini yo'qotadi: nazoratda ham 199–216 ms. Bu S4 regressiyasi
+emas va S4 da kod o'zgarmaydi. Keyingi qadam: ishga tushgandan keyin prodda
+`GET guruhlar` p95 sini kuzatish; kerak bo'lsa arzon variantlar — kunlik
+kesh yoki qamrab oluvchi indeks.
