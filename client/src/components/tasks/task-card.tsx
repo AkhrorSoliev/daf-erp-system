@@ -91,7 +91,7 @@ export function TaskCard({ task, dragEnabled, isOverlay, showAssignees }: Props)
         {task.priority !== "MEDIUM" && <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-medium", PRIORITY_CLASS[task.priority])}>{priorityText(task.priority, t)}</span>}
         {task.requiresPhoto && <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"><Camera className="size-3" />{t("Rasm bilan")}</span>}
         {task.batch && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{t("Har biriga alohida · {n}", { n: task.batch.total })}</span>}
-        {task.recurrence && <span className="inline-flex items-center gap-1 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] text-violet-700 dark:bg-violet-900/30 dark:text-violet-400"><Repeat className="size-3" />{recurrenceBadge(task.recurrence)}</span>}
+        {task.recurrence && <span className="inline-flex items-center gap-1 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] text-violet-700 dark:bg-violet-900/30 dark:text-violet-400"><Repeat className="size-3" />{recurrenceBadge(task.recurrence, t)}</span>}
       </div>
       <p className={cn("text-sm leading-snug line-clamp-3", task.status === "DONE" && "text-muted-foreground")}>{task.title}</p>
       {task.unmarkedLesson?.branchName && <p className="text-[11px] text-muted-foreground">{task.unmarkedLesson.branchName}</p>}

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { interpolate, type Params } from "@/i18n/translate";
 import { canApprove, decidedLine, initialGroupId, joinRequestNotes, requestedAtText, type JoinRequestView } from "./join-request-rules";
 
 const VIEW: JoinRequestView = {
@@ -76,5 +77,11 @@ describe("join request rules", () => {
     expect(decidedLine({ ...VIEW, status: "REJECTED", rejectReason: "begona odam" })?.text).toBe("Rad etildi: begona odam");
     expect(decidedLine({ ...VIEW, status: "EXPIRED" })?.text).toBe("Muddati o'tdi — 7 kun ichida javob berilmadi");
     expect(decidedLine({ ...VIEW, status: "REPLACED" })).toEqual({ text: "Yangi so'rov bilan almashtirildi", studentId: null, tail: "" });
+  });
+
+  it("words the notes and the decided line through the page's t", () => {
+    const t = (s: string, p?: Params) => `<${interpolate(s, p)}>`;
+    expect(joinRequestNotes({ ...VIEW, groups: [VIEW.groups[1]] }, null, null, t)[0].text).toBe("<«A1-07» guruhiga yozilib bo'lmaydi — boshqa guruhni tanlang>");
+    expect(decidedLine({ ...VIEW, status: "REJECTED", rejectReason: "begona odam" }, t)?.text).toBe("<Rad etildi: begona odam>");
   });
 });

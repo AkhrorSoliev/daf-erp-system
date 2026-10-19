@@ -54,7 +54,7 @@ export function TaskDrawerRecurrence({ taskId, rule }: { taskId: string; rule: T
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className={rule.active ? undefined : "text-muted-foreground line-through"}>{recurrenceLine(rule)}</span>
+          <span className={rule.active ? undefined : "text-muted-foreground line-through"}>{recurrenceLine(rule, t)}</span>
           <span className="text-xs text-muted-foreground">{rule.active ? t("Keyingisi: {date}", { date: dayMonth(rule.nextRunDate) }) : t("Takrorlanish to'xtatilgan")}</span>
           {rule.canManage && rule.active && (
             <Button size="xs" variant="ghost" onClick={() => setDraft({ form: formFromRule(rule), assigneeIds: rule.assignees.map((a) => a.id) })}>{t("O'zgartirish")}</Button>

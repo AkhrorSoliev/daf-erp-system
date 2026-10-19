@@ -559,6 +559,14 @@ export const STRICT_FILES: string[] = [
   "components/tasks/task-feed-text.ts",
   "components/tasks/task-file-rules.ts",
   "components/tasks/use-task-files.ts",
+  "components/tasks/task-create-dialog.tsx",
+  "components/tasks/task-assignee-picker.tsx",
+  "components/tasks/task-recurrence-fields.tsx",
+  "components/tasks/task-recurrences-dialog.tsx",
+  "components/tasks/use-task-write.ts",
+  "components/tasks/join-request/join-request-panel.tsx",
+  "components/tasks/join-request/join-request-rules.ts",
+  "lib/task-recurrence-rules.ts",
 ];
 
 function walk(dir: string): string[] {

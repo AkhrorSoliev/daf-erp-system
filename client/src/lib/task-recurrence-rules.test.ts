@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { interpolate, type Params } from "@/i18n/translate";
 import type { TaskRecurrenceView } from "@/hooks/use-tasks";
 import { EMPTY_RECURRENCE, changes, dayMonth, formFromRule, recurrenceBadge, recurrenceFormReady, recurrenceLine, recurrencePayload } from "./task-recurrence-rules";
 
@@ -12,6 +13,11 @@ describe("recurrenceBadge", () => {
   });
   it("the sheet line adds the time", () => {
     expect(recurrenceLine({ freq: "WEEKLY", weekdays: [1], dayOfMonth: null, dueTime: "10:00" })).toBe("Har dushanba, 10:00");
+  });
+  it("draws every word through the page's t", () => {
+    const t = (s: string, p?: Params) => `<${interpolate(s, p)}>`;
+    expect(recurrenceBadge({ freq: "WEEKLY", weekdays: [4, 1], dayOfMonth: null }, t)).toBe("<Har <dushanba> va <payshanba>>");
+    expect(recurrenceLine({ freq: "MONTHLY", weekdays: [], dayOfMonth: 5, dueTime: "09:00" }, t)).toBe("<Har oyning 5-sanasi>, 09:00");
   });
 });
 
