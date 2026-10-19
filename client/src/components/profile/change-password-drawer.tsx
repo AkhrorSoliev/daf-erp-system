@@ -18,6 +18,9 @@ import api from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import { freshSessionFrom } from "@/lib/fresh-session";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { ruleMessage } from "@/components/settings/settings-form-parts";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 
 interface ChangePasswordDrawerProps {
   open: boolean;
@@ -34,6 +37,7 @@ export function ChangePasswordDrawer({
   open,
   onClose,
 }: ChangePasswordDrawerProps) {
+  const t = useT();
   const [saving, setSaving] = useState(false);
   const setAuth = useAuth((s) => s.setAuth);
 
@@ -48,7 +52,7 @@ export function ChangePasswordDrawer({
   async function onSubmit(values: FormValues) {
     if (values.newPassword !== values.confirmPassword) {
       form.setError("confirmPassword", {
-        message: "Parollar mos kelmaydi",
+        message: msg("Parollar mos kelmaydi"),
       });
       return;
     }
@@ -65,12 +69,10 @@ export function ChangePasswordDrawer({
       if (session) {
         setAuth(session.user, session.accessToken, session.refreshToken);
       }
-      toast.success(
-        "Parol o'zgartirildi. Boshqa qurilmalardagi kirishlar tugatildi",
-      );
+      toast.success(t("Parol o'zgartirildi. Boshqa qurilmalardagi kirishlar tugatildi"));
       handleClose();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Parolni o'zgartirishda xatolik"));
+      toast.error(getErrorMessage(error, t("Parolni o'zgartirishda xatolik")));
     } finally {
       setSaving(false);
     }
@@ -89,9 +91,9 @@ export function ChangePasswordDrawer({
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <SheetHeader className="border-b px-6 py-4">
-          <SheetTitle className="text-lg">Parolni o&apos;zgartirish</SheetTitle>
+          <SheetTitle className="text-lg">{t("Parolni o'zgartirish")}</SheetTitle>
           <SheetDescription>
-            Yangi parol kamida 6 ta belgidan iborat bo&apos;lishi kerak
+            {t("Yangi parol kamida 6 ta belgidan iborat bo'lishi kerak")}
           </SheetDescription>
         </SheetHeader>
 
@@ -103,56 +105,56 @@ export function ChangePasswordDrawer({
           >
             <section className="space-y-5 px-6 py-5">
               <div className="space-y-1.5">
-                <Label htmlFor="oldPassword">Joriy parol</Label>
+                <Label htmlFor="oldPassword">{t("Joriy parol")}</Label>
                 <Input
                   id="oldPassword"
                   type="password"
-                  placeholder="Joriy parolingizni kiriting"
+                  placeholder={t("Joriy parolingizni kiriting")}
                   {...form.register("oldPassword", {
-                    required: "Joriy parol kiritilishi shart",
+                    required: msg("Joriy parol kiritilishi shart"),
                   })}
                 />
                 {form.formState.errors.oldPassword && (
                   <p className="text-sm text-destructive">
-                    {form.formState.errors.oldPassword.message}
+                    {ruleMessage(t, form.formState.errors.oldPassword.message)}
                   </p>
                 )}
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="newPassword">Yangi parol</Label>
+                <Label htmlFor="newPassword">{t("Yangi parol")}</Label>
                 <Input
                   id="newPassword"
                   type="password"
-                  placeholder="Yangi parolni kiriting"
+                  placeholder={t("Yangi parolni kiriting")}
                   {...form.register("newPassword", {
-                    required: "Yangi parol kiritilishi shart",
+                    required: msg("Yangi parol kiritilishi shart"),
                     minLength: {
                       value: 6,
-                      message: "Kamida 6 ta belgi bo'lishi kerak",
+                      message: msg("Kamida 6 ta belgi bo'lishi kerak"),
                     },
                   })}
                 />
                 {form.formState.errors.newPassword && (
                   <p className="text-sm text-destructive">
-                    {form.formState.errors.newPassword.message}
+                    {ruleMessage(t, form.formState.errors.newPassword.message)}
                   </p>
                 )}
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="confirmPassword">Parolni tasdiqlash</Label>
+                <Label htmlFor="confirmPassword">{t("Parolni tasdiqlash")}</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
-                  placeholder="Yangi parolni qayta kiriting"
+                  placeholder={t("Yangi parolni qayta kiriting")}
                   {...form.register("confirmPassword", {
-                    required: "Parolni tasdiqlash shart",
+                    required: msg("Parolni tasdiqlash shart"),
                   })}
                 />
                 {form.formState.errors.confirmPassword && (
                   <p className="text-sm text-destructive">
-                    {form.formState.errors.confirmPassword.message}
+                    {ruleMessage(t, form.formState.errors.confirmPassword.message)}
                   </p>
                 )}
               </div>
@@ -163,10 +165,10 @@ export function ChangePasswordDrawer({
         <SheetFooter className="border-t px-6 py-4">
           <div className="flex w-full justify-end gap-3">
             <Button type="button" variant="outline" onClick={handleClose}>
-              Bekor qilish
+              {t("Bekor qilish")}
             </Button>
             <Button type="submit" form="change-password-form" disabled={saving}>
-              {saving ? "Saqlanmoqda..." : "O'zgartirish"}
+              {saving ? t("Saqlanmoqda...") : t("O'zgartirish")}
             </Button>
           </div>
         </SheetFooter>

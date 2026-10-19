@@ -726,6 +726,20 @@ export const STRICT_FILES: string[] = [
   "components/settings/permissions/permissions-model.ts",
   "components/settings/permissions/permissions-types.ts",
   "app/(dashboard)/settings/permissions/page.tsx",
+  // Own profile, sessions, search results, spotlight
+  "components/profile/profile-client.tsx",
+  "components/profile/profile-card.tsx",
+  "components/profile/profile-details.tsx",
+  "components/profile/edit-profile-drawer.tsx",
+  "components/profile/change-password-drawer.tsx",
+  "components/profile/profile-save-plan.ts",
+  "components/profile/sessions/active-sessions.tsx",
+  "components/profile/sessions/sessions-model.ts",
+  "components/shared/logout-others-dialog.tsx",
+  "hooks/use-logout-others.ts",
+  "components/search/search-results-page.tsx",
+  "components/spotlight/spotlight-host.tsx",
+  "components/global-search/search-dropdown-helpers.tsx",
 ];
 
 function walk(dir: string): string[] {

@@ -6,6 +6,7 @@ import { Loader2, Monitor, Smartphone } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,6 +35,7 @@ export const SESSIONS_KEY = ["user-sessions"] as const;
  * draws the list and removes a row.
  */
 export function ActiveSessions() {
+  const t = useT();
   const queryClient = useQueryClient();
   const [target, setTarget] = useState<ActiveSession | null>(null);
 
@@ -49,12 +51,12 @@ export function ActiveSessions() {
   const remove = useMutation({
     mutationFn: (id: string) => api.delete(`/users/sessions/${id}`),
     onSuccess: () => {
-      toast.success("Qurilmadan chiqarildi");
+      toast.success(t("Qurilmadan chiqarildi"));
       setTarget(null);
       queryClient.invalidateQueries({ queryKey: SESSIONS_KEY });
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, "Qurilmadan chiqarib bo'lmadi"));
+      toast.error(getErrorMessage(error, t("Qurilmadan chiqarib bo'lmadi")));
     },
   });
 
@@ -65,9 +67,9 @@ export function ActiveSessions() {
   return (
     <section className="space-y-3 rounded-xl border bg-card p-4">
       <div>
-        <h2 className="font-heading text-base font-semibold">Faol seanslar</h2>
+        <h2 className="font-heading text-base font-semibold">{t("Faol seanslar")}</h2>
         <p className="text-sm text-muted-foreground">
-          Hisobingizga kirilgan qurilmalar. Tanimagan qurilmani shu yerdan chiqarib yuborishingiz mumkin.
+          {t("Hisobingizga kirilgan qurilmalar. Tanimagan qurilmani shu yerdan chiqarib yuborishingiz mumkin.")}
         </p>
       </div>
 
@@ -79,14 +81,14 @@ export function ActiveSessions() {
         </div>
       ) : isError ? (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed p-3 text-sm">
-          <span className="text-muted-foreground">Ro&apos;yxatni yuklab bo&apos;lmadi.</span>
+          <span className="text-muted-foreground">{t("Ro'yxatni yuklab bo'lmadi.")}</span>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
-            Qayta urinish
+            {t("Qayta urinish")}
           </Button>
         </div>
       ) : rows.length === 0 ? (
         <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-          Ro&apos;yxat hali bo&apos;sh — qurilmalar keyingi kirishdan so&apos;ng shu yerda ko&apos;rinadi.
+          {t("Ro'yxat hali bo'sh — qurilmalar keyingi kirishdan so'ng shu yerda ko'rinadi.")}
         </p>
       ) : (
         <ul className="divide-y rounded-lg border">
@@ -98,16 +100,16 @@ export function ActiveSessions() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="truncate text-sm font-medium">{session.device}</span>
-                    {session.current && <Badge variant="secondary">Joriy qurilma</Badge>}
+                    {session.current && <Badge variant="secondary">{t("Joriy qurilma")}</Badge>}
                   </div>
                   <p className="truncate text-xs text-muted-foreground">
                     {session.ip ? `${session.ip} · ` : ""}
-                    {lastSeenText(session.lastUsedAt, now)}
+                    {lastSeenText(session.lastUsedAt, now, t)}
                   </p>
                 </div>
                 {!session.current && (
                   <Button variant="outline" size="sm" onClick={() => setTarget(session)}>
-                    Chiqarish
+                    {t("Qurilmadan chiqarish")}
                   </Button>
                 )}
               </li>
@@ -119,14 +121,13 @@ export function ActiveSessions() {
       <AlertDialog open={target !== null} onOpenChange={(open) => !open && !remove.isPending && setTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Qurilmadan chiqarilsinmi?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Qurilmadan chiqarilsinmi?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {target?.device}: bu qurilmadagi kirish darhol tugatiladi. Qayta kirish uchun
-              parol kerak bo&apos;ladi.
+              {t("{device}: bu qurilmadagi kirish darhol tugatiladi. Qayta kirish uchun parol kerak bo'ladi.", { device: target?.device ?? "" })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={remove.isPending}>Bekor qilish</AlertDialogCancel>
+            <AlertDialogCancel disabled={remove.isPending}>{t("Bekor qilish")}</AlertDialogCancel>
             <AlertDialogAction
               disabled={remove.isPending}
               variant="destructive"
@@ -137,7 +138,7 @@ export function ActiveSessions() {
               }}
             >
               {remove.isPending ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : null}
-              Chiqarish
+              {t("Qurilmadan chiqarish")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
