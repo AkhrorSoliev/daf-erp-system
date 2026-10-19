@@ -15,11 +15,13 @@ import type {
   DrillResult,
   Fortschritt,
   FrageFormat,
+  Guruhlar,
   JuftNatija,
   LernenGrammarItem,
   LernenLesson,
   LernenLevel,
   LernenUnit,
+  Liga,
   Maqsad,
   MaqsadDarajasi,
   MaterialTyp,
@@ -249,6 +251,9 @@ export function useAbschluss() {
       void qc.invalidateQueries({ queryKey: ["lernen", "reyting"] });
       // Seans oxirida yangi nishon berilgan bo'lishi mumkin.
       void qc.invalidateQueries({ queryKey: ["lernen", "nishonlar"] });
+      // Liga xonasi (birinchi seansda qo'shiladi) va guruhlar jadvali.
+      void qc.invalidateQueries({ queryKey: ["lernen", "liga"] });
+      void qc.invalidateQueries({ queryKey: ["lernen", "guruhlar"] });
       // Takrorlash so'rovi `staleTime: Infinity` bilan abadiy keshda
       // turadi (Fix 3) — bu invalidatsiya bo'lmasa, oddiy DARS seansi
       // ham muddati kelgan so'zlarni "yeb qo'yadi" (Leitner holatini
@@ -275,6 +280,8 @@ export function useWiederholungAbschluss() {
       void qc.invalidateQueries({ queryKey: ["lernen", "fortschritt"] });
       void qc.invalidateQueries({ queryKey: ["lernen", "reyting"] });
       void qc.invalidateQueries({ queryKey: ["lernen", "nishonlar"] });
+      void qc.invalidateQueries({ queryKey: ["lernen", "liga"] });
+      void qc.invalidateQueries({ queryKey: ["lernen", "guruhlar"] });
     },
   });
 }
@@ -317,6 +324,22 @@ export function useNishonlar() {
   return useQuery<NishonQatori[]>({
     queryKey: ["lernen", "nishonlar"],
     queryFn: () => api.get(`${BASE}/nishonlar`).then((r) => r.data),
+  });
+}
+
+/** «Liga» tabi — faqat shu tab ochilganda so'raladi. Yozmaydi: xonaga qo'shilish seans oxirida. */
+export function useLiga() {
+  return useQuery<Liga>({
+    queryKey: ["lernen", "liga"],
+    queryFn: () => api.get(`${BASE}/liga`).then((r) => r.data),
+  });
+}
+
+/** «Guruhlar» tabi — markazning haftalik guruhlar jadvali, faqat shu tab ochilganda. */
+export function useGuruhlar() {
+  return useQuery<Guruhlar>({
+    queryKey: ["lernen", "guruhlar"],
+    queryFn: () => api.get(`${BASE}/guruhlar`).then((r) => r.data),
   });
 }
 

@@ -310,7 +310,7 @@ export interface Maqsad {
 /** `GET .../nishonlar` qatori: `olingan` — ISO sana yoki `null`, `qoldi` — chegaragacha. */
 export interface NishonQatori {
   key: string;
-  tur: "SERIE" | "WOERTER";
+  tur: "SERIE" | "WOERTER" | "LIGA" | "XONA" | "GURUH";
   chegara: number;
   olingan: string | null;
   qoldi: number | null;
@@ -346,6 +346,46 @@ export interface ReytingZeile {
   platz: number;
   /** Shu qator so'rovni yuborgan o'quvchining o'zimi. */
   selbst: boolean;
+}
+
+export interface LigaDarajasi {
+  tier: number;
+  nomi: string;
+}
+
+/** `GET .../liga` — haftalik liga xonasi (S3). Xonada bo'lmasa `xona: null`. */
+export interface Liga {
+  haftaBoshi: string;
+  haftaOxiri: string;
+  azo: boolean;
+  daraja: LigaDarajasi;
+  xona: {
+    raqam: number;
+    hajmi: number;
+    qatorlar: ReytingZeile[];
+    /** `soni` — Olmosda 0; `faol` — xona ≥ 15 kishi. */
+    kotarilishZonasi: { soni: number; faol: boolean };
+  } | null;
+  /** Hisoblangan o'tgan hafta; `daraja` — o'sha xonaning darajasi. */
+  otganHafta: { daraja: LigaDarajasi; orin: number; kotarildi: boolean; hajmi: number } | null;
+}
+
+/** Guruhlar jadvalining qatori: `baho` — a'zolarning o'rtacha haftalik bali. */
+export interface GuruhQatori {
+  groupId: string;
+  name: string;
+  baho: number;
+  azolar: number;
+  platz: number;
+  selbst: boolean;
+}
+
+/** `GET .../guruhlar` — TOP 10 + o'z guruhi; `oz: null` — guruhsiz yoki kichik guruh. */
+export interface Guruhlar {
+  haftaBoshi: string;
+  qatorlar: GuruhQatori[];
+  oz: { orin: number; baho: number; azolar: number; nomi: string } | null;
+  minAzolar: number;
 }
 
 export interface AttemptResult {
