@@ -34,10 +34,13 @@ export function normalizeQuery(text: string): string {
  * Bo'limlardan so'rovga mos punktlarni qoldiradi (nom, izoh yoki kalit so'z
  * bo'yicha). Bo'lim nomi qidirilmaydi: «telegram» deganga «Arxiv» ham chiqib
  * qolmasin. Bo'sh so'rov hammasini o'zgartirmay qaytaradi.
+ * Name and description are matched as the page shows them (`t`); the keywords
+ * stay Uzbek, so Uzbek words keep working in every language.
  */
 export function filterSettingsSections(
   sections: SettingsNavSection[],
   query: string,
+  t: (source: string) => string = (source) => source,
 ): SettingsNavSection[] {
   const q = normalizeQuery(query);
   if (!q) return sections;
@@ -46,7 +49,7 @@ export function filterSettingsSections(
     .map((section) => ({
       ...section,
       items: section.items.filter((item) =>
-        [item.title, item.description, ...(item.keywords ?? [])].some((text) =>
+        [t(item.title), t(item.description), ...(item.keywords ?? [])].some((text) =>
           normalizeQuery(text).includes(q),
         ),
       ),

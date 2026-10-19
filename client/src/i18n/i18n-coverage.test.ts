@@ -567,6 +567,17 @@ export const STRICT_FILES: string[] = [
   "components/tasks/join-request/join-request-panel.tsx",
   "components/tasks/join-request/join-request-rules.ts",
   "lib/task-recurrence-rules.ts",
+  // Settings — index, menu, search, shared parts, general
+  "app/(dashboard)/settings/page.tsx",
+  "lib/settings-nav.ts",
+  "lib/settings-search.ts",
+  "components/settings/settings-layout-shell.tsx",
+  "components/settings/settings-menu.tsx",
+  "components/settings/settings-menu-parts.tsx",
+  "components/settings/settings-page-header.tsx",
+  "components/settings/settings-blocks.tsx",
+  "components/settings/settings-form-parts.tsx",
+  "components/settings/general-settings-client.tsx",
 ];
 
 function walk(dir: string): string[] {

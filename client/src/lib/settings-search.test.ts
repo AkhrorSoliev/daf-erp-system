@@ -53,6 +53,22 @@ describe("filterSettingsSections — /settings qidiruvi", () => {
     expect(titles("zzzxxx")).toEqual([]);
   });
 
+  it("matches the translated name and description; Uzbek keywords still match", () => {
+    const ru: Record<string, string> = {
+      "Dam olish kunlari": "Выходные дни",
+      "Rasmiy bayramlar va dam olish kunlari": "Официальные праздники и выходные дни",
+    };
+    const translated = (query: string) =>
+      filterSettingsSections(settingsNavSections, query, (s) => ru[s] ?? s)
+        .flatMap((section) => section.items)
+        .map((item) => item.title);
+    expect(translated("выходные")).toEqual(["Dam olish kunlari"]);
+    expect(translated("праздник")).toEqual(["Dam olish kunlari"]);
+    expect(translated("bayram")).toEqual(["Dam olish kunlari"]);
+    // The Uzbek name is not searched once a translation replaces it (only keywords are).
+    expect(translated("olish kun")).toEqual([]);
+  });
+
   it("qidiruv ruxsatni kengaytirmaydi: administrator CEO punktini topa olmaydi", () => {
     expect(titles("ruxsatlar", [ADMINISTRATOR])).toEqual([]);
     expect(titles("ruxsatlar")).toEqual(["Ruxsatlar"]);
