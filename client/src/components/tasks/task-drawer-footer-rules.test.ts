@@ -114,6 +114,12 @@ describe("footerActions: a system task", () => {
     expect(footerActions(system("CANCELLED"), assignee, ME)).toEqual(NOTHING);
   });
 
+  it("lets the assignee close a held-month task", () => {
+    const t = task("NEW", { kind: "HELD_MONTH", author: null });
+    expect(footerActions(t, assignee, ME)).toEqual(only({ start: true, done: { target: "DONE" } }));
+    expect(footerActions(task("DONE", { kind: "HELD_MONTH", author: null }), assignee, ME)).toEqual(NOTHING);
+  });
+
   it("applies to every system kind", () => {
     for (const kind of ["CALLBACK", "BROKEN_PROMISE", "UNCALLED_LEAD"] as const) {
       expect(footerActions(task("NEW", { kind, author: null }), assignee, ME)).toEqual(only({ start: true }));

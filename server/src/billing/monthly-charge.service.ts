@@ -26,7 +26,7 @@ import {
   proratedMonthlyAmount,
 } from './monthly-price';
 import { chargeStartDate } from './charge-start-date';
-import { DepartureReleaseInput } from './departure-release';
+import { DepartureReleaseInput, departureRelease } from './departure-release';
 import {
   releaseCancelledLesson,
   restoreCancelledLesson,
@@ -95,6 +95,8 @@ export interface DepartureOutcome {
   share: HeldShare;
   /** True when rule 6.2 kept the money and nothing was written. */
   withheld: boolean;
+  /** What rule 6.2 kept: the unheld lessons that would have come back. 0 unless `withheld`. */
+  withheldAmount: number;
   /** True when contract 3.5 (trial lesson) returned the whole month. */
   trial: boolean;
 }
@@ -884,6 +886,7 @@ export class MonthlyChargeService {
         policy,
         share: outcome.share,
         withheld: true,
+        withheldAmount: departureRelease(loaded.input)?.amount ?? 0,
         trial: false,
       };
     }
@@ -976,6 +979,7 @@ export class MonthlyChargeService {
       policy,
       share: outcome.share,
       withheld: false,
+      withheldAmount: 0,
       trial: outcome.trial,
     };
   }

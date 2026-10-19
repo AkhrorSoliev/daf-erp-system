@@ -10,10 +10,15 @@ import {
   type CallLogCreatedPayload,
 } from '../call-logs/call-log-events';
 import {
+  DEPARTURE_WITHHELD,
+  type DepartureWithheldPayload,
+} from '../students/departure-events';
+import {
   autoTaskAssigneeIds,
   brokenPromiseText,
   callbackAssigneeIds,
   callbackText,
+  heldMonthText,
   sourceKeyOf,
   studentName,
   systemDueAt,
@@ -169,6 +174,49 @@ export class TaskAutoService {
     } catch (err) {
       this.logger.error(
         `callback task for call ${callLog.id} failed: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * A removal that kept the month's money (contract 6.2): a task for the
+   * branch's administrators to look at it — a group move done as a removal
+   * looks exactly like this. One OPEN task per enrollment (`held:<id>`).
+   */
+  @OnEvent(DEPARTURE_WITHHELD)
+  async onDepartureWithheld(
+    p: DepartureWithheldPayload,
+    now = new Date(),
+  ): Promise<void> {
+    if (p.amount <= 0) return;
+    try {
+      const student = await this.prisma.student.findFirst({
+        where: { id: p.studentId, companyId: p.companyId },
+        select: { firstName: true, lastName: true },
+      });
+      if (!student) return;
+      const assigneeIds = await autoTaskAssigneeIds(
+        this.prisma,
+        p.companyId,
+        p.branchId,
+      );
+      await this.make({
+        companyId: p.companyId,
+        branchId: p.branchId,
+        kind: 'HELD_MONTH',
+        ...heldMonthText({ name: studentName(student), ...p }),
+        dueAt: systemDueAt(
+          tashkentDateStr(now),
+          await this.holidays(p.branchId, now),
+          now,
+        ),
+        entityId: String(p.studentId),
+        sourceKey: sourceKeyOf('HELD_MONTH', p.enrollmentId),
+        assigneeIds,
+      });
+    } catch (err) {
+      this.logger.error(
+        `held-month task for enrollment ${p.enrollmentId} failed: ${(err as Error).message}`,
       );
     }
   }

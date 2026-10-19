@@ -31,6 +31,7 @@ export const PRIORITY_CLASS: Record<TaskPriority, string> = {
 };
 export const KIND_LABEL: Record<TaskKind, string> = {
   MANUAL: "", LESSON_QUESTION: msg("Dars bo'ldimi?"), CALLBACK: msg("Qayta qo'ng'iroq"), BROKEN_PROMISE: msg("Buzilgan va'da"), UNCALLED_LEAD: msg("Qo'ng'iroqsiz lid"),
+  HELD_MONTH: msg("Ushlab qolingan oy"),
   JOIN_REQUEST: msg("O'quvchi so'rovi"),
 };
 export const ENTITY_LABEL: Record<string, string> = { Student: msg("O'quvchi"), User: msg("Xodim"), Group: msg("Guruh"), Lead: msg("Lid") };

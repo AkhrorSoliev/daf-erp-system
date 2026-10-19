@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-19",
+    sarlavha: "Chiqarishda oy puli ushlansa, topshiriq tushadi",
+    matn: "O'quvchi guruhdan chiqarilganda oyning 40% idan ko'pi o'tgan va oy puli ushlab qolingan bo'lsa, filial administratorlariga «Oy puli ushlab qolindi» topshirig'i tushadi. Unda o'quvchi, guruh va ushlangan summa bor. O'quvchi aslida boshqa guruhga o'tgan bo'lsa, rahbarga ayting: pul qaytarilishi kerak. Haqiqatan ketgan bo'lsa, topshiriqni ko'rib chiqib «Bajarildi» bilan yoping. O'quvchi qayta yozilsa yoki pul qaytarilsa, topshiriq o'zi yopiladi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "guruhdan-chiqarish" },
+  },
+  {
+    sana: "2026-10-19",
     sarlavha: "Chiqarishda oy puli qaytmasligi haqida ogohlantirish",
     matn: "Guruhdan chiqarish oynasida, oyning 40% idan ko'pi o'tgan bo'lsa, tepada ogohlantirish chiqadi: oy to'lovi qaytarilmaydi va qancha pul ushlab qolinadi. O'quvchi boshqa guruhga o'tayotgan bo'lsa, oynani yopib, profildagi «Guruhni o'zgartirish» dan foydalaning: u o'tmagan darslarning pulini balansga qaytaradi. Sabab «ko'chdi» kabi tanlansa, ogohlantirish qizil bo'ladi. U chiqarishni to'smaydi.",
     rollar: [1, 2, 3],

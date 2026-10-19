@@ -180,6 +180,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0111](0111-dars-baholari-togri-anonim.md) | Dars baholari hisoboti to'liq anonim: o'quvchi ismi/id'si hech bir javobda yo'q, «Ko'rsatish» yo'q, bot «hech kimga ismingiz ko'rinmaydi» deydi; `studentId` faqat takrorni oldini olish uchun bazada | Qabul qilindi | 2026-10-18 |
 | [0113](0113-faol-seanslar-royxati.md) | Faol seanslar ro'yxati: har kirish bitta `UserSession` qatori, token `sid` ko'taradi; bitta qurilmani o'chirish (qator + Redis belgisi), `sessionVersion` o'z o'rnida qoladi va ro'yxatni parol o'zgarganda o'zi tozalaydi; shahar yo'q, eski token birinchi refresh'da qator oladi | Qabul qilindi | 2026-10-18 |
 | [0112](0112-xodim-oyligini-qolda-tuzatish.md) | Xodim oyligi tizim tomonidan hisoblanib taklif qilinadi, CEO esa oy uchun qo'lda summa kirita oladi; stavka o'zgarmaydi, oylik hisobi bitta funksiyadan chiqadi | Qabul qilindi | 2026-10-18 |
+| [0114](0114-ushlab-qolingan-oy-topshirigi.md) | Chiqarishda shartnoma 6.2 oy pulini ushlab qolsa, administratorga «Pul ushlab qolindi» avtomatik topshirig'i tushadi; ijrochi uni ko'rib yopadi | Qabul qilindi | 2026-10-19 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 

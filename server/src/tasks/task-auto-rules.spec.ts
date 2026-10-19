@@ -4,6 +4,7 @@ import {
   brokenPromiseText,
   callbackAssigneeIds,
   callbackText,
+  heldMonthText,
   kindsClosedBy,
   paymentClosesBrokenPromise,
   sourceKeyOf,
@@ -224,5 +225,30 @@ describe('who', () => {
       isActive: true,
       status: 'ACTIVE',
     });
+  });
+});
+
+describe('HELD_MONTH', () => {
+  it('is closed by a new enrollment alone', () => {
+    expect(kindsClosedBy('student.enrolled')).toEqual(['HELD_MONTH']);
+    expect(kindsClosedBy('payment.received')).not.toContain('HELD_MONTH');
+  });
+
+  it('says what was kept and what to do', () => {
+    const t = heldMonthText({
+      name: 'Ruziev Sherzodbek',
+      groupName: '#005',
+      amount: 242_305,
+      held: 6,
+      covered: 13,
+      percent: 46,
+      reason: 'Boshqa guruhga ko‘chdi',
+    });
+    expect(t.title).toBe(
+      "Oy puli ushlab qolindi: Ruziev Sherzodbek — 242 305 so'm",
+    );
+    expect(t.description).toContain('46%');
+    expect(t.description).toContain('6/13');
+    expect(t.description).toContain('rahbarga ayting');
   });
 });

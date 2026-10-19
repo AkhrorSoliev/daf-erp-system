@@ -2292,6 +2292,7 @@ describe('MonthlyChargeService', () => {
         policy: 'STUDENT_CANCELLED',
         share: { held: 6, covered: 13, percent: 46 },
         withheld: true,
+        withheldAmount: 560_000, // 7 unheld lessons × 80 000
         trial: false,
       });
       expect(txWriteMock.createAdjustment).not.toHaveBeenCalled();

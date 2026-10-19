@@ -49,6 +49,10 @@ import { assertMayChooseDeparturePolicy } from './shared/departure-policy-access
 import { isEnrollableGroupStatus } from '../groups/shared/enrollable-statuses';
 import { departureMoneyNote } from '../billing/departure-money-note';
 import {
+  DEPARTURE_WITHHELD,
+  type DepartureWithheldPayload,
+} from './departure-events';
+import {
   EXIT_REASON_COMMENT_ERROR,
   EXIT_REASON_COMMENT_MIN_LENGTH,
   exitReasonRequiresComment,
@@ -807,7 +811,7 @@ export class StudentEnrollmentService {
 
     const removedGroup = await this.prisma.group.findUnique({
       where: { id: enrollment.groupId },
-      select: { name: true },
+      select: { name: true, branchId: true },
     });
     // What happened to the month's charge, on both history rows — the one
     // place a later «why was nothing returned?» can be answered.
@@ -848,6 +852,22 @@ export class StudentEnrollmentService {
       departureReasonId,
       companyId: student?.companyId ?? null,
     });
+
+    if (monthOutcome?.withheld && student?.companyId) {
+      this.eventEmitter.emit(DEPARTURE_WITHHELD, {
+        companyId: student.companyId,
+        branchId: removedGroup?.branchId ?? null,
+        studentId: enrollment.studentId,
+        enrollmentId,
+        groupName: removedGroup?.name ?? '',
+        amount: monthOutcome.withheldAmount,
+        held: monthOutcome.share.held,
+        covered: monthOutcome.share.covered,
+        percent: monthOutcome.share.percent,
+        departureDay: tashkentDateStr(departureAt),
+        reason: reasonText,
+      } satisfies DepartureWithheldPayload);
+    }
 
     return { message: "O'quvchi guruhdan chiqarildi" };
   }

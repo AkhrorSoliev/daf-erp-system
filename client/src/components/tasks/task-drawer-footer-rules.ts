@@ -32,6 +32,8 @@ export function footerActions(
   // The author is the only assignee: their task skips the review step.
   const isSelf = meId !== undefined && task.author?.id === meId && task.assignees.length === 1 && task.assignees[0].id === meId;
 
+  // «Ushlab qolingan oy»: the assignee looks at it and closes it (server: task-transitions.ts).
+  if (task.kind === "HELD_MONTH") return working ? { ...NONE, start: task.status === "NEW", done: { target: "DONE" } } : NONE;
   if (system) return working && task.status === "NEW" ? { ...NONE, start: true } : NONE;
   if (task.status === "IN_REVIEW") {
     if (access.canManage) return { ...NONE, accept: true, return: true };

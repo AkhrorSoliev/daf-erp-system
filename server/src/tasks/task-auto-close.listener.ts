@@ -74,6 +74,25 @@ export class TaskAutoCloseListener {
     );
   }
 
+  /** A student back in a group: the administrator dealt with the withheld month. */
+  @OnEvent('student.enrolled')
+  async onEnrolled(p: {
+    companyId?: number | null;
+    studentId: number;
+  }): Promise<void> {
+    if (!p.companyId) return;
+    await this.close(
+      'student.enrolled',
+      {
+        companyId: p.companyId,
+        entityType: 'Student',
+        entityId: String(p.studentId),
+      },
+      'STUDENT_ENROLLED',
+      null,
+    );
+  }
+
   @OnEvent(LEAD_CALLED)
   async onLeadCalled(p: LeadCalledPayload): Promise<void> {
     await this.close(
