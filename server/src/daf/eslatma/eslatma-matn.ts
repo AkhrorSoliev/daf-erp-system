@@ -1,6 +1,10 @@
 import type { InlineKeyboardMarkup } from 'telegraf/types';
 import { escapeHtml } from '../../telegram-groups/utils/format.util';
-import { LIGA_NOMLARI, darajaNomi } from '../liga/liga-qoidalari';
+import {
+  ENG_YUQORI_DARAJA,
+  LIGA_NOMLARI,
+  darajaNomi,
+} from '../liga/liga-qoidalari';
 
 /**
  * S4 xabar matnlari (spec S4 §1.2, §2, §3) — CEO o'z Telegram'ida ko'rgan
@@ -64,9 +68,10 @@ export function haftalikMatn(h: HaftalikMalumot): string {
     `• Topilgan ball: ${h.ball}`,
   ];
   if (h.liga) {
-    const tabrik = h.liga.kotarildi
-      ? `. Tabriklaymiz, ${darajaNomi(h.liga.tier + 1)} ligasiga ko'tarildingiz!`
-      : '';
+    const tabrik =
+      h.liga.kotarildi && h.liga.tier < ENG_YUQORI_DARAJA
+        ? `. Tabriklaymiz, ${darajaNomi(h.liga.tier + 1)} ligasiga ko'tarildingiz!`
+        : '';
     q.push(
       `• Liga: ${darajaNomi(h.liga.tier)}, xonada ${h.liga.orin}-o'rin${tabrik}`,
     );
@@ -92,12 +97,12 @@ export function nishonNomi(key: string): string {
   const liga = /^LIGA_([A-Z]+)$/.exec(key);
   if (liga) {
     const nom = LIGA_NOMLARI.find((n) => n.toUpperCase() === liga[1]);
-    return nom ? `${nom} ligasi` : key;
+    return nom ? `${nom} ligasi` : escapeHtml(key);
   }
   if (key === 'XONA_GOLIB') return "Xona g'olibi";
   if (key === 'GURUH_BIRINCHI') return "Guruhlar jadvalida 1-o'rin";
   const m = /^(SERIE|WOERTER)_(\d+)$/.exec(key);
-  if (!m) return key;
+  if (!m) return escapeHtml(key);
   const n = Number(m[2]);
   if (m[1] === 'SERIE') return `${n} kun ketma-ket`;
   return n === 592 ? "A1 so'zlarining hammasi" : `${n} ta so'z`;

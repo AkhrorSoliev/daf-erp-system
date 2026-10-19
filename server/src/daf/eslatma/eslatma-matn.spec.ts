@@ -67,6 +67,16 @@ describe('haftalikMatn — spec S4 §2', () => {
     );
   });
 
+  it("eng yuqori darajada tabrik chiqmaydi (kotarildi=true bo'lsa ham)", () => {
+    const m = haftalikMatn({
+      ...TOLIQ,
+      liga: { tier: 4, orin: 1, kotarildi: true },
+    });
+    expect(m).toContain("• Liga: Olmos, xonada 1-o'rin\n");
+    expect(m).not.toContain('Tabriklaymiz');
+    expect(m).not.toContain('Olmos ligasiga');
+  });
+
   it("ko'tarilmagan liga — tabrik yo'q", () => {
     const m = haftalikMatn({
       ...TOLIQ,
@@ -149,6 +159,15 @@ describe('umumiy', () => {
       'NOMA_LUM',
     ]);
     for (const n of NISHON_KATALOGI) expect(nishonNomi(n.key)).not.toBe(n.key);
+  });
+
+  it("noma'lum nishon kaliti HTMLga xom tushmaydi; noma'lum liga kaliti o'zgarmaydi", () => {
+    expect(nishonNomi('<b>x</b>')).toBe('&lt;b&gt;x&lt;/b&gt;');
+    expect(nishonNomi('LIGA_NOMALUM')).toBe('LIGA_NOMALUM');
+    expect(nishonNomi('LIGA_<X')).toBe('LIGA_&lt;X');
+    expect(haftalikMatn({ ...TOLIQ, nishonlar: ['<i>'] })).toContain(
+      '• Yangi nishonlar: &lt;i&gt;\n',
+    );
   });
 
   it('tugma: «Eslatmalarni to`xtatish», dr:off:<id>, 64 baytdan qisqa', () => {

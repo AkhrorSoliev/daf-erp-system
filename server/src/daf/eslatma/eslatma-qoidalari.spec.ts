@@ -179,6 +179,33 @@ describe('kechkiNomzodmi — spec S4 §1.1', () => {
   });
 });
 
+describe('kechki qoidalar faqat EVENING jurnalini sanaydi', () => {
+  it("kecha WEEKLY SENT — bugungi kechki eslatmani to'smaydi", () => {
+    expect(
+      kechkiNomzodmi(
+        kechki({ jurnal: [yozuv('WEEKLY', '2026-10-20')] }),
+        BUGUN,
+      ),
+    ).toBe(true);
+  });
+
+  it('oynadagi 4 ta WEEKLY SENT 7 kunda 4 chegarasiga sanalmaydi', () => {
+    const w = ['2026-10-15', '2026-10-16', '2026-10-17', '2026-10-19'].map(
+      (d) => yozuv('WEEKLY', d),
+    );
+    expect(kechkiNomzodmi(kechki({ jurnal: w }), BUGUN)).toBe(true);
+  });
+
+  it("BUGUNGI WEEKLY qatori (SENT) kechki eslatmani to'sadi", () => {
+    expect(
+      kechkiNomzodmi(
+        kechki({ kunlar: ['2026-10-17'], jurnal: [yozuv('WEEKLY', DUSHANBA)] }),
+        DUSHANBA,
+      ),
+    ).toBe(false);
+  });
+});
+
 describe('haftalikNomzodmi — spec S4 §2', () => {
   it("o'tgan hafta kamida 1 ball — oladi, 0 — yo'q", () => {
     expect(haftalikNomzodmi(haftalik({ otganHaftaBall: 1 }), DUSHANBA)).toBe(
