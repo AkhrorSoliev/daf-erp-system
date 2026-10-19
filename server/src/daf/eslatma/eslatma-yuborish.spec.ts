@@ -222,6 +222,77 @@ describe('EslatmaYuborish — auditoriya → jurnal → sendToStudent', () => {
     expect(Date.now() - t0).toBeGreaterThanOrEqual(50);
   });
 
+  describe('pauza', () => {
+    function pauzali() {
+      const k = make();
+      const pauza = jest
+        .spyOn(k.y as any, 'pauza')
+        .mockResolvedValue(undefined);
+      return { ...k, pauza };
+    }
+
+    it('sendToStudent istisno tashlasa ham pauza bor, sikl davom etadi, qator FAILED qoladi', async () => {
+      kechki.mockResolvedValue([AZIZA, BOBUR]);
+      egalla.mockResolvedValueOnce(11).mockResolvedValueOnce(12);
+      const { y, sms, pauza, prisma } = pauzali();
+      sms.sendToStudent
+        .mockRejectedValueOnce(new Error('db down'))
+        .mockResolvedValueOnce({ status: 'SENT' });
+      expect(await y.kechki(1, '2026-10-20', 'on', 60)).toMatchObject({
+        yuborildi: 1,
+        xato: 1,
+      });
+      expect(pauza).toHaveBeenCalledTimes(2);
+      expect(pauza).toHaveBeenCalledWith(60);
+      expect(natija.mock.calls).toEqual([
+        [prisma, 11, 'FAILED'],
+        [prisma, 12, 'SENT'],
+      ]);
+    });
+
+    it("egallash yutqazilsa pauza yo'q", async () => {
+      kechki.mockResolvedValue([AZIZA, BOBUR]);
+      egalla.mockResolvedValueOnce(null).mockResolvedValueOnce(12);
+      const { y, pauza } = pauzali();
+      await y.kechki(1, '2026-10-20', 'on', 60);
+      expect(pauza).toHaveBeenCalledTimes(1);
+    });
+
+    it("egallashning o'zi yiqilsa pauza yo'q (hech narsa yuborilmagan)", async () => {
+      kechki.mockResolvedValue([AZIZA]);
+      egalla.mockRejectedValueOnce(new Error('db down'));
+      const { y, pauza } = pauzali();
+      await y.kechki(1, '2026-10-20', 'on', 60);
+      expect(pauza).not.toHaveBeenCalled();
+    });
+
+    it('oddiy yuborishdan keyin pauza bor, yuborishdan keyin chaqiriladi', async () => {
+      kechki.mockResolvedValue([AZIZA]);
+      egalla.mockResolvedValueOnce(11);
+      const { y, sms, pauza } = pauzali();
+      const tartib: string[] = [];
+      sms.sendToStudent.mockImplementation(async () => {
+        tartib.push('yubor');
+        return { status: 'SENT' };
+      });
+      pauza.mockImplementation(async () => {
+        tartib.push('pauza');
+      });
+      await y.kechki(1, '2026-10-20', 'on', 60);
+      expect(tartib).toEqual(['yubor', 'pauza']);
+    });
+
+    it('natijani yozish yiqilsa ham sikl davom etadi va pauza bor', async () => {
+      kechki.mockResolvedValue([AZIZA, BOBUR]);
+      egalla.mockResolvedValueOnce(11).mockResolvedValueOnce(12);
+      natija.mockRejectedValueOnce(new Error('db down'));
+      const { y, sms, pauza } = pauzali();
+      await y.kechki(1, '2026-10-20', 'on', 60);
+      expect(sms.sendToStudent).toHaveBeenCalledTimes(2);
+      expect(pauza).toHaveBeenCalledTimes(2);
+    });
+  });
+
   it("haftalikMalumot: xona yoki o'rin yo'q — liga qatori yo'q; guruh o'rni yo'q — guruh qatori yo'q", () => {
     expect(
       haftalikMalumot({ ...HAFTALIK_QATOR, tier: null, orin: null }).liga,

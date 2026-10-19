@@ -1,7 +1,8 @@
 /**
  * Nishonlar katalogi — BITTA joyda (spec S2 2.1, S3 §3). Jadvalda faqat
  * olingan nishon kaliti saqlanadi, shuning uchun yangi tur migratsiyasiz
- * qo'shiladi. Nom serverda yo'q: mijoz kalitdan quradi.
+ * qo'shiladi. Nomni mijoz kalitdan quradi; Telegram matni uchun server ham
+ * quradi (`eslatma-matn.ts` `nishonNomi`, ikkalasi testda solishtiriladi).
  */
 export type NishonTuri = 'SERIE' | 'WOERTER' | 'LIGA' | 'XONA' | 'GURUH';
 
