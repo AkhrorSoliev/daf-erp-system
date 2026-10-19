@@ -336,6 +336,15 @@ export interface Fortschritt {
   faelligeWoerter: number;
   /** Kunlik maqsad (S2). Eski server javobida yo'q — karta chizilmaydi. */
   maqsad?: Maqsad;
+  /** S4: Telegram eslatmalari yoqilganmi. Eski server javobida yo'q — qator chizilmaydi. */
+  eslatmalar?: boolean;
+  /** S4: karta botga ulangan va chat uzilmagan. */
+  telegramUlangan?: boolean;
+}
+
+/** `PATCH .../eslatmalar` javobi. */
+export interface EslatmalarJavob {
+  eslatmalar: boolean;
 }
 
 /** Reyting jadvalidagi bitta qator. */

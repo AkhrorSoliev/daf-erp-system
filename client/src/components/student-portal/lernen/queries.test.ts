@@ -1,16 +1,18 @@
-import { QueryClient, QueryObserver } from "@tanstack/react-query";
+import { MutationObserver, QueryClient, QueryObserver } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
+import api from "@/lib/api";
 
-vi.mock("@/lib/api", () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+vi.mock("@/lib/api", () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } }));
 
 import {
+  eslatmalarMutation,
   guruhlarQuery,
   ligaQuery,
   sozHisobiniEskirt,
   uebungSeansQuery,
   wiederholungQuery,
 } from "./queries";
-import type { PublicFrage } from "./types";
+import type { Fortschritt, PublicFrage } from "./types";
 
 const frage = { index: 0 } as PublicFrage;
 const gcTick = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -68,5 +70,33 @@ describe("liga va guruhlar so'rovlari", () => {
     expect(guruhlarQuery().queryKey).toEqual(["lernen", "guruhlar"]);
     expect(ligaQuery().staleTime).toBe(30_000);
     expect(guruhlarQuery().staleTime).toBe(30_000);
+  });
+});
+
+describe("eslatmalarMutation — almashtirgich darrov saqlanadi (spec S4 §7)", () => {
+  const KEY = ["lernen", "fortschritt"];
+  const boshlangich = { eslatmalar: true, telegramUlangan: true } as Fortschritt;
+
+  it("so'rovdan oldin ko'rinadi, server javobi bilan qoladi", async () => {
+    const qc = new QueryClient();
+    qc.setQueryData(KEY, boshlangich);
+    let sorovPaytida: boolean | undefined;
+    // `as never`: the axios generic signature is not worth restating in a test.
+    vi.mocked(api.patch).mockImplementationOnce((async () => {
+      sorovPaytida = qc.getQueryData<Fortschritt>(KEY)?.eslatmalar;
+      return { data: { eslatmalar: false } };
+    }) as never);
+    await new MutationObserver(qc, eslatmalarMutation(qc)).mutate(false);
+    expect(api.patch).toHaveBeenCalledWith("/student-portal/lernen/eslatmalar", { yoqilgan: false });
+    expect(sorovPaytida).toBe(false);
+    expect(qc.getQueryData<Fortschritt>(KEY)?.eslatmalar).toBe(false);
+  });
+
+  it("xato — eski holatga qaytadi", async () => {
+    const qc = new QueryClient();
+    qc.setQueryData(KEY, boshlangich);
+    vi.mocked(api.patch).mockRejectedValueOnce(new Error("network"));
+    await new MutationObserver(qc, eslatmalarMutation(qc)).mutate(false).catch(() => undefined);
+    expect(qc.getQueryData<Fortschritt>(KEY)?.eslatmalar).toBe(true);
   });
 });

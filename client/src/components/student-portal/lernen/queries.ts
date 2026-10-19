@@ -6,6 +6,7 @@ import {
   useQuery,
   useQueryClient,
   type QueryClient,
+  type UseMutationOptions,
 } from "@tanstack/react-query";
 import api from "@/lib/api";
 import type {
@@ -13,6 +14,7 @@ import type {
   AttemptResult,
   DrillQuestion,
   DrillResult,
+  EslatmalarJavob,
   Fortschritt,
   FrageFormat,
   Guruhlar,
@@ -317,6 +319,39 @@ export function useMaqsadOzgartir() {
       );
     },
   });
+}
+
+/**
+ * Telegram eslatmalari almashtirgichi (spec S4 §7): darrov ko'rinadi
+ * (`onMutate`), xato bo'lsa eski holatga qaytadi, muvaffaqiyatda server
+ * javobi yoziladi. Alohida funksiya — test uni `MutationObserver` bilan
+ * hooksiz yurgizadi.
+ */
+export function eslatmalarMutation(
+  qc: QueryClient,
+): UseMutationOptions<EslatmalarJavob, unknown, boolean, { oldin?: Fortschritt }> {
+  const KEY = ["lernen", "fortschritt"];
+  const yoz = (eslatmalar: boolean) =>
+    qc.setQueryData<Fortschritt>(KEY, (old) => (old ? { ...old, eslatmalar } : old));
+  return {
+    mutationFn: (yoqilgan) =>
+      api.patch<EslatmalarJavob>(`${BASE}/eslatmalar`, { yoqilgan }).then((r) => r.data),
+    onMutate: async (yoqilgan) => {
+      await qc.cancelQueries({ queryKey: KEY });
+      const oldin = qc.getQueryData<Fortschritt>(KEY);
+      yoz(yoqilgan);
+      return { oldin };
+    },
+    onError: (_err, _yoqilgan, ctx) => {
+      if (ctx?.oldin) qc.setQueryData(KEY, ctx.oldin);
+    },
+    onSuccess: (javob) => yoz(javob.eslatmalar),
+  };
+}
+
+export function useEslatmalarOzgartir() {
+  const qc = useQueryClient();
+  return useMutation(eslatmalarMutation(qc));
 }
 
 /** «Darajam» tabidagi nishonlar — faqat shu bo'lim ko'ringanda so'raladi. */
