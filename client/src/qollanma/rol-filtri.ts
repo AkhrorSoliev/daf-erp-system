@@ -1,12 +1,4 @@
-import type { QollanmaBolim, QollanmaSahifa, RolId } from "./turlar";
-
-export const ROL_NOMLARI: Record<RolId, string> = {
-  1: "CEO",
-  2: "Filial direktori",
-  3: "Administrator",
-  4: "O'qituvchi",
-  5: "Kassir",
-};
+import type { QollanmaBolim, QollanmaSahifa } from "./turlar";
 
 /** Bir nechta roli bor xodim — hammasining yig'indisini ko'radi. */
 export function sahifalarRolUchun(

@@ -740,6 +740,21 @@ export const STRICT_FILES: string[] = [
   "components/search/search-results-page.tsx",
   "components/spotlight/spotlight-host.tsx",
   "components/global-search/search-dropdown-helpers.tsx",
+  // Notifications page, guide chrome, staff pay correction, search pages
+  "components/notifications/notifications-page-client.tsx",
+  "components/notifications/notification-page-list.tsx",
+  "components/qollanma/qollanma-bolim-sahifasi.tsx",
+  "components/qollanma/qollanma-bosh-sahifa.tsx",
+  "components/qollanma/qollanma-layout-shell.tsx",
+  "components/qollanma/qollanma-nav.tsx",
+  "components/qollanma/qollanma-sahifa-bosh.tsx",
+  "components/qollanma/qollanma-sheet.tsx",
+  "components/qollanma/yangiliklar-royxati.tsx",
+  "components/payments/salary/salary-adjustment-dialog.tsx",
+  "components/payments/salary/salary-adjustment-model.ts",
+  "data/searchable-pages.ts",
+  "hooks/use-global-search.ts",
+  "components/shared/group-students-hover-card.tsx",
 ];
 
 function walk(dir: string): string[] {
