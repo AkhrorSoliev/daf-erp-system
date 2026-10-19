@@ -149,6 +149,27 @@ describe('SmsService', () => {
       });
     });
 
+    // S4 (ADR-0117): the reminder carries its stop button; every other
+    // caller sends no markup and keeps the exact options it always had.
+    it('sends the reply markup when one is given', async () => {
+      prisma.student.findFirst.mockResolvedValue({ telegramChatId: '123456' });
+      const markup = {
+        inline_keyboard: [
+          [{ text: "Eslatmalarni to'xtatish", callback_data: 'dr:off:10001' }],
+        ],
+      };
+
+      await service.sendToStudent(10001, 'Eslatma', 'AUTO', undefined, 1, {
+        replyMarkup: markup,
+      });
+
+      expect(mockBot.telegram.sendMessage).toHaveBeenCalledWith(
+        '123456',
+        'Eslatma',
+        { parse_mode: 'HTML', reply_markup: markup },
+      );
+    });
+
     it('should save FAILED status when Telegram API throws', async () => {
       prisma.student.findFirst.mockResolvedValue({
         telegramChatId: '123456',
