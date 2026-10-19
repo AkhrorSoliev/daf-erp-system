@@ -585,6 +585,23 @@ export const STRICT_FILES: string[] = [
   "components/settings/edit-branch-form.tsx",
   "app/(dashboard)/settings/branches/page.tsx",
   "app/(dashboard)/settings/branches/[id]/page.tsx",
+  "components/settings/courses-settings-client.tsx",
+  "components/settings/course-detail-client.tsx",
+  "components/settings/course-row-actions.tsx",
+  "components/settings/edit-course-drawer.tsx",
+  "components/settings/edit-course-form.tsx",
+  "lib/course-terms.ts",
+  "lib/payment-model.ts",
+  "components/settings/rooms-settings-client.tsx",
+  "components/settings/room-detail-client.tsx",
+  "components/settings/room-row-actions.tsx",
+  "components/settings/room-weekly-schedule.tsx",
+  "components/settings/edit-room-drawer.tsx",
+  "components/settings/edit-room-form.tsx",
+  "app/(dashboard)/settings/courses/page.tsx",
+  "app/(dashboard)/settings/courses/[id]/page.tsx",
+  "app/(dashboard)/settings/rooms/page.tsx",
+  "app/(dashboard)/settings/rooms/[id]/page.tsx",
 ];
 
 function walk(dir: string): string[] {

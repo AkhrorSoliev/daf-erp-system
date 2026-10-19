@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useEditRoom, type Room } from "@/hooks/use-edit-room";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 
 interface RoomRowActionsProps {
   room: Room;
@@ -23,15 +24,16 @@ interface RoomRowActionsProps {
 }
 
 export function RoomRowActions({ room, onDeleted }: RoomRowActionsProps) {
+  const t = useT();
   const { openDrawer } = useEditRoom();
 
   const handleDelete = async () => {
     try {
       await api.delete(`/rooms/${room.id}`);
-      toast.success("Xona muvaffaqiyatli o'chirildi");
+      toast.success(t("Xona muvaffaqiyatli o'chirildi"));
       onDeleted?.(room.id);
     } catch {
-      toast.error("Xonani o'chirishda xatolik yuz berdi");
+      toast.error(t("Xonani o'chirishda xatolik yuz berdi"));
     }
   };
 
@@ -46,20 +48,20 @@ export function RoomRowActions({ room, onDeleted }: RoomRowActionsProps) {
               onClick={(e) => e.stopPropagation()}
             >
               <MoreHorizontal className="size-4" />
-              <span className="sr-only">Amallar</span>
+              <span className="sr-only">{t("Amallar")}</span>
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent>Amallar</TooltipContent>
+        <TooltipContent>{t("Amallar")}</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
         <DropdownMenuItem onClick={() => openDrawer(room)}>
           <Pencil className="mr-2 size-4" />
-          Tahrirlash
+          {t("Tahrirlash")}
         </DropdownMenuItem>
         <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
           <Trash2 className="mr-2 size-4" />
-          O&apos;chirish
+          {t("O'chirish")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
