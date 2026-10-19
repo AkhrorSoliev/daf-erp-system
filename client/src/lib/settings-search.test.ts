@@ -65,8 +65,10 @@ describe("filterSettingsSections — /settings qidiruvi", () => {
     expect(translated("выходные")).toEqual(["Dam olish kunlari"]);
     expect(translated("праздник")).toEqual(["Dam olish kunlari"]);
     expect(translated("bayram")).toEqual(["Dam olish kunlari"]);
-    // The Uzbek name is not searched once a translation replaces it (only keywords are).
-    expect(translated("olish kun")).toEqual([]);
+    // The Uzbek-Latin name and description are searched too, so a user who types
+    // Latin Uzbek in uz-Cyrl/ru/de/en still finds the page (was `[]` before).
+    expect(translated("olish kun")).toEqual(["Dam olish kunlari"]);
+    expect(translated("rasmiy bayram")).toEqual(["Dam olish kunlari"]);
   });
 
   it("qidiruv ruxsatni kengaytirmaydi: administrator CEO punktini topa olmaydi", () => {

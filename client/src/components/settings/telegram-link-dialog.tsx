@@ -184,7 +184,7 @@ export function TelegramLinkDialog({ open, onOpenChange }: TelegramLinkDialogPro
                     ) : (
                       <Icon className="size-4 text-muted-foreground" />
                     )}
-                    <span>{roleTitle({ id: role.id }, t)}</span>
+                    <span>{roleTitle({ id: role.id }, t, { grant: true })}</span>
                   </button>
                 );
               })}

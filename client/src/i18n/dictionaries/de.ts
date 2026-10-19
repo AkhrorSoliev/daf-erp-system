@@ -3960,7 +3960,7 @@ const de: Dictionary = {
   "07:30 da ketma-ket qoldirganlar pauzaga o'tkaziladi": "Um 07:30 wird pausiert, wer mehrmals hintereinander gefehlt hat",
   "Pauzadagi o'quvchidan pul yechilmaydi, ustozga oylik yozilmaydi": "Bei Pausierten wird kein Geld abgebucht, und der Lehrkraft wird kein Gehalt gutgeschrieben",
   "Chegaralar": "Grenzwerte",
-  "ta dars": "UE",
+  "ta dars": "Std.",
   "Pauzaga o'tkazish": "Pausieren",
   "Kuniga ko'pi bilan": "Höchstens pro Tag",
   "nafar": "Pers.",
@@ -4253,6 +4253,10 @@ const de: Dictionary = {
   "o'chirilgan imkoniyat": "entfernte Funktion",
   "{name} yoqildi": "{name} eingeschaltet",
   "{name} o'chirildi": "{name} ausgeschaltet",
+  // Settings — review fixes
+  "Filiallarni boshqarish va yangi filiallar qo'shish": "Filialen verwalten und neue hinzufügen",
+  "Direktor (CEO)": "Direktor (CEO)",
+  "(ID: {id})": "(ID: {id})",
 };
 
 export default de;

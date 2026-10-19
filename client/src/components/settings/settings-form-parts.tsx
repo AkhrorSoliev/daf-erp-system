@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/i18n/context";
+import type { Params } from "@/i18n/translate";
 
 /**
  * «O'quv qoidalari» sahifasining uch bloki (pauza, DaF normasi, hujjat) bir
@@ -22,6 +23,18 @@ export function SettingsCard({ children }: { children: ReactNode }) {
 /** Karta ichidagi to'g'ri bo'lmagan qiymat haqidagi bitta qator. */
 export function FormError({ children }: { children: ReactNode }) {
   return <p className="text-sm text-destructive">{children}</p>;
+}
+
+/**
+ * A react-hook-form rule message drawn in the page language. The rule keeps the
+ * Uzbek `msg("…")` text, so a language switch re-translates an error already shown.
+ */
+export function ruleMessage(
+  t: (source: string, params?: Params) => string,
+  message: string | undefined,
+  params?: Params,
+): string | undefined {
+  return message ? t(message, params) : message;
 }
 
 export function digitsOnly(raw: string): string {

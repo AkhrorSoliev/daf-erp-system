@@ -40,6 +40,8 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { PAYMENT_MODEL_LABELS, type PaymentModel } from "@/lib/payment-model";
 import { coursePriceLabel } from "@/lib/course-terms";
 import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
+import { ruleMessage } from "./settings-form-parts";
 import { markedText, unmarked } from "@/components/payments/debt-history/marked-text";
 
 interface EditCourseFormProps {
@@ -284,12 +286,12 @@ export function EditCourseForm({
               id="name"
               placeholder={t("Kurs nomi")}
               {...form.register("name", {
-                required: t("Kurs nomi kiritilishi shart"),
+                required: msg("Kurs nomi kiritilishi shart"),
               })}
             />
             {form.formState.errors.name && (
               <p className="text-sm text-destructive">
-                {form.formState.errors.name.message}
+                {ruleMessage(t, form.formState.errors.name.message)}
               </p>
             )}
           </div>

@@ -27,6 +27,8 @@ import {
   toHoliday,
 } from "@/lib/holiday-scope";
 import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
+import { ruleMessage } from "./settings-form-parts";
 
 interface EditHolidayFormProps {
   holiday: Holiday | null;
@@ -74,7 +76,7 @@ export function EditHolidayForm({
     if (!values.date) {
       form.setError("date", {
         type: "required",
-        message: t("Sana tanlanishi shart"),
+        message: msg("Sana tanlanishi shart"),
       });
       return;
     }
@@ -82,7 +84,7 @@ export function EditHolidayForm({
     if (values.endDate && values.endDate < values.date) {
       form.setError("endDate", {
         type: "invalid",
-        message: t("Tugash sanasi boshlanish sanasidan oldin bo'lishi mumkin emas"),
+        message: msg("Tugash sanasi boshlanish sanasidan oldin bo'lishi mumkin emas"),
       });
       return;
     }
@@ -159,16 +161,16 @@ export function EditHolidayForm({
             id="name"
             placeholder={t("Masalan: Mustaqillik kuni")}
             {...form.register("name", {
-              required: t("Bayram nomi kiritilishi shart"),
+              required: msg("Bayram nomi kiritilishi shart"),
               maxLength: {
                 value: 200,
-                message: t("{n} belgidan oshmasligi kerak", { n: 200 }),
+                message: msg("{n} belgidan oshmasligi kerak"),
               },
             })}
           />
           {form.formState.errors.name && (
             <p className="text-sm text-destructive">
-              {form.formState.errors.name.message}
+              {ruleMessage(t, form.formState.errors.name.message, { n: 200 })}
             </p>
           )}
         </div>
@@ -179,7 +181,7 @@ export function EditHolidayForm({
             <Controller
               name="date"
               control={form.control}
-              rules={{ required: t("Sana tanlanishi shart") }}
+              rules={{ required: msg("Sana tanlanishi shart") }}
               render={({ field }) => (
                 <DatePicker
                   id="date"
@@ -193,7 +195,7 @@ export function EditHolidayForm({
             />
             {form.formState.errors.date && (
               <p className="text-sm text-destructive">
-                {form.formState.errors.date.message}
+                {ruleMessage(t, form.formState.errors.date.message)}
               </p>
             )}
           </div>
@@ -216,7 +218,7 @@ export function EditHolidayForm({
             />
             {form.formState.errors.endDate && (
               <p className="text-sm text-destructive">
-                {form.formState.errors.endDate.message}
+                {ruleMessage(t, form.formState.errors.endDate.message)}
               </p>
             )}
           </div>

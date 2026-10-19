@@ -85,8 +85,8 @@ export function BranchesSettingsClient() {
   return (
     <div className="space-y-4">
       <SettingsPageHeader
-        title="Filiallar"
-        description="Filiallarni boshqarish va yangi filiallar qo'shish"
+        title={t("Filiallar")}
+        description={t("Filiallarni boshqarish va yangi filiallar qo'shish")}
         action={
           isCeo ? (
             <Tooltip>

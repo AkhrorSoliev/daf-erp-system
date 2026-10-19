@@ -109,7 +109,7 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
       ? []
       : ROLES.filter((r) => roleField.roleIds.includes(r.id)).map((r) => ({
           ...r,
-          label: roleTitle(r, t),
+          label: roleTitle(r, t, { grant: true }),
         }));
 
   const form = useForm<FormValues>({

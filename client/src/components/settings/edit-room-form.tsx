@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { useEditRoom, type Room } from "@/hooks/use-edit-room";
 import api from "@/lib/api";
 import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
+import { ruleMessage } from "./settings-form-parts";
 
 interface EditRoomFormProps {
   room: Room | null;
@@ -104,12 +106,12 @@ export function EditRoomForm({
             id="name"
             placeholder={t("101-xona")}
             {...form.register("name", {
-              required: t("Xona nomi kiritilishi shart"),
+              required: msg("Xona nomi kiritilishi shart"),
             })}
           />
           {form.formState.errors.name && (
             <p className="text-sm text-destructive">
-              {form.formState.errors.name.message}
+              {ruleMessage(t, form.formState.errors.name.message)}
             </p>
           )}
         </div>

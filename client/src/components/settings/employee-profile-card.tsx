@@ -89,7 +89,7 @@ export function EmployeeProfileCard({ employee, commentKey }: EmployeeProfileCar
 
         <div>
           <h2 className="text-xl font-bold">{fullName}</h2>
-          <p className="text-sm text-muted-foreground">{t("(id: {id})", { id: employee.id })}</p>
+          <p className="text-sm text-muted-foreground">{t("(ID: {id})", { id: employee.id })}</p>
         </div>
 
         <div className="flex flex-wrap justify-center gap-1.5">

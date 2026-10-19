@@ -4253,6 +4253,10 @@ const ru: Dictionary = {
   "o'chirilgan imkoniyat": "удалённая возможность",
   "{name} yoqildi": "{name} включено",
   "{name} o'chirildi": "{name} выключено",
+  // Settings — review fixes
+  "Filiallarni boshqarish va yangi filiallar qo'shish": "Управление филиалами и добавление новых",
+  "Direktor (CEO)": "Директор (CEO)",
+  "(ID: {id})": "(ID: {id})",
 };
 
 export default ru;

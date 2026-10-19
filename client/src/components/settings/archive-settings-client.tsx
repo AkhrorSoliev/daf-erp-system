@@ -325,7 +325,11 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>{t("Nomi")}</TableHead>
+              <TableHead>
+                {entityType === "users" || entityType === "students" || entityType === "leads"
+                  ? t("Ism familiya")
+                  : t("Nomi")}
+              </TableHead>
               {showReason && <TableHead>{t("Sabab")}</TableHead>}
               <TableHead>{t("Arxivlangan sana")}</TableHead>
               <TableHead>{t("Kim tomonidan")}</TableHead>
@@ -507,7 +511,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
           entityType={entityType}
           id={openId}
           tab={sheetTab}
-          onTabChange={(t) => setUrlFilters({ atab: t === "tarix" ? "tarix" : "" })}
+          onTabChange={(tab) => setUrlFilters({ atab: tab === "tarix" ? "tarix" : "" })}
           onClose={closeSheet}
           onRestore={openRestore}
           restoring={actionId !== null && String(actionId) === openId}

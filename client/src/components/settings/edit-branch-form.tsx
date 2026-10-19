@@ -9,6 +9,8 @@ import { TimePicker } from "@/components/ui/time-picker";
 import { useEditBranch, type Branch } from "@/hooks/use-edit-branch";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
+import { ruleMessage } from "./settings-form-parts";
 import api from "@/lib/api";
 import {
   branchUpdateBody,
@@ -113,12 +115,12 @@ export function EditBranchForm({
             id="name"
             placeholder={t("Filial nomi")}
             {...form.register("name", {
-              required: t("Filial nomi kiritilishi shart"),
+              required: msg("Filial nomi kiritilishi shart"),
             })}
           />
           {form.formState.errors.name && (
             <p className="text-sm text-destructive">
-              {form.formState.errors.name.message}
+              {ruleMessage(t, form.formState.errors.name.message)}
             </p>
           )}
         </div>

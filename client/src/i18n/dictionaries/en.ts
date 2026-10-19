@@ -3853,9 +3853,9 @@ const en: Dictionary = {
   "Bayram bir necha kun davom etsa, tugash sanasini tanlang. Bir kunlik bayram uchun tugash sanasini bo'sh qoldiring.": "If the holiday lasts several days, choose the end date. For a one-day holiday, leave the end date empty.",
   "Filial tanlanmagan": "No branch selected",
   "Bayram kimniki ekanini o'zgartirib bo'lmaydi: kerak bo'lsa, o'chirib, qaytadan qo'shing.": "Who the holiday belongs to cannot be changed: if needed, delete it and add it again.",
-  "«Butun markaz» — hamma filialda dam olish kuni. Filial tanlansa, bayram faqat o'sha filial guruhlariga tegadi.": "“Whole centre” — a day off in every branch. If a branch is chosen, the holiday affects only that branch's groups.",
-  "Bayram faqat shu filial guruhlariga tegadi. Butun markaz bayramini CEO qo'shadi.": "The holiday affects only this branch's groups. A holiday for the whole centre is added by the CEO.",
-  "Butun markaz": "Whole centre",
+  "«Butun markaz» — hamma filialda dam olish kuni. Filial tanlansa, bayram faqat o'sha filial guruhlariga tegadi.": "“Whole center” — a day off in every branch. If a branch is chosen, the holiday affects only that branch's groups.",
+  "Bayram faqat shu filial guruhlariga tegadi. Butun markaz bayramini CEO qo'shadi.": "The holiday affects only this branch's groups. A holiday for the whole center is added by the CEO.",
+  "Butun markaz": "Whole center",
   "Filial #{id}": "Branch #{id}",
   "O'quvchi guruhdan chiqarilganda, boshqa guruhga o'tkazilganda va guruh ustozi almashganda tanlanadigan sabablar": "Reasons chosen when a student is removed from a group, moved to another group, or when a group's teacher changes",
   "Chiqish va status": "Leaving and status",
@@ -4253,6 +4253,10 @@ const en: Dictionary = {
   "o'chirilgan imkoniyat": "removed capability",
   "{name} yoqildi": "{name} turned on",
   "{name} o'chirildi": "{name} turned off",
+  // Settings — review fixes
+  "Filiallarni boshqarish va yangi filiallar qo'shish": "Manage branches and add new ones",
+  "Direktor (CEO)": "Director (CEO)",
+  "(ID: {id})": "(ID: {id})",
 };
 
 export default en;
