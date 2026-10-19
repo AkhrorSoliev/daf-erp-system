@@ -28,6 +28,8 @@ import {
 } from "@/components/ui/table";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { formatPrice } from "@/lib/format-utils";
+import { useT } from "@/i18n/context";
 import type { AutoPausedItem, AutoPausedResponse } from "./outreach-types";
 import type { LogCallPrefill } from "./log-call-dialog";
 
@@ -37,6 +39,7 @@ interface PausedTabProps {
 }
 
 export function PausedTab({ isActive, onLogCall }: PausedTabProps) {
+  const t = useT();
   const queryClient = useQueryClient();
   const [target, setTarget] = useState<AutoPausedItem | null>(null);
 
@@ -58,11 +61,11 @@ export function PausedTab({ isActive, onLogCall }: PausedTabProps) {
         queryKey: ["outreach", "removal-queue"],
       });
       queryClient.invalidateQueries({ queryKey: ["outreach-stats"] });
-      toast.success("O'quvchi faollashtirildi");
+      toast.success(t("O'quvchi faollashtirildi"));
       setTarget(null);
     },
     onError: (err) => {
-      toast.error(getErrorMessage(err, "Faollashtirishda xatolik"));
+      toast.error(getErrorMessage(err, t("Faollashtirishda xatolik")));
     },
   });
 
@@ -73,7 +76,7 @@ export function PausedTab({ isActive, onLogCall }: PausedTabProps) {
   if (items.length === 0) {
     return (
       <div className="rounded-md border p-8 text-center text-sm text-muted-foreground">
-        Avtomatik pauzaga tushgan o&apos;quvchi yo&apos;q.
+        {t("Avtomatik pauzaga tushgan o'quvchi yo'q.")}
       </div>
     );
   }
@@ -85,13 +88,13 @@ export function PausedTab({ isActive, onLogCall }: PausedTabProps) {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>O&apos;quvchi</TableHead>
-              <TableHead>Telefon</TableHead>
-              <TableHead>Guruh / kurs</TableHead>
-              <TableHead>Pauza sanasi</TableHead>
-              <TableHead>Sabab</TableHead>
-              <TableHead>Balans</TableHead>
-              <TableHead className="w-56">Amal</TableHead>
+              <TableHead>{t("O'quvchi")}</TableHead>
+              <TableHead>{t("Telefon")}</TableHead>
+              <TableHead>{t("Guruh / kurs")}</TableHead>
+              <TableHead>{t("Pauza sanasi")}</TableHead>
+              <TableHead>{t("Sabab")}</TableHead>
+              <TableHead>{t("Balans")}</TableHead>
+              <TableHead className="w-56">{t("Amal")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -144,13 +147,13 @@ export function PausedTab({ isActive, onLogCall }: PausedTabProps) {
                       : "text-muted-foreground"
                   }
                 >
-                  {formatSom(row.student.balance)}
+                  {t("{amount} so'm", { amount: formatPrice(row.student.balance) })}
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap items-center gap-1">
                     {row.calledToday && (
                       <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
-                        Bog&apos;lanildi
+                        {t("Bog'lanildi")}
                       </Badge>
                     )}
                     <Button
@@ -166,11 +169,11 @@ export function PausedTab({ isActive, onLogCall }: PausedTabProps) {
                       }
                     >
                       <PhoneCall className="mr-1 h-3.5 w-3.5" />
-                      Qo&apos;ng&apos;iroq
+                      {t("Qo'ng'iroq qilish")}
                     </Button>
                     <Button size="sm" onClick={() => setTarget(row)}>
                       <PlayCircle className="mr-1 h-3.5 w-3.5" />
-                      Faollashtirish
+                      {t("Faollashtirish")}
                     </Button>
                   </div>
                 </TableCell>
@@ -188,17 +191,15 @@ export function PausedTab({ isActive, onLogCall }: PausedTabProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>
               {target
-                ? `${target.student.firstName} ${target.student.lastName}ni faollashtirasizmi?`
+                ? t("{name}ni faollashtirasizmi?", { name: `${target.student.firstName} ${target.student.lastName}` })
                 : ""}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              O&apos;quvchi guruh ro&apos;yxatiga qaytadi va darslari uchun yana
-              hisob yozila boshlaydi. Ketma-ket qoldirish sanog&apos;i noldan
-              boshlanadi — ya&apos;ni u yana chegaracha dars imkoniyati oladi.
+              {t("O'quvchi guruh ro'yxatiga qaytadi va darslari uchun yana hisob yozila boshlaydi. Ketma-ket qoldirish sanog'i noldan boshlanadi — ya'ni u yana chegaracha dars imkoniyati oladi.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+            <AlertDialogCancel>{t("Bekor qilish")}</AlertDialogCancel>
             <AlertDialogAction
               disabled={reactivate.isPending}
               onClick={(e) => {
@@ -206,7 +207,7 @@ export function PausedTab({ isActive, onLogCall }: PausedTabProps) {
                 if (target) reactivate.mutate(target.studentId);
               }}
             >
-              Faollashtirish
+              {t("Faollashtirish")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -240,8 +241,4 @@ function formatDate(iso: string) {
 function formatPhone(phone: string | null) {
   if (!phone) return "—";
   return `+998 ${phone.slice(0, 2)} ${phone.slice(2, 5)} ${phone.slice(5, 7)} ${phone.slice(7, 9)}`;
-}
-
-function formatSom(amount: number) {
-  return `${new Intl.NumberFormat("uz-UZ").format(amount)} so'm`;
 }

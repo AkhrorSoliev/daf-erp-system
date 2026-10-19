@@ -12,9 +12,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatNumber } from "@/lib/format-utils";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 import type { OutreachStats } from "./outreach-types";
 
 export function OutreachStatsWidget() {
+  const t = useT();
   const { data, isLoading } = useQuery({
     queryKey: ["outreach", "stats"],
     queryFn: () =>
@@ -36,25 +38,25 @@ export function OutreachStatsWidget() {
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard
         icon={XCircle}
-        label="Bugun kelmadi"
+        label={t("Bugun kelmadi")}
         value={data.todayAbsentees}
         accentColor={data.todayAbsentees > 0 ? "text-red-600" : undefined}
       />
       <StatCard
         icon={UserMinus}
-        label="Ko'p dars qoldirgan"
+        label={t("Ko'p dars qoldirgan")}
         value={data.removalQueue}
         accentColor={data.removalQueue > 0 ? "text-orange-600" : undefined}
       />
       <StatCard
         icon={CalendarClock}
-        label="To'lov sanalari"
+        label={t("To'lov sanalari")}
         value={data.activePromises}
         accentColor={data.activePromises > 0 ? "text-red-600" : undefined}
       />
       <StatCard
         icon={PhoneCall}
-        label="Bugun bog'lanildi"
+        label={t("Bugun bog'lanildi")}
         value={data.callsToday}
         accentColor={data.callsToday > 0 ? "text-emerald-600" : undefined}
       />
