@@ -1,9 +1,9 @@
 /**
- * Nishonlar katalogi — BITTA joyda (spec S2 2.1). Jadvalda faqat olingan
- * nishon kaliti saqlanadi, shuning uchun yangi tur (S3 musobaqa nishonlari)
- * migratsiyasiz qo'shiladi. Nom serverda yo'q: mijoz kalitdan quradi.
+ * Nishonlar katalogi — BITTA joyda (spec S2 2.1, S3 §3). Jadvalda faqat
+ * olingan nishon kaliti saqlanadi, shuning uchun yangi tur migratsiyasiz
+ * qo'shiladi. Nom serverda yo'q: mijoz kalitdan quradi.
  */
-export type NishonTuri = 'SERIE' | 'WOERTER';
+export type NishonTuri = 'SERIE' | 'WOERTER' | 'LIGA' | 'XONA' | 'GURUH';
 
 export interface Nishon {
   key: string;
@@ -23,16 +23,44 @@ export const NISHON_KATALOGI: readonly Nishon[] = [
   { key: 'WOERTER_300', tur: 'WOERTER', chegara: 300 },
   // A1 dagi hamma so'z.
   { key: 'WOERTER_592', tur: 'WOERTER', chegara: 592 },
+  // S3: chegara — liga darajasi (`daf/liga/liga-qoidalari.ts`, 1 = Kumush).
+  { key: 'LIGA_KUMUSH', tur: 'LIGA', chegara: 1 },
+  { key: 'LIGA_OLTIN', tur: 'LIGA', chegara: 2 },
+  { key: 'LIGA_YOQUT', tur: 'LIGA', chegara: 3 },
+  { key: 'LIGA_OLMOS', tur: 'LIGA', chegara: 4 },
+  // Kamida bitta xonada 1-o'rin, ≥ 50 ball, xonada ≥ 5 a'zo.
+  { key: 'XONA_GOLIB', tur: 'XONA', chegara: 1 },
+  // Guruhlar jadvalida 1-o'rin olgan haftada shu guruh uchun ≥ 1 ball.
+  { key: 'GURUH_BIRINCHI', tur: 'GURUH', chegara: 1 },
 ];
 
-/** `serie` — joriy seriya (kun); `woerter` — kamida bir marta to'g'ri javob berilgan so'zlar. */
+/**
+ * `serie` — joriy seriya (kun); `woerter` — kamida bir marta to'g'ri javob
+ * berilgan so'zlar. S3 maydonlari ixtiyoriy: berilmasa shu nishonlar
+ * sharti bajarilmagan hisoblanadi (S2 bir martalik skripti ularni bermaydi).
+ */
 export interface NishonSharoiti {
   serie: number;
   woerter: number;
+  /** `DafStudentLeague.tier`, qator yo'q = 0. */
+  liga?: number;
+  xonaGolib?: boolean;
+  guruhBirinchi?: boolean;
 }
 
 function joriy(tur: NishonTuri, s: NishonSharoiti): number {
-  return tur === 'SERIE' ? s.serie : s.woerter;
+  switch (tur) {
+    case 'SERIE':
+      return s.serie;
+    case 'WOERTER':
+      return s.woerter;
+    case 'LIGA':
+      return s.liga ?? 0;
+    case 'XONA':
+      return s.xonaGolib ? 1 : 0;
+    case 'GURUH':
+      return s.guruhBirinchi ? 1 : 0;
+  }
 }
 
 /** Sharti bajarilgan kalitlar, katalog tartibida (olingan-olinmaganidan qat'i nazar). */

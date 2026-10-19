@@ -291,8 +291,8 @@ describe('DafPortalController — maqsad va nishonlar (S2)', () => {
 
   it('GET nishonlar — tokendagi o`quvchi', async () => {
     const { controller, fortschritt } = make();
-    await controller.getNishonlar(55);
-    expect(fortschritt.nishonlar).toHaveBeenCalledWith(55);
+    await controller.getNishonlar(55, 1);
+    expect(fortschritt.nishonlar).toHaveBeenCalledWith(55, 1);
   });
 
   it('yo`llar va usullar', () => {

@@ -71,14 +71,29 @@ export async function nishonlarniBerXavfsiz(
    * berilmaydi. Berilmasa shu yerda sanaladi.
    */
   woerterP?: Promise<number | null>,
+  /**
+   * S3: seans oxiri liga holati (`liganiYangilaXavfsiz`, hech qachon otmaydi).
+   * `null` yoki berilmasa — musobaqa nishonlari bu seansda berilmaydi.
+   */
+  ligaP?: Promise<Pick<
+    NishonSharoiti,
+    'liga' | 'xonaGolib' | 'guruhBirinchi'
+  > | null>,
 ): Promise<string[]> {
   try {
-    const woerter = await (woerterP ?? woerterSoni(prisma, studentId));
+    const [woerter, liga] = await Promise.all([
+      woerterP ?? woerterSoni(prisma, studentId),
+      ligaP ?? Promise.resolve(null),
+    ]);
     if (woerter === null) {
       logger.warn(`So'z soni sanalmadi (studentId=${studentId})`);
       return [];
     }
-    return await grantBadges(prisma, studentId, companyId, { serie, woerter });
+    return await grantBadges(prisma, studentId, companyId, {
+      serie,
+      woerter,
+      ...(liga ?? {}),
+    });
   } catch (err) {
     logger.warn(
       `Nishon berilmadi (studentId=${studentId}): ${(err as Error).message}`,

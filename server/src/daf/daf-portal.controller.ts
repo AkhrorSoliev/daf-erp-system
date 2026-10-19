@@ -284,7 +284,10 @@ export class DafPortalController {
    * yozmaydi: nishon seans oxirida beriladi.
    */
   @Get('nishonlar')
-  getNishonlar(@CurrentUser('studentId') studentId: number) {
-    return this.fortschritt.nishonlar(studentId);
+  getNishonlar(
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.fortschritt.nishonlar(studentId, companyId);
   }
 }

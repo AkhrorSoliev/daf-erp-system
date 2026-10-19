@@ -8,6 +8,7 @@ import {
 } from '../../common/date/tashkent';
 import { currentGroupId } from '../shared/student-scope';
 import { reytingIsmi } from '../shared/reyting-ismi';
+import { liganiYangilaXavfsiz } from '../liga/liga-seans';
 import { nishonlarniBerXavfsiz, woerterSoni } from '../nishon/nishon-berish';
 import {
   MAQSAD_BALL,
@@ -309,6 +310,15 @@ export class FortschrittService {
     // `null` (nishon berilmaydi) — bu yerda tashlanmaydi, aks holda
     // `urinishlarP` yiqilganda ushlanmagan rad etish qoladi.
     const woerterP = woerterSoni(this.prisma, studentId).catch(() => null);
+    // S3: liga holati — bitta so'rov, birinchi bosqich bilan parallel; xonaga
+    // qo'shilish (haftada bir marta) va kechikkan hisob ham shu zanjirda.
+    // Hech qachon otmaydi: `null` bo'lsa liga nishonlari berilmaydi.
+    const ligaP = liganiYangilaXavfsiz(
+      this.prisma,
+      studentId,
+      companyId,
+      jetzt,
+    );
 
     const [urinishlar, oz, guruh] = await Promise.all([
       urinishlarP,
@@ -366,7 +376,14 @@ export class FortschrittService {
             return true;
           })
         : Promise.resolve(false),
-      nishonlarniBerXavfsiz(this.prisma, studentId, companyId, serie, woerterP),
+      nishonlarniBerXavfsiz(
+        this.prisma,
+        studentId,
+        companyId,
+        serie,
+        woerterP,
+        ligaP,
+      ),
     ]);
 
     return {
@@ -419,8 +436,8 @@ export class FortschrittService {
   }
 
   /** `GET .../nishonlar` — hamma katalog, o'quvchining o'z nishonlari bilan. Yozmaydi. */
-  nishonlar(studentId: number): Promise<NishonQatori[]> {
-    return nishonlarRoyxati(this.prisma, studentId, new Date());
+  nishonlar(studentId: number, companyId: number): Promise<NishonQatori[]> {
+    return nishonlarRoyxati(this.prisma, studentId, companyId, new Date());
   }
 
   async reyting(

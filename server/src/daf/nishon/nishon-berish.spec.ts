@@ -145,4 +145,32 @@ describe('nishonlarniBerXavfsiz', () => {
     $queryRaw.mockRejectedValueOnce(new Error('db down'));
     await expect(nishonlarniBerXavfsiz(prisma, 55, 1, 3)).resolves.toEqual([]);
   });
+
+  it('liga holati berilsa musobaqa nishonlari ham (S3)', async () => {
+    const { prisma } = fakeBadgeTable([], 0);
+    expect(
+      await nishonlarniBerXavfsiz(
+        prisma,
+        55,
+        1,
+        0,
+        Promise.resolve(0),
+        Promise.resolve({ liga: 2, xonaGolib: true, guruhBirinchi: false }),
+      ),
+    ).toEqual(['LIGA_KUMUSH', 'LIGA_OLTIN', 'XONA_GOLIB']);
+  });
+
+  it('liga holati null — faqat S2 nishonlari', async () => {
+    const { prisma } = fakeBadgeTable([], 50);
+    expect(
+      await nishonlarniBerXavfsiz(
+        prisma,
+        55,
+        1,
+        3,
+        undefined,
+        Promise.resolve(null),
+      ),
+    ).toEqual(['SERIE_3', 'WOERTER_50']);
+  });
 });

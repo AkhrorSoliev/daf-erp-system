@@ -6,8 +6,18 @@ function prismaFor(opts: {
   kunlar: string[];
   woerter: number;
   olingan: { key: string; earnedAt: Date }[];
+  liga?: number;
 }) {
   return {
+    $queryRaw: jest.fn(async () => [
+      {
+        tier: opts.liga ?? 0,
+        azo: false,
+        kechikkan: false,
+        xonaGolib: false,
+        guruhBirinchi: false,
+      },
+    ]),
     dafStudentDay: {
       findMany: jest.fn(async () =>
         opts.kunlar.map((d) => ({ day: new Date(`${d}T00:00:00.000Z`) })),
@@ -29,8 +39,8 @@ describe('nishonlarRoyxati', () => {
         { key: 'WOERTER_50', earnedAt: new Date('2026-10-01T10:00:00.000Z') },
       ],
     });
-    const r = await nishonlarRoyxati(prisma, 55, JETZT);
-    expect(r).toHaveLength(10);
+    const r = await nishonlarRoyxati(prisma, 55, 1, JETZT);
+    expect(r).toHaveLength(16);
     expect(r[0]).toEqual({
       key: 'SERIE_3',
       tur: 'SERIE',
@@ -56,7 +66,7 @@ describe('nishonlarRoyxati', () => {
         { key: 'SERIE_7', earnedAt: new Date('2026-09-20T07:00:00.000Z') },
       ],
     });
-    const r = await nishonlarRoyxati(prisma, 55, JETZT);
+    const r = await nishonlarRoyxati(prisma, 55, 1, JETZT);
     expect(r.find((x) => x.key === 'SERIE_7')!.olingan).toBe(
       '2026-09-20T07:00:00.000Z',
     );
@@ -64,12 +74,30 @@ describe('nishonlarRoyxati', () => {
 
   it('GET hech narsa yozmaydi', async () => {
     const prisma = prismaFor({ kunlar: [], woerter: 600, olingan: [] });
-    await nishonlarRoyxati(prisma, 55, JETZT);
+    await nishonlarRoyxati(prisma, 55, 1, JETZT);
     expect(Object.keys(prisma.dafStudentBadge)).toEqual(['findMany']);
     expect(prisma.dafStudentDay.findMany).toHaveBeenCalledWith({
       where: { studentId: 55, attempts: { gt: 0 } },
       select: { day: true },
       distinct: ['day'],
     });
+  });
+
+  it('liga nishonlari: daraja yetgan — «qoldi 0» (keyingi mashqda), yetmagan — 1', async () => {
+    const prisma = prismaFor({ kunlar: [], woerter: 0, olingan: [], liga: 1 });
+    const r = await nishonlarRoyxati(prisma, 55, 1, JETZT);
+    expect(r.find((x) => x.key === 'LIGA_KUMUSH')).toMatchObject({
+      tur: 'LIGA',
+      olingan: null,
+      qoldi: 0,
+    });
+    expect(r.find((x) => x.key === 'LIGA_OLTIN')).toMatchObject({ qoldi: 1 });
+    expect(r.find((x) => x.key === 'XONA_GOLIB')).toMatchObject({
+      tur: 'XONA',
+      qoldi: 1,
+    });
+    expect(prisma.$queryRaw.mock.calls[0][0].strings[0]).toContain(
+      '/* liga-sharoiti */',
+    );
   });
 });

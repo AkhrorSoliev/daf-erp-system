@@ -22,6 +22,15 @@ function fake(opts: {
   woerter?: number;
   /** INSERT … RETURNING javobi; `'xato'` — so'rov yiqiladi. */
   badges?: string[] | 'xato';
+  /** `/* liga-sharoiti *\/` javobi (S3); standart — xonada, kechikkan yo'q. */
+  liga?: Partial<{
+    tier: number;
+    azo: boolean;
+    kechikkan: boolean;
+    xonaGolib: boolean;
+    guruhBirinchi: boolean;
+  }>;
+  ligaXato?: boolean;
 }) {
   // Day rows for the SQL fake: the week dated today (Monday), the caller's
   // row carrying today's attempts, and a Sunday row for the streak.
@@ -45,6 +54,19 @@ function fake(opts: {
   );
   return {
     $queryRaw: jest.fn((sql: Prisma.Sql) => {
+      if (sql.strings[0].includes('/* liga-sharoiti */')) {
+        if (opts.ligaXato) return Promise.reject(new Error('db down'));
+        return Promise.resolve([
+          {
+            tier: 0,
+            azo: true,
+            kechikkan: false,
+            xonaGolib: false,
+            guruhBirinchi: false,
+            ...opts.liga,
+          },
+        ]);
+      }
       if (!sql.strings[0].includes('/* nishon-berish */')) return zentrum(sql);
       if (opts.badges === 'xato') return Promise.reject(new Error('db down'));
       return Promise.resolve((opts.badges ?? []).map((key) => ({ key })));
@@ -356,6 +378,56 @@ describe('seansNatijasi', () => {
       expect(n).not.toBeNull();
       expect(n!.punkte).toBe(10);
       expect(n!.yangiNishonlar).toEqual([]);
+    });
+
+    it('liga holati (S3) nishon berishga yetadi', async () => {
+      const prisma = fake({
+        ...asos,
+        liga: { tier: 1, xonaGolib: true },
+        badges: ['LIGA_KUMUSH', 'XONA_GOLIB'],
+      });
+      const n = await new FortschrittService(prisma).seansNatijasi(
+        's-1',
+        55,
+        1,
+      );
+      expect(n.yangiNishonlar).toEqual(['LIGA_KUMUSH', 'XONA_GOLIB']);
+      const insert = prisma.$queryRaw.mock.calls
+        .map((c: unknown[]) => c[0] as Prisma.Sql)
+        .find((s: Prisma.Sql) => s.strings[0].includes('/* nishon-berish */'))!;
+      expect(insert.values).toEqual(
+        expect.arrayContaining(['WOERTER_50', 'LIGA_KUMUSH', 'XONA_GOLIB']),
+      );
+    });
+
+    it('liga so`rovi yiqilsa — S2 nishonlari baribir, natija saqlanadi', async () => {
+      const prisma = fake({ ...asos, ligaXato: true, badges: ['WOERTER_50'] });
+      const n = await new FortschrittService(prisma).seansNatijasiXavfsiz(
+        's-1',
+        55,
+        1,
+      );
+      expect(n!.yangiNishonlar).toEqual(['WOERTER_50']);
+      const insert = prisma.$queryRaw.mock.calls
+        .map((c: unknown[]) => c[0] as Prisma.Sql)
+        .find((s: Prisma.Sql) => s.strings[0].includes('/* nishon-berish */'))!;
+      expect(insert.values).not.toContain('LIGA_KUMUSH');
+    });
+
+    it('oddiy seans: liga holati bitta so`rov, yozuv yo`q (hisob/qo`shilish chaqirilmaydi)', async () => {
+      const prisma = fake({ ...asos, badges: [] });
+      await new FortschrittService(prisma).seansNatijasi('s-1', 55, 1);
+      const sqls = prisma.$queryRaw.mock.calls.map(
+        (c: unknown[]) => (c[0] as Prisma.Sql).strings[0],
+      );
+      expect(
+        sqls.filter((x: string) => x.includes('/* liga-sharoiti */')),
+      ).toHaveLength(1);
+      expect(
+        sqls.some((x: string) =>
+          /liga-(eng-eski|qulf|xona-och|azo-qosh|hisob)/.test(x),
+        ),
+      ).toBe(false);
     });
   });
 });

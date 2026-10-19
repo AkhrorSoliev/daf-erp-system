@@ -124,7 +124,10 @@ run(async (prisma) => {
         (s: (typeof students)[0]) =>
           svc.seansNatijasi(sessionId, s.id, s.companyId),
       ],
-      ['nishonlar', (s: (typeof students)[0]) => svc.nishonlar(s.id)],
+      [
+        'nishonlar',
+        (s: (typeof students)[0]) => svc.nishonlar(s.id, s.companyId),
+      ],
     ] as const) {
       const ms = await Promise.all(students.map((s) => timed(() => op(s))));
       samples[name].push(...ms);
@@ -226,7 +229,7 @@ run(async (prisma) => {
       'nishonlar · 105 kunlik seriya, 10 nishon (TOLIQ)',
       LIMIT.nishonlar,
       'TOLIQ',
-      (s) => svc.nishonlar(s.id),
+      (s) => svc.nishonlar(s.id, s.companyId),
     ),
   ];
   console.table(cohortTable);
