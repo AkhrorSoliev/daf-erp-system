@@ -5,15 +5,6 @@ import {
   type EslatmaTuri,
 } from './eslatma-qoidalari';
 
-/**
- * `DafReminderLog` ning YAGONA yozuvchisi (spec S4 §4, ADR-0117;
- * `eslatma-jurnali.single-source.spec.ts`). Qator yuborishdan OLDIN
- * egallanadi: qatorni yaratgan chaqiruv yuboradi, ikkinchisi (cronning ikki
- * nusxasi, qayta ishga tushirish) `null` oladi va hech narsa qilmaydi.
- * Egallangan qator `FAILED` bilan boshlanadi: jarayon yuborishdan oldin
- * yiqilsa, qator «yuborilmadi» bo'lib qoladi — qayta urinilmaydi va
- * chegaraga sanalmaydi.
- */
 type Db = Pick<Prisma.TransactionClient, '$queryRaw' | '$executeRaw'>;
 
 export interface EgallashKaliti {
@@ -24,6 +15,15 @@ export interface EgallashKaliti {
   sentOn: string;
 }
 
+/**
+ * `DafReminderLog` ning YAGONA yozuvchisi (spec S4 §4, ADR-0117;
+ * `eslatma-jurnali.single-source.spec.ts`). Qator yuborishdan OLDIN
+ * egallanadi: qatorni yaratgan chaqiruv yuboradi, ikkinchisi (cronning ikki
+ * nusxasi, qayta ishga tushirish) `null` oladi va hech narsa qilmaydi.
+ * Egallangan qator `FAILED` bilan boshlanadi: jarayon yuborishdan oldin
+ * yiqilsa, qator «yuborilmadi» bo'lib qoladi — qayta urinilmaydi va
+ * chegaraga sanalmaydi.
+ */
 export async function eslatmaniEgalla(
   db: Db,
   k: EgallashKaliti,
@@ -38,6 +38,7 @@ export async function eslatmaniEgalla(
   return q?.id ?? null;
 }
 
+/** Egallangan qatorning holati (`SENT` | `FAILED`); faqat shu `id` yangilanadi. */
 export async function natijaniYoz(
   db: Db,
   id: number,

@@ -64,7 +64,7 @@ export interface OquvchiFakti {
   ochirilgan: boolean;
   chatId: string | null;
   uzilgan: boolean;
-  /** O'quvchining eslatmalar tanlovi (`DafStudentSetting`), qator yo'q = `true`. */
+  /** `DafStudentSetting.remindersEnabled`, qator yo'q = `true`. */
   eslatmalar: boolean;
   jurnal: readonly JurnalYozuvi[];
 }
