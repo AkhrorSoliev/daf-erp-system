@@ -3,6 +3,7 @@ import { HolidaysModule } from '../../holidays/holidays.module';
 import { SmsModule } from '../../sms/sms.module';
 import { TelegramModule } from '../../telegram/telegram.module';
 import { EslatmaCron } from './eslatma.cron';
+import { EslatmaTelegramHandler } from './eslatma-telegram.handler';
 import { EslatmaYuborish } from './eslatma-yuborish';
 
 /**
@@ -13,6 +14,6 @@ import { EslatmaYuborish } from './eslatma-yuborish';
  */
 @Module({
   imports: [SmsModule, TelegramModule, HolidaysModule],
-  providers: [EslatmaYuborish, EslatmaCron],
+  providers: [EslatmaYuborish, EslatmaCron, EslatmaTelegramHandler],
 })
 export class EslatmaModule {}
