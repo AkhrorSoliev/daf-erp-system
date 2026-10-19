@@ -24,6 +24,8 @@ export const KEEP_LATIN: ReadonlySet<string> = new Set([
   "ios",
   "webhook",
   "externalid",
+  // The content seed script is named in Latin in the media empty states.
+  "seed",
 ]);
 
 const LETTERS: Record<string, string> = {

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Check, ChevronsUpDown, Search } from "lucide-react";
+import { useT } from "@/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -34,6 +35,7 @@ export function DafQidiruvliSelect({
   hammasiMatni: string;
   className?: string;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -81,7 +83,7 @@ export function DafQidiruvliSelect({
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Qidirish..."
+              placeholder={t("Qidirish...")}
               maxLength={100}
               className="h-8 pl-8"
             />
@@ -108,7 +110,7 @@ export function DafQidiruvliSelect({
             </button>
           ))}
           {korinadigan.length === 0 && (
-            <p className="px-2 py-3 text-center text-sm text-muted-foreground">Topilmadi</p>
+            <p className="px-2 py-3 text-center text-sm text-muted-foreground">{t("Topilmadi")}</p>
           )}
         </div>
       </PopoverContent>
