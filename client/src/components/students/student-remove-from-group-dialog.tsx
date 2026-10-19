@@ -28,7 +28,9 @@ import { formatBalance, formatNumber } from "@/lib/format-utils";
 import type { DebtWriteOffEligibility } from "./debt-write-off-types";
 import {
   EXIT_REASON_COMMENT_MIN_LENGTH,
+  exitReasonRequiresComment,
   isExitReasonCommentMissing,
+  looksLikeGroupMove,
   type ExitReasonOption,
 } from "@/lib/exit-reason-utils";
 import { DepartureMoneyBlock } from "./departure-money-block";
@@ -136,6 +138,11 @@ function RemoveDialogBody({
     DEFAULT_DEPARTURE_POLICY,
   );
   const money = useDeparturePreview(studentId, enrollmentId, true);
+  const picked = reasons?.find((r) => r.id === reasonId);
+  // The free text is the reason only without a configured list or on «Boshqa sabab».
+  const looksLikeMove = looksLikeGroupMove(
+    `${picked?.name ?? ""} ${!hasConfiguredReasons || exitReasonRequiresComment(picked) ? reasonText : ""}`,
+  );
 
   return (
     <>
@@ -205,6 +212,7 @@ function RemoveDialogBody({
           policy={departurePolicy}
           onPolicyChange={setDeparturePolicy}
           context="removal"
+          looksLikeMove={looksLikeMove}
           disabled={removing}
         />
 
