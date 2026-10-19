@@ -36,4 +36,14 @@ describe("Nishonlarim", () => {
     ]);
     expect(html).not.toMatch(/badge|streak|serie\b/i);
   });
+
+  it("musobaqa nishoni — o'z nomi va to'q binafsha to'ldirish (oq matn)", () => {
+    const html = render([
+      { key: "LIGA_KUMUSH", tur: "LIGA", chegara: 1, olingan: "2026-10-19T07:00:00.000Z", qoldi: null },
+      { key: "XONA_GOLIB", tur: "XONA", chegara: 1, olingan: null, qoldi: 1 },
+    ]);
+    expect(html).toContain("Kumush ligasi");
+    expect(html).toContain("bg-grape-500 text-white");
+    expect(html).toContain("Xonada 1-o&#x27;rin, kamida 50 ball");
+  });
 });

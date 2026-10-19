@@ -25,7 +25,7 @@ export function kotarilishMatni(z: { soni: number; faol: boolean }): string {
   if (z.soni === 0) return "Eng yuqori liga — bu yerdan ko'tarilish yo'q";
   return z.faol
     ? `Birinchi ${z.soni} tasi ko'tariladi (kamida ${KOTARILISH_MIN_BALL} ball)`
-    : `Xona hali kichik — ko'tarilish ≥ ${KOTARILISH_MIN_AZO} kishi bo'lganda`;
+    : `Xona hali kichik — ko'tarilish kamida ${KOTARILISH_MIN_AZO} kishi bo'lganda`;
 }
 
 /**

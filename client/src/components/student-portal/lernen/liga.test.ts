@@ -53,7 +53,7 @@ describe("kotarilishMatni", () => {
       "Birinchi 5 tasi ko'tariladi (kamida 50 ball)",
     );
     expect(kotarilishMatni({ soni: 5, faol: false })).toBe(
-      "Xona hali kichik — ko'tarilish ≥ 15 kishi bo'lganda",
+      "Xona hali kichik — ko'tarilish kamida 15 kishi bo'lganda",
     );
     expect(kotarilishMatni({ soni: 0, faol: false })).toBe(
       "Eng yuqori liga — bu yerdan ko'tarilish yo'q",
