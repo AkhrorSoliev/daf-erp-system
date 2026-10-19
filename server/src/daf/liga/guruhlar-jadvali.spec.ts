@@ -107,6 +107,8 @@ describe('guruhlarJavobi — GET guruhlar', () => {
     expect(matn).toMatch(/g\."deletedAt" IS NULL/);
     expect(matn).toMatch(/e\.status = 'ACTIVE'/);
     expect(matn).toMatch(/d\."groupKey" = a\."groupId"/);
+    // Hafta qatorlari a'zolarga qo'shilishdan OLDIN (o'quvchi, guruh) bo'yicha yig'iladi.
+    expect(matn).toMatch(/GROUP BY x\."studentId", x\."groupKey"/);
     expect(sql.values).toEqual([1, 1, '2026-10-19', '2026-10-26']);
     expect(h.chaqiruvlar).toEqual(['guruhlar-yigindisi']);
     expect(db.$executeRaw).not.toHaveBeenCalled();
