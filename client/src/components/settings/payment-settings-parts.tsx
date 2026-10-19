@@ -10,6 +10,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useT } from "@/i18n/context";
 
 /** One titled block of the payment settings page. */
 export function SettingsSection({
@@ -60,6 +61,7 @@ export function SettingRow({
   control,
   children,
 }: SettingRowProps) {
+  const t = useT();
   return (
     <div className="py-4">
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
@@ -75,10 +77,10 @@ export function SettingRow({
                 <TooltipTrigger asChild>
                   <Lock
                     className="size-3.5 text-muted-foreground"
-                    aria-label="Faqat markaz rahbari o'zgartira oladi"
+                    aria-label={t("Faqat markaz rahbari o'zgartira oladi")}
                   />
                 </TooltipTrigger>
-                <TooltipContent>Faqat markaz rahbari o&apos;zgartira oladi</TooltipContent>
+                <TooltipContent>{t("Faqat markaz rahbari o'zgartira oladi")}</TooltipContent>
               </Tooltip>
             )}
           </div>
@@ -86,7 +88,7 @@ export function SettingRow({
           {details && (
             <details className="text-xs text-muted-foreground">
               <summary className="w-fit cursor-pointer select-none hover:text-foreground">
-                Batafsil
+                {t("Batafsil")}
               </summary>
               <p className="mt-1">{details}</p>
             </details>

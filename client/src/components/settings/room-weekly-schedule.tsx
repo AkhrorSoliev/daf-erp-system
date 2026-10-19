@@ -8,6 +8,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/context";
 
 interface Teacher {
   id: number;
@@ -31,13 +33,13 @@ interface RoomWeeklyScheduleProps {
 }
 
 const WEEKDAYS = [
-  { key: "monday", label: "Dushanba", short: "Du" },
-  { key: "tuesday", label: "Seshanba", short: "Se" },
-  { key: "wednesday", label: "Chorshanba", short: "Cho" },
-  { key: "thursday", label: "Payshanba", short: "Pay" },
-  { key: "friday", label: "Juma", short: "Ju" },
-  { key: "saturday", label: "Shanba", short: "Sha" },
-  { key: "sunday", label: "Yakshanba", short: "Ya" },
+  { key: "monday", label: msg("Dushanba"), short: msg("Du") },
+  { key: "tuesday", label: msg("Seshanba"), short: msg("Se") },
+  { key: "wednesday", label: msg("Chorshanba"), short: msg("Cho") },
+  { key: "thursday", label: msg("Payshanba"), short: msg("Pay") },
+  { key: "friday", label: msg("Juma"), short: msg("Ju") },
+  { key: "saturday", label: msg("Shanba"), short: msg("Sha") },
+  { key: "sunday", label: msg("Yakshanba"), short: msg("Ya") },
 ];
 
 const JS_DAY_TO_INDEX: Record<number, number> = {
@@ -76,6 +78,7 @@ export function RoomWeeklySchedule({
   groups,
   workingHours,
 }: RoomWeeklyScheduleProps) {
+  const t = useT();
   const todayIndex = JS_DAY_TO_INDEX[new Date().getDay()];
 
   // Filter groups that have schedule data
@@ -163,11 +166,11 @@ export function RoomWeeklySchedule({
       <div className="rounded-lg border bg-card p-6">
         <div className="flex items-center gap-2 mb-4">
           <CalendarDays className="size-5 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">Dars jadvali</h3>
+          <h3 className="text-lg font-semibold">{t("Dars jadvali")}</h3>
         </div>
         <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
           <DoorOpen className="h-8 w-8 text-muted-foreground/50" />
-          <p className="text-sm">Bu xonaga dars biriktirilmagan</p>
+          <p className="text-sm">{t("Bu xonaga dars biriktirilmagan")}</p>
         </div>
       </div>
     );
@@ -177,14 +180,14 @@ export function RoomWeeklySchedule({
     <div className="rounded-lg border bg-card p-6">
       <div className="flex items-center gap-2 mb-4">
         <CalendarDays className="size-5 text-muted-foreground" />
-        <h3 className="text-lg font-semibold">Dars jadvali</h3>
+        <h3 className="text-lg font-semibold">{t("Dars jadvali")}</h3>
       </div>
       <div className="rounded-md border overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-muted/40">
               <th className="border-b px-2 py-2 text-xs font-medium text-muted-foreground text-left w-15 sticky left-0 bg-muted/40">
-                Vaqt
+                {t("Vaqt")}
               </th>
               {WEEKDAYS.map((day, i) => (
                 <th
@@ -195,8 +198,8 @@ export function RoomWeeklySchedule({
                       : ""
                   }`}
                 >
-                  <span className="hidden sm:inline">{day.label}</span>
-                  <span className="sm:hidden">{day.short}</span>
+                  <span className="hidden sm:inline">{t(day.label)}</span>
+                  <span className="sm:hidden">{t(day.short)}</span>
                 </th>
               ))}
             </tr>
@@ -283,12 +286,11 @@ export function RoomWeeklySchedule({
                               </p>
                               {lesson.group.teachers.length > 0 && (
                                 <p className="text-xs">
-                                  Ustoz:{" "}
-                                  {lesson.group.teachers
-                                    .map(
-                                      (t) => `${t.firstName} ${t.lastName}`
-                                    )
-                                    .join(", ")}
+                                  {t("Ustoz: {name}", {
+                                    name: lesson.group.teachers
+                                      .map((teacher) => `${teacher.firstName} ${teacher.lastName}`)
+                                      .join(", "),
+                                  })}
                                 </p>
                               )}
                             </div>

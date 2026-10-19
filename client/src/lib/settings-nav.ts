@@ -19,6 +19,7 @@ import {
   MessagesSquare,
   type LucideIcon,
 } from "lucide-react";
+import { msg } from "@/i18n/msg";
 import type { Can } from "./permission-check";
 import type { PermissionKey } from "./permission-keys";
 
@@ -76,25 +77,25 @@ export interface SettingsNavSection {
 
 export const settingsNavSections: SettingsNavSection[] = [
   {
-    title: "Markaz",
+    title: msg("Markaz"),
     icon: Landmark,
-    summary: "Kompaniya, filiallar, xonalar va bayramlar",
+    summary: msg("Kompaniya, filiallar, xonalar va bayramlar"),
     items: [
       // Shown to everyone who sees the reference pages; the form inside
       // edits only for a holder of `settings.company`.
       {
-        title: "Kompaniya ma'lumotlari",
+        title: msg("Kompaniya ma'lumotlari"),
         url: "/settings/general",
         icon: Building,
-        description: "Kompaniya nomi, telefon va asosiy ma'lumotlar",
+        description: msg("Kompaniya nomi, telefon va asosiy ma'lumotlar"),
         keywords: ["nom", "telefon", "umumiy", "markaz"],
         permission: "settings.reference",
       },
       {
-        title: "Filiallar",
+        title: msg("Filiallar"),
         url: "/settings/branches",
         icon: Building2,
-        description: "Filiallarni boshqarish va yangi filial qo'shish",
+        description: msg("Filiallarni boshqarish va yangi filial qo'shish"),
         keywords: ["filial", "yangi filial", "manzil"],
         permission: "settings.branches",
       },
@@ -103,56 +104,56 @@ export const settingsNavSections: SettingsNavSection[] = [
       // buttons that all answered 403. `settings.reference` is the capability
       // the writes check.
       {
-        title: "Xonalar",
+        title: msg("Xonalar"),
         url: "/settings/rooms",
         icon: DoorOpen,
-        description: "Filiallardagi xonalarni boshqarish",
+        description: msg("Filiallardagi xonalarni boshqarish"),
         keywords: ["xona", "sinf", "sig'im"],
         permission: "settings.reference",
       },
       {
-        title: "Dam olish kunlari",
+        title: msg("Dam olish kunlari"),
         url: "/settings/holidays",
         icon: CalendarOff,
-        description: "Rasmiy bayramlar va dam olish kunlari",
+        description: msg("Rasmiy bayramlar va dam olish kunlari"),
         keywords: ["bayram", "dam olish", "ta'til"],
         permission: "settings.reference",
       },
     ],
   },
   {
-    title: "Jamoa va ruxsatlar",
+    title: msg("Jamoa va ruxsatlar"),
     icon: UsersRound,
-    summary: "Xodimlar va ularning imkoniyatlari",
+    summary: msg("Xodimlar va ularning imkoniyatlari"),
     items: [
       {
-        title: "Xodimlar",
+        title: msg("Xodimlar"),
         url: "/settings/employees",
         icon: Users,
-        description: "Xodimlarni boshqarish va rollarni belgilash",
+        description: msg("Xodimlarni boshqarish va rollarni belgilash"),
         keywords: ["xodim", "ustoz", "administrator", "kassir", "rol", "parol"],
         permission: "employees.view",
       },
       {
-        title: "Ruxsatlar",
+        title: msg("Ruxsatlar"),
         url: "/settings/permissions",
         icon: ShieldCheck,
-        description: "Har bir rol uchun imkoniyatlarni yoqish va o'chirish",
+        description: msg("Har bir rol uchun imkoniyatlarni yoqish va o'chirish"),
         keywords: ["huquq", "rol", "imkoniyat"],
         ceoOnly: true,
       },
     ],
   },
   {
-    title: "O'quv jarayoni",
+    title: msg("O'quv jarayoni"),
     icon: GraduationCap,
-    summary: "Kurslar, sabablar va o'quvchiga qo'yiladigan talablar",
+    summary: msg("Kurslar, sabablar va o'quvchiga qo'yiladigan talablar"),
     items: [
       {
-        title: "Kurslar",
+        title: msg("Kurslar"),
         url: "/settings/courses",
         icon: BookOpen,
-        description: "Kurslarni boshqarish va yangi kurs qo'shish",
+        description: msg("Kurslarni boshqarish va yangi kurs qo'shish"),
         keywords: ["kurs", "narx", "daraja"],
         permission: "settings.reference",
       },
@@ -161,10 +162,10 @@ export const settingsNavSections: SettingsNavSection[] = [
         // group-teacher-change reason endpoints check `settings.reference`;
         // the gate matches them exactly — a link that ends in a 403 is worse
         // than no link.
-        title: "Sabablar",
+        title: msg("Sabablar"),
         url: "/settings/reasons",
         icon: ListChecks,
-        description: "Guruhdan chiqarish, o'tkazish va ustoz almashish sabablari",
+        description: msg("Guruhdan chiqarish, o'tkazish va ustoz almashish sabablari"),
         keywords: ["sabab", "chiqarish", "o'tkazish"],
         permission: "settings.reference",
       },
@@ -173,10 +174,10 @@ export const settingsNavSections: SettingsNavSection[] = [
         // Branch Director read it, only the CEO writes. DaF normasi:
         // `settings.company`. Qatnashganlik hujjati: every route is
         // `@CeoOnly()` (spec 2026-10-17).
-        title: "O'quv qoidalari",
+        title: msg("O'quv qoidalari"),
         url: "/settings/rules",
         icon: Scale,
-        description: "Avtomatik pauza, DaF normasi va qatnashganlik hujjati chegaralari",
+        description: msg("Avtomatik pauza, DaF normasi va qatnashganlik hujjati chegaralari"),
         keywords: [
           "pauza",
           "davomat",
@@ -201,27 +202,27 @@ export const settingsNavSections: SettingsNavSection[] = [
     ],
   },
   {
-    title: "To'lov va lidlar",
+    title: msg("To'lov va lidlar"),
     icon: Banknote,
-    summary: "Pul qoidalari, lidlar va KPI",
+    summary: msg("Pul qoidalari, lidlar va KPI"),
     items: [
       {
         // GET/PATCH /settings/payment check `settings.payment`; the gate
         // matches it exactly — a link that ends in a 403 is worse than no link.
-        title: "To'lov",
+        title: msg("To'lov"),
         url: "/settings/payment",
         icon: Wallet,
-        description: "Kurs to'lov modeli va hisob-kitob qoidalari",
+        description: msg("Kurs to'lov modeli va hisob-kitob qoidalari"),
         keywords: ["pul", "model", "oylik to'lov", "qarz", "hisob-kitob"],
         permission: "settings.payment",
       },
       {
         // Both writes are `@CeoOnly()` (ADR-0093, ADR-0096): identity, not a
         // capability.
-        title: "Lidlar va KPI",
+        title: msg("Lidlar va KPI"),
         url: "/settings/leads-kpi",
         icon: UserCheck,
-        description: "Lidni band qilish muddatlari va KPI narxlari",
+        description: msg("Lidni band qilish muddatlari va KPI narxlari"),
         keywords: ["lid", "band qilish", "muddat", "mas'ul", "kpi", "mukofot", "bonus", "narx"],
         blocks: [
           { id: "lidlar", ceoOnly: true },
@@ -231,17 +232,17 @@ export const settingsNavSections: SettingsNavSection[] = [
     ],
   },
   {
-    title: "Telegram va arxiv",
+    title: msg("Telegram va arxiv"),
     icon: MessagesSquare,
-    summary: "Bot ulanishlari, hisobotlar va o'chirilgan ma'lumotlar",
+    summary: msg("Bot ulanishlari, hisobotlar va o'chirilgan ma'lumotlar"),
     items: [
       {
         // Guruhlar: `settings.telegram-groups`. Hisobot: every route is
         // `@CeoOnly()` (ADR-0095).
-        title: "Telegram",
+        title: msg("Telegram"),
         url: "/settings/telegram",
         icon: Send,
-        description: "Botga ulangan guruhlar va kunlik hisobot qabul qiluvchilar",
+        description: msg("Botga ulangan guruhlar va kunlik hisobot qabul qiluvchilar"),
         keywords: ["telegram", "bot", "guruh", "kunlik hisobot", "chat", "qabul qiluvchi"],
         blocks: [
           { id: "guruhlar", permission: "settings.telegram-groups" },
@@ -249,10 +250,10 @@ export const settingsNavSections: SettingsNavSection[] = [
         ],
       },
       {
-        title: "Arxiv",
+        title: msg("Arxiv"),
         url: "/settings/archive",
         icon: Archive,
-        description: "O'chirilgan ma'lumotlar",
+        description: msg("O'chirilgan ma'lumotlar"),
         keywords: ["o'chirilgan", "tiklash", "arxiv"],
         permission: "settings.archive",
       },

@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import {
   Loader2,
   Check,
@@ -32,6 +31,17 @@ import { isOwnAccount, withoutOwnSignInKeys } from "@/lib/own-sign-in-keys";
 import { useAuth } from "@/hooks/use-auth";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
 import { roleLabel } from "@/components/payments/salary-utils";
+import { roleTitle } from "@/components/profile/profile-roles";
+import { getStatusConfig } from "@/lib/status-config";
+import {
+  CEO_ROLE_ID,
+  TEACHER_ROLE_ID,
+  employeeFormError,
+  employeeSchema,
+  type EmployeeFormValues,
+} from "@/lib/schemas/employee-schema";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/context";
 import { EmployeeCredentialsSection } from "./employee-credentials-section";
 import {
   EmployeeRolePicker,
@@ -39,89 +49,24 @@ import {
   type RoleOption,
 } from "./employee-roles-field";
 
-const CEO_ROLE_ID = 1;
-const TEACHER_ROLE_ID = 4;
-
-const ROLES: RoleOption[] = [
-  { id: CEO_ROLE_ID, label: "CEO", icon: Crown },
-  { id: 2, label: "Direktor", icon: Building2 },
-  { id: 3, label: "Administrator", icon: Shield },
-  { id: TEACHER_ROLE_ID, label: "O'qituvchi", icon: GraduationCap },
-  { id: 5, label: "Kassir", icon: Wallet },
+// The title of each role comes from the shared role-label helper (`roleTitle`).
+const ROLES: Omit<RoleOption, "label">[] = [
+  { id: CEO_ROLE_ID, icon: Crown },
+  { id: 2, icon: Building2 },
+  { id: 3, icon: Shield },
+  { id: TEACHER_ROLE_ID, icon: GraduationCap },
+  { id: 5, icon: Wallet },
 ];
 
-const STATUS_OPTIONS = [
-  { value: "ACTIVE", label: "Faol" },
-  { value: "INACTIVE", label: "Nofaol" },
-  { value: "SUSPENDED", label: "To'xtatilgan" },
-  { value: "TERMINATED", label: "Ishdan bo'shatilgan" },
-];
+// The shared user status labels (`msg()` texts in status-config.ts).
+const STATUS_OPTIONS = ["ACTIVE", "INACTIVE", "SUSPENDED", "TERMINATED"].map((value) => ({
+  value,
+  label: getStatusConfig("users", value).label,
+}));
 
-const schema = z
-  .object({
-    firstName: z.string().min(2, "Ism kamida 2 ta belgidan iborat bo'lishi kerak"),
-    lastName: z.string().min(2, "Familiya kamida 2 ta belgidan iborat bo'lishi kerak"),
-    phone: z
-      .string()
-      .regex(/^\d{9}$/, "Telefon raqam 9 ta raqamdan iborat bo'lishi kerak")
-      .or(z.literal("")),
-    login: z.string().optional().or(z.literal("")),
-    password: z.string().optional().or(z.literal("")),
-    gender: z.enum(["MALE", "FEMALE", ""]).optional(),
-    status: z.string().optional(),
-    mainBranch: z.string().optional(),
-    position: z
-      .string()
-      .trim()
-      .min(2, "Lavozim kamida 2 ta belgidan iborat bo'lishi kerak")
-      .max(60, "Lavozim 60 ta belgidan oshmasligi kerak"),
-    roleIds: z.array(z.number()),
-    branchIds: z.array(z.number()),
-    isEdit: z.boolean(),
-  })
-  .superRefine((data, ctx) => {
-    const hasCeoRole = data.roleIds.includes(CEO_ROLE_ID);
-    const hasTeacherRole = data.roleIds.includes(TEACHER_ROLE_ID);
-    const hasRoles = data.roleIds.length > 0;
+const BRANCHES_LOAD_ERROR = msg("Filiallarni yuklashda xatolik");
 
-    if (!hasCeoRole && data.branchIds.length === 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["branchIds"],
-        message: !hasRoles
-          ? "Tizimga kirmaydigan xodim uchun ham filial tanlanishi shart"
-          : hasTeacherRole
-            ? "O'qituvchi uchun kamida bitta filial tanlang"
-            : "Kamida bitta filial tanlang",
-      });
-    }
-
-    if (!data.isEdit && hasRoles) {
-      if (!data.password || data.password.length < 4) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["password"],
-          message: "Yangi xodim uchun parol majburiy (kamida 4 ta belgi)",
-        });
-      }
-    } else if (data.password && data.password.length < 4) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["password"],
-        message: "Parol kamida 4 ta belgidan iborat bo'lishi kerak",
-      });
-    }
-
-    if (data.branchIds.length > 1 && !data.mainBranch) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["mainBranch"],
-        message: "Bir nechta filial tanlanganda asosiy filial tanlanishi shart",
-      });
-    }
-  });
-
-export type FormValues = z.infer<typeof schema>;
+export type FormValues = EmployeeFormValues;
 
 interface EditEmployeeFormProps {
   employee: EmployeeUser | null;
@@ -137,6 +82,12 @@ interface BranchOption {
 
 export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmployeeFormProps) {
   const isEdit = !!employee;
+  const t = useT();
+  // The branch fetch toasts through a ref copy, so a language switch never refetches.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
   const currentUser = useAuth((s) => s.user);
   const currentUserId = currentUser?.id;
   // Your own record: phone, login and password change only in Profil, where
@@ -153,13 +104,16 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
     currentUser?.roles.map((r) => r.name) ?? [],
     employee?.roles.map((r) => r.id) ?? [],
   );
-  const roleOptions =
+  const roleOptions: RoleOption[] =
     roleField.mode === "hidden"
       ? []
-      : ROLES.filter((r) => roleField.roleIds.includes(r.id));
+      : ROLES.filter((r) => roleField.roleIds.includes(r.id)).map((r) => ({
+          ...r,
+          label: roleTitle(r, t, { grant: true }),
+        }));
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(employeeSchema),
     defaultValues: {
       firstName: employee?.firstName ?? "",
       lastName: employee?.lastName ?? "",
@@ -184,7 +138,7 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
       setBranches(list.map((b: any) => ({ id: b.id, name: b.name })));
     } catch (error) {
       setBranches([]);
-      toast.error(getErrorMessage(error, "Filiallarni yuklashda xatolik"));
+      toast.error(getErrorMessage(error, tRef.current(BRANCHES_LOAD_ERROR)));
     } finally {
       setBranchesLoading(false);
     }
@@ -258,16 +212,16 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
           withoutOwnSignInKeys(payload, ownAccount),
         );
         saved = data;
-        toast.success("Xodim muvaffaqiyatli yangilandi");
+        toast.success(t("Xodim muvaffaqiyatli yangilandi"));
       } else {
         const { data } = await api.post("/users", payload);
         saved = data;
-        toast.success("Xodim muvaffaqiyatli qo'shildi");
+        toast.success(t("Xodim muvaffaqiyatli qo'shildi"));
       }
       onSaved?.(saved);
       onClose();
     } catch (err) {
-      toast.error(getErrorMessage(err, "Saqlashda xatolik"));
+      toast.error(getErrorMessage(err, t("Saqlashda xatolik")));
     } finally {
       setSubmitting(false);
     }
@@ -294,37 +248,41 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
       {/* Asosiy ma'lumotlar */}
       <section className="space-y-5 px-6 py-5">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Asosiy ma&apos;lumotlar
+          {t("Asosiy ma'lumotlar")}
         </h3>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label htmlFor="firstName">Ism *</Label>
+            <Label htmlFor="firstName">{t("Ism")} *</Label>
             <Input
               id="firstName"
-              placeholder="Ism"
+              placeholder={t("Ism")}
               {...form.register("firstName")}
             />
             {form.formState.errors.firstName && (
-              <p className="text-xs text-destructive">{form.formState.errors.firstName.message}</p>
+              <p className="text-xs text-destructive">
+                {employeeFormError(t, form.formState.errors.firstName.message)}
+              </p>
             )}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="lastName">Familiya *</Label>
+            <Label htmlFor="lastName">{t("Familiya")} *</Label>
             <Input
               id="lastName"
-              placeholder="Familiya"
+              placeholder={t("Familiya")}
               {...form.register("lastName")}
             />
             {form.formState.errors.lastName && (
-              <p className="text-xs text-destructive">{form.formState.errors.lastName.message}</p>
+              <p className="text-xs text-destructive">
+                {employeeFormError(t, form.formState.errors.lastName.message)}
+              </p>
             )}
           </div>
         </div>
 
         <div className="flex gap-3">
           <div className="flex-1 space-y-1.5">
-            <Label>Telefon</Label>
+            <Label>{t("Telefon")}</Label>
             <Controller
               control={form.control}
               name="phone"
@@ -337,31 +295,40 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
               )}
             />
             {form.formState.errors.phone && (
-              <p className="text-xs text-destructive">{form.formState.errors.phone.message}</p>
+              <p className="text-xs text-destructive">
+                {employeeFormError(t, form.formState.errors.phone.message)}
+              </p>
             )}
             {ownAccount && (
               <p className="text-xs text-muted-foreground">
-                O&apos;z telefoningiz va parolingiz{" "}
-                <Link href="/profile" className="font-medium text-primary hover:underline">
-                  Profil
-                </Link>{" "}
-                sahifasida o&apos;zgartiriladi.
+                {/* The «**…**» span of the sentence is the link to Profil. */}
+                {t("O'z telefoningiz va parolingiz **Profil** sahifasida o'zgartiriladi.")
+                  .split("**")
+                  .map((part, i) =>
+                    i % 2 === 1 ? (
+                      <Link key={i} href="/profile" className="font-medium text-primary hover:underline">
+                        {part}
+                      </Link>
+                    ) : (
+                      part
+                    ),
+                  )}
               </p>
             )}
           </div>
           <div className="w-28 shrink-0 space-y-1.5">
-            <Label>Jinsi</Label>
+            <Label>{t("Jinsi")}</Label>
             <Controller
               control={form.control}
               name="gender"
               render={({ field }) => (
                 <Select value={field.value || ""} onValueChange={field.onChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Tanlang" />
+                    <SelectValue placeholder={t("Tanlang")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="MALE">Erkak</SelectItem>
-                    <SelectItem value="FEMALE">Ayol</SelectItem>
+                    <SelectItem value="MALE">{t("Erkak")}</SelectItem>
+                    <SelectItem value="FEMALE">{t("Ayol")}</SelectItem>
                   </SelectContent>
                 </Select>
               )}
@@ -380,19 +347,19 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
       {/* Lavozim va filial */}
       <section className="space-y-5 border-t px-6 py-5">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Lavozim va filial
+          {t("Lavozim va filial")}
         </h3>
 
         <div className="space-y-1.5">
-          <Label htmlFor="position">Lavozim *</Label>
+          <Label htmlFor="position">{t("Lavozim")} *</Label>
           <Input
             id="position"
-            placeholder="Masalan: Farrosh, Qorovul, Administrator"
+            placeholder={t("Masalan: Farrosh, Qorovul, Administrator")}
             {...form.register("position")}
           />
           {form.formState.errors.position && (
             <p className="text-xs text-destructive">
-              {form.formState.errors.position.message}
+              {employeeFormError(t, form.formState.errors.position.message)}
             </p>
           )}
         </div>
@@ -405,14 +372,14 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
             roles={roleOptions}
             selectedRoleIds={watchRoleIds}
             onToggle={toggleRole}
-            error={form.formState.errors.roleIds?.message}
+            error={employeeFormError(t, form.formState.errors.roleIds?.message)}
           />
         ) : null}
 
         {/* Branches */}
         <div className="space-y-2.5">
           <Label>
-            Filiallar
+            {t("Filiallar")}
             {!watchRoleIds.includes(CEO_ROLE_ID) && " *"}
           </Label>
           <div className="space-y-1.5">
@@ -443,20 +410,22 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
             })}
           </div>
           {form.formState.errors.branchIds && (
-            <p className="text-xs text-destructive">{form.formState.errors.branchIds.message}</p>
+            <p className="text-xs text-destructive">
+              {employeeFormError(t, form.formState.errors.branchIds.message)}
+            </p>
           )}
         </div>
 
         {watchBranchIds.length > 1 && (
           <div className="space-y-1.5">
-            <Label>Asosiy filial *</Label>
+            <Label>{t("Asosiy filial")} *</Label>
             <Controller
               control={form.control}
               name="mainBranch"
               render={({ field }) => (
                 <Select value={field.value || ""} onValueChange={field.onChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Tanlang" />
+                    <SelectValue placeholder={t("Tanlang")} />
                   </SelectTrigger>
                   <SelectContent>
                     {branches
@@ -471,7 +440,9 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
               )}
             />
             {form.formState.errors.mainBranch && (
-              <p className="text-xs text-destructive">{form.formState.errors.mainBranch.message}</p>
+              <p className="text-xs text-destructive">
+                {employeeFormError(t, form.formState.errors.mainBranch.message)}
+              </p>
             )}
           </div>
         )}
@@ -481,11 +452,11 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
       {isEdit && (
         <section className="space-y-5 border-t px-6 py-5">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Holati
+            {t("Holati")}
           </h3>
 
           <div className="space-y-1.5">
-            <Label>Xodim holati</Label>
+            <Label>{t("Xodim holati")}</Label>
             <Controller
               control={form.control}
               name="status"
@@ -497,7 +468,7 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
                   <SelectContent>
                     {STATUS_OPTIONS.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
+                        {t(opt.label)}
                       </SelectItem>
                     ))}
                   </SelectContent>

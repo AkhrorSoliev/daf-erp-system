@@ -13,6 +13,7 @@ import { SettingsPageHeader } from "./settings-page-header";
 import { FormError, SettingsCard, SettingsSaveBar, UnitNumberField } from "./settings-form-parts";
 import { useCan, usePermissionsReady } from "@/hooks/use-permissions";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import {
   buildPatch,
@@ -42,6 +43,7 @@ function CandidatesNote({
   saved: AbsencePauseSettings;
   draft: AbsencePauseDraft;
 }) {
+  const t = useT();
   const threshold = previewThreshold(saved, draft);
   const { data, isLoading } = useQuery({
     queryKey: ["absence-pause", "preview", threshold],
@@ -55,10 +57,10 @@ function CandidatesNote({
   });
   if (threshold === null) return null;
   if (isLoading || !data) {
-    return <p className="text-sm text-muted-foreground">Nomzodlar hisoblanmoqda...</p>;
+    return <p className="text-sm text-muted-foreground">{t("Nomzodlar hisoblanmoqda...")}</p>;
   }
   const cap = isValid(draft) ? Number(draft.cap) : saved.dailyCap;
-  const note = candidatesText(data.candidates, threshold, cap);
+  const note = candidatesText(data.candidates, threshold, cap, t);
   return (
     <div
       role="status"
@@ -73,7 +75,7 @@ function CandidatesNote({
         <>
           {" "}
           <Link href="/outreach" className="underline underline-offset-2">
-            Ro&apos;yxatni ko&apos;rish
+            {t("Ro'yxatni ko'rish")}
           </Link>
         </>
       )}
@@ -82,6 +84,7 @@ function CandidatesNote({
 }
 
 export function AbsencePauseSettingsClient() {
+  const t = useT();
   const queryClient = useQueryClient();
   // The server writes this with `settings.company` too; the lock keeps the
   // button from ending in a 403. The note below waits for the list, so it
@@ -120,21 +123,21 @@ export function AbsencePauseSettingsClient() {
       queryClient.invalidateQueries({ queryKey: HISTORY_KEY });
       queryClient.invalidateQueries({ queryKey: ["absence-pause", "preview"] });
       queryClient.invalidateQueries({ queryKey: ["outreach-stats"] });
-      toast.success("Saqlandi");
+      toast.success(t("Saqlandi"));
     },
     onError: (err) => {
-      toast.error(getErrorMessage(err, "Saqlashda xatolik"));
+      toast.error(getErrorMessage(err, t("Saqlashda xatolik")));
     },
   });
 
   const header = (
     <SettingsPageHeader
-      title="Avtomatik pauza"
-      description="Ketma-ket dars qoldirgan o'quvchini tizim o'zi pauzaga o'tkazadi"
+      title={t("Avtomatik pauza")}
+      description={t("Ketma-ket dars qoldirgan o'quvchini tizim o'zi pauzaga o'tkazadi")}
       action={
         <Button variant="outline" size="sm" onClick={() => setHistoryOpen(true)}>
           <History className="mr-1.5 size-4" />
-          Tarix
+          {t("Tarix")}
         </Button>
       }
     />
@@ -144,10 +147,10 @@ export function AbsencePauseSettingsClient() {
     return (
       <div className="space-y-3">
         {header}
-        <p className="text-sm text-muted-foreground">Sozlamani yuklab bo&apos;lmadi.</p>
+        <p className="text-sm text-muted-foreground">{t("Sozlamani yuklab bo'lmadi.")}</p>
         <Button variant="outline" disabled={isFetching} onClick={() => void refetch()}>
           {isFetching && <Loader2 className="size-4 animate-spin" />}
-          Qayta urinish
+          {t("Qayta urinish")}
         </Button>
         <AbsencePauseHistorySheet open={historyOpen} onOpenChange={setHistoryOpen} />
       </div>
@@ -163,14 +166,14 @@ export function AbsencePauseSettingsClient() {
   }
 
   const form = draft ?? toDraft(data);
-  const errors = draftErrors(form);
+  const errors = draftErrors(form, t);
   const dirty = isDirty(data, form);
   const patch = buildPatch(data, form);
   const canSave = dirty && isValid(form) && Object.keys(patch).length > 0 && !save.isPending;
   const locked = !canEdit || save.isPending;
   const set = (key: keyof AbsencePauseDraft, value: string | boolean) =>
     setDraft({ ...form, [key]: value });
-  const summary = summaryText(form);
+  const summary = summaryText(form, t);
   const lastEntry = last.data?.data[0];
 
   return (
@@ -179,8 +182,7 @@ export function AbsencePauseSettingsClient() {
 
       {permissionsReady && !canEdit && (
         <p className="mb-4 max-w-xl rounded-md border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-          Bu sozlamani faqat CEO o&apos;zgartira oladi. Sozlama barcha filiallarga birdek
-          qo&apos;llanadi.
+          {t("Bu sozlamani faqat CEO o'zgartira oladi. Sozlama barcha filiallarga birdek qo'llanadi.")}
         </p>
       )}
 
@@ -188,14 +190,14 @@ export function AbsencePauseSettingsClient() {
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-0.5">
             <Label htmlFor="enabled" className="text-base">
-              Qoidani yoqish
+              {t("Qoidani yoqish")}
             </Label>
             <p className="text-xs text-muted-foreground">
               {last.isLoading
-                ? "Yuklanmoqda..."
+                ? t("Yuklanmoqda...")
                 : lastEntry
-                  ? `Oxirgi o'zgarish: ${lastChangeText(lastEntry)}`
-                  : "Hali o'zgartirilmagan"}
+                  ? t("Oxirgi o'zgarish: {change}", { change: lastChangeText(lastEntry, t) })
+                  : t("Hali o'zgartirilmagan")}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -206,7 +208,7 @@ export function AbsencePauseSettingsClient() {
                   : "rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
               }
             >
-              {data.enabled ? "Yoqilgan" : "O'chiq"}
+              {data.enabled ? t("Yoqilgan") : t("O'chiq")}
             </span>
             <Switch
               id="enabled"
@@ -218,20 +220,20 @@ export function AbsencePauseSettingsClient() {
         </div>
 
         <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-          <li>20:30 da o&apos;sha kuni sababsiz qoldirgan o&apos;quvchiga Telegram xabar boradi</li>
-          <li>07:30 da ketma-ket qoldirganlar pauzaga o&apos;tkaziladi</li>
-          <li>Pauzadagi o&apos;quvchidan pul yechilmaydi, ustozga oylik yozilmaydi</li>
+          <li>{t("20:30 da o'sha kuni sababsiz qoldirgan o'quvchiga Telegram xabar boradi")}</li>
+          <li>{t("07:30 da ketma-ket qoldirganlar pauzaga o'tkaziladi")}</li>
+          <li>{t("Pauzadagi o'quvchidan pul yechilmaydi, ustozga oylik yozilmaydi")}</li>
         </ul>
 
         <CandidatesNote saved={data} draft={form} />
 
         <div className="space-y-3 border-t pt-5">
-          <h3 className="text-sm font-semibold">Chegaralar</h3>
+          <h3 className="text-sm font-semibold">{t("Chegaralar")}</h3>
           <div className="flex flex-wrap gap-4">
             <UnitNumberField
               id="warn"
-              label="Xabar"
-              unit="ta dars"
+              label={t("Xabar")}
+              unit={t("ta dars")}
               value={form.warn}
               error={errors.warn}
               disabled={locked}
@@ -239,8 +241,8 @@ export function AbsencePauseSettingsClient() {
             />
             <UnitNumberField
               id="pause"
-              label="Pauza"
-              unit="ta dars"
+              label={t("Pauzaga o'tkazish")}
+              unit={t("ta dars")}
               value={form.pause}
               error={errors.pause}
               disabled={locked}
@@ -248,8 +250,8 @@ export function AbsencePauseSettingsClient() {
             />
             <UnitNumberField
               id="cap"
-              label="Kuniga ko'pi bilan"
-              unit="nafar"
+              label={t("Kuniga ko'pi bilan")}
+              unit={t("nafar")}
               value={form.cap}
               error={errors.cap}
               disabled={locked}
@@ -266,8 +268,7 @@ export function AbsencePauseSettingsClient() {
             )
           )}
           <p className="text-xs text-muted-foreground">
-            Bir kunda belgilangandan ko&apos;p nomzod chiqsa, hech kim pauzalanmaydi va sizga xabar
-            keladi.
+            {t("Bir kunda belgilangandan ko'p nomzod chiqsa, hech kim pauzalanmaydi va sizga xabar keladi.")}
           </p>
         </div>
 
@@ -283,7 +284,7 @@ export function AbsencePauseSettingsClient() {
       <Button variant="link" asChild className="mt-3 h-auto px-0">
         <Link href="/outreach?tab=paused">
           <PauseCircle className="mr-1.5 size-4" />
-          Pauzadagilarni ko&apos;rish
+          {t("Pauzadagilarni ko'rish")}
         </Link>
       </Button>
 

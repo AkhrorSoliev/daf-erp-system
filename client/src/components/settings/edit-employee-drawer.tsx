@@ -12,6 +12,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
 import { EditEmployeeForm } from "./edit-employee-form";
+import { useT } from "@/i18n/context";
 
 interface EditEmployeeDrawerProps {
   onSaved?: (data: EmployeeUser) => void;
@@ -19,6 +20,7 @@ interface EditEmployeeDrawerProps {
 
 export function EditEmployeeDrawer({ onSaved }: EditEmployeeDrawerProps) {
   const { open, mode, employee, submitting, closeDrawer } = useEditEmployee();
+  const t = useT();
 
   const isAdd = mode === "add";
 
@@ -33,12 +35,12 @@ export function EditEmployeeDrawer({ onSaved }: EditEmployeeDrawerProps) {
       >
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle className="text-lg">
-            {isAdd ? "Yangi xodim qo'shish" : "Xodimni tahrirlash"}
+            {isAdd ? t("Yangi xodim qo'shish") : t("Xodimni tahrirlash")}
           </SheetTitle>
           <SheetDescription>
             {isAdd
-              ? "Yangi xodim ma'lumotlarini kiriting"
-              : "Xodim ma\u2019lumotlarini o\u2018zgartirish"}
+              ? t("Yangi xodim ma'lumotlarini kiriting")
+              : t("Xodim ma'lumotlarini o'zgartirish")}
           </SheetDescription>
         </SheetHeader>
 
@@ -54,11 +56,11 @@ export function EditEmployeeDrawer({ onSaved }: EditEmployeeDrawerProps) {
         <SheetFooter className="border-t px-6 py-4">
           <div className="flex w-full justify-end gap-3">
             <Button type="button" variant="outline" onClick={closeDrawer} disabled={submitting}>
-              Bekor qilish
+              {t("Bekor qilish")}
             </Button>
             <Button type="submit" form="edit-employee-form" disabled={submitting}>
               {submitting && <Loader2 className="mr-1.5 size-4 animate-spin" />}
-              {isAdd ? "Qo'shish" : "Saqlash"}
+              {isAdd ? t("Qo'shish") : t("Saqlash")}
             </Button>
           </div>
         </SheetFooter>

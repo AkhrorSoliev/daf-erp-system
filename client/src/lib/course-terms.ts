@@ -1,3 +1,4 @@
+import { interpolate, type Params } from "@/i18n/translate";
 import { formatNumber } from "@/lib/format-utils";
 import type { PaymentModel } from "@/lib/payment-model";
 
@@ -12,19 +13,25 @@ export interface CourseTermRow {
   value: string;
 }
 
+/** Translates a text; the default fills placeholders and keeps the Uzbek source. */
+type Translate = (source: string, params?: Params) => string;
+
 /** The price means a month or a cycle; say which. Null: not known yet. */
-export function coursePriceLabel(model: PaymentModel | null): string {
-  if (model === "MONTHLY") return "Oylik narx";
-  if (model === "LESSON_PACK") return "Sikl narxi";
-  return "Narxi";
+export function coursePriceLabel(model: PaymentModel | null, t: Translate = interpolate): string {
+  if (model === "MONTHLY") return t("Oylik narx");
+  if (model === "LESSON_PACK") return t("Sikl narxi");
+  return t("Narxi");
 }
 
-const som = (n: number) => `${formatNumber(Math.round(n))} so'm`;
+const money = (n: number) => formatNumber(Math.round(n));
 
-function weekly(counts: number[]): string {
-  if (counts.length === 0) return "Guruhlarda dars jadvali yo'q";
-  if (counts.length === 1) return `${counts[0]} dars`;
-  return `${counts.slice(0, -1).join(", ")} yoki ${counts[counts.length - 1]} dars`;
+function weekly(counts: number[], t: Translate): string {
+  if (counts.length === 0) return t("Guruhlarda dars jadvali yo'q");
+  if (counts.length === 1) return t("{n} dars", { n: counts[0] });
+  return t("{list} yoki {n} dars", {
+    list: counts.slice(0, -1).join(", "),
+    n: counts[counts.length - 1],
+  });
 }
 
 /**
@@ -40,29 +47,37 @@ export function courseTermRows(
     lessonPaymentCount: number | null;
   },
   schedule: CourseSchedule | null,
+  t: Translate = interpolate,
 ): CourseTermRow[] {
+  const som = (n: number) => t("{amount} so'm", { amount: money(n) });
   const perWeek = {
-    label: "Haftasiga",
-    value: weekly(schedule?.weeklyLessons ?? []),
+    label: t("Haftasiga"),
+    value: weekly(schedule?.weeklyLessons ?? [], t),
   };
 
   if (course.paymentModel === "MONTHLY") {
     const out: CourseTermRow[] = [
-      { label: coursePriceLabel("MONTHLY"), value: som(course.price) },
+      { label: coursePriceLabel("MONTHLY", t), value: som(course.price) },
       perWeek,
     ];
     const m = schedule?.monthLessons;
     if (m && m.min > 0) {
       out.push({
-        label: "Oyiga",
-        value: m.min === m.max ? `${m.min} dars` : `${m.min}–${m.max} dars`,
+        label: t("Oyiga"),
+        value:
+          m.min === m.max
+            ? t("{n} dars", { n: m.min })
+            : t("{min}–{max} dars", { min: m.min, max: m.max }),
       });
       out.push({
-        label: "1 dars",
+        label: t("1 dars"),
         value:
           m.min === m.max
             ? som(course.price / m.min)
-            : `≈ ${formatNumber(Math.round(course.price / m.max))} – ${som(course.price / m.min)}`,
+            : t("≈ {min} – {max} so'm", {
+                min: money(course.price / m.max),
+                max: money(course.price / m.min),
+              }),
       });
     }
     return out;
@@ -70,9 +85,9 @@ export function courseTermRows(
 
   const size = course.lessonPaymentCount ?? 0;
   return [
-    { label: coursePriceLabel("LESSON_PACK"), value: som(course.price) },
-    { label: "Sikl darslari", value: size > 0 ? `${size} ta` : "—" },
-    ...(size > 0 ? [{ label: "1 dars", value: som(course.price / size) }] : []),
+    { label: coursePriceLabel("LESSON_PACK", t), value: som(course.price) },
+    { label: t("Sikl darslari"), value: size > 0 ? t("{n} ta", { n: size }) : "—" },
+    ...(size > 0 ? [{ label: t("1 dars"), value: som(course.price / size) }] : []),
     perWeek,
   ];
 }

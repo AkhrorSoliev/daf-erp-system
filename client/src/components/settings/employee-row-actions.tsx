@@ -16,6 +16,7 @@ import {
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
 import { useAuth } from "@/hooks/use-auth";
 import { useCan } from "@/hooks/use-permissions";
+import { useT } from "@/i18n/context";
 
 interface EmployeeRowActionsProps {
   employee: EmployeeUser;
@@ -26,6 +27,7 @@ export function EmployeeRowActions({ employee, onDeleteRequest }: EmployeeRowAct
   const { openDrawer } = useEditEmployee();
   const user = useAuth((s) => s.user);
   const canDelete = useCan("employees.manage");
+  const t = useT();
 
   return (
     <DropdownMenu>
@@ -38,16 +40,16 @@ export function EmployeeRowActions({ employee, onDeleteRequest }: EmployeeRowAct
               onClick={(e) => e.stopPropagation()}
             >
               <MoreHorizontal className="size-4" />
-              <span className="sr-only">Amallar</span>
+              <span className="sr-only">{t("Amallar")}</span>
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent>Amallar</TooltipContent>
+        <TooltipContent>{t("Amallar")}</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
         <DropdownMenuItem onClick={() => openDrawer(employee)}>
           <Pencil className="mr-2 size-4" />
-          Tahrirlash
+          {t("Tahrirlash")}
         </DropdownMenuItem>
         {canDelete && employee.id !== user?.id && (
           <DropdownMenuItem
@@ -55,7 +57,7 @@ export function EmployeeRowActions({ employee, onDeleteRequest }: EmployeeRowAct
             onClick={() => onDeleteRequest?.(employee)}
           >
             <Trash2 className="mr-2 size-4" />
-            O&apos;chirish
+            {t("O'chirish")}
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>

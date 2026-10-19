@@ -1,3 +1,6 @@
+import type { Translate } from "@/components/notifications/notification-view";
+import { interpolate } from "@/i18n/translate";
+
 export type AppLevel = "A1" | "A2" | "B1";
 
 export interface ParticipationSettings {
@@ -56,20 +59,20 @@ function wholeLessons(text: string): number | null {
   return wholeNumber(text, MIN_LESSONS_RANGE.min, MIN_LESSONS_RANGE.max);
 }
 
-/** The first thing wrong with the draft, in Uzbek, or null. */
-export function draftError(d: ParticipationDraft): string | null {
+/** The first thing wrong with the draft (Uzbek unless a `t` is passed), or null. */
+export function draftError(d: ParticipationDraft, t: Translate = interpolate): string | null {
   if (wholePercent(d.attendance) === null) {
-    return "Davomat chegarasi 0 dan 100 gacha butun son bo'lishi kerak";
+    return t("Davomat chegarasi 0 dan 100 gacha butun son bo'lishi kerak");
   }
   if (wholeLessons(d.minLessons) === null) {
-    return "Eng kam dars soni 1 dan 200 gacha butun son bo'lishi kerak";
+    return t("Eng kam dars soni 1 dan 200 gacha butun son bo'lishi kerak");
   }
   if (wholePercent(d.maxLate) === null) {
-    return "Kech qolish chegarasi 0 dan 100 gacha butun son bo'lishi kerak";
+    return t("Kech qolish chegarasi 0 dan 100 gacha butun son bo'lishi kerak");
   }
   for (const level of APP_LEVELS) {
     if (wholePercent(d[level]) === null) {
-      return `${level} uchun ilova chegarasi 0 dan 100 gacha butun son bo'lishi kerak`;
+      return t("{level} uchun ilova chegarasi 0 dan 100 gacha butun son bo'lishi kerak", { level });
     }
   }
   return null;

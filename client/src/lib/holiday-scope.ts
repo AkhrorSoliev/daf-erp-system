@@ -1,4 +1,9 @@
 import type { Holiday } from "@/hooks/use-edit-holiday";
+import { msg } from "@/i18n/msg";
+import { interpolate, type Params } from "@/i18n/translate";
+
+/** Translates a text; the default fills placeholders and keeps the Uzbek source. */
+type Translate = (source: string, params?: Params) => string;
 
 /**
  * Whose a holiday is (CEO decision 10.10.2026). A holiday with no branch
@@ -6,7 +11,7 @@ import type { Holiday } from "@/hooks/use-edit-holiday";
  * creates, edits or deletes it. Any other holiday is one branch's.
  */
 export const CENTRE_WIDE = "centre";
-export const CENTRE_WIDE_LABEL = "Butun markaz";
+export const CENTRE_WIDE_LABEL = msg("Butun markaz");
 
 /** A row of `GET /holidays`, or the answer of a create/update. */
 export interface ApiHoliday {
@@ -33,9 +38,10 @@ export function toHoliday(h: ApiHoliday): Holiday {
 /** The badge on a row: «Butun markaz» or the branch's name. */
 export function holidayScopeLabel(
   h: Pick<Holiday, "branchId" | "branchName">,
+  t: Translate = interpolate,
 ): string {
-  if (h.branchId == null) return CENTRE_WIDE_LABEL;
-  return h.branchName ?? `Filial #${h.branchId}`;
+  if (h.branchId == null) return t(CENTRE_WIDE_LABEL);
+  return h.branchName ?? t("Filial #{id}", { id: h.branchId });
 }
 
 /** The row's «Amallar»: a centre-wide holiday is the CEO's alone. */

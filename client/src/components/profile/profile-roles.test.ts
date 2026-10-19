@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasOwnSalary, uzbekRoles } from "./profile-roles";
+import { hasOwnSalary, roleTitle, uzbekRoles } from "./profile-roles";
 
 describe("uzbekRoles", () => {
   it("names every role in Uzbek and keeps the ids", () => {
@@ -38,5 +38,19 @@ describe("hasOwnSalary", () => {
 
   it("is true for a Director who also teaches", () => {
     expect(hasOwnSalary([{ id: 1 }, { id: 4 }])).toBe(true);
+  });
+});
+
+describe("roleTitle", () => {
+  const t = (s: string) => `[${s}]`;
+
+  it("names the CEO «Direktor (CEO)» only on controls that grant a role", () => {
+    expect(roleTitle({ id: 1 }, t, { grant: true })).toBe("[Direktor (CEO)]");
+    expect(roleTitle({ id: 1 }, t)).toBe("[Direktor]");
+  });
+
+  it("leaves every other role unchanged when granting", () => {
+    expect(roleTitle({ id: 2 }, t, { grant: true })).toBe("[Filial direktori]");
+    expect(roleTitle({ id: 99, name: "Custom" }, t, { grant: true })).toBe("Custom");
   });
 });

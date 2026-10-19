@@ -1,14 +1,16 @@
 import { Switch } from "@/components/ui/switch";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { cn } from "@/lib/utils";
 import type { BranchOption, Recipient } from "./telegram-report-api";
 import type { ReportLayout } from "./telegram-report-labels";
 import { branchSummary, reachMeta, type ReachMeta } from "./recipient-view";
 
 const LAYOUT_SHORT: Record<ReportLayout, string> = {
-  BY_SECTION: "Bo'lim",
-  TABLE: "Jadval",
-  BY_BRANCH: "Filial",
-  TOTAL_ONLY: "Jami",
+  BY_SECTION: msg("Bo'lim"),
+  TABLE: msg("Jadvalli"),
+  BY_BRANCH: msg("Filial"),
+  TOTAL_ONLY: msg("Jami"),
 };
 
 const TONE: Record<ReachMeta["tone"], string> = {
@@ -41,21 +43,23 @@ interface Props {
 }
 
 export function RecipientTable({ rows, branches, selectedId, now, onSelect, onToggle, busy, empty }: Props) {
+  const t = useT();
   return (
-    <div role="grid" aria-label="Hisobot oluvchilar" className="overflow-hidden rounded-xl border">
+    <div role="grid" aria-label={t("Hisobot oluvchilar")} className="overflow-hidden rounded-xl border">
       <div
         role="row"
         className={cn("hidden gap-x-3 border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground md:grid", COLUMNS)}
       >
-        <span role="columnheader">Xodim</span>
-        <span role="columnheader">Telegram</span>
-        <span role="columnheader">Vaqt</span>
-        <span role="columnheader">Ko&apos;rinish</span>
-        <span role="columnheader" className="sr-only">Yoqilgan</span>
+        <span role="columnheader">{t("Xodim")}</span>
+        <span role="columnheader">{t("Telegram")}</span>
+        <span role="columnheader">{t("Vaqt")}</span>
+        <span role="columnheader">{t("Shakl")}</span>
+        <span role="columnheader" className="sr-only">{t("Yoqilgan")}</span>
       </div>
       {rows.length === 0 && <p className="px-4 py-10 text-center text-sm text-muted-foreground">{empty}</p>}
       {rows.map((r) => {
-        const meta = reachMeta(r, now);
+        const meta = reachMeta(r, now, t);
+        const layout = LAYOUT_SHORT[r.layout];
         const selected = r.id === selectedId;
         return (
           <div
@@ -77,7 +81,7 @@ export function RecipientTable({ rows, branches, selectedId, now, onSelect, onTo
               >
                 <span className="block truncate text-sm font-medium">{r.name}</span>
                 <span className="block truncate text-xs text-muted-foreground">
-                  {r.position ? `${r.position} · ` : ""}{branchSummary(r, branches)}
+                  {r.position ? `${r.position} · ` : ""}{branchSummary(r, branches, t)}
                 </span>
               </button>
             </div>
@@ -86,11 +90,11 @@ export function RecipientTable({ rows, branches, selectedId, now, onSelect, onTo
               <span className="min-w-0 truncate text-xs text-muted-foreground">{meta.note}</span>
             </div>
             <span role="gridcell" className="hidden text-sm tabular-nums md:block">{r.sendTime}</span>
-            <span role="gridcell" className="hidden text-sm md:block">{LAYOUT_SHORT[r.layout]}</span>
+            <span role="gridcell" className="hidden text-sm md:block">{t(layout)}</span>
             <div role="gridcell" className="col-start-2 row-start-1 md:col-start-auto md:row-start-auto">
               <Switch
                 checked={r.isActive}
-                aria-label="Yoqilgan"
+                aria-label={t("Yoqilgan")}
                 disabled={busy}
                 onClick={(e) => e.stopPropagation()}
                 onCheckedChange={(v) => onToggle(r.id, v)}

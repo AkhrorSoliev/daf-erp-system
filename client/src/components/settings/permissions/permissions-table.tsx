@@ -10,6 +10,9 @@ import {
 } from "@/components/ui/collapsible";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { roleTitle } from "@/components/profile/profile-roles";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import type { PermissionKey } from "@/lib/permission-keys";
 import { cn } from "@/lib/utils";
 import { cellState, sectionCount, sectionCountLabel } from "./permissions-model";
@@ -38,8 +41,8 @@ interface RowContext {
 }
 
 const DANGER_TEXT = {
-  money: "Pulni o'zgartiradi",
-  irreversible: "Qaytarib bo'lmaydi",
+  money: msg("Pulni o'zgartiradi"),
+  irreversible: msg("Qaytarib bo'lmaydi"),
 } as const;
 
 function ResetButton({
@@ -51,6 +54,7 @@ function ResetButton({
   disabled: boolean;
   onClick: () => void;
 }) {
+  const t = useT();
   return (
     <Button
       type="button"
@@ -58,11 +62,11 @@ function ResetButton({
       size="xs"
       disabled={disabled}
       onClick={onClick}
-      aria-label={`${roleLabel}: boshlang'ich holatga qaytarish`}
+      aria-label={t("{role}: boshlang'ich holatga qaytarish", { role: roleLabel })}
       className="h-auto gap-1 px-1.5 py-0.5 text-xs font-normal whitespace-normal text-muted-foreground"
     >
       <RotateCcw className="size-3 shrink-0" />
-      Boshlang'ich holatga qaytarish
+      {t("Boshlang'ich holatga qaytarish")}
     </Button>
   );
 }
@@ -75,6 +79,7 @@ export function PermissionsTable({
   onReset,
   busy,
 }: PermissionsTableProps) {
+  const t = useT();
   const single = roleIds.length === 1;
   // The reset button shows only when the role has something to reset (spec §8).
   const changed = (roleId: number) =>
@@ -82,7 +87,10 @@ export function PermissionsTable({
   const ctx: RowContext = {
     overview,
     roleIds,
-    roleLabels: new Map<number, string>(overview.roles.map((r) => [r.id, r.label] as const)),
+    // Role names through the shared helper; a role the client does not know prints as sent.
+    roleLabels: new Map<number, string>(
+      overview.roles.map((r) => [r.id, roleTitle({ id: r.id, name: r.label }, t)] as const),
+    ),
     // The column count follows the Role rows the server sent, so it is a style, not a class.
     cols: {
       gridTemplateColumns: single
@@ -111,7 +119,7 @@ export function PermissionsTable({
             className="grid items-start gap-x-2 px-3 text-xs font-medium text-muted-foreground"
             style={ctx.cols}
           >
-            <span className="pt-1">Imkoniyat</span>
+            <span className="pt-1">{t("Imkoniyat")}</span>
             {roleIds.map((roleId) => (
               <div key={roleId} className="flex flex-col items-center gap-1 text-center">
                 <span className="pt-1">{ctx.roleLabels.get(roleId)}</span>
@@ -135,6 +143,7 @@ export function PermissionsTable({
 }
 
 function PermissionSection({ section, ctx }: { section: Section; ctx: RowContext }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const entries = ctx.overview.catalog.filter((e) => e.section === section.key);
   if (entries.length === 0) return null;
@@ -165,7 +174,7 @@ function PermissionSection({ section, ctx }: { section: Section; ctx: RowContext
                 single ? "text-right" : "text-center",
               )}
             >
-              {sectionCountLabel(sectionCount(ctx.overview, section.key, roleId))}
+              {sectionCountLabel(sectionCount(ctx.overview, section.key, roleId), t)}
             </span>
           ))}
         </button>
@@ -182,6 +191,7 @@ function PermissionSection({ section, ctx }: { section: Section; ctx: RowContext
 }
 
 function PermissionRow({ entry, ctx }: { entry: CatalogEntry; ctx: RowContext }) {
+  const t = useT();
   const single = ctx.roleIds.length === 1;
   // A phone has room for the reason under the label; a wide screen shows it on the lock.
   const phoneLock = single ? cellState(ctx.overview, entry.key, ctx.roleIds[0]).lockReason : null;
@@ -194,7 +204,7 @@ function PermissionRow({ entry, ctx }: { entry: CatalogEntry; ctx: RowContext })
           {entry.danger && <DangerMark danger={entry.danger} />}
         </p>
         {phoneLock && (
-          <p className="mt-0.5 text-xs text-muted-foreground">Berib bo'lmaydi: {phoneLock}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{t("Berib bo'lmaydi: {reason}", { reason: phoneLock })}</p>
         )}
       </div>
       {ctx.roleIds.map((roleId) => (
@@ -216,6 +226,7 @@ function PermissionCell({
   roleId: number;
   ctx: RowContext;
 }) {
+  const t = useT();
   const state = cellState(ctx.overview, entry.key, roleId);
   const name = `${ctx.roleLabels.get(roleId) ?? ""}: ${entry.label}`;
   if (state.locked) return <LockMark name={name} reason={state.lockReason ?? ""} />;
@@ -233,14 +244,14 @@ function PermissionCell({
           <TooltipTrigger asChild>
             <span
               role="img"
-              aria-label="Boshlang'ich holatdan farq qiladi"
+              aria-label={t("Boshlang'ich holatdan farq qiladi")}
               className={cn(
                 "absolute top-1/2 size-2 -translate-y-1/2 rounded-full bg-yellow-500",
                 ctx.roleIds.length === 1 ? "-left-3.5" : "-right-3.5",
               )}
             />
           </TooltipTrigger>
-          <TooltipContent>Boshlang'ich holatdan farq qiladi</TooltipContent>
+          <TooltipContent>{t("Boshlang'ich holatdan farq qiladi")}</TooltipContent>
         </Tooltip>
       )}
     </span>
@@ -249,13 +260,14 @@ function PermissionCell({
 
 /** A locked cell. Radix opens a tooltip on hover and focus only; the click handler adds the tap. */
 function LockMark({ name, reason }: { name: string; reason: string }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   return (
     <Tooltip open={open} onOpenChange={setOpen}>
       <TooltipTrigger asChild>
         <button
           type="button"
-          aria-label={`${name} — berib bo'lmaydi: ${reason}`}
+          aria-label={t("{name} — berib bo'lmaydi: {reason}", { name, reason })}
           className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
           onClick={(event) => {
             // Radix closes the tooltip on click unless the event is prevented.
@@ -266,22 +278,25 @@ function LockMark({ name, reason }: { name: string; reason: string }) {
           <Lock className="size-3.5" />
         </button>
       </TooltipTrigger>
-      <TooltipContent>Berib bo'lmaydi: {reason}</TooltipContent>
+      <TooltipContent>{t("Berib bo'lmaydi: {reason}", { reason })}</TooltipContent>
     </Tooltip>
   );
 }
 
 function DangerMark({ danger }: { danger: keyof typeof DANGER_TEXT }) {
+  const t = useT();
+  const label = DANGER_TEXT[danger];
+  const text = t(label);
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <span
           role="img"
-          aria-label={DANGER_TEXT[danger]}
+          aria-label={text}
           className="mt-1.5 inline-block size-2 shrink-0 rounded-full bg-red-500"
         />
       </TooltipTrigger>
-      <TooltipContent>{DANGER_TEXT[danger]}</TooltipContent>
+      <TooltipContent>{text}</TooltipContent>
     </Tooltip>
   );
 }

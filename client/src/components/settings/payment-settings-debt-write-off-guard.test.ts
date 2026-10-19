@@ -53,12 +53,12 @@ describe("payment.debtWriteOffEnabled sozlamasi UI'da", () => {
       0,
       SOURCE.indexOf('checked={settings["payment.debtWriteOffEnabled"]}'),
     ).slice(-1200);
-    expect(row).toContain('label="Qarz kechirishga ruxsat"');
-    expect(row.slice(row.lastIndexOf('label="Qarz kechirishga ruxsat"'))).toContain(
+    expect(row).toContain('label={t("Qarz kechirishga ruxsat")}');
+    expect(row.slice(row.lastIndexOf('label={t("Qarz kechirishga ruxsat")}'))).toContain(
       "locked={!isCeo}",
     );
     expect(SOURCE).toContain("{!isCeo && canEdit && (");
-    expect(SOURCE).toContain("faqat markaz rahbari o&apos;zgartira");
+    expect(SOURCE).toContain("faqat markaz rahbari o'zgartira");
   });
 
   it("CEO ko'radigan nom va tushuntirish joyida", () => {
