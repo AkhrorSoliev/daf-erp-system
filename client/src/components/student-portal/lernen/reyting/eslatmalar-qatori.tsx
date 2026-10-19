@@ -17,8 +17,9 @@ import {
 /**
  * «Darajam» tabida «Nishonlarim» ostida (spec S4 §7): «Telegram eslatmalari»,
  * almashtirgich va bir qatorli izoh. Bosish darrov saqlanadi (xato bo'lsa
- * xabar va eski holat — `eslatmalarMutation`). Saqlanayotganda almashtirgich
- * faol emas (ikki marta bosish poygasi). Botga ulanmagan o'quvchida «Botga
+ * xabar va eski holat — `eslatmalarMutation`). Saqlanayotganda bosish
+ * e'tiborsiz qoladi (ikki marta bosish poygasi), lekin tugma `disabled` bo'lmaydi:
+ * fokus yo'qolmaydi va xira miltillamaydi. Botga ulanmagan o'quvchida «Botga
  * ulang» izohi, almashtirgich faol emas. Ma'lumot `fortschritt` so'rovidan —
  * alohida so'rov yo'q.
  */
@@ -51,14 +52,14 @@ export function EslatmalarQatori() {
         aria-labelledby={sarlavhaId}
         aria-describedby={izohId}
         aria-disabled={!faol || undefined}
-        disabled={ozgartir.isPending}
         onClick={() => {
-          if (!faol) return;
+          // `disabled` emas: u tugmani fokusdan chiqaradi va har bosishda xira miltillatadi.
+          if (!faol || ozgartir.isPending) return;
           ozgartir.mutate(!yoqiq, {
             onError: (err) => toast.error(getErrorMessage(err, SAQLANMADI)),
           });
         }}
-        className="flex min-h-11 min-w-12 shrink-0 items-center justify-center disabled:opacity-50 aria-disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500"
+        className="flex min-h-11 min-w-12 shrink-0 items-center justify-center aria-disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500"
       >
         <span
           aria-hidden
