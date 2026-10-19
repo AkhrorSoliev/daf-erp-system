@@ -50,7 +50,7 @@ describe("haftaMatni", () => {
 describe("kotarilishMatni", () => {
   it("faol zona, kichik xona, Olmos", () => {
     expect(kotarilishMatni({ soni: 5, faol: true })).toBe(
-      "Birinchi 5 tasi ko'tariladi (kamida 50 ball)",
+      "Birinchi 5 tasi, kamida 50 ball topgan bo'lsa, ko'tariladi",
     );
     expect(kotarilishMatni({ soni: 5, faol: false })).toBe(
       "Xona hali kichik — ko'tarilish kamida 15 kishi bo'lganda",

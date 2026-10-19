@@ -4,6 +4,7 @@ import { ArrowUp, Trophy, UsersThree } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Avatar, EmptyState, LoadingCards } from "../../lumio";
 import { useReyting } from "../queries";
+import { KOTARILISH_MIN_BALL } from "../liga";
 import { qisqaRaqam } from "../yol/yol-tuzilishi";
 import type { ReytingZeile } from "../types";
 import { loadState } from "../../lib/load-state";
@@ -42,7 +43,7 @@ export function ReytingQatori({ qator, zona = false }: { qator: ReytingZeile; zo
           weight="bold"
           className="shrink-0 text-success"
           role="img"
-          aria-label="Ko'tarilish zonasi"
+          aria-label={`Ko'tarilish zonasi (kamida ${KOTARILISH_MIN_BALL} ball bilan)`}
         />
       ) : null}
       <span className="shrink-0 font-display text-sm font-extrabold text-ink-900">

@@ -24,7 +24,7 @@ export function haftaMatni(haftaOxiri: string, bugun: string, hajmi: number | nu
 export function kotarilishMatni(z: { soni: number; faol: boolean }): string {
   if (z.soni === 0) return "Eng yuqori liga — bu yerdan ko'tarilish yo'q";
   return z.faol
-    ? `Birinchi ${z.soni} tasi ko'tariladi (kamida ${KOTARILISH_MIN_BALL} ball)`
+    ? `Birinchi ${z.soni} tasi, kamida ${KOTARILISH_MIN_BALL} ball topgan bo'lsa, ko'tariladi`
     : `Xona hali kichik — ko'tarilish kamida ${KOTARILISH_MIN_AZO} kishi bo'lganda`;
 }
 

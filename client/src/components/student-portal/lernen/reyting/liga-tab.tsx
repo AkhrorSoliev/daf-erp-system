@@ -20,28 +20,30 @@ const LIGA_TUSI = [
   "bg-sky-500/12 text-sky-600",
 ];
 
-/** Yuklanish holati — daraja kartasi (88 px) va olti qator (54 px): ma'lumot kelganda sahifa sakramaydi. */
+/** Yuklanish holati — daraja kartasi (88 px), izoh qatori (16 px) va olti qator (54 px): ma'lumot kelganda sahifa sakramaydi. */
 export function LigaSkelet() {
   return (
-    <div className="space-y-2" aria-hidden>
+    <div className="space-y-4" aria-hidden>
       <Skeleton className="h-[88px] w-full" />
-      {Array.from({ length: 6 }).map((_, i) => (
-        <Skeleton key={i} className="h-[54px] w-full" />
-      ))}
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-2/3" />
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-[54px] w-full" />
+        ))}
+      </div>
     </div>
   );
 }
 
 /**
- * «Liga» tabi (spec S3 §5): daraja, hafta tugashiga qolgan kun va xona hajmi,
+ * «Liga» tabining yuqori qismi: daraja, hafta tugashiga qolgan kun va xona hajmi,
  * xona jadvali (o'z qatori ajratilgan, faol zonada birinchi 5 tasi yashil),
- * tepada «O'tgan hafta». Ostida «Butun markaz» — eski «Markaz» tabining
- * ro'yxati, faqat bosilganda so'raladi. Hech narsa yozmaydi.
+ * tepada «O'tgan hafta». O'z yuklanish/xato holati shu yerda — «Butun markaz»
+ * tugmasi `LigaTab`da, liga so'rovidan mustaqil. Hech narsa yozmaydi.
  */
-export function LigaTab() {
+function LigaXonasi() {
   const query = useLiga();
   const { data } = query;
-  const [markaz, setMarkaz] = React.useState(false);
 
   if (loadState(query) === "loading") return <LigaSkelet />;
   if (!data) return <LoadFailed query={query} />;
@@ -103,7 +105,16 @@ export function LigaTab() {
           description="Bu haftaning birinchi mashqini tugating — o'z ligangizdagi xonaga qo'shilasiz."
         />
       )}
+    </div>
+  );
+}
 
+export function LigaTab() {
+  const [markaz, setMarkaz] = React.useState(false);
+
+  return (
+    <div className="space-y-4">
+      <LigaXonasi />
       <Button
         variant="secondary"
         block

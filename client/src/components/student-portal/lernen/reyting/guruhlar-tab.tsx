@@ -85,9 +85,11 @@ export function GuruhlarTab() {
           ))}
           {pastda.length > 0 ? (
             <>
+              {pastda[0].platz > top.length + 1 ? (
               <li className="text-center text-xs font-semibold text-ink-500" aria-hidden>
                 ···
               </li>
+              ) : null}
               {pastda.map((q) => (
                 <GuruhQatoriKorinishi key={q.groupId} qator={q} />
               ))}

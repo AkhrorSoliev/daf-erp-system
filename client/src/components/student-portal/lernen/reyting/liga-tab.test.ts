@@ -42,7 +42,7 @@ describe("LigaTab", () => {
   it("ko'tarilish zonasi: birinchi 5 tasi yashil, o'z qatori ajratilgan, hajm", () => {
     const html = render(liga());
     expect(html).toContain("Kumush ligasi");
-    expect(html).toContain("Birinchi 5 tasi ko&#x27;tariladi");
+    expect(html).toContain("Birinchi 5 tasi, kamida 50 ball topgan bo&#x27;lsa, ko&#x27;tariladi");
     expect(html.match(/bg-success\/10/g)).toHaveLength(5);
     expect(html.match(/border-coral-500/g)).toHaveLength(1);
     expect(html).toContain("16 kishi");
@@ -77,9 +77,32 @@ describe("LigaTab", () => {
     expect(html).toContain('aria-expanded="false"');
   });
 
+  it("«Butun markaz» liga yuklanayotganda ham, xatoda ham bor", async () => {
+    const yuklanmoqda = renderToStaticMarkup(
+      createElement(QueryClientProvider, { client: new QueryClient() }, createElement(LigaTab)),
+    );
+    expect(yuklanmoqda).toContain("Butun markaz");
+    expect(yuklanmoqda).toContain("h-[88px]");
+
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, retryOnMount: false, staleTime: Infinity } },
+    });
+    await client.prefetchQuery({
+      queryKey: ["lernen", "liga"],
+      queryFn: () => Promise.reject(new Error("Network Error")),
+    });
+    const xato = renderToStaticMarkup(
+      createElement(QueryClientProvider, { client }, createElement(LigaTab)),
+    );
+    expect(xato).toContain("Ma&#x27;lumotni yuklab bo&#x27;lmadi");
+    expect(xato).toContain("Butun markaz");
+    expect(xato).toContain('aria-expanded="false"');
+  });
+
   it("skelet yuklangan ekran o'lchamlarini egallaydi", () => {
     const html = renderToStaticMarkup(createElement(LigaSkelet));
     expect(html).toContain("h-[88px]");
+    expect(html).toContain("space-y-4");
     expect(html.match(/h-\[54px\]/g)).toHaveLength(6);
   });
 

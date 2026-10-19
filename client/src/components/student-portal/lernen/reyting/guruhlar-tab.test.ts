@@ -39,6 +39,17 @@ describe("GuruhlarTab", () => {
     expect(html).not.toContain("jadvalga hali kirmaydi");
   });
 
+  it("o'z guruhi 11-o'rinda — bo'shliq belgisi yo'q", () => {
+    const html = render({
+      haftaBoshi: "2026-10-19",
+      qatorlar: [...Array.from({ length: 10 }, (_, i) => q(i + 1)), q(11, { selbst: true })],
+      oz: { orin: 11, baho: 19.5, azolar: 12, nomi: "A1-111" },
+      minAzolar: 3,
+    });
+    expect(html).toContain("A1-111");
+    expect(html).not.toContain("···");
+  });
+
   it("guruhsiz yoki kichik guruh — izoh", () => {
     const html = render({ haftaBoshi: "2026-10-19", qatorlar: [q(1)], oz: null, minAzolar: 3 });
     expect(html).toContain("Guruhingiz jadvalga hali kirmaydi (kamida 3 kishi kerak)");
