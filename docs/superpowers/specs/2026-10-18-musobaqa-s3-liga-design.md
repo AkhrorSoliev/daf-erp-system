@@ -309,15 +309,20 @@ daraja (har ligada 1 000), o'tgan hafta (12.10) 150 xona (har ligada 30 xona,
 har biri 30 kishi) / 4 500 a'zo (TUGAGAN kohorti — 500 o'quvchi — xonasiz),
 o'tgan haftaning 30 263 `DafStudentDay` qatori, 520 faol guruh. Sinov kuni
 dushanba edi, shuning uchun joriy haftada bir kunlik qator bor edi (6 674);
-qolgan 6 kun dushanba qatorlarining nusxasi bilan to'ldirildi (hafta 46 718
-qator, S2 da 49,9 ming) — aks holda hafta yig'indisi so'rovlari (jumladan
+qolgan 6 kun dushanba qatorlarining nusxasi bilan qo'lda (skriptsiz, SQL bilan)
+to'ldirildi: sanalari 20–25.10, ya'ni o'lchov kunidan keyingi, mos `DafAttempt`
+qatorlari yo'q (shu bazada `audit-daf-student-day` endi farq ko'rsatadi) —
+hafta 46 718 qator, S2 da 49,9 ming. Aks holda hafta yig'indisi so'rovlari (jumladan
 `guruhlar`) bir hafta oxiridagidan 7 marta yengil o'lchanardi. 50 parallel
-o'quvchi × 10 raund, servis darajasida, Prisma pool prod'dagidek (10 ulanish),
-kod `5082f193`. Skriptlar: `server/scripts/load/` (S3 uchun yangi:
+o'quvchi × 10 raund (birinchi qo'shilish qatorida 442 / 444 namuna: xonasiz
+TUGAGAN kohorti 500 ta, qolganini aralash blokning va parallel qo'shilish
+tekshiruvining qo'shilishlari ishlatgan, oxirgi raund 42–44 parallel), servis
+darajasida, Prisma pool prod'dagidek (10 ulanish), kod `5082f193`. Skriptlar: `server/scripts/load/` (S3 uchun yangi:
 `daf-yuklama-s3-seed.ts`, `daf-yuklama-s3-hisob.ts`, `daf-yuklama-s3-kech.ts`).
 
 **`settleWeek`, bir kompaniya, 5 000 o'quvchi (4 500 a'zo):** 381–451 ms (turli
-yurgizishlarda; jadvaldagi ikki o'lchovdan oldin 381 va 404 ms);
+yurgizishlarda: hisob skripti 381–440, `count` 429–430, qo'shilishlar bilan
+birga 443–451);
 **27 ta SQL** bitta tranzaksiyada (har xona yoki o'quvchi uchun alohida so'rov
 yo'q: eng ko'pi 1 000 qatorli bo'lak — `liga-azo-qosh` 6, `liga-natija-yoz` 5,
 `liga-xona-och` 5, qolgani bittadan); 150 xona, 4 500 a'zo, 600 ko'tarildi
@@ -340,13 +345,30 @@ xona oldi va hech narsani o'zgartirmadi.
 | shu paytda `liga` va `uebersicht` (oddiy o'qish) | 436 ms: 9 ta kutayotgan `joinRoom` + hisob pool'ning 10 ulanishini ushlaydi, o'qish ulanish kutadi |
 | Birinchi seans oxiri, o'tgan hafta hisoblanmagan (`seansNatijasi` → `settleDue` → `joinRoom`) | 430 ms (odatdagi 97 ms o'rniga) |
 | Dushanba 00:00: 50 seans oxiri bir vaqtda, hafta hisoblanmagan | hammasi 544–581 ms, xato 0, 50 tasi ham qo'shildi |
-| Sun'iy sekin hisob: kompaniya qulfini tashqaridan 22 s ushlab turish, 40 `joinRoom` | hamma 40 qo'shilish yiqildi (30 tasi 5 s da «tranzaksiya boshlanmadi», pool'ning 10 ulanishini ushlagan 10 tasi 20 s da: 10 s li tranzaksiya byudjeti qulf kutayotgan so'rovni to'xtatmaydi), o'qishlar ham 20,3 s kutdi |
-| Shu holatda 50 seans oxiri | hammasi 20,8 s da qaytdi (xatosiz, `natija` bor), hech kim xonaga qo'shilmadi |
+| Sun'iy sekin hisob, `lock_timeout` DAN OLDIN: kompaniya qulfini tashqaridan 22 s ushlab turish, 40 `joinRoom` | hamma 40 qo'shilish yiqildi (30 tasi 5 s da «tranzaksiya boshlanmadi», pool'ning 10 ulanishini ushlagan 10 tasi 20 s da: 10 s li tranzaksiya byudjeti qulf kutayotgan so'rovni to'xtatmaydi), o'qishlar ham 20,3 s kutdi |
+| Shu holatda 50 seans oxiri (`lock_timeout` dan oldin) | hammasi 20,8 s da qaytdi (xatosiz, `natija` bor), hech kim xonaga qo'shilmadi |
 
 Haqiqiy hisob 0,4 s, shuning uchun to'siq bor-yo'g'i 0,4 s; rejadagi 60 s chegara
 esa seans oxirini va pool'dagi hamma o'qishni shuncha ushlab turardi (yuqoridagi
-oxirgi ikki qator). Qulfni kutish `joinRoom` da chegaralanmagan; `lock_timeout`
-qo'shish tavsiya (sinov natijasi chegarani buzmadi, shuning uchun o'zgartirilmadi).
+oxirgi ikki qator). Shuning uchun `joinRoom` tranzaksiyasining BIRINCHI so'rovi
+`set_config('lock_timeout', '2s', true)` (= `SET LOCAL`, faqat shu tranzaksiya;
+`maxWait` 5 s dan past): umumiy kompaniya qulfi, daraja qulfi va a'zolik
+`ON CONFLICT` kutishini qamraydi, vaqt tugasa tranzaksiya qaytariladi
+(yarim holat yo'q), xatoni `liganiYangilaXavfsiz` ushlaydi va o'quvchi keyingi
+seans oxirida qo'shiladi. Hisob (`kutish: true` qulfi) va seans oxiri
+`pg_try_…` yo'li o'zgarmadi. Xuddi shu 22 s li qulf sinovi `lock_timeout` DAN KEYIN:
+
+| Holat | Natija |
+| --- | --- |
+| bitta seans oxiri (bitta `joinRoom`), qulf band | 2,06 s da qaytdi (qo'shilish vaqt tugashi bilan bekor bo'ldi, xato yo'q, `natija` bor), o'quvchi xonaga qo'shilmadi |
+| 40 `joinRoom` bir vaqtda | 0 / 40 qo'shildi: pool'ning 10 ulanishini ushlaganlar 2 s da «lock timeout» (55P03) oldi, qolganlari pool navbatida to'lqin-to'lqin (2 s dan), eng sekini 6,1 s («tranzaksiya boshlanmadi», `maxWait` 5 s) — oldin 20,3 s |
+| shu paytda `liga` / `uebersicht` o'qishlari (72 ta, 400 ms oralig'ida) | p50 13, p95 20 ms; eng sekini 6,1 s (qo'shilishlar to'lqini bilan bir vaqtda boshlangan birinchi o'qish), 2 tasi 1 s dan sekin — oldin 20,3 s |
+| 50 seans oxiri bir vaqtda, qulf band | hammasi 6,2 s da qaytdi (xatosiz, `natija` bor), hech kim qo'shilmadi — oldin 20,8 s |
+| 50 seans oxiri, hisob qulfi band emas (hisoblanmagan hafta, oddiy yo'l) | 549 (p50) – 561 ms, 50 / 50 qo'shildi — o'zgarish yo'q |
+
+`SET LOCAL` qoldiq qoldirmaydi: tranzaksiyadan keyin ulanishda `SHOW lock_timeout`
+= 0. Hali ham 6 s ga yaqin to'lqin qoladi (pool 10 ulanish, 40–50 kutuvchi): u faqat
+hisob uzoq (≥ 2 s) cho'zilganda bo'ladi; real hisob 0,4 s.
 
 **Natija (p50 / p95, ms).** Ikki o'lchov, bir xil kod va ma'lumot, har biri
 yangi tiklangan holatdan (`settleWeek` → o'lchov). Birinchisi (load average

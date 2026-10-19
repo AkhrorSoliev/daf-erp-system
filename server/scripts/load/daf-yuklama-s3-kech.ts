@@ -1,8 +1,10 @@
 /**
  * LOCAL ONLY. S3 week settlement under concurrent work (spec S3 §10, Task 10
  * review items). Needs the state `daf-yuklama-s3-seed.ts` leaves: last week's
- * rooms NOT yet settled. One scenario per run (`MODE`), the DB is reset by hand
- * between runs:
+ * rooms NOT yet settled. One scenario per run (`MODE`). On its first run it
+ * snapshots the seeded tiers and badges into `_bak_tier` / `_bak_badge` (kept;
+ * `IF NOT EXISTS`); between runs the DB is put back by hand with
+ * `daf-yuklama-s3-tiklash.sql` (same folder), which reads those snapshots:
  *
  *  count    — one `settleDue` on a client that logs every statement: wall
  *             time and the statements by their `/* tag *\/` (a per-student
@@ -73,7 +75,11 @@ run(async (prisma) => {
     const settled = () =>
       mon.dafLeagueRoom.count({ where: { settledAt: { not: null } } });
     if ((await settled()) > 0)
-      throw new Error('Hafta allaqachon hisoblangan: bazani tiklang.');
+      throw new Error(
+        'Hafta allaqachon hisoblangan: bazani tiklang (daf-yuklama-s3-tiklash.sql).',
+      );
+    await mon.$executeRaw`CREATE TABLE IF NOT EXISTS _bak_tier AS SELECT "studentId", tier FROM "DafStudentLeague"`;
+    await mon.$executeRaw`CREATE TABLE IF NOT EXISTS _bak_badge AS SELECT id FROM "DafStudentBadge"`;
 
     if (MODE === 'count') {
       const counted = new PrismaClient({
@@ -303,7 +309,7 @@ run(async (prisma) => {
       );
       return;
     }
-    throw new Error('MODE: stall | kech1 | kech50 | parallel');
+    throw new Error('MODE: count | stall | kech1 | kech50 | parallel');
   } finally {
     await mon.$disconnect();
   }

@@ -22,6 +22,8 @@ import {
  */
 export const LIGA_HISOB_KALIT = 1279870785;
 export const LIGA_XONA_KALIT = 1279870786;
+/** `joinRoom` qulf kutishi; tranzaksiya `maxWait` (5 s) dan past. */
+export const LOCK_TIMEOUT = '2s';
 
 export type LigaTx = Pick<
   Prisma.TransactionClient,
@@ -132,6 +134,14 @@ export async function azolarniQosh(
  * darajasining a'zosi eng kam xonasi; hammasi 30 bo'lsa yangi xona. Qulf
  * tartibi doim bir xil (hisob → daraja), shuning uchun hisob bilan o'zaro
  * qulflanish bo'lmaydi; a'zolik qulfdan KEYIN tekshiriladi.
+ *
+ * Qulf kutishi `LOCK_TIMEOUT` bilan cheklangan (tranzaksiya ichida, `SET LOCAL`
+ * — birinchi so'rov): umumiy kompaniya qulfi, daraja qulfi va a'zolik
+ * `ON CONFLICT` kutishini qamraydi. Uzoq hisob paytida kutayotgan qo'shilish
+ * pool ulanishini 20 s emas, 2 s ushlaydi; vaqt tugasa tranzaksiya qaytariladi
+ * (yarim holat yo'q) va xato otiladi — seans oxiri uni ushlaydi
+ * (`liganiYangilaXavfsiz`), o'quvchi keyingi seans oxirida qo'shiladi. Hisob
+ * (`settleWeek`) bunga tegmaydi: `SET LOCAL` faqat shu tranzaksiyada.
  */
 export async function joinRoom(
   prisma: PrismaService,
@@ -142,6 +152,9 @@ export async function joinRoom(
   const hafta = wochenStartTag(jetzt);
   return prisma.$transaction(
     async (tx) => {
+      await tx.$queryRaw(
+        Prisma.sql`/* liga-qulf-muddati */ SELECT set_config('lock_timeout', ${LOCK_TIMEOUT}, true)`,
+      );
       await tx.$queryRaw(Prisma.sql`/* liga-qulf-umumiy */
         SELECT 1 AS ok FROM pg_advisory_xact_lock_shared(${LIGA_HISOB_KALIT}::int, ${companyId}::int)`);
       const [daraja] = await tx.$queryRaw<

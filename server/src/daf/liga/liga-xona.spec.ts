@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client';
-import { joinRoom, ligaJavobi, ligaSharoiti } from './liga-xona';
+import { joinRoom, ligaJavobi, ligaSharoiti, LOCK_TIMEOUT } from './liga-xona';
 import { ligaBaza, type LigaBazaHolati } from './liga-baza.fake-spec';
 
 const JETZT = new Date('2026-10-21T09:00:00Z'); // chorshanba, Toshkent
@@ -179,7 +179,8 @@ describe('joinRoom — hafta ichida qo`shilish', () => {
   it('qulflar: hisob qulfi (shared) → daraja → daraja qulfi → tekshiruv; ON CONFLICT bilan', async () => {
     const { db, h } = ligaBaza();
     await joinRoom(db, 55, 1, JETZT);
-    expect(h.chaqiruvlar.slice(0, 4)).toEqual([
+    expect(h.chaqiruvlar.slice(0, 5)).toEqual([
+      'liga-qulf-muddati',
       'liga-qulf-umumiy',
       'liga-daraja',
       'liga-xona-qulf',
@@ -192,6 +193,34 @@ describe('joinRoom — hafta ichida qo`shilish', () => {
       /ON CONFLICT \("weekStart", "studentId"\) DO NOTHING/,
     );
     expect(db.$transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('qulf kutishi cheklangan: birinchi so`rov tranzaksiya ichidagi lock_timeout (SET LOCAL), maxWait dan past', async () => {
+    const { db, h } = ligaBaza();
+    await joinRoom(db, 55, 1, JETZT);
+    expect(h.chaqiruvlar[0]).toBe('liga-qulf-muddati');
+    const q = sqlOf(db.$queryRaw, 'liga-qulf-muddati');
+    // is_local = true — oddiy SET emas: ulanish pool'ga qaytganda qoldiq qolmasin.
+    expect(q.strings.join('?')).toMatch(
+      /set_config\('lock_timeout', \?, true\)/,
+    );
+    expect(q.values).toEqual([LOCK_TIMEOUT]);
+    expect(LOCK_TIMEOUT).toBe('2s');
+    // Tranzaksiya `maxWait` 5 s; qulf kutishi undan past.
+    expect(db.$transaction.mock.calls[0][1]).toMatchObject({ maxWait: 5_000 });
+  });
+
+  it('vaqt tugasa joinRoom otadi, hech narsa yozilmaydi; seans oxiri uni ushlaydi', async () => {
+    const { db, h } = ligaBaza();
+    const asl = db.$queryRaw.getMockImplementation()!;
+    db.$queryRaw.mockImplementation((sql: Prisma.Sql) =>
+      sql.strings[0].includes('/* liga-qulf-umumiy */')
+        ? Promise.reject(new Error('canceling statement due to lock timeout'))
+        : asl(sql),
+    );
+    await expect(joinRoom(db, 55, 1, JETZT)).rejects.toThrow(/lock timeout/);
+    expect(h.kirishlar).toEqual([]);
+    expect(h.xonalar).toEqual([]);
   });
 });
 

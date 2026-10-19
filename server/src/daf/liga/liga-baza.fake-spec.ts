@@ -104,6 +104,7 @@ export function ligaBaza(boshlangich: Partial<LigaBazaHolati> = {}) {
     const v = sql.values as any[];
     switch (m) {
       case 'liga-qulf':
+      case 'liga-qulf-muddati':
       case 'liga-qulf-umumiy':
       case 'liga-xona-qulf':
         return [{ ok: 1 }];
