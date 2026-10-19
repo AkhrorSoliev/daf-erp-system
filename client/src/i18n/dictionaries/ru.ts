@@ -4274,7 +4274,7 @@ const ru: Dictionary = {
   "O'qiyotganlar qarzi {amount} · {n} ta sana kutilmoqda": "Долг учащихся {amount} · ожидается дат: {n}",
   "Ro'yxatni ochish": "Открыть список",
   "Hali qo'ng'iroqlar qayd qilinmagan": "Звонков пока не записано",
-  "{date} sanasida darsga kelmagan o'quvchi yo'q": "{date} все ученики пришли на занятия",
+  "{date} sanasida darsga kelmagan o'quvchi yo'q": "{date} пропустивших занятия нет",
   "Dars vaqti": "Время занятия",
   "Bog'lanildi": "Связались",
   "Natija kiritish": "Записать результат",
@@ -4456,7 +4456,7 @@ const ru: Dictionary = {
   "Jami: {n} ta ishtirokchi": "Всего участников: {n}",
   "Ism, telefon, username...": "Имя, телефон, username...",
   "Qo'lda qo'shish": "Добавить вручную",
-  "Barcha vaqtlar": "Всё время",
+  "Barcha vaqtlar": "Любое время",
   "Vaqt qidirish...": "Поиск времени...",
   "To'lov holati qidirish...": "Поиск статуса оплаты...",
   "Yozildi": "Дата записи",
@@ -4520,7 +4520,7 @@ const ru: Dictionary = {
   "To'lovni belgilashda xatolik": "Ошибка при отметке оплаты",
   "To'lovni bekor qilishda xatolik": "Ошибка при отмене платежа",
   "To'lovni bekor qilasizmi?": "Отменить платёж?",
-  "\"{name}\"ning {amount} so'm to'lovi bekor qilinadi: ishtirokchi yana «to'lanmagan» bo'ladi va bu summa mock daromadidan chiqadi. Ishtirokchi ro'yxatdan o'chmaydi.": "Платёж «{name}» на {amount} сум будет отменён: участник снова станет «неоплаченным», а сумма вычтется из дохода пробных экзаменов. Участник из списка не удаляется.",
+  "\"{name}\"ning {amount} so'm to'lovi bekor qilinadi: ishtirokchi yana «to'lanmagan» bo'ladi va bu summa mock daromadidan chiqadi. Ishtirokchi ro'yxatdan o'chmaydi.": "Платёж участника «{name}» на {amount} сум будет отменён: участник снова станет «неоплаченным», а сумма вычтется из дохода пробных экзаменов. Участник из списка не удаляется.",
   "Pul olingan bo'lsa, uni odamga qaytaring. Faqat turi yoki izohi xato bo'lsa, bekor qilmang — «To'lovni tahrirlash»da tuzating.": "Если деньги были получены, верните их человеку. Если неверен только способ или комментарий, не отменяйте — исправьте в «Изменить оплату».",
   "Masalan: boshqa ishtirokchi o'rniga belgilangan": "Например: отмечено вместо другого участника",
   "O'quvchi yaratildi: #{id}": "Ученик создан: #{id}",
@@ -4529,7 +4529,7 @@ const ru: Dictionary = {
   "Kurs va guruhga yozish keyinroq o'quvchi profilida amalga oshiriladi.": "Запись на курс и в группу делается позже в профиле ученика.",
   "Ishtirokchi o'chirildi": "Участник удалён",
   "Ishtirokchini o'chirish": "Удалить участника",
-  "\"{name}\" imtihondan o'chiriladi. Bu amal arxivlash — ma'lumotlar yo'qotilmaydi.": "«{name}» будет удалён с экзамена. Это архивация — данные не теряются.",
+  "\"{name}\" imtihondan o'chiriladi. Bu amal arxivlash — ma'lumotlar yo'qotilmaydi.": "Участник «{name}» будет удалён с экзамена. Это архивация — данные не теряются.",
   "Bu ishtirokchi {amount} so'mni o'quvchi balansidan to'lagan. O'chirilganda tizim bu pulni balansga o'zi qaytaradi — naqd bermang.": "Этот участник оплатил {amount} сум с баланса ученика. При удалении система сама вернёт деньги на баланс — наличными не выдавайте.",
   "Bu ishtirokchi {amount} so'm to'lagan. O'chirilsa, bu to'lov mock daromadidan chiqadi, qayta ro'yxatdan o'tsa undan yana to'lov so'raladi. Avval pulni odamga qaytaring.": "Этот участник оплатил {amount} сум. При удалении платёж вычтется из дохода пробных экзаменов, а при повторной регистрации оплату запросят снова. Сначала верните деньги человеку.",
   "Pul odamga qaytarildi": "Деньги возвращены человеку",
@@ -4606,7 +4606,7 @@ const ru: Dictionary = {
   "Qayerda yo'qotyapmiz": "Где мы теряем",
   "Har pog'onadagi yo'qotish bosiladi — o'sha o'quvchilar ro'yxati ochiladi": "Потерю на каждом шаге можно нажать — откроется список этих учеников",
   "yo'qotish yo'q": "потерь нет",
-  "Hech kirmagan": "Без входов",
+  "Hech kirmagan": "Ни разу не заходили",
   "Norma bajarilmayapti": "Норма не выполняется",
   "Qisman": "Частично",
   "Normada": "В норме",
@@ -4734,7 +4734,7 @@ const ru: Dictionary = {
   "Sahifa {page} / {total}": "Страница {page} из {total}",
   "Tushundim": "Понятно",
   // Notifications page, guide chrome, staff pay correction, search pages
-  "Tizim xabarlari": "Системные",
+  "Tizim xabarlari": "Системные уведомления",
   "Xabarlardan qidirish": "Поиск по уведомлениям",
   "Bildirishnoma turlari": "Типы уведомлений",
   "Bu bo'limda sizning rolingizga tegishli sahifa yo'q.": "В этом разделе нет страниц для вашей роли.",
@@ -4765,6 +4765,8 @@ const ru: Dictionary = {
   "Hisobdan farq: {diff}": "Отличие от расчёта: {diff}",
   "Oylik tasdiqlangan — avval to'lovni bekor qilish kerak.": "Зарплата утверждена — сначала нужно отменить выплату.",
   "O'quvchilar yo'q": "Учеников нет",
+  // Mock exams — results tab, announced warning
+  "Natijalar e'lon qilingan — ballarni o'zgartirib bo'lmaydi.": "Результаты объявлены — баллы изменить нельзя.",
 };
 
 export default ru;

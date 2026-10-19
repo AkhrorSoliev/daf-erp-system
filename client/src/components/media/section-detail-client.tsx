@@ -87,7 +87,7 @@ export function SectionDetailClient({ sectionId }: { sectionId: number }) {
   // "Material" yorlig'i (to'liq javob) bir xil `/inhalt` javobining
   // ikki qismini ko'rsatadi. Kalitlar teng bo'lgani uchun React Query
   // ikkalasiga BITTA keshdan xizmat qiladi — bo'lim ochilganda bitta GET,
-  // va istalgan tarafning "Qayta urinib ko'rish"i ikkalasini yangilaydi
+  // va istalgan tarafning "Qayta urinish"i ikkalasini yangilaydi
   // (ko'rikda topilgan xato: sarlavha xom `axios`da qolib, panel bilan
   // bir xil URL'ni ikkinchi marta so'rardi).
   const {

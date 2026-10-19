@@ -10,10 +10,13 @@ import {
   type MockExamStatus,
 } from "@/hooks/use-mock-exams-board";
 
+// The grading step label, also quoted by the results tab warning.
+export const GRADING_STEP_LABEL = msg("Baholash");
+
 const STEPS: { status: MockExamStatus; label: string }[] = [
   { status: "REGISTRATION_OPEN", label: msg("Ro'yxat ochiq") },
   { status: "REGISTRATION_CLOSED", label: msg("Ro'yxat yopiq") },
-  { status: "GRADING", label: msg("Baholash") },
+  { status: "GRADING", label: GRADING_STEP_LABEL },
   { status: "ANNOUNCED", label: msg("E'lon qilingan") },
   { status: "ARCHIVED", label: msg("Arxiv") },
 ];

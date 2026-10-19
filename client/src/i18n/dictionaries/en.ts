@@ -4609,7 +4609,7 @@ const en: Dictionary = {
   "Hech kirmagan": "Never opened",
   "Norma bajarilmayapti": "Standard not met",
   "Qisman": "Partly",
-  "Normada": "On standard",
+  "Normada": "On track",
   "qizil": "red",
   "sariq": "yellow",
   "yashil": "green",
@@ -4765,6 +4765,8 @@ const en: Dictionary = {
   "Hisobdan farq: {diff}": "Difference from the calculation: {diff}",
   "Oylik tasdiqlangan — avval to'lovni bekor qilish kerak.": "The salary is approved — the payment must be cancelled first.",
   "O'quvchilar yo'q": "No students",
+  // Mock exams — results tab, announced warning
+  "Natijalar e'lon qilingan — ballarni o'zgartirib bo'lmaydi.": "Results are announced — scores can no longer be changed.",
 };
 
 export default en;

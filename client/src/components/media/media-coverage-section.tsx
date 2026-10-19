@@ -302,7 +302,7 @@ export function MediaCoverageSection() {
   const t = useT();
   const [data, setData] = useState<MediaCoverageOverview | null>(null);
   const [error, setError] = useState(false);
-  // "Qayta urinib ko'rish" bosilganda effektni qayta yugurtirish uchun —
+  // "Qayta urinish" bosilganda effektni qayta yugurtirish uchun —
   // client/CLAUDE.md talab qiladigan "xato holati qayta urinish imkonini
   // berishi kerak" qoidasi shu orqali bajariladi. `loading` alohida state
   // emas — `data`/`error` ikkalasi ham hali kelmagan payt shuning o'zi.

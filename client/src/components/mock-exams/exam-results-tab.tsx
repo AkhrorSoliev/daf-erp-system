@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MOCK_EXAM_STATUS_LABELS } from "@/hooks/use-mock-exams-board";
+import { GRADING_STEP_LABEL } from "./exam-status-stepper";
 import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { formatNumber } from "@/lib/format-utils";
@@ -238,8 +239,12 @@ export function ExamResultsTab({ exam }: ExamResultsTabProps) {
   const canEdit = isGrading;
   const subjects = matrix.subjects;
   const participants = matrix.participants;
-  // Status words are `msg()` texts: bind to a local before `t`.
-  const gradingLabel = MOCK_EXAM_STATUS_LABELS.GRADING;
+  // Status words are `msg()` texts: bind to a local before `t`. The warning
+  // quotes the step bar's own label for the grading step.
+  const gradingLabel = GRADING_STEP_LABEL;
+  // ANNOUNCED and ARCHIVED never go back to grading (MOCK_EXAM_TRANSITIONS).
+  const isAnnounced =
+    exam.status === "ANNOUNCED" || exam.status === "ARCHIVED";
   const statusLabel: string | undefined = MOCK_EXAM_STATUS_LABELS[exam.status];
 
   if (subjects.length === 0) {
@@ -316,7 +321,12 @@ export function ExamResultsTab({ exam }: ExamResultsTabProps) {
         </div>
       </div>
 
-      {!isGrading && (
+      {isAnnounced && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+          {t("Natijalar e'lon qilingan — ballarni o'zgartirib bo'lmaydi.")}
+        </div>
+      )}
+      {!isGrading && !isAnnounced && (
         <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
           {t("Ballarni faqat «{status}» holatida kiritish mumkin.", {
             status: t(gradingLabel),

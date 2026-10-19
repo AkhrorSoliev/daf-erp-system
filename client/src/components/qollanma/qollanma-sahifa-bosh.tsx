@@ -26,7 +26,7 @@ export function QollanmaSahifaBosh({
       <p className="mt-2 text-xs text-muted-foreground">
         {t("Yangilandi: {date} · Kimlar uchun: {roles}", {
           date: sanaKorinishi(sahifa.yangilangan),
-          roles: sahifa.rollar.map((r) => roleTitle({ id: r }, t)).join(", "),
+          roles: sahifa.rollar.map((r) => roleTitle({ id: r }, t, { grant: true })).join(", "),
         })}
       </p>
       <div className="mt-4 rounded-lg border bg-muted/40 p-4 leading-7">{sahifa.qisqacha}</div>
