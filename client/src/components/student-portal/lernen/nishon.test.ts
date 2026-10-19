@@ -48,8 +48,14 @@ describe("nishonQoldi", () => {
       "Oltin ligasiga ko'tarilganda",
     );
     expect(nishonQoldi(q({ key: "XONA_GOLIB", tur: "XONA", chegara: 1, qoldi: 1 }))).toBe(
-      "Xonada 1-o'rin, kamida 50 ball",
+      "Xonada 1-o'rin, kamida 50 ball, xonada kamida 5 kishi bo'lsa",
     );
+    expect(nishonQoldi(q({ key: "LIGA_X", tur: "LIGA", chegara: 9, qoldi: 1 }))).toBe(
+      "Yuqori ligaga ko'tarilganda",
+    );
+    expect(
+      nishonQoldi(q({ key: "YANGI_1", tur: "YANGI" as NishonQatori["tur"], chegara: 1, qoldi: 1 })),
+    ).toBeNull();
     expect(nishonQoldi(q({ key: "GURUH_BIRINCHI", tur: "GURUH", chegara: 1, qoldi: 1 }))).toBe(
       "Guruhingiz hafta jadvalida 1-o'rin olganda",
     );

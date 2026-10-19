@@ -8,6 +8,7 @@ export const LIGA_NOMLARI = ["Bronza", "Kumush", "Oltin", "Yoqut", "Olmos"] as c
 export const KOTARILISH_MIN_BALL = 50;
 export const KOTARILISH_MIN_AZO = 15;
 export const GOLIB_MIN_BALL = 50;
+export const GOLIB_MIN_AZO = 5;
 
 const kunRaqami = (s: string) =>
   Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10))) / 86_400_000;

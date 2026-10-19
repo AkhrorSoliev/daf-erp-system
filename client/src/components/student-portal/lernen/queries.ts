@@ -327,20 +327,39 @@ export function useNishonlar() {
   });
 }
 
-/** «Liga» tabi — faqat shu tab ochilganda so'raladi. Yozmaydi: xonaga qo'shilish seans oxirida. */
-export function useLiga() {
-  return useQuery<Liga>({
+/**
+ * Jadval har seansda o'zgaradi, shuning uchun kesh qisqa: tablar orasida
+ * almashganda qayta so'ramaydi, seans oxirida esa baribir yangilanadi
+ * (`useAbschluss` / `useWiederholungAbschluss` bekor qiladi).
+ */
+const JADVAL_STALE_MS = 30_000;
+
+export function ligaQuery(enabled: boolean = true) {
+  return queryOptions({
     queryKey: ["lernen", "liga"],
-    queryFn: () => api.get(`${BASE}/liga`).then((r) => r.data),
+    queryFn: () => api.get<Liga>(`${BASE}/liga`).then((r) => r.data),
+    enabled,
+    staleTime: JADVAL_STALE_MS,
   });
 }
 
-/** «Guruhlar» tabi — markazning haftalik guruhlar jadvali, faqat shu tab ochilganda. */
-export function useGuruhlar() {
-  return useQuery<Guruhlar>({
+export function guruhlarQuery(enabled: boolean = true) {
+  return queryOptions({
     queryKey: ["lernen", "guruhlar"],
-    queryFn: () => api.get(`${BASE}/guruhlar`).then((r) => r.data),
+    queryFn: () => api.get<Guruhlar>(`${BASE}/guruhlar`).then((r) => r.data),
+    enabled,
+    staleTime: JADVAL_STALE_MS,
   });
+}
+
+/** «Liga» tabi — `enabled` tab ko'ringandagina `true`. Yozmaydi: xonaga qo'shilish seans oxirida. */
+export function useLiga({ enabled = true }: { enabled?: boolean } = {}) {
+  return useQuery(ligaQuery(enabled));
+}
+
+/** «Guruhlar» tabi — markazning haftalik guruhlar jadvali; `enabled` tab ko'ringandagina `true`. */
+export function useGuruhlar({ enabled = true }: { enabled?: boolean } = {}) {
+  return useQuery(guruhlarQuery(enabled));
 }
 
 /**

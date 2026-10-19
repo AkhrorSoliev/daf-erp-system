@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/api", () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 
 import {
+  guruhlarQuery,
+  ligaQuery,
   sozHisobiniEskirt,
   uebungSeansQuery,
   wiederholungQuery,
@@ -54,5 +56,17 @@ describe("sozHisobiniEskirt — leaving a round marks the counters stale", () =>
     expect(qc.getQueryState(["lernen", "unit", 7])?.isInvalidated).toBe(true);
     expect(qc.getQueryState(["lernen", "levels"])?.isInvalidated).toBe(true);
     expect(qc.getQueryState(["lernen", "grammar"])?.isInvalidated).toBe(false);
+  });
+});
+
+describe("liga va guruhlar so'rovlari", () => {
+  it("tab ko'rinmaguncha so'ramaydi, kesh qisqa", () => {
+    expect(ligaQuery().enabled).toBe(true);
+    expect(ligaQuery(false).enabled).toBe(false);
+    expect(guruhlarQuery(false).enabled).toBe(false);
+    expect(ligaQuery().queryKey).toEqual(["lernen", "liga"]);
+    expect(guruhlarQuery().queryKey).toEqual(["lernen", "guruhlar"]);
+    expect(ligaQuery().staleTime).toBe(30_000);
+    expect(guruhlarQuery().staleTime).toBe(30_000);
   });
 });

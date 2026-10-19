@@ -1,4 +1,4 @@
-import { GOLIB_MIN_BALL, LIGA_NOMLARI } from "./liga";
+import { GOLIB_MIN_AZO, GOLIB_MIN_BALL, LIGA_NOMLARI } from "./liga";
 import type { NishonQatori } from "./types";
 
 /**
@@ -34,11 +34,16 @@ export function nishonQoldi(q: NishonQatori): string | null {
       return `yana ${q.qoldi} kun`;
     case "WOERTER":
       return `yana ${q.qoldi} ta so'z`;
-    case "LIGA":
-      return `${LIGA_NOMLARI[q.chegara] ?? ""} ligasiga ko'tarilganda`;
+    case "LIGA": {
+      const nom = LIGA_NOMLARI[q.chegara];
+      return nom ? `${nom} ligasiga ko'tarilganda` : "Yuqori ligaga ko'tarilganda";
+    }
     case "XONA":
-      return `Xonada 1-o'rin, kamida ${GOLIB_MIN_BALL} ball`;
+      return `Xonada 1-o'rin, kamida ${GOLIB_MIN_BALL} ball, xonada kamida ${GOLIB_MIN_AZO} kishi bo'lsa`;
     case "GURUH":
       return "Guruhingiz hafta jadvalida 1-o'rin olganda";
+    default:
+      // Newer server may add a badge kind this client does not know yet.
+      return null;
   }
 }

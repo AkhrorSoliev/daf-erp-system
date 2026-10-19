@@ -2,6 +2,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { describe, expect, it } from "vitest";
 import {
+  GOLIB_MIN_AZO,
   GOLIB_MIN_BALL,
   KOTARILISH_MIN_AZO,
   KOTARILISH_MIN_BALL,
@@ -18,8 +19,11 @@ const server = readFileSync(
   join(__dirname, "../../../../../server/src/daf/liga/liga-qoidalari.ts"),
   "utf8",
 );
-const son = (nom: string) =>
-  Number(new RegExp(`export const ${nom} = (\\d+);`).exec(server)?.[1]);
+const son = (nom: string) => {
+  const m = new RegExp(`export const ${nom} = (\\d+);`).exec(server);
+  expect(m, `${nom} not found in liga-qoidalari.ts`).not.toBeNull();
+  return Number(m![1]);
+};
 
 describe("liga konstantalari serverniki bilan bir xil", () => {
   it("nomlar va chegaralar", () => {
@@ -31,6 +35,7 @@ describe("liga konstantalari serverniki bilan bir xil", () => {
     expect(KOTARILISH_MIN_BALL).toBe(son("KOTARILISH_MIN_BALL"));
     expect(KOTARILISH_MIN_AZO).toBe(son("KOTARILISH_MIN_AZO"));
     expect(GOLIB_MIN_BALL).toBe(son("GOLIB_MIN_BALL"));
+    expect(GOLIB_MIN_AZO).toBe(son("GOLIB_MIN_AZO"));
   });
 });
 
