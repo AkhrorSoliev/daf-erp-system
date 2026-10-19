@@ -7,6 +7,13 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-18",
+    sarlavha: "Avtomatik pauza sozlamasi aniqroq bo'ldi",
+    matn: "O'quv qoidalari sahifasidagi «Avtomatik pauza» bloki yangilandi. Qoida yoqilgan yoki o'chiqligi belgi bilan ko'rinadi, switchni bosish esa «Saqlash» bosilmaguncha hech narsani o'zgartirmaydi: saqlanmagan o'zgarish haqida panel chiqadi. Qoidani yoqishdan oldin sahifa hozir nechta o'quvchi pauzaga tushishini aytadi. Raqam maydonlari strelkasiz, birligi yonida, xatosi tagida. Kartada oxirgi o'zgarish (kim va qachon), «Tarix» tugmasi esa yoqish, o'chirish va chegara o'zgarishlarining to'liq ro'yxatini yon panelda ochadi.",
+    rollar: [1, 2],
+    sahifa: { bolim: "davomat", sahifa: "avtomatik-pauza" },
+  },
+  {
+    sana: "2026-10-18",
     sarlavha: "Profilda faol seanslar ro'yxati",
     matn: "Profil sahifasida «Faol seanslar» bo'limi paydo bo'ldi: hisobingizga kirilgan qurilmalar (brauzer va tizim nomi, IP manzil, oxirgi faollik). Siz turgan qurilma «Joriy qurilma» deb belgilanadi. Tanimagan qurilma yonidagi «Chiqarish» tugmasi faqat shu qurilmadagi kirishni darhol tugatadi, qolganlariga tegmaydi. «Boshqa qurilmalardan chiqish» tugmasi avvalgidek ishlaydi. Shahar hozircha ko'rsatilmaydi. Yangilanishdan oldin kirgan qurilmalar ro'yxatda taxminan bir soatdan keyin paydo bo'ladi.",
     rollar: [1, 2, 3, 4, 5],
