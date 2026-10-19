@@ -46,6 +46,9 @@ describe("LigaTab", () => {
     expect(html.match(/bg-success\/10/g)).toHaveLength(5);
     expect(html.match(/border-coral-500/g)).toHaveLength(1);
     expect(html).toContain("16 kishi");
+    // izoh matni AA kontrastda (text-success 2.3:1 edi); yashil faqat qator fonida qoladi
+    expect(html).toMatch(/text-ink-700"[^>]*>Birinchi 5 tasi/);
+    expect(html).not.toMatch(/<p[^>]*text-success/);
   });
 
   it("kichik xona: zona yo'q, «Xona hali kichik»", () => {
@@ -75,6 +78,8 @@ describe("LigaTab", () => {
     const html = render(liga());
     expect(html).toContain("Butun markaz");
     expect(html).toContain('aria-expanded="false"');
+    // yig'ilganda aria-controls yo'q: ko'rsatilgan id DOM da mavjud emas
+    expect(html).not.toContain("aria-controls");
   });
 
   it("«Butun markaz» liga yuklanayotganda ham, xatoda ham bor", async () => {

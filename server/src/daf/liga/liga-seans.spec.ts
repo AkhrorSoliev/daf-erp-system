@@ -73,6 +73,22 @@ describe('liganiYangilaXavfsiz — seans oxiri', () => {
     expect(tartib).toEqual(['settle', 'join']);
   });
 
+  it('hisob band (bajarildi:false), eski hafta qoldi — joinRoom chaqirilmaydi, natija o`zgarmaydi', async () => {
+    (ligaSharoiti as jest.Mock)
+      .mockResolvedValueOnce(holat({ kechikkan: true, azo: false }))
+      .mockResolvedValueOnce(
+        holat({ kechikkan: true, azo: false, tier: 1, xonaGolib: true }),
+      );
+    (settleDue as jest.Mock).mockResolvedValue([{ bajarildi: false }]);
+    expect(await liganiYangilaXavfsiz(prisma, 55, 1, JETZT)).toEqual({
+      liga: 1,
+      xonaGolib: true,
+      guruhBirinchi: false,
+    });
+    expect(ligaSharoiti).toHaveBeenCalledTimes(2);
+    expect(joinRoom).not.toHaveBeenCalled();
+  });
+
   it('holat o`qilmadi — null, otilmaydi', async () => {
     (ligaSharoiti as jest.Mock).mockRejectedValue(new Error('db down'));
     await expect(

@@ -83,7 +83,7 @@ function LigaXonasi() {
           <p
             className={cn(
               "px-1 text-xs font-semibold",
-              xona.kotarilishZonasi.faol ? "text-success" : "text-ink-500",
+              xona.kotarilishZonasi.faol ? "text-ink-700" : "text-ink-500",
             )}
           >
             {kotarilishMatni(xona.kotarilishZonasi)}
@@ -119,7 +119,7 @@ export function LigaTab() {
         variant="secondary"
         block
         aria-expanded={markaz}
-        aria-controls="butun-markaz"
+        aria-controls={markaz ? "butun-markaz" : undefined}
         onClick={() => setMarkaz((v) => !v)}
       >
         Butun markaz
