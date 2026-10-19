@@ -26,19 +26,23 @@ describe("EslatmalarQatori", () => {
     expect(html).toContain('role="switch"');
     expect(html).toContain('aria-checked="true"');
     expect(html).not.toContain('disabled=""');
+    expect(html).not.toContain('aria-disabled="true"');
   });
 
   it("o'chirilgan: almashtirgich o'chiq, faol", () => {
     const html = render({ eslatmalar: false, telegramUlangan: true });
     expect(html).toContain('aria-checked="false"');
     expect(html).not.toContain('disabled=""');
+    expect(html).not.toContain('aria-disabled="true"');
   });
 
   it("botga ulanmagan: «Botga ulang», almashtirgich faol emas", () => {
     const html = render({ eslatmalar: true, telegramUlangan: false });
     expect(html).toContain("Botga ulang");
     expect(html).not.toContain("Kechki eslatma va dushanba xulosasi");
-    expect(html).toContain('disabled=""');
+    expect(html).toContain('aria-disabled="true"');
+    expect(html).toContain('aria-checked="false"');
+    expect(html).not.toContain('aria-checked="true"');
   });
 
   it("eski server (maydonlar yo'q) — hech narsa chizilmaydi", () => {
@@ -54,10 +58,12 @@ describe("EslatmalarQatori", () => {
   it("a11y: nomi sarlavhadan, izohga aria-describedby bilan bog'langan", () => {
     for (const ulangan of [true, false]) {
       const html = render({ eslatmalar: true, telegramUlangan: ulangan });
-      expect(html).toContain('aria-labelledby="eslatmalar-sarlavha"');
-      expect(html).toContain('id="eslatmalar-sarlavha"');
-      expect(html).toContain('aria-describedby="eslatmalar-izoh"');
-      expect(html).toContain('id="eslatmalar-izoh"');
+      const lb = html.match(/aria-labelledby="([^"]+)"/)?.[1];
+      const db = html.match(/aria-describedby="([^"]+)"/)?.[1];
+      expect(lb).toBeTruthy();
+      expect(db).toBeTruthy();
+      expect(html).toContain(`id="${lb}"`);
+      expect(html).toContain(`id="${db}"`);
     }
   });
 });

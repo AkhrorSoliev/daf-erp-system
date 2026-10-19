@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import toast from "react-hot-toast";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { cn } from "@/lib/utils";
@@ -24,19 +25,22 @@ import {
 export function EslatmalarQatori() {
   const { data } = useFortschritt();
   const ozgartir = useEslatmalarOzgartir();
+  const id = useId();
+  const sarlavhaId = `${id}-sarlavha`;
+  const izohId = `${id}-izoh`;
   const holat = data ? eslatmaHolati(data) : null;
   if (!holat) return null;
 
-  const yoqiq = data?.eslatmalar === true;
+  const yoqiq = holat === "yoqilgan";
   const faol = holat !== "ulanmagan";
 
   return (
     <Card className="flex items-center justify-between gap-3">
       <div className="min-w-0">
-        <p id="eslatmalar-sarlavha" className="font-display text-sm font-extrabold text-ink-900">
+        <p id={sarlavhaId} className="font-display text-sm font-extrabold text-ink-900">
           {ESLATMA_SARLAVHA}
         </p>
-        <p id="eslatmalar-izoh" className="text-xs font-semibold text-ink-500">
+        <p id={izohId} className="text-xs font-semibold text-ink-500">
           {faol ? ESLATMA_IZOH : ULANMAGAN_IZOH}
         </p>
       </div>
@@ -44,26 +48,32 @@ export function EslatmalarQatori() {
         type="button"
         role="switch"
         aria-checked={yoqiq}
-        aria-labelledby="eslatmalar-sarlavha"
-        aria-describedby="eslatmalar-izoh"
-        disabled={!faol || ozgartir.isPending}
-        onClick={() =>
+        aria-labelledby={sarlavhaId}
+        aria-describedby={izohId}
+        aria-disabled={!faol || undefined}
+        disabled={ozgartir.isPending}
+        onClick={() => {
+          if (!faol) return;
           ozgartir.mutate(!yoqiq, {
             onError: (err) => toast.error(getErrorMessage(err, SAQLANMADI)),
-          })
-        }
-        className={cn(
-          "relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500",
-          yoqiq ? "bg-teal-500" : "bg-line",
-        )}
+          });
+        }}
+        className="flex min-h-11 min-w-12 shrink-0 items-center justify-center disabled:opacity-50 aria-disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500"
       >
         <span
           aria-hidden
           className={cn(
-            "absolute top-1 left-0 h-5 w-5 rounded-full bg-white shadow transition-transform",
-            yoqiq ? "translate-x-6" : "translate-x-1",
+            "relative h-7 w-12 rounded-full transition-colors",
+            yoqiq ? "bg-teal-500" : "bg-ink-500",
           )}
-        />
+        >
+          <span
+            className={cn(
+              "absolute top-1 left-0 h-5 w-5 rounded-full bg-white shadow transition-transform",
+              yoqiq ? "translate-x-6" : "translate-x-1",
+            )}
+          />
+        </span>
       </button>
     </Card>
   );
