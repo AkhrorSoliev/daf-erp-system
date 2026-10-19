@@ -36,6 +36,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useLeadsBoard, type LeadBoardSection } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
+import { useT } from "@/i18n/context";
 import { LeadCardItem } from "./lead-card";
 
 interface LeadSectionProps {
@@ -51,6 +52,7 @@ export function LeadSection({
   canMoveUp,
   canMoveDown,
 }: LeadSectionProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const fetchSectionLeads = useLeadsBoard((s) => s.fetchSectionLeads);
   const moveSection = useLeadsBoard((s) => s.moveSection);
@@ -119,9 +121,7 @@ export function LeadSection({
               {...attributes}
             >
             <GripVertical className="size-4" />
-            <span className="sr-only">
-              Bo&apos;limni ko&apos;chirish uchun ushlang
-            </span>
+            <span className="sr-only">{t("Bo'limni ko'chirish uchun ushlang")}</span>
           </button>
           <CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-2 py-2 text-left hover:bg-muted/50">
             <ChevronRight
@@ -144,13 +144,13 @@ export function LeadSection({
             onClick={() => openAddLead(section.id)}
           >
             <Plus className="size-4" />
-            <span className="sr-only">Lid qo&apos;shish</span>
+            <span className="sr-only">{t("Lid qo'shish")}</span>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="size-7 shrink-0">
                 <MoreVertical className="size-4" />
-                <span className="sr-only">Bo&apos;lim amallari</span>
+                <span className="sr-only">{t("Bo'lim amallari")}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -165,21 +165,21 @@ export function LeadSection({
                 }
               >
                 <Pencil className="mr-2 size-4" />
-                Tahrirlash
+                {t("Tahrirlash")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={!canMoveUp}
                 onClick={() => moveSection(columnId, section.id, "up")}
               >
                 <ArrowUp className="mr-2 size-4" />
-                Yuqoriga surish
+                {t("Yuqoriga surish")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={!canMoveDown}
                 onClick={() => moveSection(columnId, section.id, "down")}
               >
                 <ArrowDown className="mr-2 size-4" />
-                Pastga surish
+                {t("Pastga surish")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() =>
@@ -191,7 +191,7 @@ export function LeadSection({
                 }
               >
                 <FolderInput className="mr-2 size-4" />
-                Boshqa ustunga ko&apos;chirish
+                {t("Boshqa ustunga ko'chirish")}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -206,7 +206,7 @@ export function LeadSection({
                 }
               >
                 <Trash2 className="mr-2 size-4" />
-                O&apos;chirish
+                {t("O'chirish")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -221,7 +221,7 @@ export function LeadSection({
           ) : !leads && failed ? (
             <div className="flex flex-col items-center gap-2 rounded-md border border-dashed px-3 py-5 text-center">
               <p className="text-xs text-muted-foreground">
-                Yuklab bo&apos;lmadi
+                {t("Yuklab bo'lmadi")}
               </p>
               <Button
                 variant="outline"
@@ -229,13 +229,13 @@ export function LeadSection({
                 className="h-7 text-xs"
                 onClick={() => fetchSectionLeads(section.id)}
               >
-                Qayta urinish
+                {t("Qayta urinish")}
               </Button>
             </div>
           ) : !leads || leads.length === 0 ? (
             <div className="flex flex-col items-center gap-2 rounded-md border border-dashed px-3 py-5 text-center">
               <p className="text-xs text-muted-foreground">
-                Bu bo&apos;limda lid yo&apos;q
+                {t("Bu bo'limda lid yo'q")}
               </p>
               <Button
                 variant="outline"
@@ -244,7 +244,7 @@ export function LeadSection({
                 onClick={() => openAddLead(section.id)}
               >
                 <Plus className="size-3.5" />
-                Lid qo&apos;shish
+                {t("Lid qo'shish")}
               </Button>
             </div>
           ) : (

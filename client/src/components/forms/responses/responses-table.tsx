@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { CallCell } from "./call-cell";
 import { answerText } from "./submission-format";
@@ -62,20 +63,21 @@ function DesktopTable({
   onOpenLead,
   onRestore,
 }: Props) {
+  const t = useT();
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead className="w-12 border-r">#</TableHead>
-          <TableHead>Ism familiya</TableHead>
-          <TableHead>Telefon</TableHead>
-          <TableHead>Manba</TableHead>
-          <TableHead>Yuborildi</TableHead>
-          <TableHead>Qo&apos;ng&apos;iroq</TableHead>
+          <TableHead>{t("Ism familiya")}</TableHead>
+          <TableHead>{t("Telefon")}</TableHead>
+          <TableHead>{t("Manba")}</TableHead>
+          <TableHead>{t("Yuborildi")}</TableHead>
+          <TableHead>{t("Qo'ng'iroq")}</TableHead>
           {columns.map((c) => (
             <TableHead key={c.id}>{c.label}</TableHead>
           ))}
-          <TableHead className="w-12 text-right">Amal</TableHead>
+          <TableHead className="w-12 text-right">{t("Amal")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -118,7 +120,7 @@ function DesktopTable({
                   </TableCell>
                   {columns.map((c) => (
                     <TableCell key={c.id} className="max-w-48 truncate">
-                      {answerText(c, row.data[c.id]) || "—"}
+                      {answerText(c, row.data[c.id], t) || "—"}
                     </TableCell>
                   ))}
                   <TableCell className="text-right">
@@ -144,6 +146,7 @@ function MobileList({
   onOpenLead,
   onRestore,
 }: Props) {
+  const t = useT();
   if (loading) {
     return (
       <div className="space-y-2">
@@ -169,7 +172,7 @@ function MobileList({
             </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
               <SubmissionPhone row={row} />
-              <span>{row.lead?.source?.name ?? "Manbasiz"}</span>
+              <span>{row.lead?.source?.name ?? t("Manbasiz")}</span>
               <SubmittedAt iso={row.submittedAt} />
             </div>
             {columns.length > 0 && (
@@ -177,7 +180,7 @@ function MobileList({
                 {columns.map((c) => (
                   <Fragment key={c.id}>
                     <dt className="text-muted-foreground">{c.label}:</dt>
-                    <dd>{answerText(c, row.data[c.id]) || "—"}</dd>
+                    <dd>{answerText(c, row.data[c.id], t) || "—"}</dd>
                   </Fragment>
                 ))}
               </dl>

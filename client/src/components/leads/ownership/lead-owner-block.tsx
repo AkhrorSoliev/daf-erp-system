@@ -13,6 +13,7 @@ import { claimLead, releaseLead } from "./ownership-api";
 import { LeadOwnerAssign } from "./lead-owner-assign";
 import { dueLabel, dueTone, ownerName, type LeadOwner } from "./ownership-format";
 import { useMinuteClock } from "./use-minute-clock";
+import { useT } from "@/i18n/context";
 
 export interface OwnerBlockLead {
   id: string;
@@ -33,6 +34,7 @@ export function LeadOwnerBlock({
   lead: OwnerBlockLead;
   onChanged: (card: LeadCard) => void;
 }) {
+  const t = useT();
   const now = useMinuteClock();
   const userId = useAuth((s) => s.user?.id);
   const canClaim = useCan("leads.claim");
@@ -48,7 +50,7 @@ export function LeadOwnerBlock({
       onChanged(kind === "claim" ? await claimLead(lead.id) : await releaseLead(lead.id));
       toast.success(ok);
     } catch (error) {
-      toast.error(getErrorMessage(error, "Saqlashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Saqlashda xatolik yuz berdi")));
     } finally {
       setBusy(null);
     }
@@ -59,7 +61,7 @@ export function LeadOwnerBlock({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-muted/30 p-3">
       <div className="min-w-0">
-        <p className="text-sm font-medium">Mas&apos;ul</p>
+        <p className="text-sm font-medium">{t("Mas'ul")}</p>
         {lead.owner ? (
           <p className="mt-0.5 text-xs text-muted-foreground">
             {ownerName(lead.owner)}
@@ -71,13 +73,15 @@ export function LeadOwnerBlock({
                 )}
               >
                 {" · "}
-                {tone === "overdue" ? "muddat o'tdi" : dueLabel(lead.ownerDueAt, now)}
+                {tone === "overdue" ? t("muddat o'tdi") : dueLabel(lead.ownerDueAt, now, t)}
               </span>
             )}
           </p>
         ) : (
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {converted ? "Egasi belgilanmagan" : "Umumiy ro'yxatda — hali hech kim olmagan"}
+            {converted
+              ? t("Egasi belgilanmagan")
+              : t("Umumiy ro'yxatda — hali hech kim olmagan")}
           </p>
         )}
       </div>
@@ -87,10 +91,10 @@ export function LeadOwnerBlock({
             <Button
               size="sm"
               disabled={busy !== null}
-              onClick={() => void run("claim", "Lid sizga biriktirildi")}
+              onClick={() => void run("claim", t("Lid sizga biriktirildi"))}
             >
               {busy === "claim" && <Loader2 className="size-4 animate-spin" />}
-              Band qilish
+              {t("Band qilish")}
             </Button>
           )}
           {lead.owner && (mine || canAssign) && (
@@ -98,10 +102,10 @@ export function LeadOwnerBlock({
               size="sm"
               variant="outline"
               disabled={busy !== null}
-              onClick={() => void run("release", "Lid umumiy ro'yxatga qaytarildi")}
+              onClick={() => void run("release", t("Lid umumiy ro'yxatga qaytarildi"))}
             >
               {busy === "release" && <Loader2 className="size-4 animate-spin" />}
-              Bo&apos;shatish
+              {t("Bo'shatish")}
             </Button>
           )}
           {canAssign && (

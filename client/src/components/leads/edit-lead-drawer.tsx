@@ -22,6 +22,7 @@ import { useLeadsBoard, type LeadCard } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
 import { LeadAdditionalFields } from "./lead-additional-fields";
 import { LeadSourcePicker } from "./lead-source-picker";
+import { useT } from "@/i18n/context";
 
 interface EditLeadValues {
   firstName: string;
@@ -32,6 +33,7 @@ interface EditLeadValues {
 }
 
 export function EditLeadDrawer() {
+  const t = useT();
   const editLead = useLeadsUi((s) => s.editLead);
   const closeEditLead = useLeadsUi((s) => s.closeEditLead);
   const applyLeadUpdate = useLeadsBoard((s) => s.applyLeadUpdate);
@@ -86,10 +88,10 @@ export function EditLeadDrawer() {
             : undefined,
       });
       applyLeadUpdate(editLead.sectionId, data);
-      toast.success("Lid yangilandi");
+      toast.success(t("Lid yangilandi"));
       closeEditLead();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Lidni yangilashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Lidni yangilashda xatolik yuz berdi")));
     } finally {
       setSubmitting(false);
     }
@@ -103,9 +105,9 @@ export function EditLeadDrawer() {
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <SheetHeader className="border-b px-6 py-4">
-          <SheetTitle className="text-lg">Lidni tahrirlash</SheetTitle>
+          <SheetTitle className="text-lg">{t("Lidni tahrirlash")}</SheetTitle>
           <SheetDescription>
-            Lid ma&apos;lumotlarini o&apos;zgartiring
+            {t("Lid ma'lumotlarini o'zgartiring")}
           </SheetDescription>
         </SheetHeader>
 
@@ -117,11 +119,11 @@ export function EditLeadDrawer() {
           >
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="edit-firstName">Ism</Label>
+                <Label htmlFor="edit-firstName">{t("Ism")}</Label>
                 <Input
                   id="edit-firstName"
                   {...register("firstName", {
-                    required: "Ism kiritilishi shart",
+                    required: t("Ism kiritilishi shart"),
                   })}
                 />
                 {errors.firstName && (
@@ -131,11 +133,11 @@ export function EditLeadDrawer() {
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="edit-lastName">Familiya</Label>
+                <Label htmlFor="edit-lastName">{t("Familiya")}</Label>
                 <Input
                   id="edit-lastName"
                   {...register("lastName", {
-                    required: "Familiya kiritilishi shart",
+                    required: t("Familiya kiritilishi shart"),
                   })}
                 />
                 {errors.lastName && (
@@ -147,13 +149,13 @@ export function EditLeadDrawer() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="edit-lead-phone">Telefon raqami</Label>
+              <Label htmlFor="edit-lead-phone">{t("Telefon raqami")}</Label>
               <Controller
                 name="phone"
                 control={control}
                 rules={{
                   validate: (v) =>
-                    v.length === 9 || "Telefon raqamini to'liq kiriting",
+                    v.length === 9 || t("Telefon raqamini to'liq kiriting"),
                 }}
                 render={({ field }) => (
                   <PhoneInput
@@ -180,18 +182,18 @@ export function EditLeadDrawer() {
                 validate: (v) =>
                   !editLead?.sourceId ||
                   Boolean(v) ||
-                  "Lid manbasini olib tashlab bo'lmaydi",
+                  t("Lid manbasini olib tashlab bo'lmaydi"),
               }}
               render={({ field }) => (
                 <LeadSourcePicker
                   open={open}
                   value={field.value}
                   onChange={field.onChange}
-                  label="Qayerdan bildi?"
+                  label={t("Qayerdan bildi?")}
                   required={Boolean(editLead?.sourceId)}
                   error={errors.sourceId?.message}
                   id="edit-lead-sourceId"
-                  loadErrorMessage="Manbalarni yuklashda xatolik"
+                  loadErrorMessage={t("Manbalarni yuklashda xatolik")}
                 />
               )}
             />
@@ -201,7 +203,7 @@ export function EditLeadDrawer() {
               control={control}
               rules={{
                 validate: (v) =>
-                  !v || v.length === 9 || "Telefon raqamini to'liq kiriting",
+                  !v || v.length === 9 || t("Telefon raqamini to'liq kiriting"),
               }}
               render={({ field }) => (
                 <LeadAdditionalFields
@@ -222,11 +224,11 @@ export function EditLeadDrawer() {
               onClick={closeEditLead}
               disabled={submitting}
             >
-              Bekor qilish
+              {t("Bekor qilish")}
             </Button>
             <Button type="submit" form="edit-lead-form" disabled={submitting}>
               {submitting && <Loader2 className="size-4 animate-spin" />}
-              Saqlash
+              {t("Saqlash")}
             </Button>
           </div>
         </SheetFooter>

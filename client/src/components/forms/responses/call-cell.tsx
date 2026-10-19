@@ -10,6 +10,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useT } from "@/i18n/context";
 import type { SubmissionRow } from "./types";
 
 interface Props {
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export function CallCell({ row, onToggle }: Props) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const lead = row.lead;
   // O'quvchi bo'lgan yoki arxivdagi lidga qo'ng'iroq belgisi qo'yilmaydi.
@@ -30,25 +32,25 @@ export function CallCell({ row, onToggle }: Props) {
     if (!ok) return;
     if (called) {
       toast(
-        (t) => (
+        (item) => (
           <span className="flex items-center gap-3 text-sm">
-            Qo&apos;ng&apos;iroq belgilandi
+            {t("Qo'ng'iroq belgilandi")}
             <button
               type="button"
               className="font-medium text-primary hover:underline"
               onClick={() => {
-                toast.dismiss(t.id);
+                toast.dismiss(item.id);
                 void toggle(false);
               }}
             >
-              Bekor qilish
+              {t("Qaytarib olish")}
             </button>
           </span>
         ),
         { duration: 5000 },
       );
     } else {
-      toast.success("Qo'ng'iroq belgisi olib tashlandi");
+      toast.success(t("Qo'ng'iroq belgisi olib tashlandi"));
     }
   }
 
@@ -67,7 +69,7 @@ export function CallCell({ row, onToggle }: Props) {
         ) : (
           <Phone className="size-3.5" />
         )}
-        Telefon qildim
+        {t("Telefon qildim")}
       </Button>
     );
   }
@@ -94,10 +96,10 @@ export function CallCell({ row, onToggle }: Props) {
               ) : (
                 <X className="size-3.5" />
               )}
-              <span className="sr-only">Belgini olib tashlash</span>
+              <span className="sr-only">{t("Belgini olib tashlash")}</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Qo&apos;ng&apos;iroq belgisini olib tashlash</TooltipContent>
+          <TooltipContent>{t("Qo'ng'iroq belgisini olib tashlash")}</TooltipContent>
         </Tooltip>
       )}
     </div>

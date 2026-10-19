@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import toast from "react-hot-toast";
@@ -37,6 +43,7 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPhone } from "@/lib/format-utils";
 import {
   LEAD_STATUS_LABELS,
+  leadColumnName,
   leadConvertedLabel,
   useLeadsBoard,
   type LeadCard,
@@ -49,6 +56,8 @@ import type { FormFieldShape } from "@/lib/schemas/custom-form-schema";
 import { mockPaymentState } from "@/components/mock-exams/mock-fee";
 import type { LeadOwner } from "./ownership/ownership-format";
 import { LeadOwnerBlock } from "./ownership/lead-owner-block";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 
 interface LeadFormSubmission {
   id: string;
@@ -93,7 +102,7 @@ interface LeadDetail {
   section: {
     id: string;
     name: string;
-    column: { id: string; name: string };
+    column: { id: string; name: string; systemKey?: string | null };
   } | null;
   formSubmissions: LeadFormSubmission[];
   mockParticipations: LeadMockParticipation[];
@@ -109,11 +118,11 @@ interface LeadDetail {
 }
 
 const STUDENT_STATUS_LABELS: Record<string, string> = {
-  ACTIVE: "Faol",
-  FROZEN: "Muzlatilgan",
-  GRADUATED: "Bitirgan",
-  EXPELLED: "Chetlatilgan",
-  ARCHIVED: "Arxivlangan",
+  ACTIVE: msg("Faol"),
+  FROZEN: msg("Muzlatilgan"),
+  GRADUATED: msg("Bitirgan"),
+  EXPELLED: msg("Chetlatilgan"),
+  ARCHIVED: msg("Arxivlangan"),
 };
 
 function DetailRow({ label, value }: { label: string; value: ReactNode }) {
@@ -126,12 +135,12 @@ function DetailRow({ label, value }: { label: string; value: ReactNode }) {
 }
 
 const MOCK_EXAM_STATUS_LABELS: Record<string, string> = {
-  DRAFT: "Qoralama",
-  REGISTRATION_OPEN: "Ro'yxat ochiq",
-  REGISTRATION_CLOSED: "Ro'yxat yopiq",
-  GRADING: "Baholanmoqda",
-  ANNOUNCED: "E'lon qilingan",
-  ARCHIVED: "Arxivlangan",
+  DRAFT: msg("Qoralama"),
+  REGISTRATION_OPEN: msg("Ro'yxat ochiq"),
+  REGISTRATION_CLOSED: msg("Ro'yxat yopiq"),
+  GRADING: msg("Baholanmoqda"),
+  ANNOUNCED: msg("E'lon qilingan"),
+  ARCHIVED: msg("Arxivlangan"),
 };
 
 function MockParticipationsBlock({
@@ -139,17 +148,26 @@ function MockParticipationsBlock({
 }: {
   participations: LeadMockParticipation[];
 }) {
+  const t = useT();
+  // An unknown status code is shown as it came, never through t().
+  const examStatus = (status: string) => {
+    const label = MOCK_EXAM_STATUS_LABELS[status];
+    return label ? t(label) : status;
+  };
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <h4 className="text-sm font-semibold">🎯 Mock imtihonlarga yozilgan</h4>
+        <h4 className="text-sm font-semibold">
+          {t("🎯 Mock imtihonlarga yozilgan")}
+        </h4>
         <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
           {participations.length}
         </span>
       </div>
       <p className="text-xs text-muted-foreground">
-        Bu lid telefon raqami orqali quyidagi mock imtihonlarga ro&apos;yxatga
-        olingan
+        {t(
+          "Bu lid telefon raqami orqali quyidagi mock imtihonlarga ro'yxatga olingan",
+        )}
       </p>
       <ul className="space-y-2">
         {participations.map((p) => (
@@ -176,11 +194,12 @@ function MockParticipationsBlock({
                   📅{" "}
                   {p.exam.examDate
                     ? format(parseISO(p.exam.examDate), "dd.MM.yyyy")
-                    : "sanasi yo'q"}
+                    : t("sanasi yo'q")}
                 </span>
                 <span>
-                  Yozildi:{" "}
-                  {format(parseISO(p.registeredAt), "dd.MM.yyyy")}
+                  {t("Yozildi: {date}", {
+                    date: format(parseISO(p.registeredAt), "dd.MM.yyyy"),
+                  })}
                 </span>
                 {(() => {
                   // Bepul (yoki DaF uchun bepul) mockda "To'lov kutilmoqda"
@@ -189,26 +208,28 @@ function MockParticipationsBlock({
                   if (state === "paid")
                     return (
                       <span className="text-emerald-600">
-                        ✓ To&apos;langan
+                        {t("✓ To'langan")}
                       </span>
                     );
                   if (state === "pending")
                     return (
                       <span className="text-amber-600">
-                        To&apos;lov kutilmoqda
+                        {t("To'lov kutilmoqda")}
                       </span>
                     );
-                  return <span className="text-muted-foreground">Bepul</span>;
+                  return (
+                    <span className="text-muted-foreground">{t("Bepul")}</span>
+                  );
                 })()}
               </div>
             </div>
             <div className="shrink-0 text-right text-xs">
               <div className="text-muted-foreground">
-                {MOCK_EXAM_STATUS_LABELS[p.exam.status] ?? p.exam.status}
+                {examStatus(p.exam.status)}
               </div>
               {p.totalScore !== null && (
                 <div className="mt-1 font-medium tabular-nums">
-                  {p.totalScore} ball
+                  {t("{n} ball", { n: p.totalScore })}
                 </div>
               )}
             </div>
@@ -224,10 +245,11 @@ function FormSubmissionsBlock({
 }: {
   submissions: LeadFormSubmission[];
 }) {
+  const t = useT();
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <h4 className="text-sm font-semibold">Forma orqali kelgan</h4>
+        <h4 className="text-sm font-semibold">{t("Forma orqali kelgan")}</h4>
       </div>
       {submissions.map((sub) => {
         const fieldLabels = new Map(sub.form.fields.map((f) => [f.id, f]));
@@ -247,7 +269,7 @@ function FormSubmissionsBlock({
             </div>
             {entries.length === 0 ? (
               <p className="text-xs text-muted-foreground">
-                Qo&apos;shimcha javoblar yo&apos;q
+                {t("Qo'shimcha javoblar yo'q")}
               </p>
             ) : (
               <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1.5 text-xs">
@@ -277,9 +299,10 @@ function FormSubmissionEntry({
   label: string;
   value: unknown;
 }) {
+  const t = useT();
   let display: string;
   if (value === null || value === undefined || value === "") display = "—";
-  else if (typeof value === "boolean") display = value ? "Ha" : "Yo'q";
+  else if (typeof value === "boolean") display = value ? t("Ha") : t("Yo'q");
   else display = String(value);
   return (
     <>
@@ -289,7 +312,20 @@ function FormSubmissionEntry({
   );
 }
 
+// Drawer tabs: `value` is the `?lead_tab=` URL value and never changes.
+const LEAD_TABS = [
+  { value: "malumot", label: msg("Ma'lumot") },
+  { value: "izohlar", label: msg("Izohlar") },
+  { value: "tarix", label: msg("Tarix") },
+];
+
 export function LeadDetailDrawer() {
+  const t = useT();
+  // The detail fetch reads `t` from here, so a language switch never refetches.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
   const leadId = useLeadsUi((s) => s.detailLeadId);
   const closeLeadDetail = useLeadsUi((s) => s.closeLeadDetail);
   const openEditLead = useLeadsUi((s) => s.openEditLead);
@@ -374,14 +410,14 @@ export function LeadDetailDrawer() {
         existingStudentId: lead.matchedStudent.id,
       });
       if (lead.section) applyLeadRemove(lead.section.id, lead.id);
-      toast.success("Lid mavjud o'quvchiga bog'landi");
+      toast.success(t("Lid mavjud o'quvchiga bog'landi"));
       handleCloseDetail();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Bog'lashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Bog'lashda xatolik yuz berdi")));
     } finally {
       setLinking(false);
     }
-  }, [lead, applyLeadRemove, handleCloseDetail]);
+  }, [lead, applyLeadRemove, handleCloseDetail, t]);
 
   useEffect(() => {
     if (!leadId) return;
@@ -397,8 +433,9 @@ export function LeadDetailDrawer() {
       })
       .catch((error) => {
         if (!cancelled) {
+          const t = tRef.current;
           setFailed(true);
-          toast.error(getErrorMessage(error, "Lidni yuklashda xatolik"));
+          toast.error(getErrorMessage(error, t("Lidni yuklashda xatolik")));
         }
       })
       .finally(() => {
@@ -482,15 +519,15 @@ export function LeadDetailDrawer() {
       invalidateActivity(lead.id);
       toast.success(
         next
-          ? "Telefon qilindi deb belgilandi"
-          : "Telefon belgisi olib tashlandi",
+          ? t("Telefon qilindi deb belgilandi")
+          : t("Telefon belgisi olib tashlandi"),
       );
     } catch (error) {
-      toast.error(getErrorMessage(error, "Saqlashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Saqlashda xatolik yuz berdi")));
     } finally {
       setMarking(false);
     }
-  }, [lead, applyLeadUpdate, invalidateActivity, authUser]);
+  }, [lead, applyLeadUpdate, invalidateActivity, authUser, t]);
 
   // ADR-0093: the owner changed in the drawer — keep the drawer and the card in step.
   const handleOwnerChanged = useCallback(
@@ -519,6 +556,16 @@ export function LeadDetailDrawer() {
     invalidateActivity(lead.id);
   }, [lead, bumpLeadCommentCount, invalidateActivity]);
 
+  const statusLabel = (status: LeadStatus) => {
+    const label = LEAD_STATUS_LABELS[status];
+    return t(label);
+  };
+  // An unknown student status is shown as it came, never through t().
+  const studentStatus = (status: string) => {
+    const label = STUDENT_STATUS_LABELS[status];
+    return label ? t(label) : status;
+  };
+
   return (
     <Sheet open={!!leadId} onOpenChange={(o) => !o && handleCloseDetail()}>
       <SheetContent
@@ -526,23 +573,23 @@ export function LeadDetailDrawer() {
         className="flex flex-col overflow-hidden p-0 sm:max-w-md"
       >
         <SheetHeader className="border-b px-6 py-4">
-          <SheetTitle className="text-lg">Lid ma&apos;lumotlari</SheetTitle>
+          <SheetTitle className="text-lg">{t("Lid ma'lumotlari")}</SheetTitle>
           <SheetDescription>
-            Potensial o&apos;quvchi haqida to&apos;liq ma&apos;lumot
+            {t("Potensial o'quvchi haqida to'liq ma'lumot")}
           </SheetDescription>
         </SheetHeader>
 
         {failed && !loading ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-5 text-center">
             <p className="text-sm text-muted-foreground">
-              Lidni yuklab bo&apos;lmadi
+              {t("Lidni yuklab bo'lmadi")}
             </p>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setReloadKey((k) => k + 1)}
             >
-              Qayta urinish
+              {t("Qayta urinish")}
             </Button>
           </div>
         ) : loading || !lead ? (
@@ -558,9 +605,11 @@ export function LeadDetailDrawer() {
             className="flex flex-1 flex-col overflow-hidden"
           >
             <TabsList className="mx-6 mt-3 grid w-auto grid-cols-3">
-              <TabsTrigger value="malumot">Ma&apos;lumot</TabsTrigger>
-              <TabsTrigger value="izohlar">Izohlar</TabsTrigger>
-              <TabsTrigger value="tarix">Tarix</TabsTrigger>
+              {LEAD_TABS.map((item) => (
+                <TabsTrigger key={item.value} value={item.value}>
+                  {t(item.label)}
+                </TabsTrigger>
+              ))}
             </TabsList>
 
             <div className="flex-1 overflow-y-auto px-6 py-5">
@@ -570,28 +619,28 @@ export function LeadDetailDrawer() {
                     {lead.firstName} {lead.lastName}
                   </h3>
                   <Badge variant="secondary">
-                    {LEAD_STATUS_LABELS[lead.statusEnum]}
+                    {statusLabel(lead.statusEnum)}
                   </Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <DetailRow label="Telefon" value={formatPhone(lead.phone)} />
+                  <DetailRow label={t("Telefon")} value={formatPhone(lead.phone)} />
                   {lead.extraPhone && (
                     <DetailRow
-                      label="Zaxira raqam"
+                      label={t("Zaxira raqam")}
                       value={formatPhone(lead.extraPhone)}
                     />
                   )}
-                  <DetailRow label="Manba" value={lead.source?.name} />
+                  <DetailRow label={t("Manba")} value={lead.source?.name} />
                   <DetailRow
-                    label="Joylashuvi"
+                    label={t("Joylashuvi")}
                     value={
                       lead.section
-                        ? `${lead.section.column.name} › ${lead.section.name}`
+                        ? `${leadColumnName(lead.section.column, t)} › ${lead.section.name}`
                         : null
                     }
                   />
                   <DetailRow
-                    label="Qo'shilgan sana"
+                    label={t("Qo'shilgan sana")}
                     value={format(parseISO(lead.createdAt), "dd.MM.yyyy")}
                   />
                 </div>
@@ -600,12 +649,12 @@ export function LeadDetailDrawer() {
 
                 <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 p-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium">Telefon holati</p>
+                    <p className="text-sm font-medium">{t("Telefon holati")}</p>
                     {lead.calledAt ? (
                       <p className="mt-0.5 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
                         <PhoneCall className="size-3.5 shrink-0" />
                         <span>
-                          Telefon qilingan ·{" "}
+                          {t("Telefon qilingan")} ·{" "}
                           {format(
                             parseISO(lead.calledAt),
                             "dd.MM.yyyy, HH:mm",
@@ -617,7 +666,7 @@ export function LeadDetailDrawer() {
                       </p>
                     ) : (
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        Hali telefon qilinmagan
+                        {t("Hali telefon qilinmagan")}
                       </p>
                     )}
                   </div>
@@ -633,7 +682,7 @@ export function LeadDetailDrawer() {
                     ) : (
                       <PhoneCall className="size-4" />
                     )}
-                    {lead.calledAt ? "Bekor qilish" : "Telefon qilindi"}
+                    {lead.calledAt ? t("Belgini olib tashlash") : t("Telefon qilindi")}
                   </Button>
                 </div>
 
@@ -654,6 +703,7 @@ export function LeadDetailDrawer() {
                       {leadConvertedLabel(
                         lead.statusEnum,
                         lead.statusChangeReason,
+                        t,
                       )}
                     </p>
                     <Button
@@ -668,27 +718,27 @@ export function LeadDetailDrawer() {
                         );
                       }}
                     >
-                      O&apos;quvchi sahifasini ochish →
+                      {t("O'quvchi sahifasini ochish →")}
                     </Button>
                   </div>
                 ) : lead.matchedStudent ? (
                   <div className="space-y-3 rounded-md border border-amber-300 bg-amber-50/60 p-3 dark:border-amber-800/60 dark:bg-amber-950/30">
                     <div>
                       <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
-                        Bu telefon bilan o&apos;quvchi allaqachon mavjud
+                        {t("Bu telefon bilan o'quvchi allaqachon mavjud")}
                       </p>
                       <p className="mt-1 text-sm">
                         {lead.matchedStudent.firstName}{" "}
                         {lead.matchedStudent.lastName}{" "}
                         <span className="text-muted-foreground">
                           #{lead.matchedStudent.id} ·{" "}
-                          {STUDENT_STATUS_LABELS[lead.matchedStudent.status] ??
-                            lead.matchedStudent.status}
+                          {studentStatus(lead.matchedStudent.status)}
                         </span>
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Dublikat oldini olish uchun yangi akkaunt yaratilmaydi —
-                        mavjud o&apos;quvchiga bog&apos;lang.
+                        {t(
+                          "Dublikat oldini olish uchun yangi akkaunt yaratilmaydi — mavjud o'quvchiga bog'lang.",
+                        )}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -703,7 +753,7 @@ export function LeadDetailDrawer() {
                         }}
                       >
                         <GraduationCap className="size-4" />
-                        Profilni ochish
+                        {t("Profilni ochish")}
                       </Button>
                       <Button
                         size="sm"
@@ -713,7 +763,7 @@ export function LeadDetailDrawer() {
                         {linking ? (
                           <Loader2 className="size-4 animate-spin" />
                         ) : null}
-                        Shu o&apos;quvchiga bog&apos;lash
+                        {t("Shu o'quvchiga bog'lash")}
                       </Button>
                     </div>
                   </div>
@@ -730,7 +780,7 @@ export function LeadDetailDrawer() {
                     }}
                   >
                     <GraduationCap className="size-4" />
-                    O&apos;quvchiga aylantirish
+                    {t("O'quvchiga aylantirish")}
                   </Button>
                 )}
               </TabsContent>
@@ -783,7 +833,7 @@ export function LeadDetailDrawer() {
                   }}
                 >
                   <Trash2 className="size-4" />
-                  O&apos;chirish
+                  {t("O'chirish")}
                 </Button>
               ) : (
                 <span />
@@ -802,7 +852,7 @@ export function LeadDetailDrawer() {
                     }}
                   >
                     <ArrowRightLeft className="size-4" />
-                    Ko&apos;chirish
+                    {t("Lidni ko'chirish")}
                   </Button>
                 )}
                 <Button
@@ -821,7 +871,7 @@ export function LeadDetailDrawer() {
                   }}
                 >
                   <Pencil className="size-4" />
-                  Tahrirlash
+                  {t("Tahrirlash")}
                 </Button>
               </div>
             </div>

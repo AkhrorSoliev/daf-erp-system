@@ -7,8 +7,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
+import { useT } from "@/i18n/context";
 import type { CustomFormDetail } from "@/hooks/use-custom-forms";
-import { useLeadsBoard } from "@/hooks/use-leads-board";
+import { useLeadsBoard, useLeadsBoardTranslator } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
 import { ConvertLeadDialog } from "@/components/leads/convert-lead-dialog";
 import { DeleteConfirmDialog } from "@/components/leads/delete-confirm-dialog";
@@ -27,6 +28,13 @@ import { useFormSubmissions } from "./use-form-submissions";
 export function FormResponsesClient({ formId }: { formId: string }) {
   const router = useRouter();
   const setName = useBreadcrumbName((s) => s.setName);
+  const translate = useT();
+  useLeadsBoardTranslator();
+  // Read in the load effect through a ref, so a language switch does not refetch.
+  const tRef = useRef(translate);
+  useEffect(() => {
+    tRef.current = translate;
+  }, [translate]);
   const [form, setForm] = useState<CustomFormDetail | null>(null);
   const submissions = useFormSubmissions(formId);
   const { refetch } = submissions;
@@ -47,7 +55,8 @@ export function FormResponsesClient({ formId }: { formId: string }) {
       })
       .catch((error) => {
         if (ignore) return;
-        toast.error(getErrorMessage(error, "Formani yuklashda xatolik"));
+        const t = tRef.current;
+        toast.error(getErrorMessage(error, t("Formani yuklashda xatolik")));
         router.replace("/leads/forms");
       });
     return () => {
@@ -79,6 +88,7 @@ export function FormResponsesClient({ formId }: { formId: string }) {
       board.map((c) => ({
         id: c.id,
         name: c.name,
+        systemKey: c.systemKey,
         sections: c.sections.map((s) => ({ id: s.id, name: s.name })),
       })),
     [board],

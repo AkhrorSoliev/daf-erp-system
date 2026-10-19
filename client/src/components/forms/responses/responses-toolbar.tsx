@@ -11,6 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useT } from "@/i18n/context";
 import { SourceBreakdown } from "./source-breakdown";
 import { StageChips } from "./stage-chips";
 import type { SubmissionCounts, SubmissionStage } from "./types";
@@ -30,6 +31,7 @@ interface Props {
 }
 
 export function ResponsesToolbar({ counts, filters, onChange }: Props) {
+  const t = useT();
   const setSearch = useCallback(
     (search: string) => onChange({ search }),
     [onChange],
@@ -67,7 +69,7 @@ export function ResponsesToolbar({ counts, filters, onChange }: Props) {
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="shrink-0 sm:hidden">
               <SlidersHorizontal className="size-4" />
-              Filtr
+              {t("Filtr")}
               {hiddenActive > 0 && (
                 <span className="tabular-nums">({hiddenActive})</span>
               )}
@@ -105,6 +107,7 @@ function SearchInput({
   value: string;
   onCommit: (value: string) => void;
 }) {
+  const t = useT();
   const [draft, setDraft] = useState(value);
   const [seen, setSeen] = useState(value);
   const [sent, setSent] = useState(value);
@@ -129,7 +132,7 @@ function SearchInput({
       <Input
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
-        placeholder="Ism yoki telefon..."
+        placeholder={t("Ism yoki telefon...")}
         className="pl-8"
       />
     </div>
@@ -145,6 +148,7 @@ function DateRange({
   endDate: string;
   onChange: (startDate: string, endDate: string) => void;
 }) {
+  const t = useT();
   const start = startDate ? parseISO(startDate) : undefined;
   const end = endDate ? parseISO(endDate) : undefined;
   const toStr = (d: Date | undefined) => (d ? format(d, "yyyy-MM-dd") : "");
@@ -153,7 +157,7 @@ function DateRange({
       <DatePicker
         value={start ?? null}
         onChange={(d) => onChange(toStr(d), endDate)}
-        placeholder="Boshlanish sanasi"
+        placeholder={t("Boshlanish sanasi")}
         maxDate={end}
         defaultMonth={end}
         className="w-full sm:w-44"
@@ -161,7 +165,7 @@ function DateRange({
       <DatePicker
         value={end ?? null}
         onChange={(d) => onChange(startDate, toStr(d))}
-        placeholder="Tugash sanasi"
+        placeholder={t("Tugash sanasi")}
         minDate={start}
         defaultMonth={start}
         className="w-full sm:w-44"

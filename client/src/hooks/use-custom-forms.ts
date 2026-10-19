@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
 import type { FormFieldShape } from "@/lib/schemas/custom-form-schema";
 
 export interface CustomFormSummary {
@@ -33,6 +34,12 @@ export interface CustomFormDetail extends CustomFormSummary {
 export function useCustomForms(open: boolean) {
   const [forms, setForms] = useState<CustomFormSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const translate = useT();
+  // Read in the fetch through a ref, so a language switch does not refetch.
+  const tRef = useRef(translate);
+  useEffect(() => {
+    tRef.current = translate;
+  }, [translate]);
 
   const refetch = useCallback(async () => {
     setLoading(true);
@@ -40,7 +47,8 @@ export function useCustomForms(open: boolean) {
       const { data } = await api.get<CustomFormSummary[]>("/custom-forms");
       setForms(data);
     } catch (error) {
-      toast.error(getErrorMessage(error, "Formalarni yuklashda xatolik"));
+      const t = tRef.current;
+      toast.error(getErrorMessage(error, t("Formalarni yuklashda xatolik")));
     } finally {
       setLoading(false);
     }

@@ -10,6 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { CustomFormDetail } from "@/hooks/use-custom-forms";
+import { useT } from "@/i18n/context";
 import { CopyFormLinkButton } from "../copy-form-link-dialog";
 
 interface Props {
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export function ResponsesHeader({ form, canExport, exporting, onExport }: Props) {
+  const t = useT();
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-2">
@@ -28,11 +30,11 @@ export function ResponsesHeader({ form, canExport, exporting, onExport }: Props)
             <Button asChild variant="ghost" size="icon" className="shrink-0">
               <Link href="/leads/forms">
                 <ArrowLeft className="size-4" />
-                <span className="sr-only">Formalarga qaytish</span>
+                <span className="sr-only">{t("Formalarga qaytish")}</span>
               </Link>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Formalarga qaytish</TooltipContent>
+          <TooltipContent>{t("Formalarga qaytish")}</TooltipContent>
         </Tooltip>
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -40,7 +42,7 @@ export function ResponsesHeader({ form, canExport, exporting, onExport }: Props)
               {form.title}
             </h1>
             <Badge variant={form.isActive ? "secondary" : "outline"}>
-              {form.isActive ? "Faol" : "Faol emas"}
+              {form.isActive ? t("Forma faol") : t("Forma faol emas")}
             </Badge>
           </div>
           <p className="truncate text-xs text-muted-foreground">
@@ -49,7 +51,7 @@ export function ResponsesHeader({ form, canExport, exporting, onExport }: Props)
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <CopyFormLinkButton slug={form.slug} label="Havola" />
+        <CopyFormLinkButton slug={form.slug} label={t("Havola")} />
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -66,12 +68,14 @@ export function ResponsesHeader({ form, canExport, exporting, onExport }: Props)
               CSV
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Joriy filtrdagi javoblarni Excel uchun yuklab olish</TooltipContent>
+          <TooltipContent>
+            {t("Joriy filtrdagi javoblarni Excel uchun yuklab olish")}
+          </TooltipContent>
         </Tooltip>
         <Button asChild size="sm">
           <Link href={`/leads/forms/${form.id}/tahrirlash`}>
             <Pencil className="size-4" />
-            Tahrirlash
+            {t("Tahrirlash")}
           </Link>
         </Button>
       </div>
