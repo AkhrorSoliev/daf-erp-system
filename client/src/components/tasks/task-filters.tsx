@@ -6,16 +6,18 @@ import { Input } from "@/components/ui/input";
 import { MultiSelectCombobox, type MultiSelectOption } from "@/components/ui/multi-select-combobox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTasks, type TaskCard, type TaskFilters as Filters, type TaskPerson, type TaskPriority } from "@/hooks/use-tasks";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { PRIORITY_LABEL, STATUS_COLUMNS } from "./task-labels";
 import { useAssignable } from "./use-assignable";
 
+// msg() labels: the filter bars draw them with t().
 export const DUE_OPTIONS = [
-  { value: "all", label: "Barcha muddatlar" },
-  { value: "overdue", label: "Muddati o'tgan" },
-  { value: "today", label: "Bugun" },
-  { value: "week", label: "Shu hafta" },
+  { value: "all", label: msg("Barcha muddatlar") },
+  { value: "overdue", label: msg("Muddati o'tgan") },
+  { value: "today", label: msg("Bugun") },
+  { value: "week", label: msg("Shu hafta") },
 ];
-const PRIORITY_OPTIONS: MultiSelectOption[] = Object.entries(PRIORITY_LABEL).map(([value, label]) => ({ value, label }));
 
 /** A filter changed: swap the board's filters and load it again. */
 function change(patch: Partial<Filters>) {
@@ -34,11 +36,13 @@ export const personOption = (p: TaskPerson): MultiSelectOption => ({
 /** The authors of the cards on the board, plus those already seen (a narrowed board shows fewer). */
 function authorsOf(cards: TaskCard[], seen: TaskPerson[]): TaskPerson[] {
   const byId = new Map(seen.map((p) => [p.id, p]));
-  for (const t of cards) if (t.author) byId.set(t.author.id, t.author);
+  for (const card of cards) if (card.author) byId.set(card.author.id, card.author);
   return [...byId.values()].sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
 }
 
 export function TaskFilters() {
+  const t = useT();
+  const priorityOptions: MultiSelectOption[] = Object.entries(PRIORITY_LABEL).map(([value, label]) => ({ value, label: t(label) }));
   const view = useTasks((s) => s.view);
   const filters = useTasks((s) => s.filters);
   const columns = useTasks((s) => s.columns);
@@ -60,17 +64,17 @@ export function TaskFilters() {
     <div className="flex flex-wrap items-center gap-2">
       <div className="relative w-full sm:w-64">
         <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Topshiriq bo'yicha qidirish..." className="pl-9" />
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Topshiriq bo'yicha qidirish...")} className="pl-9" />
       </div>
       <Select value={filters.due ?? "all"} onValueChange={(v) => change({ due: v === "all" ? undefined : (v as Filters["due"]) })}>
         <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-        <SelectContent>{DUE_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+        <SelectContent>{DUE_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{t(o.label)}</SelectItem>)}</SelectContent>
       </Select>
       <MultiSelectCombobox
-        options={PRIORITY_OPTIONS}
+        options={priorityOptions}
         selected={filters.priority ?? []}
         onChange={(v) => change({ priority: v.length ? (v as TaskPriority[]) : undefined })}
-        placeholder="Barcha ustuvorliklar"
+        placeholder={t("Barcha ustuvorliklar")}
         className="w-48"
       />
       {view === "my" ? (
@@ -82,8 +86,8 @@ export function TaskFilters() {
             setSeenAuthors(authors);
             change({ authorId: v.length ? v.map(Number) : undefined });
           }}
-          placeholder="Barcha beruvchilar"
-          searchPlaceholder="Beruvchini qidirish..."
+          placeholder={t("Barcha beruvchilar")}
+          searchPlaceholder={t("Beruvchini qidirish...")}
           className="w-48"
         />
       ) : (
@@ -91,8 +95,8 @@ export function TaskFilters() {
           options={(data?.assignees ?? []).map(personOption)}
           selected={filters.assigneeId?.map(String) ?? []}
           onChange={(v) => change({ assigneeId: v.length ? v.map(Number) : undefined })}
-          placeholder="Barcha ijrochilar"
-          searchPlaceholder="Ijrochini qidirish..."
+          placeholder={t("Barcha ijrochilar")}
+          searchPlaceholder={t("Ijrochini qidirish...")}
           className="w-48"
         />
       )}

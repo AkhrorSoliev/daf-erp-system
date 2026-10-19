@@ -3,6 +3,7 @@ import { usePathname } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
+import { useTasksTranslator } from "@/hooks/use-tasks";
 import { useT } from "@/i18n/context";
 import { isTeacherOnly } from "@/lib/teacher-only";
 import { TaskCreateDialog, useTaskCreate } from "./task-create-dialog";
@@ -15,6 +16,7 @@ const isStaff = (roles: { id: number }[]) => roles.some((r) => r.id >= 1 && r.id
 export function HeaderTaskButton() {
   const user = useAuth((s) => s.user);
   const t = useT();
+  useTasksTranslator();
   const open = useTaskCreate((s) => s.open);
   const ctx = useEntityContext((s) => s.context);
   const pathname = usePathname();

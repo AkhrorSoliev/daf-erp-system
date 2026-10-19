@@ -6,14 +6,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { UnmarkedLessonPrompt } from "@/components/attendance/unmarked/unmarked-lesson-prompt";
 import { useTasks, type TaskCard as TaskCardData, type TaskPerson } from "@/hooks/use-tasks";
+import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { recurrenceBadge } from "@/lib/task-recurrence-rules";
-import { ENTITY_LABEL, KIND_LABEL, PRIORITY_CLASS, PRIORITY_LABEL } from "./task-labels";
+import { KIND_LABEL, PRIORITY_CLASS, SYSTEM_LABEL, entityText, kindText, priorityText } from "./task-labels";
 import { dueState, formatDue } from "./task-due";
 
 const initials = (p: TaskPerson) => `${p.firstName.charAt(0)}${p.lastName.charAt(0)}`;
 
 function Person({ p, className }: { p: TaskPerson; className?: string }) {
+  const t = useT();
+  const name = `${p.firstName} ${p.lastName}`;
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -22,13 +25,14 @@ function Person({ p, className }: { p: TaskPerson; className?: string }) {
           <AvatarFallback className="text-[8px]">{initials(p)}</AvatarFallback>
         </Avatar>
       </TooltipTrigger>
-      <TooltipContent>{p.firstName} {p.lastName}{p.seenAt === null ? " — hali ko'rmadi" : ""}</TooltipContent>
+      <TooltipContent>{p.seenAt === null ? t("{name} — hali ko'rmadi", { name }) : name}</TooltipContent>
     </Tooltip>
   );
 }
 
 function SeenMark({ unseen }: { unseen: boolean }) {
-  const label = unseen ? "Hali ko'rmadi" : "Ko'rdi";
+  const t = useT();
+  const label = unseen ? t("Hali ko'rmadi") : t("Ko'rdi");
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -42,6 +46,7 @@ function SeenMark({ unseen }: { unseen: boolean }) {
 }
 
 export function DueBadge({ dueAt, closedAt }: { dueAt: string | null; closedAt: string | null }) {
+  const t = useT();
   if (!dueAt) return null;
   const now = new Date();
   const state = closedAt ? "later" : dueState(dueAt, now);
@@ -49,7 +54,7 @@ export function DueBadge({ dueAt, closedAt }: { dueAt: string | null; closedAt: 
   return (
     <span className={cn("inline-flex items-center gap-1 text-[11px]", cls)}>
       <CalendarClock className="size-3" />
-      {state === "overdue" ? `Muddati o'tdi · ${formatDue(dueAt, now)}` : formatDue(dueAt, now)}
+      {state === "overdue" ? t("Muddati o'tdi · {due}", { due: formatDue(dueAt, now, t) }) : formatDue(dueAt, now, t)}
     </span>
   );
 }
@@ -57,6 +62,7 @@ export function DueBadge({ dueAt, closedAt }: { dueAt: string | null; closedAt: 
 interface Props { task: TaskCardData; dragEnabled: boolean; isOverlay?: boolean; showAssignees: boolean }
 
 export function TaskCard({ task, dragEnabled, isOverlay, showAssignees }: Props) {
+  const t = useT();
   const openTask = useTasks((s) => s.openTask);
   // A closed card is never dragged out of «Bajarildi».
   const canDrag = dragEnabled && task.status !== "DONE";
@@ -80,11 +86,11 @@ export function TaskCard({ task, dragEnabled, isOverlay, showAssignees }: Props)
       className={cn("rounded-lg border bg-card p-3 shadow-sm cursor-pointer space-y-2 outline-none focus-visible:ring-2 focus-visible:ring-primary/40", canDrag && "active:cursor-grabbing", isOverlay && "shadow-lg ring-2 ring-primary/20 rotate-2", task.status === "DONE" && "opacity-80")}
     >
       <div className="flex flex-wrap items-center gap-1.5">
-        {isSystem && <span className="inline-flex items-center gap-1 rounded bg-foreground px-1.5 py-0.5 text-[10px] font-medium text-background"><Bot className="size-3" />Tizim</span>}
-        {isSystem && KIND_LABEL[task.kind] && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">{KIND_LABEL[task.kind]}</span>}
-        {task.priority !== "MEDIUM" && <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-medium", PRIORITY_CLASS[task.priority])}>{PRIORITY_LABEL[task.priority]}</span>}
-        {task.requiresPhoto && <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"><Camera className="size-3" />Rasm bilan</span>}
-        {task.batch && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Har biriga alohida · {task.batch.total}</span>}
+        {isSystem && <span className="inline-flex items-center gap-1 rounded bg-foreground px-1.5 py-0.5 text-[10px] font-medium text-background"><Bot className="size-3" />{t(SYSTEM_LABEL)}</span>}
+        {isSystem && KIND_LABEL[task.kind] && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">{kindText(task.kind, t)}</span>}
+        {task.priority !== "MEDIUM" && <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-medium", PRIORITY_CLASS[task.priority])}>{priorityText(task.priority, t)}</span>}
+        {task.requiresPhoto && <span className="inline-flex items-center gap-1 rounded bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"><Camera className="size-3" />{t("Rasm bilan")}</span>}
+        {task.batch && <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">{t("Har biriga alohida · {n}", { n: task.batch.total })}</span>}
         {task.recurrence && <span className="inline-flex items-center gap-1 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] text-violet-700 dark:bg-violet-900/30 dark:text-violet-400"><Repeat className="size-3" />{recurrenceBadge(task.recurrence)}</span>}
       </div>
       <p className={cn("text-sm leading-snug line-clamp-3", task.status === "DONE" && "text-muted-foreground")}>{task.title}</p>
@@ -92,14 +98,14 @@ export function TaskCard({ task, dragEnabled, isOverlay, showAssignees }: Props)
       {task.batch && (
         <div className="space-y-1">
           <div className="h-1.5 rounded bg-muted"><div className="h-full rounded bg-emerald-500" style={{ width: `${(100 * task.batch.done) / task.batch.total}%` }} /></div>
-          <p className="text-[11px] text-muted-foreground">{task.batch.done}/{task.batch.total} bajardi</p>
+          <p className="text-[11px] text-muted-foreground">{t("{done}/{total} bajardi", { done: task.batch.done, total: task.batch.total })}</p>
         </div>
       )}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
         {task.stepsTotal > 0 && <span className="inline-flex items-center gap-1"><CheckSquare className="size-3" />{task.stepsDone}/{task.stepsTotal}</span>}
         {task.eventsCount > 1 && <span className="inline-flex items-center gap-1"><MessageSquare className="size-3" />{task.eventsCount - 1}</span>}
         {(task.filesCount ?? 0) > 0 && <span className="inline-flex items-center gap-1"><Paperclip className="size-3" />{task.filesCount}</span>}
-        {task.entityType && <span className="inline-flex items-center gap-1"><Link2 className="size-3" />{ENTITY_LABEL[task.entityType] ?? task.entityType}</span>}
+        {task.entityType && <span className="inline-flex items-center gap-1"><Link2 className="size-3" />{entityText(task.entityType, t)}</span>}
         <DueBadge dueAt={task.dueAt} closedAt={task.closedAt} />
       </div>
       {task.unmarkedLesson?.status === "PENDING" && (
@@ -121,7 +127,7 @@ export function TaskCard({ task, dragEnabled, isOverlay, showAssignees }: Props)
         </div>
       )}
       <div className="flex items-center justify-between border-t pt-1.5">
-        {task.author ? <span className="truncate text-[11px] text-muted-foreground max-w-32">{task.author.firstName} {task.author.lastName}</span> : <span className="text-[11px] text-muted-foreground">Tizim</span>}
+        {task.author ? <span className="truncate text-[11px] text-muted-foreground max-w-32">{task.author.firstName} {task.author.lastName}</span> : <span className="text-[11px] text-muted-foreground">{t(SYSTEM_LABEL)}</span>}
         {showAssignees ? (
           <div className="flex items-center gap-1">
             <SeenMark unseen={unseen} />

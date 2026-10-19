@@ -9,10 +9,12 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/use-auth";
+import { useT } from "@/i18n/context";
+import { markedText } from "@/components/payments/debt-history/marked-text";
 import { useTasks, type TaskCard as TaskCardData, type TaskDetail, type TaskStatus } from "@/hooks/use-tasks";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { STATUS_COLUMNS, STATUS_LABEL } from "./task-labels";
+import { STATUS_COLUMNS, statusText } from "./task-labels";
 import { judgeDrop } from "./task-drop";
 import { TaskColumn } from "./task-column";
 import { TaskCard } from "./task-card";
@@ -20,6 +22,7 @@ import { TaskCard } from "./task-card";
 interface Props { dragEnabled: boolean; showAssignees: boolean }
 
 export function TaskBoard({ dragEnabled, showAssignees }: Props) {
+  const t = useT();
   const columns = useTasks((s) => s.columns);
   const fetchColumn = useTasks((s) => s.fetchColumn);
   const patchTask = useTasks((s) => s.patchTask);
@@ -50,7 +53,7 @@ export function TaskBoard({ dragEnabled, showAssignees }: Props) {
     const to = STATUS_COLUMNS.find((c) => c.id === over?.id)?.id;
     if (!dragEnabled || !task || !to) return;
     const verdict = judgeDrop(task, to, userId);
-    if (verdict.kind === "toast") toast.error(verdict.message);
+    if (verdict.kind === "toast") toast.error(t(verdict.message));
     else if (verdict.kind === "confirm") setPending({ task, to });
   }
 
@@ -62,7 +65,7 @@ export function TaskBoard({ dragEnabled, showAssignees }: Props) {
       const { data } = await api.post<TaskDetail>(`/tasks/${task.id}/status`, { status: to });
       patchTask(data);
     } catch (error) {
-      toast.error(getErrorMessage(error, "Holatni o'zgartirishda xatolik"));
+      toast.error(getErrorMessage(error, t("Holatni o'zgartirishda xatolik")));
       // The server may have moved or dropped the card meanwhile (another
       // assignee took a system task): show what it holds.
       void refreshTask(task.id);
@@ -111,14 +114,14 @@ export function TaskBoard({ dragEnabled, showAssignees }: Props) {
       <AlertDialog open={!!pending} onOpenChange={(open) => { if (!open) setPending(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Holatni o&apos;zgartirish</AlertDialogTitle>
+            <AlertDialogTitle>{t("Holatni o'zgartirish")}</AlertDialogTitle>
             <AlertDialogDescription>
-              «{title}» topshirig&apos;i holatini <strong>{pending ? STATUS_LABEL[pending.task.status] : ""}</strong> dan <strong>{pending ? STATUS_LABEL[pending.to] : ""}</strong> ga o&apos;zgartirmoqchimisiz?
+              {pending && markedText(t("«{title}» topshirig'i holatini **{from}** dan **{to}** ga o'zgartirmoqchimisiz?", { title, from: statusText(pending.task.status, t), to: statusText(pending.to, t) }))}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void confirmMove()}>Tasdiqlash</AlertDialogAction>
+            <AlertDialogCancel>{t("Bekor qilish")}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void confirmMove()}>{t("Tasdiqlash")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
