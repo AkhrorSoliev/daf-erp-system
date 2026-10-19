@@ -13,6 +13,18 @@ export function uzbekRoles<T extends { id: number }>(
 }
 
 /**
+ * One role's title in the page language. A role the client does not know is
+ * data and is shown under its database name, never through `t`.
+ */
+export function roleTitle(
+  role: { id: number; name?: string },
+  t: (source: string) => string = (source) => source,
+): string {
+  const label = roleLabel([role]);
+  return label === "—" ? (role.name ?? label) : t(label);
+}
+
+/**
  * Whether the profile has a «To'lanishi kerak» figure to show. Only the
  * Director (CEO) has no salary: drawing the block for them prints a bare «—».
  * Everyone else, an administrator without a rate included, keeps the block.

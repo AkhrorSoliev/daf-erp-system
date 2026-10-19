@@ -615,6 +615,19 @@ export const STRICT_FILES: string[] = [
   "app/(dashboard)/settings/holidays/page.tsx",
   "app/(dashboard)/settings/reasons/page.tsx",
   "app/(dashboard)/settings/archive/page.tsx",
+  "components/settings/employees-settings-client.tsx",
+  "components/settings/employee-row-actions.tsx",
+  "components/settings/edit-employee-drawer.tsx",
+  "components/settings/edit-employee-form.tsx",
+  "components/settings/employee-credentials-section.tsx",
+  "components/settings/employee-roles-field.tsx",
+  "components/settings/employee-profile-client.tsx",
+  "components/settings/employee-profile-card.tsx",
+  "components/settings/employee-profile-tabs.tsx",
+  "lib/schemas/employee-schema.ts",
+  "components/profile/profile-roles.ts",
+  "app/(dashboard)/settings/employees/page.tsx",
+  "app/(dashboard)/settings/employees/[id]/page.tsx",
 ];
 
 function walk(dir: string): string[] {

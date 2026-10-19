@@ -5,9 +5,11 @@ import { Check, Lock, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/context";
 
 export interface RoleOption {
   id: number;
+  /** Already in the page language (the parent passes `roleTitle(role, t)`). */
   label: string;
   icon: LucideIcon;
 }
@@ -28,12 +30,12 @@ export function EmployeeRolePicker({
   error,
 }: EmployeeRolePickerProps) {
   const labelId = useId();
+  const t = useT();
   return (
     <div className="flex flex-col gap-2.5">
-      <Label id={labelId}>Tizim huquqi</Label>
+      <Label id={labelId}>{t("Tizim huquqi")}</Label>
       <p className="text-xs text-muted-foreground">
-        Rol berilmasa, xodim tizimga kira olmaydi — faqat ro'yxatda turadi
-        va oylik oladi.
+        {t("Rol berilmasa, xodim tizimga kira olmaydi — faqat ro'yxatda turadi va oylik oladi.")}
       </p>
       <div role="group" aria-labelledby={labelId} className="grid grid-cols-2 gap-2">
         {roles.map((role) => {
@@ -78,12 +80,13 @@ export function EmployeeRolePicker({
  */
 export function EmployeeRolesReadOnly({ roles }: { roles: readonly RoleOption[] }) {
   const labelId = useId();
+  const t = useT();
   return (
     <div className="flex flex-col gap-2.5">
-      <Label id={labelId}>Tizim huquqi</Label>
+      <Label id={labelId}>{t("Tizim huquqi")}</Label>
       <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <Lock className="size-3.5 shrink-0" />
-        Bu rollarni faqat sizdan yuqori rahbar o'zgartira oladi.
+        {t("Bu rollarni faqat sizdan yuqori rahbar o'zgartira oladi.")}
       </p>
       <ul aria-labelledby={labelId} className="flex flex-wrap gap-2">
         {roles.map((role) => {
