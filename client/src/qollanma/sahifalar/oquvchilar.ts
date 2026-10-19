@@ -217,7 +217,7 @@ export const oquvchilar: QollanmaSahifa[] = [
       "guruhga qaytarilgan",
       "pul qaytarilmaydigan chegara",
     ],
-    yangilangan: "2026-10-10",
+    yangilangan: "2026-10-19",
   },
   {
     bolim: "oquvchilar",

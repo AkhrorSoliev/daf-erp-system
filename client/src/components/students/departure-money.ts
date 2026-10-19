@@ -344,3 +344,48 @@ export function departurePolicyPayload(
     ? { departurePolicy: policy }
     : {};
 }
+
+export interface WithheldWarning {
+  tone: "warning" | "danger";
+  title: string;
+  body: string;
+}
+
+/**
+ * Removal only: contract 6.2 keeps the month's money when the student leaves
+ * after more than 40% of the lessons. An admin who moves a student to another
+ * group through «Chiqarish» loses it by mistake — the transfer returns it.
+ * Says so before the click; blocks nothing.
+ */
+export function withheldWarning(
+  preview: DeparturePreview | undefined,
+  { looksLikeMove = false }: { looksLikeMove?: boolean } = {},
+  t: Translate = interpolate,
+): WithheldWarning | null {
+  const withheld = monthlyRows(preview).filter(
+    (r) => r.month.outcomes.STUDENT_CANCELLED.withheld,
+  );
+  if (withheld.length === 0) return null;
+  const { heldPercent, threshold } = withheld[0].month;
+  const amount = withheld.reduce(
+    (s, r) => s + r.month.outcomes.CENTER_INITIATIVE.amount,
+    0,
+  );
+  const title =
+    amount > 0
+      ? t("Oy to'lovi qaytarilmaydi — {amount} ushlab qolinadi", {
+          amount: som(amount, t),
+        })
+      : t("Oy to'lovi qaytarilmaydi");
+  const body = t(
+    "Oyning {percent}% i o'tgan (shartnoma 6.2: {threshold}% dan ko'p). O'quvchi boshqa guruhga o'tayotgan bo'lsa, bu oynani yopib, profildagi «Guruhni o'zgartirish» dan foydalaning: u o'tmagan darslarning pulini balansga qaytaradi. «Chiqarish» faqat o'quvchi haqiqatan ketganda.",
+    { percent: heldPercent, threshold },
+  );
+  return looksLikeMove
+    ? {
+        tone: "danger",
+        title,
+        body: `${t("Siz «ko'chdi» sababini tanladingiz — bu chiqarish emas, almashtirish.")} ${body}`,
+      }
+    : { tone: "warning", title, body };
+}
