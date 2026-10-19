@@ -1,4 +1,9 @@
 import { Prisma } from '@prisma/client';
+import {
+  addDaysToDateStr,
+  tashkentDateStr,
+} from '../../src/common/date/tashkent';
+import { wochenStartTag } from '../../src/daf/uebung/punkte';
 
 /**
  * LOCAL ONLY. The S2 load test splits the 5 000 students that have attempts
@@ -82,4 +87,19 @@ export async function kohortOl(
           : Prisma.empty
       }
     ORDER BY random() LIMIT ${n}`);
+}
+
+/**
+ * S4: the evening audience is asked for TOMORROW (Tashkent), so no student
+ * has a row on «today» and the 14-day window holds the seeded history; the
+ * Monday summary for THIS week's Monday (last week is the one
+ * `daf-yuklama-s3-hisob.ts` settled). The S4 seed, parity and measurement
+ * must run on the same Tashkent day.
+ */
+export function s4KechkiKun(): string {
+  return addDaysToDateStr(tashkentDateStr(new Date()), 1);
+}
+
+export function s4HaftalikKun(): string {
+  return wochenStartTag(new Date());
 }
