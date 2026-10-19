@@ -12,6 +12,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useCan } from "@/hooks/use-permissions";
 import { getErrorMessage } from "@/lib/get-error-message";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import {
   draftErrors,
   isDirty,
@@ -32,11 +34,13 @@ interface CompanyNorma {
   dafSariqKun: number;
 }
 
-const TITLE = "DaF normasi";
-const DESCRIPTION =
-  "O'quvchi ilovada qancha ishlashi kerak: «DaF ilovasi» bo'limidagi ranglar shu normadan chiqadi";
+const TITLE = msg("DaF normasi");
+const DESCRIPTION = msg(
+  "O'quvchi ilovada qancha ishlashi kerak: «DaF ilovasi» bo'limidagi ranglar shu normadan chiqadi",
+);
 
 export function DafNormaSettingsClient() {
+  const t = useT();
   const queryClient = useQueryClient();
   const user = useAuth((s) => s.user);
   // The server writes this with `settings.company` too (`PATCH /company/:id`);
@@ -79,19 +83,19 @@ export function DafNormaSettingsClient() {
       setDraft(null);
       // Markaz sahifalari normani o'z javobida oladi — ular ham yangilansin.
       queryClient.invalidateQueries({ queryKey: ["daf-center"] });
-      toast.success("Norma saqlandi");
+      toast.success(t("Norma saqlandi"));
     },
-    onError: (err) => toast.error(getErrorMessage(err, "Saqlashda xatolik")),
+    onError: (err) => toast.error(getErrorMessage(err, t("Saqlashda xatolik"))),
   });
 
   if (isError) {
     return (
       <div className="space-y-3">
-        <SettingsPageHeader title={TITLE} description={DESCRIPTION} />
-        <p className="text-sm text-muted-foreground">Normani yuklab bo&apos;lmadi.</p>
+        <SettingsPageHeader title={t(TITLE)} description={t(DESCRIPTION)} />
+        <p className="text-sm text-muted-foreground">{t("Normani yuklab bo'lmadi.")}</p>
         <Button variant="outline" disabled={isFetching} onClick={() => void refetch()}>
           {isFetching && <Loader2 className="size-4 animate-spin" />}
-          Qayta urinish
+          {t("Qayta urinish")}
         </Button>
       </div>
     );
@@ -106,22 +110,22 @@ export function DafNormaSettingsClient() {
   }
 
   const form = draft ?? toDraft(data);
-  const errors = draftErrors(form);
+  const errors = draftErrors(form, t);
   const dirty = isDirty(data, form);
   const locked = !canEdit || save.isPending;
   const set = (k: keyof DafDraft) => (text: string) => setDraft({ ...form, [k]: text });
 
   return (
     <div>
-      <SettingsPageHeader title={TITLE} description={DESCRIPTION} />
+      <SettingsPageHeader title={t(TITLE)} description={t(DESCRIPTION)} />
 
       <SettingsCard>
         <div className="flex flex-wrap gap-4">
           <UnitNumberField
             id="kunlikDaqiqa"
-            label="Kunlik eng kam vaqt"
-            unit="daqiqa"
-            hint="Faqat o'quv bo'limi sanaladi"
+            label={t("Kunlik eng kam vaqt")}
+            unit={t("daqiqa")}
+            hint={t("Faqat o'quv bo'limi sanaladi")}
             value={form.kunlikDaqiqa}
             error={errors.kunlikDaqiqa}
             disabled={locked}
@@ -129,9 +133,9 @@ export function DafNormaSettingsClient() {
           />
           <UnitNumberField
             id="kunlikSavol"
-            label="Kunlik eng kam savol"
-            unit="ta savol"
-            hint="Vaqt yoki savol: bittasi yetsa kun faol"
+            label={t("Kunlik eng kam savol")}
+            unit={t("ta savol")}
+            hint={t("Vaqt yoki savol: bittasi yetsa kun faol")}
             value={form.kunlikSavol}
             error={errors.kunlikSavol}
             disabled={locked}
@@ -141,9 +145,9 @@ export function DafNormaSettingsClient() {
         <div className="flex flex-wrap gap-4">
           <UnitNumberField
             id="haftalikKun"
-            label="Yashil chegarasi"
-            unit="kun"
-            hint="7 kundan shuncha faol bo'lsa norma bajarilgan"
+            label={t("Yashil chegarasi")}
+            unit={t("kun")}
+            hint={t("7 kundan shuncha faol bo'lsa norma bajarilgan")}
             value={form.haftalikKun}
             error={errors.haftalikKun}
             disabled={locked}
@@ -151,9 +155,9 @@ export function DafNormaSettingsClient() {
           />
           <UnitNumberField
             id="sariqKun"
-            label="Sariq chegarasi"
-            unit="kun"
-            hint="Shundan kam bo'lsa qizil"
+            label={t("Sariq chegarasi")}
+            unit={t("kun")}
+            hint={t("Shundan kam bo'lsa qizil")}
             value={form.sariqKun}
             error={errors.sariqKun}
             disabled={locked}
@@ -163,7 +167,7 @@ export function DafNormaSettingsClient() {
 
         {errors.order && <FormError>{errors.order}</FormError>}
         <p className="rounded-md bg-muted/40 px-3 py-2 text-sm leading-relaxed text-muted-foreground">
-          {normText(form)}
+          {normText(form, t)}
         </p>
 
         <SettingsSaveBar

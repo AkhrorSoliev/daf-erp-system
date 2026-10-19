@@ -34,7 +34,7 @@ describe("actorName", () => {
     expect(actorName(entry({}))).toBe("Ahror S.");
   });
   it("names the system when nobody changed it", () => {
-    expect(actorName(entry({ changedBy: null }))).toBe("Tizim");
+    expect(actorName(entry({ changedBy: null }))).toBe("Tizim (avtomatik)");
   });
   it("copes with an empty surname", () => {
     expect(actorName(entry({ changedBy: { id: 1, firstName: "Ahror", lastName: " " } }))).toBe("Ahror");

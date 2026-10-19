@@ -7,6 +7,9 @@
  * baribir qayta tekshiradi, bu yerda esa foydalanuvchi darhol javob oladi.
  */
 
+import type { Translate } from "@/components/notifications/notification-view";
+import { interpolate } from "@/i18n/translate";
+
 export interface AbsencePauseSettings {
   enabled: boolean;
   warnThreshold: number;
@@ -39,12 +42,12 @@ export function toDraft(s: AbsencePauseSettings): AbsencePauseDraft {
   };
 }
 
-export function fieldError(key: NumberKey, text: string): string | null {
-  if (text.trim() === "") return "Qiymatni kiriting";
+export function fieldError(key: NumberKey, text: string, t: Translate = interpolate): string | null {
+  if (text.trim() === "") return t("Qiymatni kiriting");
   const n = Number(text);
   const [min, max] = RANGES[key];
   if (!Number.isInteger(n) || n < min || n > max) {
-    return `${min} dan ${max} gacha bo'lishi kerak`;
+    return t("{min} dan {max} gacha bo'lishi kerak", { min, max });
   }
   return null;
 }
@@ -57,13 +60,13 @@ export interface DraftErrors {
   order: string | null;
 }
 
-export function draftErrors(d: AbsencePauseDraft): DraftErrors {
-  const warn = fieldError("warn", d.warn);
-  const pause = fieldError("pause", d.pause);
-  const cap = fieldError("cap", d.cap);
+export function draftErrors(d: AbsencePauseDraft, t: Translate = interpolate): DraftErrors {
+  const warn = fieldError("warn", d.warn, t);
+  const pause = fieldError("pause", d.pause, t);
+  const cap = fieldError("cap", d.cap, t);
   const order =
     !warn && !pause && Number(d.warn) >= Number(d.pause)
-      ? "Xabar chegarasi pauza chegarasidan kichik bo'lishi kerak"
+      ? t("Xabar chegarasi pauza chegarasidan kichik bo'lishi kerak")
       : null;
   return { warn, pause, cap, order };
 }
@@ -110,12 +113,12 @@ export function isDirty(
 }
 
 /** Uch maydon nima qilishini aytadigan jonli jumla. */
-export function summaryText(d: AbsencePauseDraft): string | null {
+export function summaryText(d: AbsencePauseDraft, t: Translate = interpolate): string | null {
   if (fieldError("warn", d.warn) || fieldError("pause", d.pause)) return null;
   const warn = Number(d.warn);
   const pause = Number(d.pause);
   if (warn >= pause) return null;
-  return `O'quvchi ketma-ket ${warn} ta dars qoldirsa xabar oladi, ${pause} ta qoldirsa pauzaga o'tadi.`;
+  return t("O'quvchi ketma-ket {warn} ta dars qoldirsa xabar oladi, {pause} ta qoldirsa pauzaga o'tadi.", { warn, pause });
 }
 
 /**
@@ -135,22 +138,29 @@ export function candidatesText(
   candidates: number,
   pause: number,
   cap: number,
+  t: Translate = interpolate,
 ): { tone: "info" | "warning"; text: string } {
   if (candidates === 0) {
     return {
       tone: "info",
-      text: `Hozir ${pause} va undan ko'p dars qoldirgan o'quvchi yo'q.`,
+      text: t("Hozir {pause} va undan ko'p dars qoldirgan o'quvchi yo'q.", { pause }),
     };
   }
-  const base = `Hozir ${candidates} nafar o'quvchi ${pause} va undan ko'p dars qoldirgan.`;
+  // Whole sentences, one key each: a translation never glues two fragments.
   if (candidates > cap) {
     return {
       tone: "warning",
-      text: `${base} Bu kunlik chegaradan (${cap}) ko'p — hech kim pauzalanmaydi, sizga xabar keladi.`,
+      text: t(
+        "Hozir {n} nafar o'quvchi {pause} va undan ko'p dars qoldirgan. Bu kunlik chegaradan ({cap}) ko'p — hech kim pauzalanmaydi, sizga xabar keladi.",
+        { n: candidates, pause, cap },
+      ),
     };
   }
   return {
     tone: "warning",
-    text: `${base} Saqlasangiz, navbatdagi 07:30 yurishda ular pauzaga o'tadi.`,
+    text: t(
+      "Hozir {n} nafar o'quvchi {pause} va undan ko'p dars qoldirgan. Saqlasangiz, navbatdagi 07:30 yurishda ular pauzaga o'tadi.",
+      { n: candidates, pause },
+    ),
   };
 }
