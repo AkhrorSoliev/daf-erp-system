@@ -175,8 +175,10 @@ qatorli ulanish kiradi.
 
 Yangi marshrut: `PATCH /student-portal/lernen/eslatmalar` (sinfiy
 `@StudentOnly` + `StudentCardGuard`, manifestda SELF, snapshot qatori,
-DTO `@IsBoolean`). Boshqa o'zgarish: `GET fortschritt` javobiga
-`eslatmalar`.
+DTO `@IsBoolean`). Boshqa o'zgarish: `GET fortschritt` javobiga ikki maydon
+qo'shiladi — `eslatmalar` (sozlama qatori yo'q = yoqilgan) va
+`telegramUlangan` (karta botga ulangan va uzilmagan; ekran shunga qarab
+almashtirgichni faol yoki «Botga ulang» holatida ko'rsatadi).
 
 ---
 
@@ -236,5 +238,84 @@ o'zgartirish · A/B sinov · «seriya uzildi» xabari (jazo yo'q).
 | Dushanba xulosasi hisoblanmagan ma'lumot bilan ketadi | Tayyorlik sharti (hisoblanmagan xona yo'q), 10–18 qayta urinish, 18:00 dan keyin o'tkazib yuboriladi |
 | Ota-ona chatida bir bola o'chirsa hammasi o'chadi | Tugma bitta o'quvchi uchun (`dr:off:<studentId>`), chat tengligi tekshiriladi |
 | Telegram 429 / sekin yuborish | Ketma-ket ≈ 60 ms oraliq; xato faqat shu o'quvchiga tegishli |
-| `fortschritt` sekinlashadi | Faqat mavjud `sozlama` CTE ga bitta ustun; yuklama qayta o'lchanadi |
+| `fortschritt` sekinlashadi | Mavjud `sozlama` CTE ga bitta ustun va `Student` PK bo'yicha bitta qatorli `ulanish` CTE; yuklama qayta o'lchanadi (§12) |
 | Auditoriya SQL'i sekin (5 000+) | Bitta o'tishli so'rov, brute-force va vaqt sinovda |
+
+---
+
+## 12. Yuklama natijalari
+
+O'lchangan 19.10.2026, lokal sinov bazasi `daf_s1_yuklama` (12 000
+o'quvchi, 1,46 mln urinish; S4 seed: 5 500 o'quvchida soxta chat, har
+25-chisi uzilgan, har 20-chisida eslatmalar o'chirilgan, jurnal tarixi),
+server kodi `8df789f7`, 10 yadroli mashina. Ikki o'lchov, bir xil kod va
+ma'lumot: **yengil yuk** — load average 3,1 → 4,5; **og'ir yuk** — 5,8 → 9,9
+(fonda ikkita CPU band qiluvchi jarayon bilan; S2 dagi «band mashina» 6,4 →
+7,9 edi). Skript: `scripts/load/daf-yuklama-s4-olchov.ts` (S4) va
+`daf-yuklama-olchov.ts` (S1–S3, o'zgarmagan). Hamma raqam p50 / p95, ms.
+
+| Amal | Yengil yuk | Og'ir yuk | Chegara (p95) | Holat |
+| --- | --- | --- | --- | --- |
+| Kechki auditoriya (3 518 o'quvchi), 20 marta | 216 / 231 | 229 / 290 | 2 000 | o'tdi |
+| — shu so'rovning jarayondagi birinchi chaqiruvi | 256 | 293 | 2 000 | o'tdi |
+| Dushanba auditoriyasi (4 372 o'quvchi), 20 marta | 38 / 42 | 46 / 51 | 2 000 | o'tdi |
+| — birinchi chaqiruv | 41 | 56 | 2 000 | o'tdi |
+| `fortschritt`, 12 000 o'quvchidan tasodifiy aralash (sozlama qatori bor/yo'q × chat bor/uzilgan/yo'q), 50 × 10 | 58 / 83 | 74 / 101 | 200 | o'tdi |
+| — chat + sozlama qatori | 57 / 83 | 74 / 100 | 200 | o'tdi |
+| — chat, sozlama qatorisiz | 58 / 83 | 74 / 101 | 200 | o'tdi |
+| — uzilgan chat | 58 / 84 | 75 / 102 | 200 | o'tdi |
+| — chatsiz | 59 / 84 | 75 / 102 | 200 | o'tdi |
+| `fortschritt`, S1–S3 aralashi (5 000 urinishli o'quvchi) | 59 / 107 | 75 / 120 | 200 | o'tdi |
+| `fortschritt` · DUE / OCHIQ / TUGAGAN | 52 / 68 · 58 / 65 · 62 / 69 | 67 / 75 · 74 / 76 · 75 / 83 | 200 | o'tdi |
+| `seansNatijasi`, tasodifiy aralash | 69 / 114 | 84 / 100 | 300 | o'tdi |
+| `seansNatijasi` · nishon `INSERT` i, hamma qator yangi (YANGI) | 78 / 134 | 143 / 157 | 300 | o'tdi |
+| `seansNatijasi` · ligaga birinchi qo'shilish | 115 / 129 | 132 / 154 | 300 | o'tdi |
+| `guruhlar` (aralash · DUE) | 68 / 119 · 69 / 119 | 81 / 142 · 83 / 141 | 200 | o'tdi |
+| `reyting zentrum` · `reyting gruppe` | 32 / 38 · 23 / 25 | 45 / 78 · 25 / 34 | 200 | o'tdi |
+| `recordAttempt` · `nishonlar` · `liga` | 16 / 54 · 13 / 21 · 11 / 15 | 18 / 58 · 16 / 26 · 12 / 17 | 200 | o'tdi |
+
+`fortschritt` S4 ustunlari (`sozlama` va `ulanish` CTE lari) qo'shilgandan
+keyin ham S3 raqamlaridan (138 ms) past: qo'shilgan CTE lar bitta qatorni
+o'qiydi, sozlama qatori borligi, chat borligi yoki uzilganligi vaqtni
+o'zgartirmaydi (qatlamlar orasidagi farq p95 da 1–2 ms). Parallel yozuv
+sinovlari (bir qator 50 yozuvchi, nishon 50 marta, ligaga 50 qo'shilish)
+ikkala o'lchovda ham «OK».
+
+**To'liq yurish** (haqiqiy `SmsService`: har xabarga `SmsMessage` va tarix
+qatori; bot soxta, pauzasiz; `TELEGRAM_BOT_TOKEN` o'rnatilmagan, skript
+soxta bot bo'lmasa to'xtaydi):
+
+| Yurish | Auditoriya | Yengil yuk | Og'ir yuk | Prodda 60 ms pauza bilan |
+| --- | --- | --- | --- | --- |
+| Kechki | 3 518 | 13 636 ms (3,9 ms/xabar) | 10 775 ms (3,1) | ≈ 225 s (3,7 daq) |
+| Dushanba | 4 372 | 16 883 ms (3,9 ms/xabar) | 12 090 ms (2,8) | ≈ 279 s (4,7 daq) |
+
+Har yurishda: auditoriyadagi har o'quvchiga aynan bitta xabar (HTML, 4 096
+dan qisqa, `dr:off:` tugmasi bilan), bitta `SENT` qator, bitta `SmsMessage`,
+`FAILED` yo'q; ikkinchi yurish 0 xabar. Prod hisobi = o'lchangan vaqt +
+auditoriya × 60 ms; haqiqiy Telegram javobi (har xabar ketma-ket kutiladi,
+o'lchanmagan) shunga qo'shiladi. **Ikki cron nusxasi poygasi** (bir
+auditoriyaga 50 parallel yurish): kechki 15 575 ms, 3 518 yuborildi,
+172 382 o'tkazib yuborildi (= 49 × 3 518); dushanba 18 120 ms, 4 372
+yuborildi, 214 228 o'tkazib yuborildi; xato 0, botga xabar = auditoriya,
+`SENT` qator = `SmsMessage` = auditoriya, bir chatga bittadan ortiq xabar yo'q.
+
+**Moslik:** yuklamadan keyin `daf-yuklama-s4-paritet.ts` — kechki 3 518,
+dushanba 4 372, farq 0.
+
+**Eslatmalar.** (1) «Birinchi chaqiruv» jarayondagi birinchi chaqiruv;
+Postgres keshi sovutilmadi, shuning uchun haqiqiy sovuq kesh yuqoridagidan
+sekinroq bo'lishi mumkin. (2) Mashina haddan tashqari band bo'lsa (load
+12–14, 8 ta CPU jarayoni) hamma yo'l 2–4 marta sekinlashadi, S4 ga
+tegmaydiganlari ham (`nishonlar` 21 → 92, `liga` 15 → 74 ms) va
+`fortschritt` p95 333–389 ms bo'ladi; S4 ma'lumotisiz nazorat o'lchovi
+load 8–11 da `guruhlar` p95 199 / 216 ms berdi. Bu jadvalga kirmadi: u kod
+emas, protsessor yetishmasligi. (3) Kechki auditoriya vaqtining ≈ 80% i
+seriya kichik so'rovida (har nomzodning butun tarixi o'qiladi). 60 kunlik
+oyna + 60 kunga yetgan seriya uchun to'liq hisob («zaxira») natijani
+o'zgartirmaydi (3 518 qatorda farq 0), lekin bu ma'lumotda sekinroq (211 →
+243 ms: ko'p o'quvchida 105 kunlik seriya, hammasi zaxiraga tushadi); 2 yillik
+tarixli vaqtinchalik nusxada (o'quvchiga 593 qator) tezroq: 800 → 408 ms.
+Chegaradan (2 000 ms) ancha past, shuning uchun **hozir qo'llanmaydi**;
+auditoriya p95 si prodda 1 000 ms dan oshsa yoki tarix 2 yildan oshsa
+qo'llanadi.
