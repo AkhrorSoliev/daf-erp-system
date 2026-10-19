@@ -14,6 +14,7 @@ import {
 import { useFortschritt } from "../queries";
 import { darajaFoizi, qisqaRaqam } from "../yol/yol-tuzilishi";
 import { Nishonlarim } from "./nishonlarim";
+import { EslatmalarQatori } from "./eslatmalar-qatori";
 import { ReytingJadvali } from "./reyting-jadvali";
 import { LigaTab } from "./liga-tab";
 import { GuruhlarTab } from "./guruhlar-tab";
@@ -47,7 +48,7 @@ export const REYTING_TABLARI: SegmentOption<ReytingTab>[] = [
  * o'quvchini "keyingi darajagacha 37% qolgan" deb ko'rsatardi — aslida
  * u shu band boshida, hali hech narsa bosib o'tmagan.
  *
- * Ostida «Nishonlarim» (S2) — o'z so'rovi bilan, faqat shu tab ochilganda.
+ * Ostida «Nishonlarim» (S2) — o'z so'rovi bilan, faqat shu tab ochilganda — va «Telegram eslatmalari» qatori (S4, `fortschritt` dan).
  */
 function DarajamTab() {
   const query = useFortschritt();
@@ -92,6 +93,7 @@ function DarajamTab() {
         )}
       </Card>
       <Nishonlarim />
+      <EslatmalarQatori />
     </div>
   );
 }
