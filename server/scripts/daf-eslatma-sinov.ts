@@ -13,61 +13,38 @@
  *
  * Sending needs a target AND `--send` AND TELEGRAM_BOT_TOKEN. `--user` reads
  * one row (a live ACTIVE CEO's telegramChatId); `--chat` touches no database.
+ * Before sending it prints the chat, the database and the bot (never the
+ * token): this file loads `server/.env`, so outside `railway run` a local
+ * token and a DEV database are picked up, and the printout is how you see it.
  * The button under each message is `dr:off:0`: the bot ties it to nobody.
  */
 import { Telegram } from 'telegraf';
 import { describeError } from '../src/telegram-digest/telegram-send';
-import { makePrisma } from './lib/check-cli';
-import {
-  ceoWhere,
-  parseSinovArgs,
-  sinovXabarlari,
-  yuborishTokeni,
-} from './lib/daf-eslatma-sinov';
-import { toxtatishTugmasi } from '../src/daf/eslatma/eslatma-matn';
+import { dbEnvLabel, dbHost, makePrisma } from './lib/check-cli';
+import { ceoWhere, runSinov } from './lib/daf-eslatma-sinov';
 
-async function ceoChati(userId: number): Promise<string> {
+async function ceoChati(userId: number): Promise<string | null> {
   const prisma = makePrisma();
   try {
     const u = await prisma.user.findFirst({
       where: ceoWhere(userId),
       select: { telegramChatId: true },
     });
-    if (!u?.telegramChatId) {
-      throw new Error(
-        `Faol CEO ${userId} topilmadi yoki uning Telegram'i ulanmagan`,
-      );
-    }
-    return u.telegramChatId;
+    return u?.telegramChatId ?? null;
   } finally {
     await prisma.$disconnect();
   }
 }
 
-async function main() {
-  const args = parseSinovArgs(process.argv.slice(2));
-  const token = yuborishTokeni(args, process.env.TELEGRAM_BOT_TOKEN);
-  const xabarlar = sinovXabarlari();
-  for (const x of xabarlar) {
-    console.log(`── ${x.nomi} (${x.matn.length} belgi)\n${x.matn}\n`);
-  }
-  if (!token) {
-    console.log('Quruq yurish: hech narsa yuborilmadi. Yuborish uchun --send.');
-    return;
-  }
-  const chatId = args.chat ?? (await ceoChati(args.user!));
-  const telegram = new Telegram(token);
-  for (const x of xabarlar) {
-    await telegram.sendMessage(chatId, x.matn, {
-      parse_mode: 'HTML',
-      reply_markup: toxtatishTugmasi(0),
-    });
-  }
-  console.log(`${xabarlar.length} ta xabar yuborildi.`);
-}
-
 if (require.main === module) {
-  main().catch((err) => {
+  runSinov(process.argv.slice(2), {
+    token: process.env.TELEGRAM_BOT_TOKEN,
+    log: (line) => console.log(line),
+    chatOfCeo: ceoChati,
+    dbInfo: () => `${dbHost()} [${dbEnvLabel()}]`,
+    telegram: (token) => new Telegram(token),
+    pause: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  }).catch((err) => {
     console.error(describeError(err));
     process.exitCode = 1;
   });
