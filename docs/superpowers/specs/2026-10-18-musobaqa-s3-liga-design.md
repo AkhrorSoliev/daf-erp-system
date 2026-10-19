@@ -295,3 +295,128 @@ ekraniga va yo'l tepasi belgisiga chiqarish (S4) · o'qituvchi ko'rinishi
 | 5 000 o'quvchida `settleWeek` uzoq | Xonalar bo'yicha paket, har kompaniya alohida tranzaksiya; vaqt sinovda o'lchanadi |
 | Reyting ekrani to'rt tab bilan tor | To'rtta (beshta emas); «Markaz» Liga ichiga ko'chadi |
 | Daraja tushmaydi, yuqori ligalar to'lib ketadi | Olmos ligasida ko'tarilish yo'q, xonalar 30 da bo'linadi; kerak bo'lsa keyin daraja qo'shish mumkin |
+
+---
+
+## 11. Yuklama natijalari
+
+O'lchangan 19.10.2026, lokal sinov bazasi `daf_s1_yuklama` (qayta yaratilgan;
+S1 §10 va S2 §8 bilan bir xil ma'lumot): 12 000 o'quvchi (urinishlar birinchi
+5 000 tasida), ≈1,48 mln urinish, `DafStudentDay`da ≈415 ming qator, A1
+kontenti u01–u05 (457 so'z, 192 dars), 9 000 o'quvchida maqsad qatori, 608 500
+`DafLexemeState`, 6 000 `DafStudentBadge`. S3 ma'lumoti: 5 000 o'quvchida
+daraja (har ligada 1 000), o'tgan hafta (12.10) 150 xona (har ligada 30 xona,
+har biri 30 kishi) / 4 500 a'zo (TUGAGAN kohorti — 500 o'quvchi — xonasiz),
+o'tgan haftaning 30 263 `DafStudentDay` qatori, 520 faol guruh. Sinov kuni
+dushanba edi, shuning uchun joriy haftada bir kunlik qator bor edi (6 674);
+qolgan 6 kun dushanba qatorlarining nusxasi bilan to'ldirildi (hafta 46 718
+qator, S2 da 49,9 ming) — aks holda hafta yig'indisi so'rovlari (jumladan
+`guruhlar`) bir hafta oxiridagidan 7 marta yengil o'lchanardi. 50 parallel
+o'quvchi × 10 raund, servis darajasida, Prisma pool prod'dagidek (10 ulanish),
+kod `5082f193`. Skriptlar: `server/scripts/load/` (S3 uchun yangi:
+`daf-yuklama-s3-seed.ts`, `daf-yuklama-s3-hisob.ts`, `daf-yuklama-s3-kech.ts`).
+
+**`settleWeek`, bir kompaniya, 5 000 o'quvchi (4 500 a'zo):** 381–451 ms (turli
+yurgizishlarda; jadvaldagi ikki o'lchovdan oldin 381 va 404 ms);
+**27 ta SQL** bitta tranzaksiyada (har xona yoki o'quvchi uchun alohida so'rov
+yo'q: eng ko'pi 1 000 qatorli bo'lak — `liga-azo-qosh` 6, `liga-natija-yoz` 5,
+`liga-xona-och` 5, qolgani bittadan); 150 xona, 4 500 a'zo, 600 ko'tarildi
+(Olmosning 30 xonasida ko'tarilish yo'q, qolgan 120 xonada 5 × 120; chegara
+5 × 150 = 750),
+yangi haftada 4 479 a'zo / 180 xona (ball ≥ 1 topganlar, har darajada
+xonalar o'lchami farqi ≤ 1), 520 guruh-hafta qatori. Brute force (xom
+`DafStudentDay` + a'zoliklar, JS da) bilan farq: 150 xonada 0, 520 guruhda 0
+(saqlangan `DafGroupWeek` ham, `guruhlarYigindisi` ham), yangi haftaning 180
+xonasi `ligaJavobi` bilan 0; Σ `place` satrlari = 4 500 = a'zolar; daraja
+tushgan o'quvchi 0, ko'tarilganlar 600 = daraja oshganlar; ikkinchi hisob 0
+xona oldi va hech narsani o'zgartirmadi.
+
+**Parallel hisob va qo'shilish** (`daf-yuklama-s3-kech.ts`):
+
+| Holat | Natija |
+| --- | --- |
+| 50 parallel `settleDue` (seans oxiri uslubi, kutmasdan) | bittasi hisobladi (150 xona, 600 ko'tarildi, 520 guruh), 49 tasi `bajarildi: false` (p50 31 ms); daraja oshgani 600 = ko'tarilgan satrlar, ikki marta oshgan 0, tushgan 0; 432 ms |
+| Hisob ketayotganda 40 xonasiz o'quvchi `joinRoom` | hisob 443 ms; qo'shilishlar p50 414 / eng sekini 445 ms (hisob tugashini kutdi), 40 tasi ham qo'shildi, xato 0 |
+| shu paytda `liga` va `uebersicht` (oddiy o'qish) | 436 ms: 9 ta kutayotgan `joinRoom` + hisob pool'ning 10 ulanishini ushlaydi, o'qish ulanish kutadi |
+| Birinchi seans oxiri, o'tgan hafta hisoblanmagan (`seansNatijasi` → `settleDue` → `joinRoom`) | 430 ms (odatdagi 97 ms o'rniga) |
+| Dushanba 00:00: 50 seans oxiri bir vaqtda, hafta hisoblanmagan | hammasi 544–581 ms, xato 0, 50 tasi ham qo'shildi |
+| Sun'iy sekin hisob: kompaniya qulfini tashqaridan 22 s ushlab turish, 40 `joinRoom` | hamma 40 qo'shilish yiqildi (30 tasi 5 s da «tranzaksiya boshlanmadi», pool'ning 10 ulanishini ushlagan 10 tasi 20 s da: 10 s li tranzaksiya byudjeti qulf kutayotgan so'rovni to'xtatmaydi), o'qishlar ham 20,3 s kutdi |
+| Shu holatda 50 seans oxiri | hammasi 20,8 s da qaytdi (xatosiz, `natija` bor), hech kim xonaga qo'shilmadi |
+
+Haqiqiy hisob 0,4 s, shuning uchun to'siq bor-yo'g'i 0,4 s; rejadagi 60 s chegara
+esa seans oxirini va pool'dagi hamma o'qishni shuncha ushlab turardi (yuqoridagi
+oxirgi ikki qator). Qulfni kutish `joinRoom` da chegaralanmagan; `lock_timeout`
+qo'shish tavsiya (sinov natijasi chegarani buzmadi, shuning uchun o'zgartirilmadi).
+
+**Natija (p50 / p95, ms).** Ikki o'lchov, bir xil kod va ma'lumot, har biri
+yangi tiklangan holatdan (`settleWeek` → o'lchov). Birinchisi (load average
+3,1 → 6,1) va ikkinchisi (7,4 → 8,0) umumiy mashinada, boshqa jarayonlar bilan.
+
+| Amal | Yengil yuk | Og'ir yuk | Chegara (p95) | Holat |
+| --- | --- | --- | --- | --- |
+| `liga` | 11 / 15 | 11 / 15 | 200 | o'tdi |
+| `guruhlar` | 94 / 163 | 95 / 165 | 200 | o'tdi |
+| `seansNatijasi` (liga so'rovi bilan), tasodifiy aralash (hammasi xonada) | 97 / 110 | 97 / 109 | 300 | o'tdi |
+| `seansNatijasi`, liga xonasiga birinchi qo'shilish (xonasiz TUGAGAN) | 141 / 149 | 139 / 149 | 300 | o'tdi |
+| `uebersicht` (fortschritt), tasodifiy aralash | 86 / 138 | 88 / 137 | 200 | o'tdi |
+| `reyting zentrum` | 59 / 63 | 59 / 65 | 200 | o'tdi |
+| `reyting gruppe` | 22 / 25 | 23 / 28 | 200 | o'tdi |
+| `recordAttempt` | 13 / 50 | 13 / 51 | 200 | o'tdi |
+| `nishonlar` | 14 / 22 | 13 / 22 | 200 | o'tdi |
+| `liga`, xonada (DUE kohorti) | 11 / 14 | 12 / 17 | 200 | o'tdi |
+| `guruhlar` (DUE kohorti) | 96 / 165 | 97 / 169 | 200 | o'tdi |
+| `uebersicht`, muddati kelgan so'z bor (DUE) | 81 / 86 | 82 / 85 | 200 | o'tdi |
+| `uebersicht`, 0 so'z, ochiq dars bor (OCHIQ) | 86 / 90 | 88 / 94 | 200 | o'tdi |
+| `uebersicht`, 0 so'z, dars qolmagan (TUGAGAN) | 86 / 93 | 86 / 90 | 200 | o'tdi |
+| `seansNatijasi`, berish uchun nishon yo'q (OCHIQ) | 95 / 100 | 96 / 101 | 300 | o'tdi |
+| `seansNatijasi`, `INSERT`, hamma qator konflikt (TOLIQ) | 103 / 111 | 105 / 110 | 300 | o'tdi |
+| `seansNatijasi`, `INSERT`, 3 qator konflikt (QISMAN) | 100 / 108 | 99 / 105 | 300 | o'tdi |
+| `seansNatijasi`, `INSERT`, hamma qator yangi (YANGI) | 107 / 120 | 109 / 121 | 300 | o'tdi |
+| `nishonlar`, 105 kunlik seriya, 10 nishon (TOLIQ) | 16 / 25 | 16 / 25 | 200 | o'tdi |
+
+S2 bilan solishtirish (tasodifiy aralash, p95): `uebersicht` 171–186 → 137–138,
+`seansNatijasi` 109–174 → 109–110, `nishonlar` 16 → 22, `reyting zentrum`
+69–103 → 63–65, `recordAttempt` 51–52 → 50–51. Odatdagi
+yo'lda liga qo'shgan hissa (bitta yengil so'rov) S2 bilan farqda bilinmaydi;
+xonaga birinchi qo'shilish ≈ +45 ms (141 ga qarshi 95, nishonsiz OCHIQ). Ikkala
+o'lchov `DafStudentBadge` 6 000 qatorga tiklangandan keyin boshlangan, shuning
+uchun TOLIQ, QISMAN va YANGI da daraja ≥ 1 bo'lgan o'quvchining liga kalitlari
+ham yangi qator bo'ladi (TOLIQ endi «hamma qator konflikt» emas). Qattiq sun'iy yuk
+(3 ta bo'sh aylanuvchi jarayon, load 6,6 → 12,9, 10 yadro) jadvalga kirmadi:
+S1/S2 yo'llari ham o'sdi (`uebersicht` 163, `reyting zentrum` 90), `guruhlar`
+127 / 238, `seansNatijasi` aralash 150 / 522, birinchi qo'shilish 187 / 343 —
+yadrolar yetmay qolganda chegaralar saqlanmaydi (beshta aylanuvchida
+`uebersicht` ham 203 ga chiqdi).
+
+**Guruhlar jadvali va chegaradagi zaxira.** Birinchi o'lchovda `guruhlar`
+p95 338–343 ms bo'ldi (chegara 200). Sabab: hafta qatorlari avval a'zolarga
+qo'shilib, keyin yig'ilardi (Merge Join + 3,5 MB tartiblash, 67 ms); qatorlar
+avval (o'quvchi, guruh) bo'yicha yig'ilib, keyin 10 645 a'zoga qo'shilsa — 31
+ms. Natija qator-qatorga bir xil (3 hafta, 520 guruh), kodga o'zgarish
+`guruhlar-jadvali.ts` dagi SQL (`5082f193`). Chegaragacha zaxira 31–37 ms: hafta
+oxirida eng tor yo'l shu; zaxira kamaysa hafta qatorlarini qamrab oluvchi indeks
+(`companyId, day` + `studentId, groupKey, points`) yoki kunlik kesh keyingi
+qadam.
+
+**EXPLAIN (ANALYZE, BUFFERS)**, hafta qatorlari jadvalning 11% i (46 718 / 415 ming)
+va o'tgan hafta 7% i (30 263). Guruhlar jadvali (`guruhlar-yigindisi`): joriy
+hafta 32,9 ms, o'tgan hafta 30,1 ms; reja `Bitmap Index Scan on
+DafStudentDay_companyId_day_idx` → `Bitmap Heap Scan` (3 560 blok, bari
+keshda) → `HashAggregate` (6 674 guruh-o'quvchi) → `Hash Join` a'zolarga;
+tartiblash yo'q. Eski SQL: 67,1 / 49,2 ms (Merge Join, 3,5 MB tartiblash).
+Jadvalning hamma qatori haftada bo'lgan fixtura (Task 4) `Seq Scan` berardi —
+haqiqiy ulushda `DafStudentDay` bo'ylab `Seq Scan` yo'q (`Enrollment` 10 645
+qator va `Group` 520 qatori `Seq Scan`, jadval kichik). Xona o'qish (`liga-xona`,
+30 a'zo): 0,39 ms (`DafLeagueEntry_roomId_idx`, `DafStudentDay_studentId_day_
+groupKey_key` bo'yicha 30 marta). `liga-holat` 0,20 ms, `liga-sharoiti` (seans
+oxiri) 0,19 ms. Hisob so'rovi `liga-azolar-ballari` (150 xona, 4 500 a'zo,
+28 528 qator): 33,7 ms.
+
+**Parallel `joinRoom`:** bitta o'quvchi 50 marta — 1 a'zolik, bitta xona; 50
+xonasiz o'quvchi birdan — eng katta xona 26 (≤ 30), ikki xonali o'quvchi 0
+(ikkala o'lchovda). Bir qatorga 50 parallel `recordAttempt` va bir o'quvchiga 50
+parallel `grantBadges` (hozir 16 kalit: hamma 16 tasi berildi, takror 0) farqsiz.
+**Moslik** (`daf-yuklama-paritet.ts`, 245 o'quvchi): S1/S2 tekshiruvlariga
+80 o'quvchining liga xonasi (`liga()` qatorlari brute force bilan) va 40
+o'quvchining guruhlar jadvali (TOP 10 + o'z guruhi, 520 faol guruh bo'yicha
+brute force) qo'shildi — farq 0.

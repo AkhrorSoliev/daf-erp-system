@@ -36,6 +36,9 @@ const ALLOWED: Record<string, string[]> = {
     'DafStudentLeague',
     'DafGroupWeek',
   ],
+  // Local only (load-test DB): tiers spread over all five leagues. Rooms are
+  // made by `joinRoom`; this raw INSERT of tier rows is the one exception.
+  'scripts/load/daf-yuklama-s3-seed.ts': ['DafStudentLeague'],
 };
 
 function walk(dir: string, out: string[] = []): string[] {

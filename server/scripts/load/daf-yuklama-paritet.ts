@@ -18,6 +18,14 @@
  * `DafStudentSetting` row, `ORTA` when there is none; the sample takes
  * students with a JIDDIY row, a YENGIL row and no row. `bosh` is recomputed
  * with its own SQL. Compared: `uebersicht().maqsad` and `seansNatijasi().maqsad`.
+ *
+ * S3: the same students' league room (`liga()`) against a brute-force read —
+ * the room's members, each with the week's `DafStudentDay` sum over all group
+ * keys, sorted points DESC then studentId ASC — and the group table
+ * (`guruhlar()`) against a brute force from `Group` + `Enrollment` + the
+ * week's rows: current ACTIVE members of ACTIVE live groups, points with
+ * `groupKey` = the group, ≥ 3 members, average DESC then group id ASC, TOP 10
+ * + own group.
  * Exits 1 on any mismatch. Writes ~500 attempts (throwaway DB only).
  */
 import { randomUUID } from 'crypto';
@@ -341,6 +349,89 @@ run(async (prisma) => {
       if (!(e instanceof Rollback)) throw e;
     });
 
+  // S3: league room and group table against brute force.
+  const kunQatorlari = await prisma.dafStudentDay.findMany({
+    where: { companyId, day: { gte: montag } },
+    select: { studentId: true, points: true, groupKey: true },
+  });
+  const haftaBall = new Map<number, number>();
+  const guruhBall = new Map<string, number>();
+  for (const r of kunQatorlari) {
+    haftaBall.set(r.studentId, (haftaBall.get(r.studentId) ?? 0) + r.points);
+    const k = `${r.studentId}|${r.groupKey}`;
+    guruhBall.set(k, (guruhBall.get(k) ?? 0) + r.points);
+  }
+  let ligaTekshirildi = 0;
+  for (const s of samples.slice(0, 80)) {
+    const l = await svc.liga(s.id);
+    const kirish = await prisma.dafLeagueEntry.findFirst({
+      where: { studentId: s.id, weekStart: montag },
+    });
+    check(s.id, 'liga.azo', l.azo, !!kirish);
+    if (!kirish) continue;
+    ligaTekshirildi += 1;
+    const azolar = await prisma.dafLeagueEntry.findMany({
+      where: { roomId: kirish.roomId },
+      select: { studentId: true },
+    });
+    const want = azolar
+      .map((a) => ({ id: a.studentId, p: haftaBall.get(a.studentId) ?? 0 }))
+      .sort((a, b) => b.p - a.p || a.id - b.id)
+      .map((a, i) => [a.id, i + 1, a.p, a.id === s.id]);
+    check(
+      s.id,
+      'liga.qatorlar',
+      l.xona?.qatorlar.map((q) => [q.studentId, q.platz, q.punkte, q.selbst]),
+      want,
+    );
+  }
+  const faolGuruhlar = await prisma.group.findMany({
+    where: { companyId, statusEnum: 'ACTIVE', deletedAt: null },
+    select: {
+      id: true,
+      enrollments: { where: { status: 'ACTIVE' }, select: { studentId: true } },
+    },
+  });
+  const brute = faolGuruhlar
+    .map((g) => {
+      const ids = [...new Set(g.enrollments.map((e) => e.studentId))];
+      const ball = ids.reduce(
+        (sum, id) => sum + (guruhBall.get(`${id}|${g.id}`) ?? 0),
+        0,
+      );
+      return {
+        groupId: g.id,
+        azolar: ids.length,
+        baho: ball / Math.max(ids.length, 1),
+      };
+    })
+    .filter((g) => g.azolar >= 3)
+    .sort(
+      (a, b) =>
+        b.baho - a.baho ||
+        (a.groupId < b.groupId ? -1 : a.groupId > b.groupId ? 1 : 0),
+    );
+  for (const s of samples.slice(0, 40)) {
+    const j = await svc.guruhlar(s.id, s.companyId);
+    const own = groupOf.get(s.id) ?? null;
+    const i = brute.findIndex((g) => g.groupId === own);
+    const want = [...brute.slice(0, 10), ...(i >= 10 ? [brute[i]] : [])].map(
+      (g) => [
+        g.groupId,
+        brute.indexOf(g) + 1,
+        Math.round(g.baho * 10) / 10,
+        g.azolar,
+      ],
+    );
+    check(
+      s.id,
+      'guruhlar',
+      j.qatorlar.map((q) => [q.groupId, q.platz, q.baho, q.azolar]),
+      want,
+    );
+    check(s.id, 'guruhlar.oz', j.oz?.orin ?? null, i >= 0 ? i + 1 : null);
+  }
+
   const moved = samples.filter((s) => s.minus > 0).length;
   console.log({
     students: samples.length,
@@ -350,6 +441,8 @@ run(async (prisma) => {
     goal: goalCounts,
     ...stats,
     weekStudents: totals.size,
+    ligaTekshirildi,
+    faolGuruhlar: brute.length,
     mismatches: mismatches.length,
   });
   for (const m of mismatches.slice(0, 20)) console.log(m);

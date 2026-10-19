@@ -62,6 +62,8 @@ export async function kohortOl(
   nomi: KohortNomi,
   n: number,
   badgeSiz = false,
+  /** S3: shu hafta liga xonasi yo'qlar — birinchi seansi `joinRoom` yo'lidan o'tadi. */
+  xonasiz = false,
 ): Promise<KohortStudent[]> {
   const ks = [...KOHORT[nomi]];
   return prisma.$queryRaw<KohortStudent[]>(Prisma.sql`
@@ -71,6 +73,12 @@ export async function kohortOl(
       ${
         badgeSiz
           ? Prisma.sql`AND NOT EXISTS (SELECT 1 FROM "DafStudentBadge" b WHERE b."studentId" = c.id)`
+          : Prisma.empty
+      }
+      ${
+        xonasiz
+          ? Prisma.sql`AND NOT EXISTS (SELECT 1 FROM "DafLeagueEntry" l WHERE l."studentId" = c.id
+              AND l."weekStart" = (date_trunc('week', (now() AT TIME ZONE 'UTC') + interval '5 hours'))::date)`
           : Prisma.empty
       }
     ORDER BY random() LIMIT ${n}`);

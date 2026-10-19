@@ -1,5 +1,5 @@
 /**
- * LOCAL ONLY. p50 / p95 of the S1 and S2 reads and the writer, 50 students at
+ * LOCAL ONLY. p50 / p95 of the S1, S2 and S3 reads and the writer, 50 students at
  * once, 10 rounds (S1 spec §6, S2 spec §8). Exits 1 when a p95 limit is
  * crossed.
  *
@@ -18,6 +18,7 @@ import { assertLocalDb } from './local-db-guard';
 import { FortschrittService } from '../../src/daf/fortschritt/fortschritt.service';
 import { recordAttempt } from '../../src/daf/shared/attempt-writer';
 import { grantBadges } from '../../src/daf/nishon/nishon-berish';
+import { joinRoom } from '../../src/daf/liga/liga-xona';
 import { NISHON_KATALOGI } from '../../src/daf/nishon/nishon-katalogi';
 import {
   GROUP_OF,
@@ -39,6 +40,8 @@ const LIMIT: Record<string, number> = {
   recordAttempt: 200,
   seansNatijasi: 300,
   nishonlar: 200,
+  liga: 200,
+  guruhlar: 200,
 };
 
 async function timed(fn: () => Promise<unknown>): Promise<number> {
@@ -88,6 +91,12 @@ run(async (prisma) => {
     WHERE "deletedAt" IS NULL AND id % 2 = 0
     ON CONFLICT ("studentId") DO NOTHING`;
 
+  // S3: the mixed rows are the steady state — every sampled student already
+  // has this week's room (an untimed join); the first join is its own row below.
+  await Promise.all(
+    students.map((s) => joinRoom(prisma as any, s.id, s.companyId, new Date())),
+  );
+
   const samples: Record<string, number[]> = Object.fromEntries(
     Object.keys(LIMIT).map((k) => [k, []]),
   );
@@ -128,6 +137,11 @@ run(async (prisma) => {
         'nishonlar',
         (s: (typeof students)[0]) => svc.nishonlar(s.id, s.companyId),
       ],
+      ['liga', (s: (typeof students)[0]) => svc.liga(s.id)],
+      [
+        'guruhlar',
+        (s: (typeof students)[0]) => svc.guruhlar(s.id, s.companyId),
+      ],
     ] as const) {
       const ms = await Promise.all(students.map((s) => timed(() => op(s))));
       samples[name].push(...ms);
@@ -139,6 +153,37 @@ run(async (prisma) => {
   );
   console.table(table);
 
+  // S3: 50 joins at once for one room-less student — one membership; then 50
+  // different room-less students — no room above 30, no one twice.
+  const [yolgiz] = await kohortOl(prisma, 'TUGAGAN', 1, false, true);
+  const qoshildi = await Promise.all(
+    Array.from({ length: PARALLEL }, () =>
+      joinRoom(prisma as any, yolgiz.id, yolgiz.companyId, new Date()),
+    ),
+  );
+  const kopchilik = await kohortOl(prisma, 'TUGAGAN', PARALLEL, false, true);
+  await Promise.all(
+    kopchilik.map((s) =>
+      joinRoom(prisma as any, s.id, s.companyId, new Date()),
+    ),
+  );
+  const [liga] = await prisma.$queryRaw<
+    { bir: number; eng: number; ikki: number }[]
+  >`
+    WITH h AS (SELECT (date_trunc('week', (now() AT TIME ZONE 'UTC') + interval '5 hours'))::date AS w)
+    SELECT
+      (SELECT COUNT(*)::int FROM "DafLeagueEntry", h WHERE "studentId" = ${yolgiz.id} AND "weekStart" = h.w) AS bir,
+      (SELECT COALESCE(MAX(n), 0)::int FROM (SELECT COUNT(*) AS n FROM "DafLeagueEntry", h
+         WHERE "weekStart" = h.w GROUP BY "roomId") x) AS eng,
+      (SELECT COUNT(*)::int FROM (SELECT "studentId" FROM "DafLeagueEntry", h
+         WHERE "weekStart" = h.w GROUP BY "studentId" HAVING COUNT(*) > 1) y) AS ikki`;
+  const ligaOk =
+    liga.bir === 1 &&
+    new Set(qoshildi.map((q) => q.roomId)).size === 1 &&
+    liga.eng <= 30 &&
+    liga.ikki === 0;
+  console.log('league join concurrency', liga, ligaOk ? 'OK' : 'FAIL');
+
   // ---- Cohort block: the worst paths one by one. ----
   /** One scenario: `rounds` rounds of 50 students; `prep` runs untimed first. */
   const kohortOlchov = async (
@@ -146,11 +191,17 @@ run(async (prisma) => {
     limit: number,
     nomi: KohortNomi,
     op: (s: KohortStudent, sessionId: string) => Promise<unknown>,
-    opts: { prep?: boolean; fresh?: boolean } = {},
+    opts: { prep?: boolean; fresh?: boolean; xonasiz?: boolean } = {},
   ): Promise<Row> => {
     const xs: number[] = [];
     for (let round = 0; round < ROUNDS; round += 1) {
-      const group = await kohortOl(prisma, nomi, PARALLEL, opts.fresh);
+      const group = await kohortOl(
+        prisma,
+        nomi,
+        PARALLEL,
+        opts.fresh,
+        opts.xonasiz,
+      );
       if (group.length === 0) break;
       const sessionId = randomUUID();
       if (opts.prep) {
@@ -231,6 +282,19 @@ run(async (prisma) => {
       'TOLIQ',
       (s) => svc.nishonlar(s.id, s.companyId),
     ),
+    await kohortOlchov(
+      'seansNatijasi · liga xonasiga birinchi qo`shilish (xonasiz TUGAGAN)',
+      LIMIT.seansNatijasi,
+      'TUGAGAN',
+      seans,
+      { prep: true, xonasiz: true },
+    ),
+    await kohortOlchov('liga · xonada (DUE)', LIMIT.liga, 'DUE', (s) =>
+      svc.liga(s.id),
+    ),
+    await kohortOlchov('guruhlar (DUE)', LIMIT.guruhlar, 'DUE', (s) =>
+      svc.guruhlar(s.id, s.companyId),
+    ),
   ];
   console.table(cohortTable);
 
@@ -290,6 +354,10 @@ run(async (prisma) => {
         grantBadges(prisma as any, who.id, who.companyId, {
           serie: 100,
           woerter: 592,
+          // S3: the catalogue also holds the league keys — all 16 are earnable.
+          liga: 4,
+          xonaGolib: true,
+          guruhBirinchi: true,
         }),
       ),
     )
@@ -317,7 +385,8 @@ run(async (prisma) => {
     table.some((r) => !r.ok) ||
     cohortTable.some((r) => !r.ok) ||
     !sameOk ||
-    !badgeOk
+    !badgeOk ||
+    !ligaOk
   )
     process.exitCode = 1;
 });
