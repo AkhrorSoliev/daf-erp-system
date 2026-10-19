@@ -88,7 +88,7 @@ function RecurrencesDialog({ onClose }: { onClose: () => void }) {
               {r.canManage && (
                 <div className="flex gap-2 pt-1">
                   <Button size="xs" variant="outline" disabled={busyId === r.id} onClick={() => void act(r, api.patch(`/tasks/recurrences/${r.id}`, { active: !r.active }), r.active ? t("Takrorlanish to'xtatildi") : t("Takrorlanish qayta yoqildi"))}>
-                    {r.active ? t("To'xtatish") : t("Davom ettirish")}
+                    {r.active ? t("Takrorlanishni to'xtatish") : t("Davom ettirish")}
                   </Button>
                   <Button size="xs" variant="ghost" className="text-destructive" disabled={busyId === r.id} onClick={() => setDeleting(r)}>{t("O'chirish")}</Button>
                 </div>

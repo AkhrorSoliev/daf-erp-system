@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/use-auth";
 import { useT } from "@/i18n/context";
-import { markedText } from "@/components/payments/debt-history/marked-text";
+import { markedText, unmarked } from "@/components/payments/debt-history/marked-text";
 import { useTasks, type TaskCard as TaskCardData, type TaskDetail, type TaskStatus } from "@/hooks/use-tasks";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -87,7 +87,8 @@ export function TaskBoard({ dragEnabled, showAssignees }: Props) {
     );
   }
 
-  const title = pending ? (pending.task.title.length > 50 ? `${pending.task.title.slice(0, 50)}…` : pending.task.title) : "";
+  // The title is data inside a markedText sentence: its «**» must not toggle bold.
+  const title = unmarked(pending ? (pending.task.title.length > 50 ? `${pending.task.title.slice(0, 50)}…` : pending.task.title) : "");
 
   return (
     <>

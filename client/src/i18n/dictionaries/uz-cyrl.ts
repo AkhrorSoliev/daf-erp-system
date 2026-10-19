@@ -13,6 +13,9 @@ const uzCyrl: Dictionary = {
   "Baholar ANONIM: o'quvchining ismi hech qayerda ko'rsatilmaydi.": "Баҳолар АНОНИМ: ўқувчининг исми ҳеч қаерда кўрсатилмайди.",
   // Key names stay as printed on the keyboard.
   "Esc — bekor, Ctrl+Enter — saqlash": "Esc — бекор, Ctrl+Enter — сақлаш",
+  "Ctrl+Enter — yuborish": "Ctrl+Enter — юбориш",
+  // File sizes: «B» stays Latin like «KB» and «MB» next to it.
+  "{n} B": "{n} B",
   // The names are sorted in Latin order: the letters stay Latin.
   "Ism (A–Z)": "Исм (A–Z)",
   // Month names: Cyrillic Uzbek writes «я» here, which the rules cannot know.

@@ -41,17 +41,19 @@ export const ROLE_LABEL: Record<string, string> = { CEO: msg("Rahbar"), "Branch 
 export const SYSTEM_LABEL = msg("Tizim (avtomatik)");
 
 // The labels above in the page's language (a lookup cannot go straight into t()).
+// A code this client does not know yet is shown as the server sent it, never through t().
 export function statusText(status: TaskStatus, t: Translate = uzbek): string {
   const label = STATUS_LABEL[status];
-  return t(label);
+  return label ? t(label) : status;
 }
 export function priorityText(priority: TaskPriority, t: Translate = uzbek): string {
   const label = PRIORITY_LABEL[priority];
-  return t(label);
+  return label ? t(label) : priority;
 }
 /** "" for a manual task. */
 export function kindText(kind: TaskKind, t: Translate = uzbek): string {
   const label = KIND_LABEL[kind];
+  if (label === undefined) return kind;
   return label ? t(label) : "";
 }
 /** An entity type the client does not know is shown as the server sent it. */

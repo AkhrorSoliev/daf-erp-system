@@ -17,7 +17,7 @@ export function onTimeTile(totals: Pick<WorkloadTotals, "onTime" | "withDue">): 
 export function personLine(u: Pick<WorkloadRow["user"], "roleNames" | "branchNames">, t: Translate = uzbek): string {
   const top = ROLE_ORDER.find((r) => u.roleNames.includes(r));
   const role = top ? ROLE_LABEL[top] : "";
-  return [role ? t(role) : "",u.branchNames.join(", ")].filter(Boolean).join(" · ");
+  return [role ? t(role) : "", u.branchNames.join(", ")].filter(Boolean).join(" · ");
 }
 
 /** Where a row leads: «Barchasi» narrowed to that person (the table reads `assignee` once on mount). */

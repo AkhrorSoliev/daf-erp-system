@@ -61,7 +61,7 @@ export function TaskDrawerRecurrence({ taskId, rule }: { taskId: string; rule: T
           )}
           {rule.canManage && (
             <Button size="xs" variant="ghost" disabled={busy} onClick={() => void send({ active: !rule.active }, rule.active ? t("Takrorlanish to'xtatildi") : t("Takrorlanish qayta yoqildi"))}>
-              {rule.active ? t("To'xtatish") : t("Davom ettirish")}
+              {rule.active ? t("Takrorlanishni to'xtatish") : t("Davom ettirish")}
             </Button>
           )}
         </div>
