@@ -1156,6 +1156,9 @@
   "GET /student-portal/lernen/grammar": [
     "Student"
   ],
+  "GET /student-portal/lernen/guruhlar": [
+    "Student"
+  ],
   "GET /student-portal/lernen/lessons/:id": [
     "Student"
   ],
@@ -1169,6 +1172,9 @@
     "Student"
   ],
   "GET /student-portal/lernen/levels": [
+    "Student"
+  ],
+  "GET /student-portal/lernen/liga": [
     "Student"
   ],
   "GET /student-portal/lernen/nishonlar": [

@@ -9,6 +9,8 @@ import {
 import { currentGroupId } from '../shared/student-scope';
 import { reytingIsmi } from '../shared/reyting-ismi';
 import { liganiYangilaXavfsiz } from '../liga/liga-seans';
+import { ligaJavobi, type LigaJavobi } from '../liga/liga-xona';
+import { guruhlarJavobi, type GuruhlarJavobi } from '../liga/guruhlar-jadvali';
 import { nishonlarniBerXavfsiz, woerterSoni } from '../nishon/nishon-berish';
 import {
   MAQSAD_BALL,
@@ -438,6 +440,16 @@ export class FortschrittService {
   /** `GET .../nishonlar` — hamma katalog, o'quvchining o'z nishonlari bilan. Yozmaydi. */
   nishonlar(studentId: number, companyId: number): Promise<NishonQatori[]> {
     return nishonlarRoyxati(this.prisma, studentId, companyId, new Date());
+  }
+
+  /** `GET .../liga` — o'quvchining xonasi va darajasi (spec S3 §4). Yozmaydi. */
+  liga(studentId: number): Promise<LigaJavobi> {
+    return ligaJavobi(this.prisma, studentId, new Date());
+  }
+
+  /** `GET .../guruhlar` — markazning haftalik guruhlar jadvali (spec S3 §2). Yozmaydi. */
+  guruhlar(studentId: number, companyId: number): Promise<GuruhlarJavobi> {
+    return guruhlarJavobi(this.prisma, studentId, companyId, new Date());
   }
 
   async reyting(

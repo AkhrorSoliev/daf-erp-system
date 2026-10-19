@@ -290,4 +290,27 @@ export class DafPortalController {
   ) {
     return this.fortschritt.nishonlar(studentId, companyId);
   }
+
+  /**
+   * Haftalik liga xonasi (spec S3 §4). `studentId` TOKENDAN. Hech narsa
+   * YOZMAYDI: xonaga qo'shilish seans oxirida — xonada bo'lmagan o'quvchi
+   * «birinchi seansdan keyin» ko'radi. Liga filialga cheklanmaydi
+   * (`branch-route-policy.ts` dagi SELF sababi).
+   */
+  @Get('liga')
+  getLiga(@CurrentUser('studentId') studentId: number) {
+    return this.fortschritt.liga(studentId);
+  }
+
+  /**
+   * Markazning haftalik guruhlar jadvali: TOP 10 + o'quvchining o'z guruhi.
+   * Alohida marshrut — «Guruhlar» tabi ochilgandagina so'raladi. Yozmaydi.
+   */
+  @Get('guruhlar')
+  getGuruhlar(
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.fortschritt.guruhlar(studentId, companyId);
+  }
 }

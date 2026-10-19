@@ -934,12 +934,18 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       "there — that would be 'fixing' a considered decision. " +
       '`GET .../nishonlar` and `PATCH .../maqsad` (S2, ADR-0115) are SELF ' +
       "the ordinary way: the caller's own badges and the caller's own goal " +
-      'row (`DafStudentSetting`, keyed on the token `studentId`) — no branch question.',
+      'row (`DafStudentSetting`, keyed on the token `studentId`) — no branch question. ' +
+      '`GET .../liga` and `GET .../guruhlar` (S3, ADR-0116) are SELF on the same ' +
+      "terms as the centre ranking: the caller's own league room (rooms are " +
+      'filled centre-wide) and the centre-wide weekly group table — both ' +
+      'deliberately not limited to a branch (06.09 §6.1).',
     routes: [
       'GET /student-portal/lernen/fortschritt',
       'GET /student-portal/lernen/reyting',
       'GET /student-portal/lernen/nishonlar',
       'PATCH /student-portal/lernen/maqsad',
+      'GET /student-portal/lernen/liga',
+      'GET /student-portal/lernen/guruhlar',
     ],
   },
   {
