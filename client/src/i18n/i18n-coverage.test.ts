@@ -63,6 +63,7 @@ export const STRICT_FILES: string[] = [
   "components/dashboard/home-next-lessons.tsx",
   "components/dashboard/home-error-note.tsx",
   "components/dashboard/home-load-error.tsx",
+  "app/(dashboard)/error.tsx",
   "components/dashboard/home-charts.tsx",
   "components/dashboard/chart-attendance.tsx",
   "components/dashboard/chart-money-trend.tsx",

@@ -4767,6 +4767,9 @@ const de: Dictionary = {
   "O'quvchilar yo'q": "Keine Teilnehmer",
   // Mock exams — results tab, announced warning
   "Natijalar e'lon qilingan — ballarni o'zgartirib bo'lmaydi.": "Die Ergebnisse sind veröffentlicht — Punkte können nicht mehr geändert werden.",
+  // Dashboard error screen
+  "Sahifani ochib bo'lmadi": "Die Seite konnte nicht geöffnet werden",
+  "Nimadir noto'g'ri ketdi. Qayta urinib ko'ring yoki boshqa bo'limga o'ting.": "Etwas ist schiefgelaufen. Versuchen Sie es erneut oder wechseln Sie in einen anderen Bereich.",
 };
 
 export default de;
