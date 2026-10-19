@@ -35,6 +35,9 @@ const uzCyrl: Dictionary = {
   "Tranzaksiya raqami (externalId)": "Транзакция рақами (externalId)",
   // A technical term in a hyphenated pair: the rules would convert each half.
   "Bu {n} ta xodim uchun mavjud **umumiy** qoidani bekor qiladi (per-group qoidalar tegmaydi).": "Бу {n} та ходим учун мавжуд **умумий** қоидани бекор қилади (per-group қоидалар тегмайди).",
+  // Bot commands and button names are typed in Latin: they stay as the bot shows them.
+  "botda /xodim kerak": "ботда /xodim керак",
+  "Hisobot dushanba–shanba belgilangan vaqtda keladi; yakshanba va butun markaz bayramida avtomatik bormaydi. Oluvchi botdagi «📊 Hisobot» tugmasi bilan istalgan payt so'ray oladi.": "Ҳисобот душанба–шанба белгиланган вақтда келади; якшанба ва бутун марказ байрамида автоматик бормайди. Олувчи ботдаги «📊 Hisobot» тугмаси билан исталган пайт сўрай олади.",
 };
 
 export default uzCyrl;

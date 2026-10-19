@@ -25,6 +25,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
+import { useT } from "@/i18n/context";
+import { roleTitle } from "@/components/profile/profile-roles";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
 import { tryCopyPendingText } from "@/lib/clipboard";
@@ -40,11 +42,12 @@ function extractError(err: unknown, fallback: string): string {
 }
 
 const ROLES = [
-  { id: 1, label: "CEO", icon: Crown },
-  { id: 2, label: "Direktor", icon: Building2 },
-  { id: 3, label: "Administrator", icon: Shield },
-  { id: 4, label: "O'qituvchi", icon: GraduationCap },
-  { id: 5, label: "Kassir", icon: Wallet },
+  // Titles come from the shared role helper (`roleTitle`).
+  { id: 1, icon: Crown },
+  { id: 2, icon: Building2 },
+  { id: 3, icon: Shield },
+  { id: 4, icon: GraduationCap },
+  { id: 5, icon: Wallet },
 ];
 
 interface TelegramLinkDialogProps {
@@ -53,6 +56,7 @@ interface TelegramLinkDialogProps {
 }
 
 export function TelegramLinkDialog({ open, onOpenChange }: TelegramLinkDialogProps) {
+  const t = useT();
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const currentUser = useAuth((s) => s.user);
   // A signed link IS an account, so nobody may generate one for a role above
@@ -108,23 +112,23 @@ export function TelegramLinkDialog({ open, onOpenChange }: TelegramLinkDialogPro
     );
     setLoading(false);
     if (copy.status === "failed") {
-      toast.error(extractError(copy.error, "Havola yaratishda xatolik"));
+      toast.error(extractError(copy.error, t("Havola yaratishda xatolik")));
       return;
     }
     if (copy.status === "empty") {
-      toast.error(TELEGRAM_BOT_NOT_CONFIGURED);
+      toast.error(t(TELEGRAM_BOT_NOT_CONFIGURED));
       return;
     }
     // The link was created even when the write was refused, so show it either way.
     setLink(copy.text);
     if (copy.status === "refused") {
       toast.error(
-        "Havola yaratildi, lekin brauzer uni nusxalashga ruxsat bermadi. Havola yonidagi tugmani bosing.",
+        t("Havola yaratildi, lekin brauzer uni nusxalashga ruxsat bermadi. Havola yonidagi tugmani bosing."),
       );
       return;
     }
     setCopied(true);
-    toast.success("Havola yaratildi va nusxalandi");
+    toast.success(t("Havola yaratildi va nusxalandi"));
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -132,7 +136,7 @@ export function TelegramLinkDialog({ open, onOpenChange }: TelegramLinkDialogPro
     if (!link) return;
     await navigator.clipboard.writeText(link);
     setCopied(true);
-    toast.success("Havola nusxalandi");
+    toast.success(t("Havola nusxalandi"));
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -140,25 +144,25 @@ export function TelegramLinkDialog({ open, onOpenChange }: TelegramLinkDialogPro
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Telegram ro&apos;yxatdan o&apos;tish havolasi</DialogTitle>
+          <DialogTitle>{t("Telegram ro'yxatdan o'tish havolasi")}</DialogTitle>
           <DialogDescription>
-            Yangi xodim tanlangan lavozim(lar) bilan Telegram bot orqali
-            ro&apos;yxatdan o&apos;tadi. Havola 3 kun amal qiladi va imzolangan
-            bo&apos;ladi.
+            {t(
+              "Yangi xodim tanlangan lavozim(lar) bilan Telegram bot orqali ro'yxatdan o'tadi. Havola 3 kun amal qiladi va imzolangan bo'ladi.",
+            )}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div>
-            <Label className="text-xs text-muted-foreground">Filial</Label>
+            <Label className="text-xs text-muted-foreground">{t("Filial")}</Label>
             <p className="mt-1 text-sm font-medium">
-              {selectedBranch?.name ?? "Filial tanlanmagan"}
+              {selectedBranch?.name ?? t("Filial tanlanmagan")}
             </p>
           </div>
 
           <div>
             <Label className="text-xs text-muted-foreground">
-              Lavozim(lar)
+              {t("Lavozim(lar)")}
             </Label>
             <div className="mt-2 grid grid-cols-2 gap-2">
               {visibleRoles.map((role) => {
@@ -180,21 +184,21 @@ export function TelegramLinkDialog({ open, onOpenChange }: TelegramLinkDialogPro
                     ) : (
                       <Icon className="size-4 text-muted-foreground" />
                     )}
-                    <span>{role.label}</span>
+                    <span>{roleTitle({ id: role.id }, t)}</span>
                   </button>
                 );
               })}
             </div>
             {roleIds.length === 0 && (
               <p className="mt-1.5 text-xs text-muted-foreground">
-                Kamida bitta lavozim tanlang
+                {t("Kamida bitta lavozim tanlang")}
               </p>
             )}
           </div>
 
           {link && (
             <div>
-              <Label className="text-xs text-muted-foreground">Havola</Label>
+              <Label className="text-xs text-muted-foreground">{t("Havola")}</Label>
               <div className="mt-1 flex gap-2">
                 <Input value={link} readOnly className="font-mono text-xs" />
                 <Button
@@ -226,7 +230,7 @@ export function TelegramLinkDialog({ open, onOpenChange }: TelegramLinkDialogPro
             ) : (
               <Link2 className="mr-2 size-4" />
             )}
-            {link ? "Havolani qayta yaratish" : "Havola yaratish"}
+            {link ? t("Havolani qayta yaratish") : t("Havola yaratish")}
           </Button>
         </DialogFooter>
       </DialogContent>

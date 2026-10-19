@@ -646,6 +646,19 @@ export const STRICT_FILES: string[] = [
   "app/(dashboard)/settings/rules/page.tsx",
   "app/(dashboard)/settings/leads-kpi/page.tsx",
   "app/(dashboard)/settings/payment/page.tsx",
+  "components/settings/telegram-settings-client.tsx",
+  "components/settings/telegram-groups-client.tsx",
+  "components/settings/telegram-link-dialog.tsx",
+  "components/settings/telegram-announce-dialog.tsx",
+  "components/settings/telegram-report/add-recipient-dialog.tsx",
+  "components/settings/telegram-report/recipient-panel.tsx",
+  "components/settings/telegram-report/recipient-table.tsx",
+  "components/settings/telegram-report/recipient-view.ts",
+  "components/settings/telegram-report/summary-cards.tsx",
+  "components/settings/telegram-report/telegram-report-api.ts",
+  "components/settings/telegram-report/telegram-report-labels.ts",
+  "components/settings/telegram-report/telegram-report-settings-client.tsx",
+  "app/(dashboard)/settings/telegram/page.tsx",
 ];
 
 function walk(dir: string): string[] {
