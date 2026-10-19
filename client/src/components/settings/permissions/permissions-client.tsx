@@ -15,6 +15,9 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { roleTitle } from "@/components/profile/profile-roles";
+import type { Translate } from "@/components/notifications/notification-view";
+import { useT } from "@/i18n/context";
 import {
   useResetRolePermissions,
   useRolePermissions,
@@ -34,14 +37,14 @@ import type { PermissionsOverview } from "./permissions-types";
 import { PermissionsTable } from "./permissions-table";
 
 /** The reset confirmation in the toggle dialog's shape: the lines «X yoqiladi / o'chadi», no heading, no money warning. */
-function resetDialogCopy(overview: PermissionsOverview, roleId: number): ConfirmCopy {
-  const copy = resetCopy(overview, roleId);
+function resetDialogCopy(overview: PermissionsOverview, roleId: number, t: Translate): ConfirmCopy {
+  const copy = resetCopy(overview, roleId, t);
   return {
     title: copy.title,
     alsoTitle: null,
     alsoLabels: copy.lines,
     warning: null,
-    confirm: "Qaytarish",
+    confirm: t("Boshlang'ich holatga qaytarish"),
   };
 }
 
@@ -52,6 +55,7 @@ function resetDialogCopy(overview: PermissionsOverview, roleId: number): Confirm
  * switches move when the server's answer comes back.
  */
 export function PermissionsClient() {
+  const t = useT();
   const { data: overview, isError, isFetching, refetch } = useRolePermissions();
   const save = useSaveRolePermissions();
   const reset = useResetRolePermissions();
@@ -68,9 +72,9 @@ export function PermissionsClient() {
         <Header />
         {isError ? (
           <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-            <p>Ruxsatlarni yuklab bo'lmadi.</p>
+            <p>{t("Ruxsatlarni yuklab bo'lmadi.")}</p>
             <Button variant="outline" size="sm" className="mt-3" onClick={() => void refetch()}>
-              Qayta urinish
+              {t("Qayta urinish")}
             </Button>
           </div>
         ) : (
@@ -89,7 +93,7 @@ export function PermissionsClient() {
       <div>
         <Header />
         <p className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-          Sozlanadigan rol topilmadi.
+          {t("Sozlanadigan rol topilmadi.")}
         </p>
       </div>
     );
@@ -101,9 +105,9 @@ export function PermissionsClient() {
   const pending = save.isPending || reset.isPending;
   const busy = pending || isFetching;
   const copy = plan
-    ? confirmCopy(overview, plan)
+    ? confirmCopy(overview, plan, t)
     : resetRoleId !== null
-      ? resetDialogCopy(overview, resetRoleId)
+      ? resetDialogCopy(overview, resetRoleId, t)
       : null;
 
   // The phone's role picker is a view switch, so it lives in the URL (?rol=); the first role is the default and is omitted.
@@ -128,7 +132,7 @@ export function PermissionsClient() {
         { roleId: plan.roleId, changes: plan.changes },
         {
           onSuccess: () => {
-            toast.success("Ruxsat saqlandi");
+            toast.success(t("Ruxsat saqlandi"));
             close();
           },
         },
@@ -138,7 +142,7 @@ export function PermissionsClient() {
         { roleId: resetRoleId },
         {
           onSuccess: () => {
-            toast.success("Boshlang'ich holat tiklandi");
+            toast.success(t("Boshlang'ich holat tiklandi"));
             close();
           },
         },
@@ -152,13 +156,13 @@ export function PermissionsClient() {
       <Legend />
       {isMobile && (
         <Select value={String(phoneRole)} onValueChange={pickRole}>
-          <SelectTrigger className="w-full" aria-label="Rol">
+          <SelectTrigger className="w-full" aria-label={t("Rol")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {overview.roles.map((r) => (
               <SelectItem key={r.id} value={String(r.id)}>
-                {r.label}
+                {roleTitle({ id: r.id, name: r.label }, t)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -169,7 +173,7 @@ export function PermissionsClient() {
         roleIds={isMobile ? [phoneRole] : allRoleIds}
         busy={busy}
         onToggle={(roleId: number, key: PermissionKey, on: boolean) =>
-          setPlan(planCellToggle(overview, roleId, key, on))
+          setPlan(planCellToggle(overview, roleId, key, on, t))
         }
         onReset={(roleId: number) => setResetRoleId(roleId)}
       />
@@ -177,6 +181,7 @@ export function PermissionsClient() {
       <PermissionConfirmDialog
         copy={copy}
         refusal={plan?.refusal ?? null}
+        destructive={plan !== null && !plan.on}
         open={copy !== null}
         pending={pending}
         onConfirm={confirm}
@@ -189,28 +194,30 @@ export function PermissionsClient() {
 }
 
 function Header() {
+  const t = useT();
   return (
     <SettingsPageHeader
-      title="Ruxsatlar"
-      description="O'zgarish xodimning keyingi bosishida kuchga kiradi."
+      title={t("Ruxsatlar")}
+      description={t("O'zgarish xodimning keyingi bosishida kuchga kiradi.")}
     />
   );
 }
 
 function Legend() {
+  const t = useT();
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
       <span className="flex items-center gap-1.5">
         <span className="size-2 rounded-full bg-yellow-500" />
-        boshlang'ich holatdan farq qiladi
+        {t("boshlang'ich holatdan farq qiladi")}
       </span>
       <span className="flex items-center gap-1.5">
         <span className="size-2 rounded-full bg-red-500" />
-        pulni o'zgartiradi yoki qaytarib bo'lmaydi
+        {t("pulni o'zgartiradi yoki qaytarib bo'lmaydi")}
       </span>
       <span className="flex items-center gap-1.5">
         <Lock className="size-3" />
-        bu rolga berib bo'lmaydi — sababini ko'rish uchun bosing
+        {t("bu rolga berib bo'lmaydi — sababini ko'rish uchun bosing")}
       </span>
     </div>
   );

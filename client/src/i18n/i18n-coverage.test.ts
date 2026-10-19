@@ -659,6 +659,13 @@ export const STRICT_FILES: string[] = [
   "components/settings/telegram-report/telegram-report-labels.ts",
   "components/settings/telegram-report/telegram-report-settings-client.tsx",
   "app/(dashboard)/settings/telegram/page.tsx",
+  "components/settings/permissions/permissions-client.tsx",
+  "components/settings/permissions/permissions-table.tsx",
+  "components/settings/permissions/permissions-history.tsx",
+  "components/settings/permissions/permission-confirm-dialog.tsx",
+  "components/settings/permissions/permissions-model.ts",
+  "components/settings/permissions/permissions-types.ts",
+  "app/(dashboard)/settings/permissions/page.tsx",
 ];
 
 function walk(dir: string): string[] {
