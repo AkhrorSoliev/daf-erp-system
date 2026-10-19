@@ -421,11 +421,11 @@ describe("withheldWarning (removal looks like a move)", () => {
     expect(withheldWarning(undefined, {})).toBeNull();
   });
 
-  it("turns red with an extra first line when the reason reads like a move", () => {
+  it("says the money comes back when the reason reads like a move", () => {
     const w = withheldWarning(preview(), { looksLikeMove: true })!;
-    expect(w.tone).toBe("danger");
-    expect(w.body.startsWith("Siz «ko'chdi» sababini tanladingiz")).toBe(true);
-    expect(w.body).toContain("Oyning 46% i o'tgan");
+    expect(w.tone).toBe("success");
+    expect(plain(w.title)).toBe("Ko'chish sifatida hisoblanadi — 560 000 so'm balansga qaytadi");
+    expect(w.body).toContain("balansiga qaytariladi");
   });
 
   it("sums the withheld rows and leaves the amount out when it is zero", () => {

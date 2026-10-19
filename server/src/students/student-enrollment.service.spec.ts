@@ -600,6 +600,40 @@ describe('StudentEnrollmentService', () => {
       expect(prisma.enrollment.update).not.toHaveBeenCalled();
     });
 
+    describe('a reason that says the student moved (ADR-0114)', () => {
+      const reasonNamed = (name: string) =>
+        prisma.studentExitReason.findFirst.mockResolvedValueOnce({
+          id: 'reason-1',
+          name,
+          companyId: 1001,
+          appliesTo: ['GROUP_REMOVAL'],
+        });
+
+      it('is settled as a transfer: no policy, no trial-lesson wait', async () => {
+        reasonNamed("Boshqa guruhga ko'chdi");
+        await service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
+          departureReasonId: 'reason-1',
+        });
+        expect(
+          monthlyChargeMock.reverseChargeForDeparture.mock.calls[0][1].policy,
+        ).toBeUndefined();
+        expect(
+          monthlyChargeMock.assertTrialLessonAnswered,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('any other reason keeps the student-cancelled rule', async () => {
+        reasonNamed('Moliyaviy sabablar');
+        await service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
+          departureReasonId: 'reason-1',
+        });
+        expect(
+          monthlyChargeMock.reverseChargeForDeparture.mock.calls[0][1].policy,
+        ).toBe('STUDENT_CANCELLED');
+        expect(monthlyChargeMock.assertTrialLessonAnswered).toHaveBeenCalled();
+      });
+    });
+
     describe('departure.withheld', () => {
       beforeEach(() => {
         prisma.studentExitReason.findFirstOrThrow = undefined;

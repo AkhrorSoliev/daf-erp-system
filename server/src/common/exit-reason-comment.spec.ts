@@ -1,4 +1,7 @@
-import { exitReasonRequiresComment } from './exit-reason-comment';
+import {
+  exitReasonRequiresComment,
+  looksLikeGroupMove,
+} from './exit-reason-comment';
 
 describe('exitReasonRequiresComment', () => {
   it('requires a comment for the catch-all reason', () => {
@@ -25,4 +28,22 @@ describe('exitReasonRequiresComment', () => {
       expect(exitReasonRequiresComment(name)).toBe(false);
     }
   });
+});
+
+describe('looksLikeGroupMove (ADR-0114)', () => {
+  it.each([
+    "Boshqa guruhga ko'chdi",
+    'Boshqa guruhga kochdi',
+    'Boshqa guruhga ko‘chdi',
+    'Guruh almashdi',
+  ])('%s is a move', (name) => expect(looksLikeGroupMove(name)).toBe(true));
+
+  it.each([
+    'Moliyaviy sabablar',
+    "O'qishni tashladi",
+    'Boshqa sabab',
+    'Narx qimmat',
+  ])('%s is not a move', (name) =>
+    expect(looksLikeGroupMove(name)).toBe(false),
+  );
 });

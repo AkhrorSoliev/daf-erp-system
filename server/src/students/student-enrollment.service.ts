@@ -56,6 +56,7 @@ import {
   EXIT_REASON_COMMENT_ERROR,
   EXIT_REASON_COMMENT_MIN_LENGTH,
   exitReasonRequiresComment,
+  looksLikeGroupMove,
 } from '../common/exit-reason-comment';
 
 @Injectable()
@@ -627,6 +628,9 @@ export class StudentEnrollmentService {
     // company under the GROUP_REMOVAL exit type.
     let departureReasonId: string | null = null;
     let reasonText: string;
+    // A configured reason that says the student moved to another group: the
+    // removal is settled as a transfer, not as a departure (ADR-0114).
+    let movedToAnotherGroup = false;
     if (input.departureReasonId) {
       const reason = await this.prisma.studentExitReason.findFirst({
         where: {
@@ -640,6 +644,7 @@ export class StudentEnrollmentService {
         throw new NotFoundException('Ketish sababi topilmadi');
       }
       departureReasonId = reason.id;
+      movedToAnotherGroup = looksLikeGroupMove(reason.name);
       // "Boshqa sabab" carries no information on its own — the comment IS
       // the reason, so it becomes mandatory. Other reasons keep it optional.
       const comment = input.reason?.trim();
@@ -699,12 +704,15 @@ export class StudentEnrollmentService {
     // Contract 3.5 waits for an unanswered «Dars bo'ldimi?» that could decide
     // the trial lesson (ADR-0060). A question opened after this check is not a
     // trial: the money step below keeps the ordinary rule.
-    await this.monthlyChargeService.assertTrialLessonAnswered(this.prisma, {
-      studentId: enrollment.studentId,
-      companyId,
-      enrollmentId,
-      today: tashkentDateStr(departureAt),
-    });
+    // A move is not a departure, so contract 3.5 does not apply to it.
+    if (!movedToAnotherGroup) {
+      await this.monthlyChargeService.assertTrialLessonAnswered(this.prisma, {
+        studentId: enrollment.studentId,
+        companyId,
+        enrollmentId,
+        today: tashkentDateStr(departureAt),
+      });
+    }
 
     // Atomic: refund unused prepaid lessons + (optional) write off the
     // current-cycle debt + flip enrollment to DROPPED + write the state
@@ -742,7 +750,9 @@ export class StudentEnrollmentService {
               companyId,
               reason: 'Guruhdan chiqarilganda',
               performedById: userId,
-              policy: departurePolicy,
+              // A move names no policy: like a transfer, the unheld lessons
+              // come back and the trial lesson does not apply (ADR-0114).
+              policy: movedToAnotherGroup ? undefined : departurePolicy,
             });
 
           if (input.writeOffCycleDebt) {
