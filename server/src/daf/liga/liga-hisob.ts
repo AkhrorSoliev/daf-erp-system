@@ -22,7 +22,7 @@ export interface HisobNatijasi {
   kotarildi: number;
   /** Keyingi hafta uchun ochilgan xonalar. */
   yangiXonalar: number;
-  /** Guruhlar jadvalidagi guruhlar (bir marta yoziladi). */
+  /** Shu chaqiruv HAQIQATAN yozgan guruh-hafta qatorlari (takroriy chaqiruvda 0). */
   guruhlar: number;
 }
 
@@ -125,8 +125,9 @@ async function guruhHaftasiniYoz(
   const jadval = guruhlarniSarala(
     await guruhlarYigindisi(tx, companyId, haftaBoshi),
   );
+  let yozildi = 0;
   for (const b of bolaklar(jadval)) {
-    await tx.$executeRaw(Prisma.sql`/* guruh-haftasi-yoz */
+    yozildi += await tx.$executeRaw(Prisma.sql`/* guruh-haftasi-yoz */
       INSERT INTO "DafGroupWeek" ("companyId", "weekStart", "groupId", "place", "average", "members", "points")
       VALUES ${Prisma.join(
         b.map(
@@ -136,7 +137,7 @@ async function guruhHaftasiniYoz(
       )}
       ON CONFLICT ("weekStart", "groupId") DO NOTHING`);
   }
-  return jadval.length;
+  return yozildi;
 }
 
 /**

@@ -245,7 +245,7 @@ describe('settleWeek — hafta oxiri', () => {
       ['g-b', OTGAN, 1, 60, 3, 180],
       ['g-a', OTGAN, 2, 30, 3, 90],
     ]);
-    await settleWeek(db, 1, OTGAN, { kutish: true });
+    expect((await settleWeek(db, 1, OTGAN, { kutish: true })).guruhlar).toBe(0);
     expect(h.guruhHaftalari).toHaveLength(2);
   });
 });

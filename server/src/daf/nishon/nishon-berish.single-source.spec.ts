@@ -9,7 +9,7 @@ import { join } from 'path';
 const SERVER = join(__dirname, '..', '..', '..');
 const ROOTS = ['src', 'scripts'];
 const PRISMA_WRITE =
-  /\.dafStudentBadge\s*\.\s*(create|createMany|update|updateMany|upsert|delete|deleteMany)\s*\(/g;
+  /\.dafStudentBadge\s*\.\s*(create|createMany|createManyAndReturn|update|updateMany|updateManyAndReturn|upsert|delete|deleteMany)\s*\(/g;
 // A nested write through the Student relation: `dafBadges: { create: … }`.
 const NESTED_WRITE =
   /\bdafBadges\s*:\s*\{\s*(create|createMany|connectOrCreate|upsert|update|updateMany|delete|deleteMany|set|disconnect)\b/g;
@@ -62,6 +62,14 @@ describe('DafStudentBadge is written only by grantBadges', () => {
     ]).toHaveLength(1);
     expect([
       ...'delete from public."DafStudentBadge"'.matchAll(RAW_WRITE),
+    ]).toHaveLength(1);
+    expect([
+      ...'tx.dafStudentBadge.createManyAndReturn({})'.matchAll(PRISMA_WRITE),
+    ]).toHaveLength(1);
+    expect([
+      ...'tx.dafStudentBadge\n  .updateManyAndReturn({})'.matchAll(
+        PRISMA_WRITE,
+      ),
     ]).toHaveLength(1);
     expect([
       ...'prisma.dafStudentBadge.findMany({})'.matchAll(PRISMA_WRITE),

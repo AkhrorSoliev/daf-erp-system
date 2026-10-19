@@ -21,7 +21,7 @@ const MODEL: Record<string, string> = {
   dafWeeks: 'DafGroupWeek',
 };
 const PRISMA_WRITE =
-  /\.(dafStudentLeague|dafLeagueRoom|dafLeagueEntry|dafGroupWeek)\s*\.\s*(create|createMany|update|updateMany|upsert|delete|deleteMany)\s*\(/g;
+  /\.(dafStudentLeague|dafLeagueRoom|dafLeagueEntry|dafGroupWeek)\s*\.\s*(create|createMany|createManyAndReturn|update|updateMany|updateManyAndReturn|upsert|delete|deleteMany)\s*\(/g;
 // A nested write through a relation: `dafLeagueEntries: { create: … }`.
 const NESTED_WRITE =
   /\b(dafLeague|dafLeagueEntries|leagueEntries|dafWeeks)\s*:\s*\{\s*(create|createMany|connectOrCreate|upsert|update|updateMany|delete|deleteMany|set|disconnect)\b/g;
@@ -98,6 +98,14 @@ describe('the league tables are written only in daf/liga', () => {
     expect([
       ...'ON CONFLICT DO UPDATE SET tier = 1'.matchAll(RAW_WRITE),
     ]).toHaveLength(0);
+    expect([
+      ...'tx.dafLeagueEntry.createManyAndReturn({})'.matchAll(PRISMA_WRITE),
+    ]).toHaveLength(1);
+    expect([
+      ...'tx.dafStudentLeague\n  .updateManyAndReturn({})'.matchAll(
+        PRISMA_WRITE,
+      ),
+    ]).toHaveLength(1);
     expect([
       ...'prisma.dafLeagueRoom.findMany({})'.matchAll(PRISMA_WRITE),
     ]).toHaveLength(0);

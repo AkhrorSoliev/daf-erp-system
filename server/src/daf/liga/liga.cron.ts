@@ -32,7 +32,7 @@ export class LigaCron {
           kutish: true,
         })) {
           this.logger.log(
-            `Liga hisobi: kompaniya ${c.id}, hafta ${n.haftaBoshi}: ${n.xonalar} xona, ${n.azolar} a'zo, ${n.kotarildi} ko'tarildi, ${n.yangiXonalar} yangi xona, ${n.guruhlar} guruh`,
+            `Liga hisobi: kompaniya ${c.id}, hafta ${n.haftaBoshi}: ${n.xonalar} xona, ${n.azolar} a'zo, ${n.kotarildi} ko'tarildi, ${n.yangiXonalar} yangi xona, ${n.guruhlar} guruh yozildi`,
           );
         }
         ok += 1;
