@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Users,
   Building2,
@@ -52,6 +52,11 @@ import { archiveReason, isDetailType } from "./archive-detail-rules";
 import { LeadsArchive } from "@/components/leads/leads-archive";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
+import type { Params } from "@/i18n/translate";
+
+type Translate = (source: string, params?: Params) => string;
 
 interface ArchiveCounts {
   users: number;
@@ -72,15 +77,15 @@ interface EntityCategory {
 }
 
 const categories: EntityCategory[] = [
-  { key: "users", label: "Ustozlar / Xodimlar", icon: Users },
-  { key: "students", label: "O'quvchilar", icon: GraduationCap },
-  { key: "groups", label: "Guruhlar", icon: UsersRound },
-  { key: "courses", label: "Kurslar", icon: BookOpen },
-  { key: "leads", label: "Lidlar", icon: UserPlus },
-  { key: "branches", label: "Filiallar", icon: Building2 },
-  { key: "rooms", label: "Xonalar", icon: DoorOpen },
-  { key: "enrollments", label: "Yozilishlar", icon: Link2 },
-  { key: "holidays", label: "Dam olish kunlari", icon: CalendarOff },
+  { key: "users", label: msg("Ustozlar / Xodimlar"), icon: Users },
+  { key: "students", label: msg("O'quvchilar"), icon: GraduationCap },
+  { key: "groups", label: msg("Guruhlar"), icon: UsersRound },
+  { key: "courses", label: msg("Kurslar"), icon: BookOpen },
+  { key: "leads", label: msg("Lidlar"), icon: UserPlus },
+  { key: "branches", label: msg("Filiallar"), icon: Building2 },
+  { key: "rooms", label: msg("Xonalar"), icon: DoorOpen },
+  { key: "enrollments", label: msg("Yozilishlar"), icon: Link2 },
+  { key: "holidays", label: msg("Dam olish kunlari"), icon: CalendarOff },
 ];
 
 const archiveSchema = {
@@ -88,13 +93,19 @@ const archiveSchema = {
 };
 
 export function ArchiveSettingsClient() {
+  const t = useT();
+  // The counts load once; a language switch must not refetch (ref copy, not a dep).
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  });
   const [counts, setCounts] = useState<ArchiveCounts | null>(null);
   const { filters: archiveFilters, setFilter: setArchiveFilter, resetFilters } = useUrlFilters(archiveSchema);
   const [loading, setLoading] = useState(true);
 
   const selected = useMemo(() => {
-    const t = archiveFilters.type;
-    return t && categories.some((c) => c.key === t) ? (t as keyof ArchiveCounts) : null;
+    const type = archiveFilters.type;
+    return type && categories.some((c) => c.key === type) ? (type as keyof ArchiveCounts) : null;
   }, [archiveFilters.type]);
 
   const fetchCounts = useCallback(async () => {
@@ -102,7 +113,7 @@ export function ArchiveSettingsClient() {
       const { data } = await api.get("/archive/counts");
       setCounts(data);
     } catch {
-      toast.error("Arxiv ma'lumotlarini yuklashda xatolik");
+      toast.error(tRef.current(msg("Arxiv ma'lumotlarini yuklashda xatolik")));
     } finally {
       setLoading(false);
     }
@@ -142,8 +153,8 @@ export function ArchiveSettingsClient() {
   return (
     <div className="space-y-4">
       <SettingsPageHeader
-        title="Arxiv"
-        description="O'chirilgan ma'lumotlar shu yerda saqlanadi. Faqat CEO ko'ra oladi."
+        title={t("Arxiv")}
+        description={t("O'chirilgan ma'lumotlar shu yerda saqlanadi. Faqat CEO ko'ra oladi.")}
       />
 
       {loading ? (
@@ -170,9 +181,11 @@ export function ArchiveSettingsClient() {
                   <Icon className="size-5 text-muted-foreground" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">{cat.label}</p>
+                  <p className="text-sm font-medium">{t(cat.label)}</p>
                   <p className="text-xs text-muted-foreground">
-                    {count > 0 ? `${count} ta arxivlangan` : "Bo'sh"}
+                    {count > 0
+                      ? t("{n} ta arxivlangan", { n: count })
+                      : t("Arxivda yo'q")}
                   </p>
                 </div>
                 {count > 0 && (
@@ -206,6 +219,12 @@ const archiveListSchema = {
 };
 
 function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
+  const t = useT();
+  // A language switch must not refetch the list (ref copy, not a dep).
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  });
   const [items, setItems] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const { filters, setFilter, setFilters: setUrlFilters } = useUrlFilters(archiveListSchema);
@@ -239,7 +258,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
       setItems(data.data);
       setTotal(data.total);
     } catch {
-      toast.error("Ma'lumotlarni yuklashda xatolik");
+      toast.error(tRef.current(msg("Ma'lumotlarni yuklashda xatolik")));
     } finally {
       setLoading(false);
     }
@@ -253,7 +272,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
     setActionId(id);
     try {
       await api.post(`/archive/${entityType}/${id}/restore`);
-      toast.success("Muvaffaqiyatli tiklandi");
+      toast.success(t("Muvaffaqiyatli tiklandi"));
       setItems((prev) => prev.filter((item) => item.id !== id));
       setTotal((prev) => Math.max(0, prev - 1));
       if (filters.id === String(id)) closeSheet();
@@ -261,7 +280,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
     } catch (err) {
       // A refused restore says why — e.g. a student card whose number is on
       // another live card (ADR-0033).
-      toast.error(getErrorMessage(err, "Tiklashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("Tiklashda xatolik yuz berdi")));
     } finally {
       setActionId(null);
     }
@@ -278,12 +297,12 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
               <ArrowLeft className="size-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Arxivga qaytish</TooltipContent>
+          <TooltipContent>{t("Arxivga qaytish")}</TooltipContent>
         </Tooltip>
         <div>
-          <h2 className="text-lg font-semibold tracking-tight">{label}</h2>
+          <h2 className="text-lg font-semibold tracking-tight">{t(label)}</h2>
           <p className="text-xs text-muted-foreground">
-            {total} ta arxivlangan
+            {t("{n} ta arxivlangan", { n: total })}
           </p>
         </div>
       </div>
@@ -291,7 +310,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
       <div className="relative w-full sm:max-w-sm">
         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Qidirish..."
+          placeholder={t("Qidirish...")}
           value={searchInput}
           onChange={(e) => {
             setSearchInput(e.target.value);
@@ -306,10 +325,10 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>Nomi</TableHead>
-              {showReason && <TableHead>Sabab</TableHead>}
-              <TableHead>Arxivlangan sana</TableHead>
-              <TableHead>Kim tomonidan</TableHead>
+              <TableHead>{t("Nomi")}</TableHead>
+              {showReason && <TableHead>{t("Sabab")}</TableHead>}
+              <TableHead>{t("Arxivlangan sana")}</TableHead>
+              <TableHead>{t("Kim tomonidan")}</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -330,7 +349,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
                 >
                   <div className="flex flex-col items-center gap-2">
                     <Archive className="size-8 text-muted-foreground/50" />
-                    Arxivda hech narsa topilmadi
+                    {t("Arxivda hech narsa topilmadi")}
                   </div>
                 </TableCell>
               </TableRow>
@@ -344,7 +363,9 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
                       : undefined
                   }
                   aria-label={
-                    canOpen ? `${getDisplayName(entityType, item)} — ko'rish` : undefined
+                    canOpen
+                      ? t("{name} — ko'rish", { name: getDisplayName(entityType, item, t) })
+                      : undefined
                   }
                   tabIndex={canOpen ? 0 : undefined}
                   onClick={canOpen ? () => setUrlFilters({ id: String(item.id) }) : undefined}
@@ -364,7 +385,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
                     {(filters.page - 1) * perPage + index + 1}
                   </TableCell>
                   <TableCell className="font-medium">
-                    {getDisplayName(entityType, item)}
+                    {getDisplayName(entityType, item, t)}
                   </TableCell>
                   {showReason && (
                     <TableCell>
@@ -397,7 +418,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
                             <RotateCcw className="size-4" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Qayta tiklash</TooltipContent>
+                        <TooltipContent>{t("Qayta tiklash")}</TooltipContent>
                       </Tooltip>
 
                       <Tooltip>
@@ -412,7 +433,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          Hozircha ishlamaydi
+                          {t("Hozircha ishlamaydi")}
                         </TooltipContent>
                       </Tooltip>
                     </div>
@@ -427,7 +448,11 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
       {totalPages > 1 && (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
-            {filters.page} / {totalPages} sahifa ({total} ta)
+            {t("{page} / {pages} sahifa ({n} ta)", {
+              page: filters.page,
+              pages: totalPages,
+              n: total,
+            })}
           </span>
           <div className="flex gap-2">
             <Button
@@ -436,7 +461,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
               disabled={filters.page <= 1}
               onClick={() => setFilter("page", filters.page - 1)}
             >
-              Oldingi
+              {t("Oldingi")}
             </Button>
             <Button
               variant="outline"
@@ -444,7 +469,7 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
               disabled={filters.page >= totalPages}
               onClick={() => setFilter("page", filters.page + 1)}
             >
-              Keyingi
+              {t("Keyingi")}
             </Button>
           </div>
         </div>
@@ -458,18 +483,19 @@ function ArchiveList({ entityType, label, onBack }: ArchiveListProps) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Qayta tiklash</AlertDialogTitle>
+            <AlertDialogTitle>{t("Qayta tiklash")}</AlertDialogTitle>
             <AlertDialogDescription>
-              &quot;{restoreTarget ? getDisplayName(entityType, restoreTarget) : ""}&quot;
-              arxivdan tiklanadi va faol holatga qaytadi. Davom etasizmi?
+              {t("«{name}» arxivdan tiklanadi va faol holatga qaytadi. Davom etasizmi?", {
+                name: restoreTarget ? getDisplayName(entityType, restoreTarget, t) : "",
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+            <AlertDialogCancel>{t("Bekor qilish")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => restoreTarget && handleRestore(restoreTarget.id)}
             >
-              Tiklash
+              {t("Tiklash")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -504,34 +530,34 @@ function deletedByName(item: any): string {
   return composed || by.name || "—";
 }
 
-function getDisplayName(entityType: string, item: any): string {
+function getDisplayName(entityType: string, item: any, t: Translate): string {
   switch (entityType) {
     // `User` carries firstName/lastName, never a `name` column, so reading
     // `item.name` here rendered "Noma'lum" for every archived staff member.
     case "users":
       return (
-        `${item.firstName || ""} ${item.lastName || ""}`.trim() || "Noma'lum"
+        `${item.firstName || ""} ${item.lastName || ""}`.trim() || t("Noma'lum")
       );
     case "students":
       return (
-        `${item.firstName || ""} ${item.lastName || ""}`.trim() || "Noma'lum"
+        `${item.firstName || ""} ${item.lastName || ""}`.trim() || t("Noma'lum")
       );
     case "leads":
       return (
-        `${item.firstName || ""} ${item.lastName || ""}`.trim() || "Noma'lum"
+        `${item.firstName || ""} ${item.lastName || ""}`.trim() || t("Noma'lum")
       );
     case "groups":
-      return item.name || "Noma'lum";
+      return item.name || t("Noma'lum");
     case "courses":
-      return item.name || "Noma'lum";
+      return item.name || t("Noma'lum");
     case "branches":
-      return item.name || "Noma'lum";
+      return item.name || t("Noma'lum");
     case "rooms":
-      return item.name || "Noma'lum";
+      return item.name || t("Noma'lum");
     case "enrollments":
       return `${item.student?.firstName || ""} ${item.student?.lastName || ""} → ${item.group?.name || ""}`.trim();
     case "holidays":
-      return item.name || "Noma'lum";
+      return item.name || t("Noma'lum");
     default:
       return item.name || item.id;
   }

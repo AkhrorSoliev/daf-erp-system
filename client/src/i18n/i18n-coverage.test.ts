@@ -602,6 +602,19 @@ export const STRICT_FILES: string[] = [
   "app/(dashboard)/settings/courses/[id]/page.tsx",
   "app/(dashboard)/settings/rooms/page.tsx",
   "app/(dashboard)/settings/rooms/[id]/page.tsx",
+  "components/settings/holidays-settings-client.tsx",
+  "components/settings/holiday-row-actions.tsx",
+  "components/settings/edit-holiday-drawer.tsx",
+  "components/settings/edit-holiday-form.tsx",
+  "lib/holiday-scope.ts",
+  "components/settings/reasons-settings-client.tsx",
+  "components/settings/reason-list-manager.tsx",
+  "components/settings/archive-settings-client.tsx",
+  "components/settings/archive-detail-sheet.tsx",
+  "components/settings/archive-detail-rules.ts",
+  "app/(dashboard)/settings/holidays/page.tsx",
+  "app/(dashboard)/settings/reasons/page.tsx",
+  "app/(dashboard)/settings/archive/page.tsx",
 ];
 
 function walk(dir: string): string[] {

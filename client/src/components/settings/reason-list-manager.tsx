@@ -20,6 +20,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 
 /**
  * Every "sabab" list in the system has the same shape server-side: a
@@ -49,9 +51,9 @@ interface ReasonListManagerProps {
   endpoint: string;
   /** React Query key root — must match the key the consuming pickers use. */
   queryKey: string;
-  /** Placeholder for the "add" input. */
+  /** Placeholder for the "add" input (already translated by the caller). */
   addPlaceholder?: string;
-  /** Shown when the list is empty. */
+  /** Shown when the list is empty (already translated by the caller). */
   emptyText?: string;
   /**
    * When set, each reason also carries an `appliesTo` multi-select. Omit for
@@ -67,10 +69,11 @@ interface ReasonListManagerProps {
 export function ReasonListManager({
   endpoint,
   queryKey,
-  addPlaceholder = "Yangi sabab nomi",
-  emptyText = "Sabablar hali qo'shilmagan",
+  addPlaceholder,
+  emptyText,
   tags,
 }: ReasonListManagerProps) {
+  const t = useT();
   const qc = useQueryClient();
   const [newName, setNewName] = useState("");
   const [newTags, setNewTags] = useState<string[]>(tags?.defaultValue ?? []);
@@ -93,11 +96,11 @@ export function ReasonListManager({
     onSuccess: () => {
       setNewName("");
       setNewTags(tags?.defaultValue ?? []);
-      toast.success("Sabab qo'shildi");
+      toast.success(t("Sabab qo'shildi"));
       invalidate();
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, "Saqlashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Saqlashda xatolik yuz berdi")));
     },
   });
 
@@ -112,11 +115,11 @@ export function ReasonListManager({
     }) => api.patch<ReasonRow>(`${endpoint}/${id}`, body),
     onSuccess: () => {
       cancelEdit();
-      toast.success("Sabab yangilandi");
+      toast.success(t("Sabab yangilandi"));
       invalidate();
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, "Saqlashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Saqlashda xatolik yuz berdi")));
     },
   });
 
@@ -124,11 +127,11 @@ export function ReasonListManager({
     mutationFn: (id: string) => api.delete(`${endpoint}/${id}`),
     onSuccess: () => {
       setConfirmDeleteId(null);
-      toast.success("Sabab o'chirildi");
+      toast.success(t("Sabab o'chirildi"));
       invalidate();
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, "O'chirishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("O'chirishda xatolik yuz berdi")));
     },
   });
 
@@ -176,7 +179,11 @@ export function ReasonListManager({
 
   const tagLabels = (values: string[]) =>
     values
-      .map((v) => tags?.options.find((o) => o.value === v)?.label ?? v)
+      .map((v) => {
+        const label = tags?.options.find((o) => o.value === v)?.label;
+        // A known code reads in the page's language; an unknown one is data.
+        return label ? t(label) : v;
+      })
       .join(" · ");
 
   const confirmName = data?.find((r) => r.id === confirmDeleteId)?.name;
@@ -187,7 +194,7 @@ export function ReasonListManager({
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder={addPlaceholder}
+          placeholder={addPlaceholder ?? t("Yangi sabab nomi")}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -200,17 +207,17 @@ export function ReasonListManager({
           <div className="space-y-1.5">
             <p className="text-xs text-muted-foreground">{tags.label}</p>
             <div className="grid grid-cols-2 gap-1.5">
-              {tags.options.map((t) => (
+              {tags.options.map((opt) => (
                 <label
-                  key={t.value}
+                  key={opt.value}
                   className="flex cursor-pointer items-center gap-2 text-sm"
                 >
                   <Checkbox
-                    checked={newTags.includes(t.value)}
-                    onCheckedChange={() => toggle(setNewTags, t.value)}
+                    checked={newTags.includes(opt.value)}
+                    onCheckedChange={() => toggle(setNewTags, opt.value)}
                     disabled={createMutation.isPending}
                   />
-                  {t.label}
+                  {t(opt.label)}
                 </label>
               ))}
             </div>
@@ -226,7 +233,7 @@ export function ReasonListManager({
           {createMutation.isPending ? (
             <Loader2 className="size-4 animate-spin" />
           ) : (
-            "Qo'shish"
+            t("Qo'shish")
           )}
         </Button>
       </div>
@@ -238,7 +245,7 @@ export function ReasonListManager({
           ))
         ) : !data || data.length === 0 ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
-            {emptyText}
+            {emptyText ?? t("Sabablar hali qo'shilmagan")}
           </div>
         ) : (
           data.map((reason) => {
@@ -270,19 +277,19 @@ export function ReasonListManager({
                     />
                     {tags && (
                       <div className="grid grid-cols-2 gap-1.5">
-                        {tags.options.map((t) => (
+                        {tags.options.map((opt) => (
                           <label
-                            key={t.value}
+                            key={opt.value}
                             className="flex cursor-pointer items-center gap-2 text-sm"
                           >
                             <Checkbox
-                              checked={editingTags.includes(t.value)}
+                              checked={editingTags.includes(opt.value)}
                               onCheckedChange={() =>
-                                toggle(setEditingTags, t.value)
+                                toggle(setEditingTags, opt.value)
                               }
                               disabled={updateMutation.isPending}
                             />
-                            {t.label}
+                            {t(opt.label)}
                           </label>
                         ))}
                       </div>
@@ -295,7 +302,7 @@ export function ReasonListManager({
                         disabled={updateMutation.isPending}
                       >
                         <X className="mr-1 size-4" />
-                        Bekor qilish
+                        {t("Bekor qilish")}
                       </Button>
                       <Button
                         size="sm"
@@ -311,7 +318,7 @@ export function ReasonListManager({
                         ) : (
                           <>
                             <Check className="mr-1 size-4" />
-                            Saqlash
+                            {t("Saqlash")}
                           </>
                         )}
                       </Button>
@@ -333,7 +340,7 @@ export function ReasonListManager({
                         size="icon"
                         onClick={() => startEdit(reason)}
                         disabled={isBusy || editingId !== null}
-                        aria-label="Tahrirlash"
+                        aria-label={t("Tahrirlash")}
                         className="h-8 w-8"
                       >
                         <Pencil className="size-4" />
@@ -343,7 +350,7 @@ export function ReasonListManager({
                         size="icon"
                         onClick={() => setConfirmDeleteId(reason.id)}
                         disabled={isBusy || editingId !== null}
-                        aria-label="O'chirish"
+                        aria-label={t("O'chirish")}
                         className="h-8 w-8 text-red-600 hover:text-red-700"
                       >
                         <Trash2 className="size-4" />
@@ -365,16 +372,19 @@ export function ReasonListManager({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Sababni o&apos;chirish</AlertDialogTitle>
+            <AlertDialogTitle>{t("Sababni o'chirish")}</AlertDialogTitle>
             <AlertDialogDescription>
               {confirmName
-                ? `"${confirmName}" sababini o'chirishni xohlaysizmi? Ilgari shu sabab bilan yozilgan yozuvlar hisobotlarda saqlanib qoladi.`
-                : "Sababni o'chirishni xohlaysizmi?"}
+                ? t(
+                    "«{name}» sababini o'chirishni xohlaysizmi? Ilgari shu sabab bilan yozilgan yozuvlar hisobotlarda saqlanib qoladi.",
+                    { name: confirmName },
+                  )
+                : t("Sababni o'chirishni xohlaysizmi?")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteMutation.isPending}>
-              Bekor qilish
+              {t("Bekor qilish")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
@@ -387,7 +397,7 @@ export function ReasonListManager({
               {deleteMutation.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
-                "O'chirish"
+                t("O'chirish")
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -399,9 +409,9 @@ export function ReasonListManager({
 
 /** Shared by the settings page and the report's ⚙ dialog. */
 export const EXIT_TYPE_OPTIONS: ReasonTagOption[] = [
-  { value: "GROUP_REMOVAL", label: "Guruhdan chiqarish" },
-  { value: "FREEZE", label: "Muzlatish" },
-  { value: "EXPEL", label: "Chetlatish" },
-  { value: "INACTIVE", label: "Nofaol qilish" },
-  { value: "ARCHIVE", label: "Arxivlash" },
+  { value: "GROUP_REMOVAL", label: msg("Guruhdan chiqarish") },
+  { value: "FREEZE", label: msg("Muzlatish") },
+  { value: "EXPEL", label: msg("Chetlatish") },
+  { value: "INACTIVE", label: msg("Nofaol qilish") },
+  { value: "ARCHIVE", label: msg("Arxivlash") },
 ];
