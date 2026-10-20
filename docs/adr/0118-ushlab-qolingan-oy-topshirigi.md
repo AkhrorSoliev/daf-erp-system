@@ -25,6 +25,6 @@ Shartnoma 6.2 bo'yicha o'quvchi oyning 40% idan ko'pi o'tgach «Guruhdan chiqari
 ## Oqibatlar
 
 - Ehtiyot: «Filial almashdi» ham shu qoidaga tushadi (nomida «almash» bor). O'quvchi filialni almashtirib guruhdan chiqsa, pul qaytadi.
-- `TaskKind` ga `HELD_MONTH` qo'shildi (migratsiya `20261019100000_task_kind_held_month`). `AutoKind`, `AUTO_RULES`, `task-auto-rules.ts` ga yangi yozuv.
+- `TaskKind` ga `HELD_MONTH` qo'shildi (migratsiya `20261019110000_task_kind_held_month`). `AutoKind`, `AUTO_RULES`, `task-auto-rules.ts` ga yangi yozuv.
 - `DepartureOutcome.withheldAmount`: ushlangan o'tmagan darslar puli (faqat `withheld` bo'lsa 0 dan katta).
 - Ochiq savol: pulni administrator o'zi qaytara oladigan ekran (CEO tasdig'i bilan) hali yo'q.
