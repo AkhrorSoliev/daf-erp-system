@@ -48,7 +48,7 @@ Jadvalga kirmagan holat — matn bilan, xato sifatida emas:
 
 **Tarix.** Oxirgi 8 hafta: `DafGroupWeek` (`weekStart`, `place`,
 `average`). Yozuvi yo'q hafta (guruh o'sha paytda jadvalda bo'lmagan) —
-«—». Kichik chiziq (sparkline) o'rin bo'yicha, kam bo'lsa — jadval.
+«—». Sakkiz ta bosiladigan chip (dushanba sanasi va o'rin).
 Qator bosilsa o'sha haftaga o'tadi (§4).
 
 ## 3. O'quvchilar jadvali
@@ -110,7 +110,7 @@ Javob:
 
 ```
 {
-  haftaBoshi, joriy,
+  haftaBoshi, joriy, bugun,            // bugun — Toshkent kuni
   haftalar: string[],                 // tanlagich uchun, yangidan eskiga
   guruh: { holat, orin|null, guruhSoni|null, baho|null, azolar, ball, minAzolar },
   // holat: JADVALDA | KAM_AZO | FAOL_EMAS | YOZUV_YOQ (o'tgan hafta, DafGroupWeek qatori yo'q)
