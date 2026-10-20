@@ -40,7 +40,7 @@ export const guruhlar: QollanmaSahifa[] = [
       "guruh havolasi",
       "kassir guruhlar",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-20",
   },
   {
     bolim: "guruhlar",

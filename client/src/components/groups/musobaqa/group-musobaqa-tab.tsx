@@ -45,7 +45,7 @@ export function GroupMusobaqaTab({ groupId }: { groupId: string }) {
             </label>
             <select
               id="musobaqa-hafta"
-              value={data.haftaBoshi}
+              value={hafta ?? data.haftalar[0]}
               onChange={(e) => setHafta(e.target.value === data.haftalar[0] ? null : e.target.value)}
               className="min-h-11 rounded-md border bg-background px-3 text-sm"
             >

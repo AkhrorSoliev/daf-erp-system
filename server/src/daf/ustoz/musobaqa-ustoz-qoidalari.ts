@@ -72,7 +72,7 @@ export function oquvchiQatorlari(input: {
     .sort(
       (x, y) =>
         y.jamiBall - x.jamiBall ||
-        x.ism.localeCompare(y.ism) ||
+        x.ism.localeCompare(y.ism, 'uz') ||
         x.studentId - y.studentId,
     );
 }

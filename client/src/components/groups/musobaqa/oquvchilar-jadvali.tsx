@@ -7,6 +7,7 @@ import { useT } from "@/i18n/context";
 import { maqsadFoizi, oxirgiMashqMatni } from "./musobaqa-format";
 import type { MusobaqaJavob } from "./types";
 
+// Ustun "#" yo'q: ball bo'yicha o'rin faqat tartib bilan ko'rsatiladi.
 // Sahifalanmaydi: guruh ≤ ~30 o'quvchi, ustoz hammani bir qarashda ko'radi (CLAUDE.md sahifalash qoidasiga ongli istisno).
 export function OquvchilarJadvali({ data }: { data: MusobaqaJavob }) {
   const t = useT();
@@ -16,7 +17,7 @@ export function OquvchilarJadvali({ data }: { data: MusobaqaJavob }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead scope="col" className="bg-background sticky left-0 min-w-44">{t("O'quvchi")}</TableHead>
+            <TableHead scope="col" className="bg-muted sticky left-0 min-w-44">{t("O'quvchi")}</TableHead>
             <TableHead scope="col" className="min-w-24 text-right">{t("Shu guruh bali")}</TableHead>
             <TableHead scope="col" className="min-w-24 text-right">{t("Jami ball")}</TableHead>
             <TableHead scope="col" className="min-w-24 text-right">{t("Faol kunlar")}</TableHead>

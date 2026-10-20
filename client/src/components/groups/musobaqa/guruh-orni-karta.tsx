@@ -19,7 +19,6 @@ export function GuruhOrniKarta({
   const g = data.guruh;
   const izoh = kartaIzohi(g, t) ?? "";
   const azolarIzohi = t("{n} a'zo, jami {ball} ball", { n: g.azolar, ball: g.ball });
-  const joriyHafta = data.haftalar[0];
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
@@ -42,14 +41,30 @@ export function GuruhOrniKarta({
       <div>
         <p className="text-muted-foreground mb-1.5 text-xs">{t("Oxirgi haftalar (o'rin)")}</p>
         <div className="flex gap-2 overflow-x-auto pb-1">
+          <button
+            type="button"
+            onClick={() => onHafta(null)}
+            aria-pressed={data.joriy}
+            className={cn(
+              "min-h-11 min-w-20 shrink-0 rounded-md border px-3 py-1 text-center text-sm font-medium",
+              data.joriy ? "border-primary bg-primary/10" : "hover:bg-muted",
+            )}
+          >
+            {t("joriy")}
+          </button>
           {data.tarix.map((q) => {
             const tanlangan = q.haftaBoshi === data.haftaBoshi;
             return (
               <button
                 key={q.haftaBoshi}
                 type="button"
-                onClick={() => onHafta(q.haftaBoshi === joriyHafta ? null : q.haftaBoshi)}
+                onClick={() => onHafta(q.haftaBoshi)}
                 aria-pressed={tanlangan}
+                aria-label={
+                  q.orin !== null
+                    ? t("{hafta} haftasi, o'rin {orin}", { hafta: haftaYorligi(q.haftaBoshi), orin: q.orin })
+                    : t("{hafta} haftasi, o'rin yo'q", { hafta: haftaYorligi(q.haftaBoshi) })
+                }
                 className={cn(
                   "min-h-11 min-w-20 shrink-0 rounded-md border px-3 py-1 text-center text-sm",
                   tanlangan ? "border-primary bg-primary/10" : "hover:bg-muted",

@@ -226,4 +226,36 @@ describe('MusobaqaUstozService.guruhKorinishi', () => {
     await servis.guruhKorinishi(G, 1, undefined, JETZT);
     expect(s3Soni()).toBe(2);
   });
+
+  it('S3 so‘rovi xato bersa: bir vaqtdagi hamma chaqiruvchi rad etiladi, keyingi chaqiruv qayta o‘qiydi', async () => {
+    const { servis, prisma } = yasa({
+      guruhlar: [{ groupId: G, name: 'A1', azolar: 4, ball: 200 }],
+    });
+    const asl = prisma.$queryRaw.getMockImplementation()!;
+    let s3Soni = 0;
+    prisma.$queryRaw.mockImplementation(
+      async (q: { strings: readonly string[] }) => {
+        if (q.strings[0].includes('guruhlar-yigindisi')) {
+          s3Soni++;
+          if (s3Soni === 1) throw new Error('db tushdi');
+        }
+        return asl(q);
+      },
+    );
+    const natija = await Promise.allSettled(
+      Array.from({ length: 3 }, () =>
+        servis.guruhKorinishi(G, 1, undefined, JETZT),
+      ),
+    );
+    expect(natija.map((n) => n.status)).toEqual([
+      'rejected',
+      'rejected',
+      'rejected',
+    ]);
+    expect(s3Soni).toBe(1);
+    await expect(
+      servis.guruhKorinishi(G, 1, undefined, JETZT),
+    ).resolves.toBeDefined();
+    expect(s3Soni).toBe(2);
+  });
 });

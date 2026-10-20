@@ -32,6 +32,7 @@ export const GROUP_MORE_TABS = [
   { key: "imtihonlar", label: msg("Imtihonlar") },
   { key: "statistika", label: msg("Statistika") },
   { key: "ilova", label: msg("Ilova faolligi") },
+  { key: "musobaqa", label: msg("Musobaqa") },
 ] as const;
 
 export const DEFAULT_GROUP_TAB = "davomat";
