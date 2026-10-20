@@ -1351,6 +1351,7 @@ const de: Dictionary = {
   "Guruh topilmadi": "Gruppe nicht gefunden",
   "ID: {id} bo'yicha guruh mavjud emas": "Eine Gruppe mit der ID {id} existiert nicht",
   "Ilova faolligi": "App-Aktivität",
+  "Musobaqa": "Wettbewerb",
   "Imtihonlar": "Prüfungen",
   "Dars o'zgarishlari": "Unterrichtsänderungen",
   "Statistika": "Statistik",

@@ -1351,6 +1351,7 @@ const ru: Dictionary = {
   "Guruh topilmadi": "Группа не найдена",
   "ID: {id} bo'yicha guruh mavjud emas": "Группы с ID {id} не существует",
   "Ilova faolligi": "Активность в приложении",
+  "Musobaqa": "Соревнование",
   "Imtihonlar": "Экзамены",
   "Dars o'zgarishlari": "Изменения занятий",
   "Statistika": "Статистика",

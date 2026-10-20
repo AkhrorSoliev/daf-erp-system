@@ -15,6 +15,7 @@ import { AttendanceStats } from "./attendance/attendance-stats";
 import { AttendanceDotsTab } from "./attendance/attendance-dots-tab";
 import { LessonChangesTab } from "./lesson-changes-tab";
 import { GroupAppActivityTab } from "./app-activity/group-app-activity-tab";
+import { GroupMusobaqaTab } from "./musobaqa/group-musobaqa-tab";
 import { EditStudentDrawer } from "@/components/students/edit-student-drawer";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { useCan } from "@/hooks/use-permissions";
@@ -68,6 +69,8 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
   const cancellationsShown = useRef(false);
   const [ilovaVisible, setIlovaVisible] = useState(false);
   const ilovaShown = useRef(false);
+  const [musobaqaVisible, setMusobaqaVisible] = useState(false);
+  const musobaqaShown = useRef(false);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>([]);
 
   const handleOptimisticAdd = useCallback((comment: CommentData) => {
@@ -125,6 +128,9 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
     } else if (tab === "ilova" && !ilovaShown.current) {
       ilovaShown.current = true;
       setIlovaVisible(true);
+    } else if (tab === "musobaqa" && !musobaqaShown.current) {
+      musobaqaShown.current = true;
+      setMusobaqaVisible(true);
     }
   }, [activeTab, fetchStudents]);
 
@@ -159,6 +165,10 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
       ilovaShown.current = true;
       setIlovaVisible(true);
     }
+    if (value === "musobaqa" && !musobaqaShown.current) {
+      musobaqaShown.current = true;
+      setMusobaqaVisible(true);
+    }
   };
 
   const handleStudentSaved = useCallback(() => {
@@ -185,6 +195,7 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
         <TabsTrigger value="darslar">{t("Darslar")}</TabsTrigger>
         <TabsTrigger value="oquvchilar">{t("O'quvchilar")}</TabsTrigger>
         <TabsTrigger value="ilova">{t("Ilova faolligi")}</TabsTrigger>
+        <TabsTrigger value="musobaqa">{t("Musobaqa")}</TabsTrigger>
         <TabsTrigger value="materiallar">{t("Materiallar")}</TabsTrigger>
         <TabsTrigger value="imtihonlar">{t("Imtihonlar")}</TabsTrigger>
         {canChangeLessons && (
@@ -236,6 +247,11 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
       {/* Ilova faolligi */}
       <TabsContent value="ilova">
         {ilovaVisible && <GroupAppActivityTab groupId={group.id} />}
+      </TabsContent>
+
+      {/* Musobaqa */}
+      <TabsContent value="musobaqa">
+        {musobaqaVisible && <GroupMusobaqaTab groupId={group.id} />}
       </TabsContent>
 
       {/* Materiallar */}
