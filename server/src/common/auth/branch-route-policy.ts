@@ -569,10 +569,12 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       "`assertCallerMayTouchGroup` — sof o'qituvchi uchun biriktirilganlik, " +
       "qolganlar uchun filial; yon oyna qo'shimcha ravishda o'quvchi shu " +
       "guruhning faol a'zosi ekanini tekshiradi. Profil route'i " +
-      '`assertCallerMayTouchStudent`.',
+      '`assertCallerMayTouchStudent`. ' +
+      '«Musobaqa» tabi (S5, ADR-0118) shu qorovulni qayta ishlatadi.',
     routes: [
       'GET /groups/:id/app-activity',
       'GET /groups/:id/app-activity/students/:studentId',
+      'GET /groups/:id/musobaqa',
       'GET /students/:id/app-activity',
     ],
   },

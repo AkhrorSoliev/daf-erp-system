@@ -430,6 +430,12 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /groups/:id/musobaqa": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
+  ],
   "GET /groups/:id/status-history": [
     "Administrator",
     "Branch Director",
