@@ -182,13 +182,23 @@ export class DafPortalController {
    * ilgarilashini buzishi mumkin bo'lardi.
    */
   @Post('lessons/:id/abschluss')
-  postAbschluss(
+  async postAbschluss(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: AbschlussDto,
     @CurrentUser('studentId') studentId: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.uebung.abschluss(id, dto, { studentId, companyId });
+    const ergebnis = await this.uebung.abschluss(id, dto, {
+      studentId,
+      companyId,
+    });
+    // After the save: the figures read what this session just wrote.
+    const natija = await this.fortschritt.seansNatijasiXavfsiz(
+      dto.sessionId,
+      studentId,
+      companyId,
+    );
+    return { ...ergebnis, natija };
   }
 
   /**
@@ -196,12 +206,21 @@ export class DafPortalController {
    * bilan bir xil sabab. `studentId` TOKENDAN.
    */
   @Post('wiederholung/abschluss')
-  postWiederholungAbschluss(
+  async postWiederholungAbschluss(
     @Body() dto: WiederholungAbschlussDto,
     @CurrentUser('studentId') studentId: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.uebung.wiederholungAbschluss(dto, { studentId, companyId });
+    const yakun = await this.uebung.wiederholungAbschluss(dto, {
+      studentId,
+      companyId,
+    });
+    const natija = await this.fortschritt.seansNatijasiXavfsiz(
+      dto.sessionId,
+      studentId,
+      companyId,
+    );
+    return { ...yakun, natija };
   }
 
   /**

@@ -10,6 +10,8 @@ describe('DafAttemptService', () => {
   let service: DafAttemptService;
   let prisma: {
     dafExercise: { findUnique: jest.Mock };
+    $executeRaw: jest.Mock;
+    $transaction: jest.Mock;
     dafAttempt: { create: jest.Mock };
     studentBranch: { findFirst: jest.Mock };
     enrollment: { findFirst: jest.Mock };
@@ -26,6 +28,10 @@ describe('DafAttemptService', () => {
   beforeEach(async () => {
     prisma = {
       dafExercise: { findUnique: jest.fn().mockResolvedValue(exercise()) },
+      $executeRaw: jest.fn(async () => 1),
+      $transaction: jest.fn(async (ops: Promise<unknown>[]) =>
+        Promise.all(ops),
+      ),
       dafAttempt: { create: jest.fn().mockResolvedValue({ id: 1 }) },
       studentBranch: {
         findFirst: jest.fn().mockResolvedValue({ branchId: 3 }),

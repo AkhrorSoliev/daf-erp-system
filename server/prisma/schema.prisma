@@ -769,6 +769,7 @@ model Student {
   salaryAccruals    SalaryAccrual[]           @relation("StudentSalaryAccruals")
   paymentPromises   PaymentPromise[]
   dafAttempts       DafAttempt[]
+  dafStudentDays    DafStudentDay[]
   appSessions       StudentAppSession[]
   dafLexemeStates   DafLexemeState[]
   dafLessonProgress DafLessonProgress[]
@@ -4289,6 +4290,29 @@ model DafAttempt {
   @@index([branchId, createdAt])
   @@index([sessionId])
   @@index([studentId, sessionId])
+}
+
+/// DERIVED: the source of truth is DafAttempt. Rebuilt from it at any time by
+/// `scripts/rebuild-daf-student-day.ts`. One writer: `recordAttempt`
+/// (src/daf/shared/attempt-writer.ts). ADR-0114.
+model DafStudentDay {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  companyId Int
+  /// Tashkent calendar day.
+  day       DateTime @db.Date
+  /// The attempt's sealed groupId; "" for no group (never NULL: a NULL key
+  /// would not block a duplicate row).
+  groupKey  String   @default("")
+  points    Int      @default(0)
+  attempts  Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, day, groupKey])
+  @@index([companyId, day])
+  @@index([groupKey, day])
 }
 
 /// Bitta mashq seansi. Klient uuid yaratadi; server birinchi urinishda

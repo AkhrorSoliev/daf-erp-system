@@ -257,13 +257,19 @@ export function useAbschluss() {
 
 /**
  * Takrorlash seansi yakuni — `DafSession` ni yopadi. `abschluss` dan farqi:
- * dars yo'q, ilgarilash keshi (`levels`/`unit`) o'zgarmaydi; `fortschritt`
- * ni `seans-ekrani` o'zi yangilaydi.
+ * dars yo'q, ilgarilash keshi (`levels`/`unit`) o'zgarmaydi; ilgarilash
+ * chiplari shu yerda yangilanadi.
  */
 export function useWiederholungAbschluss() {
+  const qc = useQueryClient();
   return useMutation<SeansYakun, unknown, { sessionId: string }>({
     mutationFn: (body) =>
       api.post(`${BASE}/wiederholung/abschluss`, body).then((r) => r.data),
+    // The path's chips must show the new total when the student goes back.
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["lernen", "fortschritt"] });
+      void qc.invalidateQueries({ queryKey: ["lernen", "reyting"] });
+    },
   });
 }
 

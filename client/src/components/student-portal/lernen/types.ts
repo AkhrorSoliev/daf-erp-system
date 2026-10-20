@@ -119,9 +119,22 @@ export interface YakuniySinovNatijasi {
   kerak: number;
 }
 
+/** Seans oxiri — server hisoblagan ball, seriya va o'rin (oldin/hozir). */
+export interface SeansNatijasi {
+  punkte: number;
+  serie: number;
+  /** Bugungi birinchi mashq — seriya qatori faqat shunda ko'rinadi. */
+  serieYangi: boolean;
+  orin: {
+    gruppe: { oldin: number; hozir: number } | null;
+    zentrum: { oldin: number; hozir: number };
+  };
+}
+
 export interface AbschlussErgebnis {
   bestScore: number;
   runs: number;
+  natija?: SeansNatijasi | null;
   /** Faqat yakuniy sinov darsida. */
   sinov?: YakuniySinovNatijasi;
 }
@@ -342,4 +355,5 @@ export interface DrillResult {
 export interface SeansYakun {
   questionCount: number;
   firstTryCorrect: number;
+  natija?: SeansNatijasi | null;
 }
