@@ -629,7 +629,7 @@ export class StudentEnrollmentService {
     let departureReasonId: string | null = null;
     let reasonText: string;
     // A configured reason that says the student moved to another group: the
-    // removal is settled as a transfer, not as a departure (ADR-0114).
+    // removal is settled as a transfer, not as a departure (ADR-0115).
     let movedToAnotherGroup = false;
     if (input.departureReasonId) {
       const reason = await this.prisma.studentExitReason.findFirst({
@@ -751,7 +751,7 @@ export class StudentEnrollmentService {
               reason: 'Guruhdan chiqarilganda',
               performedById: userId,
               // A move names no policy: like a transfer, the unheld lessons
-              // come back and the trial lesson does not apply (ADR-0114).
+              // come back and the trial lesson does not apply (ADR-0115).
               policy: movedToAnotherGroup ? undefined : departurePolicy,
             });
 

@@ -25,6 +25,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 
@@ -43,27 +45,27 @@ interface TemplateDef {
 
 export const TEMPLATES: Record<TemplateKey, TemplateDef> = {
   NEW_PAYMENT_METHOD: {
-    label: "Yangi to'lov usuli",
+    label: msg("Yangi to'lov usuli"),
     body: "🎉 Yangi to'lov usuli: {{name}}\n\nEndi siz {{name}} orqali ham to'lovlarni qabul qila olasiz. Tafsilotlar admin panelda.",
     vars: ["name"],
   },
   NEW_REPORT: {
-    label: "Yangi hisobot",
+    label: msg("Yangi hisobot"),
     body: '📊 Yangi hisobot: "{{name}}"\n\n{{description}}\n\nKo\'rish: admin.dafzentrum.uz/reports',
     vars: ["name", "description"],
   },
   BUG_FIX: {
-    label: "Xato tuzatildi",
+    label: msg("Xato tuzatildi"),
     body: "🛠 Tuzatildi: {{summary}}\n\nEndi tizim to'g'ri ishlamoqda.",
     vars: ["summary"],
   },
   GENERAL: {
-    label: "Umumiy e'lon",
+    label: msg("Umumiy e'lon"),
     body: "✨ Yangilik: {{title}}\n\n{{body}}",
     vars: ["title", "body"],
   },
   CUSTOM: {
-    label: "Maxsus matn",
+    label: msg("Maxsus matn"),
     body: "",
     vars: [],
   },
@@ -73,16 +75,22 @@ export const TEMPLATES: Record<TemplateKey, TemplateDef> = {
 // English; the admin reads these words in the form and in the preview instead.
 // A key without a label shows as itself.
 export const VAR_LABELS: Record<string, string> = {
-  name: "Nomi",
-  description: "Tavsif",
-  summary: "Qisqacha mazmuni",
-  title: "Sarlavha",
-  body: "Matn",
+  name: msg("Nomi"),
+  description: msg("Tavsif"),
+  summary: msg("Qisqacha mazmuni"),
+  title: msg("Sarlavha"),
+  body: msg("Matn"),
 };
 
-const varLabel = (key: string) => VAR_LABELS[key] ?? key;
+// The template bodies above are the message the groups receive: they stay
+// Uzbek. Only the dialog around them follows the page language.
+const varLabel = (key: string, t: (source: string) => string) => {
+  const label = VAR_LABELS[key];
+  return label ? t(label) : key;
+};
 
 export function TelegramAnnounceDialog() {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [templateKey, setTemplateKey] = useState<TemplateKey>("GENERAL");
   const [variables, setVariables] = useState<Record<string, string>>({});
@@ -93,9 +101,9 @@ export function TelegramAnnounceDialog() {
   const preview = useMemo(() => {
     if (templateKey === "CUSTOM") return customMessage;
     return def.body.replace(/\{\{(\w+)\}\}/g, (_, k) =>
-      variables[k] ? variables[k] : `[?${varLabel(k)}?]`,
+      variables[k] ? variables[k] : `[?${varLabel(k, t)}?]`,
     );
-  }, [templateKey, variables, customMessage, def.body]);
+  }, [templateKey, variables, customMessage, def.body, t]);
 
   const announceMutation = useMutation({
     mutationFn: (dryRun: boolean) =>
@@ -110,11 +118,14 @@ export function TelegramAnnounceDialog() {
     onSuccess: (data) => {
       if (data.dryRun) {
         toast.success(
-          `Ko'rinish tayyor — ${data.recipientCount} ta guruhga yuboriladi`,
+          t("Ko'rinish tayyor — {n} ta guruhga yuboriladi", { n: data.recipientCount }),
         );
       } else {
         toast.success(
-          `E'lon yuborildi: ${data.sentCount}/${data.recipientCount} ta guruh`,
+          t("E'lon yuborildi: {sent}/{total} ta guruh", {
+            sent: data.sentCount,
+            total: data.recipientCount,
+          }),
         );
         setOpen(false);
         setVariables({});
@@ -122,7 +133,7 @@ export function TelegramAnnounceDialog() {
       }
     },
     onError: (err) => {
-      toast.error(getErrorMessage(err, "E'lon yuborishda xatolik"));
+      toast.error(getErrorMessage(err, t("E'lon yuborishda xatolik")));
     },
   });
 
@@ -136,21 +147,22 @@ export function TelegramAnnounceDialog() {
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <Megaphone className="size-4 mr-2" />
-          Yangi e&apos;lon
+          {t("Yangi e'lon")}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Yangilik e&apos;loni yuborish</DialogTitle>
+          <DialogTitle>{t("Yangilik e'loni yuborish")}</DialogTitle>
           <DialogDescription>
-            Barcha tasdiqlangan Telegram guruhlarga bir martalik xabar.
-            Avval &quot;Ko&apos;rib chiqish&quot; tugmasi bilan tekshiring.
+            {t(
+              "Barcha tasdiqlangan Telegram guruhlarga bir martalik xabar. Avval \"Ko'rib chiqish\" tugmasi bilan tekshiring.",
+            )}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Shablon</Label>
+            <Label>{t("Shablon")}</Label>
             <Select
               value={templateKey}
               onValueChange={(v) => {
@@ -162,9 +174,9 @@ export function TelegramAnnounceDialog() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(TEMPLATES).map(([k, t]) => (
+                {Object.entries(TEMPLATES).map(([k, tpl]) => (
                   <SelectItem key={k} value={k}>
-                    {t.label}
+                    {t(tpl.label)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -173,9 +185,9 @@ export function TelegramAnnounceDialog() {
 
           {templateKey === "CUSTOM" ? (
             <div className="space-y-2">
-              <Label>Matn</Label>
+              <Label>{t("Matn")}</Label>
               <Textarea
-                placeholder="E'lon matni..."
+                placeholder={t("E'lon matni...")}
                 rows={5}
                 value={customMessage}
                 onChange={(e) => setCustomMessage(e.target.value)}
@@ -188,9 +200,9 @@ export function TelegramAnnounceDialog() {
           ) : (
             def.vars.map((v) => (
               <div key={v} className="space-y-2">
-                <Label>{varLabel(v)}</Label>
+                <Label>{varLabel(v, t)}</Label>
                 <Input
-                  placeholder={varLabel(v)}
+                  placeholder={varLabel(v, t)}
                   value={variables[v] ?? ""}
                   onChange={(e) =>
                     setVariables((p) => ({ ...p, [v]: e.target.value }))
@@ -201,11 +213,11 @@ export function TelegramAnnounceDialog() {
           )}
 
           <div className="space-y-2">
-            <Label>Ko&apos;rinish</Label>
+            <Label>{t("Ko'rinish (namuna)")}</Label>
             <div className="rounded border bg-muted/40 p-3 text-sm whitespace-pre-wrap min-h-24">
               {preview || (
                 <span className="text-muted-foreground">
-                  Maydonlarni to&apos;ldiring...
+                  {t("Maydonlarni to'ldiring...")}
                 </span>
               )}
             </div>
@@ -215,7 +227,7 @@ export function TelegramAnnounceDialog() {
         <DialogFooter>
           <DialogClose asChild>
             <Button variant="ghost" disabled={announceMutation.isPending}>
-              Bekor qilish
+              {t("Bekor qilish")}
             </Button>
           </DialogClose>
           <Button
@@ -226,7 +238,7 @@ export function TelegramAnnounceDialog() {
             {announceMutation.isPending && announceMutation.variables === true && (
               <Loader2 className="size-4 mr-2 animate-spin" />
             )}
-            Ko&apos;rib chiqish
+            {t("Ko'rib chiqish")}
           </Button>
           <Button
             disabled={!isReady || announceMutation.isPending}
@@ -235,7 +247,7 @@ export function TelegramAnnounceDialog() {
             {announceMutation.isPending && announceMutation.variables === false && (
               <Loader2 className="size-4 mr-2 animate-spin" />
             )}
-            Yuborish
+            {t("Yuborish")}
           </Button>
         </DialogFooter>
       </DialogContent>

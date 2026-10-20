@@ -12,6 +12,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useLogoutOthers } from "@/hooks/use-logout-others";
+import { useT } from "@/i18n/context";
 
 interface LogoutOthersDialogProps {
   open: boolean;
@@ -34,20 +35,20 @@ export function LogoutOthersDialog({
   onOpenChange,
   contentClassName,
 }: LogoutOthersDialogProps) {
+  const t = useT();
   const { logoutOthers, pending } = useLogoutOthers();
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className={contentClassName}>
         <AlertDialogHeader>
-          <AlertDialogTitle>Boshqa qurilmalardan chiqilsinmi?</AlertDialogTitle>
+          <AlertDialogTitle>{t("Boshqa qurilmalardan chiqilsinmi?")}</AlertDialogTitle>
           <AlertDialogDescription>
-            Boshqa barcha qurilma va brauzerlardagi kirishlar darhol tugatiladi.
-            Bu qurilmada qolasiz.
+            {t("Boshqa barcha qurilma va brauzerlardagi kirishlar darhol tugatiladi. Bu qurilmada qolasiz.")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Bekor qilish</AlertDialogCancel>
+          <AlertDialogCancel disabled={pending}>{t("Bekor qilish")}</AlertDialogCancel>
           <AlertDialogAction
             disabled={pending}
             // A variant, not bg-* classes: AlertDialogAction renders through
@@ -62,7 +63,7 @@ export function LogoutOthersDialog({
             {pending ? (
               <Loader2 className="mr-1.5 size-4 animate-spin" />
             ) : null}
-            Chiqish
+            {t("Chiqish")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

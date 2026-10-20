@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/i18n/context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ActivityError, PeriodToggle, usePeriodParam } from "@/components/groups/app-activity/activity-ui";
 import { DafExplainer } from "./daf-explainer";
@@ -26,6 +27,7 @@ function SahifaSkeleton() {
 }
 
 export function DafUmumiyClient() {
+  const t = useT();
   const [davr, setDavr] = usePeriodParam();
   const { data, isLoading, isError, refetch } = useMarkazUmumiy(davr);
 
@@ -33,9 +35,9 @@ export function DafUmumiyClient() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-heading text-xl font-bold tracking-tight">DaF ilovasi — umumiy holat</h1>
+          <h1 className="font-heading text-xl font-bold tracking-tight">{t("DaF ilovasi — umumiy holat")}</h1>
           <p className="text-sm text-muted-foreground">
-            Filial yuqoridagi tanlagichdan; veb, Android va iOS bir xil qoida bilan sanaladi
+            {t("Filial yuqoridagi tanlagichdan; veb, Android va iOS bir xil qoida bilan sanaladi")}
           </p>
         </div>
         <PeriodToggle value={davr} onChange={setDavr} />
@@ -47,7 +49,7 @@ export function DafUmumiyClient() {
         <ActivityError onRetry={() => void refetch()} />
       ) : data.kartalar.oquvchilar === 0 ? (
         <div className="flex h-24 items-center justify-center rounded-md border">
-          <p className="text-sm text-muted-foreground">Tanlangan filialda faol o&apos;quvchi yo&apos;q</p>
+          <p className="text-sm text-muted-foreground">{t("Tanlangan filialda faol o'quvchi yo'q")}</p>
         </div>
       ) : (
         <>

@@ -1,6 +1,7 @@
 "use client";
 
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useT } from "@/i18n/context";
 import { ChartCard } from "@/components/shared/chart-card";
 import { formatKunYorligi, formatKunOy } from "@/components/groups/app-activity/activity-format";
 import type { MarkazTrendKuni } from "./types";
@@ -10,15 +11,16 @@ const KIRGAN = "#94a3b8"; // slate-400
 const FAOL = "#2563eb"; // blue-600
 
 export function DafTrendChart({ trend }: { trend: MarkazTrendKuni[] }) {
-  const rows = trend.map((t) => ({ ...t, label: formatKunOy(t.sana) }));
+  const t = useT();
+  const rows = trend.map((kun) => ({ ...kun, label: formatKunOy(kun.sana) }));
   const bosh = rows.every((r) => r.kirganlar === 0 && r.faollar === 0);
   return (
     <ChartCard
-      title="Kunlik faollik — 30 kun"
-      subtitle="Och chiziq — ilovani ochganlar, to'q chiziq — faol kun bo'lganlar"
-      tooltip={"Ikki chiziq orasidagi bo'shliq — «ochdi, lekin ishlamadi».\nDavr 7 kun tanlansa ham grafik 30 kun ko'rsatadi: tendensiya 7 kunda ko'rinmaydi."}
+      title={t("Kunlik faollik — 30 kun")}
+      subtitle={t("Och chiziq — ilovani ochganlar, to'q chiziq — faol kun bo'lganlar")}
+      tooltip={t("Ikki chiziq orasidagi bo'shliq — «ochdi, lekin ishlamadi».\nDavr 7 kun tanlansa ham grafik 30 kun ko'rsatadi: tendensiya 7 kunda ko'rinmaydi.")}
       isEmpty={bosh}
-      emptyMessage="Bu davrda ilova faolligi yo'q"
+      emptyMessage={t("Bu davrda ilova faolligi yo'q")}
     >
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={rows} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
@@ -28,9 +30,9 @@ export function DafTrendChart({ trend }: { trend: MarkazTrendKuni[] }) {
           <Tooltip
             labelFormatter={(_, payload) => {
               const kun = payload?.[0]?.payload as MarkazTrendKuni | undefined;
-              return kun ? formatKunYorligi(kun.sana) : "";
+              return kun ? formatKunYorligi(kun.sana, t) : "";
             }}
-            formatter={(value, name) => [String(value), name === "kirganlar" ? "Kirgan" : "Faol kun"]}
+            formatter={(value, name) => [String(value), name === "kirganlar" ? t("Kirgan") : t("Faol kun")]}
           />
           <Line type="monotone" dataKey="kirganlar" stroke={KIRGAN} strokeWidth={2} dot={false} isAnimationActive={false} />
           <Line type="monotone" dataKey="faollar" stroke={FAOL} strokeWidth={2} dot={false} isAnimationActive={false} />

@@ -90,11 +90,11 @@ export function dayText(iso: string): string {
 }
 
 /** The settings form's check; the server checks again. */
-export function ruleError(rule: KpiRule): string | null {
-  if (!Number.isInteger(rule.value)) return "Butun son kiriting";
-  if (rule.value < 0) return "Manfiy bo'lishi mumkin emas";
-  if (rule.mode === "PERCENT" && rule.value > 100) return "Foiz 0 dan 100 gacha bo'ladi";
-  if (rule.mode === "FIXED" && rule.value > KPI_MAX_SOM) return "Summa 10 000 000 so'mdan oshmasin";
+export function ruleError(rule: KpiRule, t: Translate = interpolate): string | null {
+  if (!Number.isInteger(rule.value)) return t("Butun son kiriting");
+  if (rule.value < 0) return t("Manfiy bo'lishi mumkin emas");
+  if (rule.mode === "PERCENT" && rule.value > 100) return t("Foiz 0 dan 100 gacha bo'ladi");
+  if (rule.mode === "FIXED" && rule.value > KPI_MAX_SOM) return t("Summa 10 000 000 so'mdan oshmasin");
   return null;
 }
 

@@ -1,4 +1,5 @@
-import { relativeTime } from "@/components/notifications/notification-view";
+import { interpolate } from "@/i18n/translate";
+import { relativeTime, type Translate } from "@/components/notifications/notification-view";
 
 /** One row of `GET /users/sessions` (ADR-0113). */
 export interface ActiveSession {
@@ -20,10 +21,10 @@ export function sortSessions(rows: ActiveSession[]): ActiveSession[] {
 }
 
 /** «Hozir faol», «5 daqiqa oldin», «Kecha, 14:05» — Tashkent clock. */
-export function lastSeenText(lastUsedAt: string, now: Date): string {
+export function lastSeenText(lastUsedAt: string, now: Date, t: Translate = interpolate): string {
   const minutes = (now.getTime() - new Date(lastUsedAt).getTime()) / 60_000;
-  if (minutes < ACTIVE_NOW_MINUTES) return "Hozir faol";
-  return relativeTime(lastUsedAt, now);
+  if (minutes < ACTIVE_NOW_MINUTES) return t("Hozir faol");
+  return relativeTime(lastUsedAt, now, t);
 }
 
 /** A phone or tablet gets the phone icon; everything else, including an unknown device, the monitor. */

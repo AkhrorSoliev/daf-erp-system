@@ -1,4 +1,4 @@
-import type { FrageFormat, PruefErgebnis } from "../types";
+import type { FrageFormat, PruefErgebnis, SeansNatijasi } from "../types";
 
 /**
  * What the panel under a checked question says. A picture choice's
@@ -33,13 +33,36 @@ export function javobPaneliMatni(
 export function orinXabari(
   oldin: number | null,
   keyin: number | null,
+  joy: "Guruhda" | "Markazda" = "Guruhda",
 ): string | null {
   if (keyin == null) return null;
-  if (oldin == null) return `Guruhda ${keyin}-o'rin`;
+  if (oldin == null) return `${joy} ${keyin}-o'rin`;
   if (oldin === keyin) return null;
   const farq = Math.abs(oldin - keyin);
   const yonalish = keyin < oldin ? "ko'tarildingiz" : "tushdingiz";
-  return `Guruhda ${keyin}-o'rin — ${farq} pog'ona ${yonalish}`;
+  return `${joy} ${keyin}-o'rin — ${farq} pog'ona ${yonalish}`;
+}
+
+/**
+ * The end screen's three lines, straight from the server's `natija`
+ * (spec §5): points only when above 0, the streak only on the day's
+ * first practice, a rank only when it moved. The group speaks first;
+ * a student with no group gets the centre.
+ */
+export function natijaQatorlari(n: SeansNatijasi | null | undefined): {
+  ball: number | null;
+  serie: number | null;
+  orin: string | null;
+} {
+  if (!n) return { ball: null, serie: null, orin: null };
+  const orin = n.orin.gruppe
+    ? orinXabari(n.orin.gruppe.oldin, n.orin.gruppe.hozir)
+    : orinXabari(n.orin.zentrum.oldin, n.orin.zentrum.hozir, "Markazda");
+  return {
+    ball: n.punkte > 0 ? n.punkte : null,
+    serie: n.serieYangi ? n.serie : null,
+    orin,
+  };
 }
 
 /**

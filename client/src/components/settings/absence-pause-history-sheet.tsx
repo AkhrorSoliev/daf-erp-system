@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, PlayCircle, PauseCircle, SlidersHorizontal } from "lucide-react";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -59,6 +60,7 @@ interface Props {
  * o'rtasi aylanadi.
  */
 export function AbsencePauseHistorySheet({ open, onOpenChange }: Props) {
+  const t = useT();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const { data, isLoading, isError, isFetching, refetch } = useAbsencePauseHistory(
@@ -74,17 +76,17 @@ export function AbsencePauseHistorySheet({ open, onOpenChange }: Props) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex flex-col gap-0 p-0 sm:max-w-md">
         <SheetHeader className="border-b px-4 py-4 pr-12">
-          <SheetTitle>O&apos;zgarish tarixi</SheetTitle>
-          <SheetDescription>Avtomatik pauza sozlamasini kim va qachon o&apos;zgartirgan</SheetDescription>
+          <SheetTitle>{t("O'zgarish tarixi")}</SheetTitle>
+          <SheetDescription>{t("Avtomatik pauza sozlamasini kim va qachon o'zgartirgan")}</SheetDescription>
         </SheetHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4">
           {isError ? (
             <div className="space-y-3 py-6">
-              <p className="text-sm text-muted-foreground">Tarixni yuklab bo&apos;lmadi.</p>
+              <p className="text-sm text-muted-foreground">{t("Tarixni yuklab bo'lmadi.")}</p>
               <Button variant="outline" size="sm" disabled={isFetching} onClick={() => void refetch()}>
                 {isFetching && <Loader2 className="size-4 animate-spin" />}
-                Qayta urinish
+                {t("Qayta urinish")}
               </Button>
             </div>
           ) : isLoading ? (
@@ -101,12 +103,12 @@ export function AbsencePauseHistorySheet({ open, onOpenChange }: Props) {
             </div>
           ) : total === 0 ? (
             <p className="py-6 text-sm text-muted-foreground">
-              Hali o&apos;zgarish yo&apos;q. Sozlama saqlangach, shu yerda ko&apos;rinadi.
+              {t("Hali o'zgarish yo'q. Sozlama saqlangach, shu yerda ko'rinadi.")}
             </p>
           ) : (
             <ul className="divide-y">
               {data?.data.map((entry) => {
-                const line = describeEntry(entry);
+                const line = describeEntry(entry, t);
                 const Icon = ICON[line.kind];
                 return (
                   <li key={entry.id} className="flex gap-3 py-3">
@@ -116,12 +118,12 @@ export function AbsencePauseHistorySheet({ open, onOpenChange }: Props) {
                       <Icon className="size-4" aria-hidden />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium">{line.title}</p>
+                      <p className="text-sm font-medium">{t(line.title)}</p>
                       {line.detail && (
                         <p className="text-xs text-muted-foreground">{line.detail}</p>
                       )}
                       <p className="text-xs text-muted-foreground">
-                        {actorName(entry)} · {formatStamp(entry.createdAt, true)}
+                        {actorName(entry, t)} · {formatStamp(entry.createdAt, true)}
                       </p>
                     </div>
                   </li>

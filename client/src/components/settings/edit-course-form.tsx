@@ -39,6 +39,10 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { PAYMENT_MODEL_LABELS, type PaymentModel } from "@/lib/payment-model";
 import { coursePriceLabel } from "@/lib/course-terms";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
+import { ruleMessage } from "./settings-form-parts";
+import { markedText, unmarked } from "@/components/payments/debt-history/marked-text";
 
 interface EditCourseFormProps {
   course: Course | null;
@@ -99,6 +103,7 @@ export function EditCourseForm({
   formId,
   isAdd,
 }: EditCourseFormProps) {
+  const t = useT();
   const setSubmitting = useEditCourse((s) => s.setSubmitting);
   const submitting = useEditCourse((s) => s.submitting);
   // Backend `PATCH /courses/:id` Administratorga BOSHQA maydonlarni
@@ -199,7 +204,7 @@ export function EditCourseForm({
               : values.paymentModel,
         });
 
-        toast.success("Yangi kurs muvaffaqiyatli qo'shildi");
+        toast.success(t("Yangi kurs muvaffaqiyatli qo'shildi"));
         onSaved?.(courseFromResponse(data));
       } else {
         if (!course) return;
@@ -218,7 +223,7 @@ export function EditCourseForm({
           paymentModel: canEditPaymentModel ? values.paymentModel : undefined,
         });
 
-        toast.success("Kurs muvaffaqiyatli yangilandi");
+        toast.success(t("Kurs muvaffaqiyatli yangilandi"));
         onSaved?.(courseFromResponse(data));
       }
       onClose();
@@ -227,8 +232,8 @@ export function EditCourseForm({
         getErrorMessage(
           error,
           isAdd
-            ? "Kurs qo'shishda xatolik yuz berdi"
-            : "Kursni yangilashda xatolik yuz berdi",
+            ? t("Kurs qo'shishda xatolik yuz berdi")
+            : t("Kursni yangilashda xatolik yuz berdi"),
         ),
       );
     } finally {
@@ -257,6 +262,12 @@ export function EditCourseForm({
     setPendingValues(null);
   };
 
+  // The two model names of the confirm dialog (it opens only when editing).
+  const fromModelLabel = course ? PAYMENT_MODEL_LABELS[course.paymentModel] : "";
+  const toModelLabel = pendingValues
+    ? (PAYMENT_MODEL_LABELS[pendingValues.paymentModel as PaymentModel] ?? "")
+    : "";
+
   return (
     <>
       <form
@@ -266,30 +277,30 @@ export function EditCourseForm({
       >
         <section className="space-y-5 px-6 py-5">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Kurs ma&apos;lumotlari
+            {t("Kurs ma'lumotlari")}
           </h3>
 
           <div className="space-y-1.5">
-            <Label htmlFor="name">Kurs nomi</Label>
+            <Label htmlFor="name">{t("Kurs nomi")}</Label>
             <Input
               id="name"
-              placeholder="Kurs nomi"
+              placeholder={t("Kurs nomi")}
               {...form.register("name", {
-                required: "Kurs nomi kiritilishi shart",
+                required: msg("Kurs nomi kiritilishi shart"),
               })}
             />
             {form.formState.errors.name && (
               <p className="text-sm text-destructive">
-                {form.formState.errors.name.message}
+                {ruleMessage(t, form.formState.errors.name.message)}
               </p>
             )}
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="description">Tavsif</Label>
+            <Label htmlFor="description">{t("Tavsif")}</Label>
             <Textarea
               id="description"
-              placeholder="Kurs haqida qisqacha ma'lumot"
+              placeholder={t("Kurs haqida qisqacha ma'lumot")}
               rows={3}
               {...form.register("description")}
             />
@@ -303,14 +314,13 @@ export function EditCourseForm({
                   htmlFor="lessonPaymentCount"
                   className="flex items-center gap-1.5"
                 >
-                  Sikl darslari
+                  {t("Sikl darslari")}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <HelpCircle className="size-3.5 text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      Bitta to&apos;lov sikli necha darsni qoplaydi (odatda 12,
-                      intensiv kurslar uchun 20)
+                      {t("Bitta to'lov sikli necha darsni qoplaydi (odatda 12, intensiv kurslar uchun 20)")}
                     </TooltipContent>
                   </Tooltip>
                 </Label>
@@ -333,14 +343,14 @@ export function EditCourseForm({
                     v !== 12 &&
                     v !== 20 ? (
                     <p className="text-xs text-amber-600 dark:text-amber-400">
-                      Odatiy emas — odatda 12 yoki 20. Tekshiring.
+                      {t("Odatiy emas — odatda 12 yoki 20. Tekshiring.")}
                     </p>
                   ) : null;
                 })()}
               </div>
             )}
             <div className="space-y-1.5">
-              <Label htmlFor="lessonMinutes">Dars davomiyligi (daq)</Label>
+              <Label htmlFor="lessonMinutes">{t("Dars davomiyligi (daq)")}</Label>
               <Input
                 id="lessonMinutes"
                 type="number"
@@ -352,7 +362,7 @@ export function EditCourseForm({
           </div>
 
           <div className="space-y-1.5">
-            <Label>{coursePriceLabel(effectiveModel)}</Label>
+            <Label>{coursePriceLabel(effectiveModel, t)}</Label>
             <Controller
               control={form.control}
               name="price"
@@ -366,23 +376,20 @@ export function EditCourseForm({
             />
             {isMonthly && (
               <p className="text-xs text-muted-foreground">
-                Bitta dars narxi har oy guruh jadvalidan chiqadi: oylik narx ÷
-                o&apos;sha oydagi darslar soni.
+                {t("Bitta dars narxi har oy guruh jadvalidan chiqadi: oylik narx ÷ o'sha oydagi darslar soni.")}
               </p>
             )}
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="paymentModel" className="flex items-center gap-1.5">
-              To&apos;lov modeli
+              {t("To'lov modeli")}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <HelpCircle className="size-3.5 text-muted-foreground" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  &laquo;Sikl&raquo; — belgilangan son dars uchun bir marta
-                  to&apos;lanadi. &laquo;Oylik&raquo; — har kalendar oy uchun
-                  alohida hisob-kitob yaratiladi.
+                  {t("«Sikl» — belgilangan son dars uchun bir marta to'lanadi. «Oylik» — har kalendar oy uchun alohida hisob-kitob yaratiladi.")}
                 </TooltipContent>
               </Tooltip>
             </Label>
@@ -397,14 +404,14 @@ export function EditCourseForm({
                   <SelectContent>
                     {isAdd && (
                       <SelectItem value={AUTO_MODEL}>
-                        Standart sozlama bo&apos;yicha (tavsiya etiladi)
+                        {t("Standart sozlama bo'yicha (tavsiya etiladi)")}
                       </SelectItem>
                     )}
                     <SelectItem value="LESSON_PACK">
-                      {PAYMENT_MODEL_LABELS.LESSON_PACK}
+                      {t(PAYMENT_MODEL_LABELS.LESSON_PACK)}
                     </SelectItem>
                     <SelectItem value="MONTHLY">
-                      {PAYMENT_MODEL_LABELS.MONTHLY}
+                      {t(PAYMENT_MODEL_LABELS.MONTHLY)}
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -412,8 +419,7 @@ export function EditCourseForm({
             />
             {!isAdd && (
               <p className="text-xs text-muted-foreground">
-                Bu kursdagi barcha guruhlarga tegishli — almashtirsangiz,
-                saqlashdan oldin tasdiqlash so&apos;raladi.
+                {t("Bu kursdagi barcha guruhlarga tegishli — almashtirsangiz, saqlashdan oldin tasdiqlash so'raladi.")}
               </p>
             )}
           </div>
@@ -421,9 +427,9 @@ export function EditCourseForm({
           {!isAdd && (
             <div className="flex items-center justify-between rounded-lg border px-4 py-3">
               <div>
-                <p className="text-sm font-medium">Holati</p>
+                <p className="text-sm font-medium">{t("Holati")}</p>
                 <p className="text-xs text-muted-foreground">
-                  Kurs faol yoki nofaol
+                  {t("Kurs faol yoki nofaol")}
                 </p>
               </div>
               <Switch
@@ -444,41 +450,30 @@ export function EditCourseForm({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              To&apos;lov modelini almashtirish
+              {t("To'lov modelini almashtirish")}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {course && pendingValues && (
                 <>
-                  &laquo;{course.name}&raquo; kursini{" "}
-                  <strong>{PAYMENT_MODEL_LABELS[course.paymentModel]}</strong>
-                  dan{" "}
-                  <strong>
-                    {
-                      PAYMENT_MODEL_LABELS[
-                        pendingValues.paymentModel as PaymentModel
-                      ]
-                    }
-                  </strong>
-                  ga o&apos;tkazasiz.{" "}
-                  {groupCount === 0 ? (
-                    <>
-                      Bu kursda hozircha guruh yo&apos;q — hech kimga
-                      ta&apos;sir qilmaydi.
-                    </>
-                  ) : groupCount !== null ? (
-                    <>
-                      Bu kursdagi{" "}
-                      <strong>{groupCount} ta guruhning barchasi</strong> darhol
-                      yangi to&apos;lov qoidasiga o&apos;tadi — bu pul bilan
-                      bog&apos;liq qaror, ehtiyot bo&apos;ling.
-                    </>
-                  ) : (
-                    <>
-                      Bu kursdan foydalanadigan barcha guruhlar darhol yangi
-                      to&apos;lov qoidasiga o&apos;tadi — bu pul bilan
-                      bog&apos;liq qaror, ehtiyot bo&apos;ling.
-                    </>
-                  )}
+                  {markedText(
+                    t("«{course}» kursini **{from}**dan **{to}**ga o'tkazasiz.", {
+                      course: unmarked(course.name),
+                      from: t(fromModelLabel),
+                      to: t(toModelLabel),
+                    }),
+                  )}{" "}
+                  {groupCount === 0
+                    ? t("Bu kursda hozircha guruh yo'q — hech kimga ta'sir qilmaydi.")
+                    : groupCount !== null
+                      ? markedText(
+                          t(
+                            "Bu kursdagi **{n} ta guruhning barchasi** darhol yangi to'lov qoidasiga o'tadi — bu pul bilan bog'liq qaror, ehtiyot bo'ling.",
+                            { n: groupCount },
+                          ),
+                        )
+                      : t(
+                          "Bu kursdan foydalanadigan barcha guruhlar darhol yangi to'lov qoidasiga o'tadi — bu pul bilan bog'liq qaror, ehtiyot bo'ling.",
+                        )}
                 </>
               )}
             </AlertDialogDescription>
@@ -488,7 +483,7 @@ export function EditCourseForm({
               disabled={submitting}
               onClick={handleCancelModelChange}
             >
-              Bekor qilish
+              {t("Bekor qilish")}
             </AlertDialogCancel>
             {/* Oddiy Button — AlertDialogAction emas: bu amal asinxron
                 (PATCH so'rovi), Radixning o'z-o'zidan yopish xatti-harakati
@@ -500,7 +495,7 @@ export function EditCourseForm({
               onClick={handleConfirmModelChange}
             >
               {submitting && <Loader2 className="mr-1.5 size-4 animate-spin" />}
-              Ha, o&apos;zgartirilsin
+              {t("Ha, o'zgartirilsin")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

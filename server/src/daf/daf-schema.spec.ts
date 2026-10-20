@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { Prisma } from '@prisma/client';
 
@@ -77,6 +77,28 @@ describe('Daf sxemasi', () => {
       expect(body).toMatch(/sourceId\s+String\s+@unique/);
     },
   );
+
+  // DafStudentDay — a DERIVED table: the source of truth stays DafAttempt
+  // (points included). groupKey is never NULL: a NULL key would not block
+  // a duplicate row. (Task 7 adds: the rebuild script must exist.)
+  it('DafStudentDay is derived and its key cannot duplicate', () => {
+    const schema = readFileSync(
+      join(__dirname, '..', '..', 'prisma', 'schema.prisma'),
+      'utf8',
+    );
+    const block = schema.slice(schema.indexOf('model DafStudentDay {'));
+    const body = block.slice(0, block.indexOf('\n}'));
+    expect(body).toMatch(/groupKey\s+String\s+@default\(""\)/);
+    expect(body).toMatch(/@@unique\(\[studentId, day, groupKey\]\)/);
+    expect(body).toMatch(/day\s+DateTime\s+@db\.Date/);
+    expect(fieldsOf('DafAttempt')).toContain('points');
+    // The table is derived only while it can be rebuilt (ADR-0114).
+    expect(
+      existsSync(
+        join(__dirname, '..', '..', 'scripts', 'rebuild-daf-student-day.ts'),
+      ),
+    ).toBe(true);
+  });
 });
 
 describe('A1 strukturasi', () => {

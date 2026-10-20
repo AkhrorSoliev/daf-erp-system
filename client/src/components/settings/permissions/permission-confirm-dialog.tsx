@@ -11,6 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useT } from "@/i18n/context";
 import type { ConfirmCopy } from "./permissions-model";
 
 interface PermissionConfirmDialogProps {
@@ -24,6 +25,8 @@ interface PermissionConfirmDialogProps {
    * shows why and offers no confirm button, so nothing is sent.
    */
   refusal?: string | null;
+  /** Turning a capability off: the confirm button is red. */
+  destructive?: boolean;
 }
 
 /**
@@ -40,7 +43,9 @@ export function PermissionConfirmDialog({
   onConfirm,
   onOpenChange,
   refusal = null,
+  destructive = false,
 }: PermissionConfirmDialogProps) {
+  const t = useT();
   return (
     <AlertDialog
       open={open && copy !== null}
@@ -53,11 +58,11 @@ export function PermissionConfirmDialog({
         {copy && refusal && (
           <>
             <AlertDialogHeader>
-              <AlertDialogTitle>O'zgartirib bo'lmaydi</AlertDialogTitle>
+              <AlertDialogTitle>{t("O'zgartirib bo'lmaydi")}</AlertDialogTitle>
               <AlertDialogDescription>{refusal}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Yopish</AlertDialogCancel>
+              <AlertDialogCancel>{t("Yopish")}</AlertDialogCancel>
             </AlertDialogFooter>
           </>
         )}
@@ -67,7 +72,7 @@ export function PermissionConfirmDialog({
             <AlertDialogHeader>
               <AlertDialogTitle>{copy.title}</AlertDialogTitle>
               <AlertDialogDescription>
-                O'zgarish xodimning keyingi bosishida kuchga kiradi.
+                {t("O'zgarish xodimning keyingi bosishida kuchga kiradi.")}
               </AlertDialogDescription>
             </AlertDialogHeader>
 
@@ -93,9 +98,9 @@ export function PermissionConfirmDialog({
             )}
 
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={pending}>Bekor qilish</AlertDialogCancel>
+              <AlertDialogCancel disabled={pending}>{t("Bekor qilish")}</AlertDialogCancel>
               <AlertDialogAction
-                variant={copy.confirm === "O'chirish" ? "destructive" : "default"}
+                variant={destructive ? "destructive" : "default"}
                 disabled={pending}
                 onClick={(event) => {
                   // AlertDialogAction closes the dialog on click; keep it open until the save answers.

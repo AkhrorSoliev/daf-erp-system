@@ -23,7 +23,8 @@ export default async function QollanmaSahifaPage({
 
   return (
     <article className="min-w-0 pb-16">
-      <QollanmaSahifaBosh sahifa={yozuv} bolim={bolimYozuv} />
+      {/* icon — funksiya, klient komponentiga uzatib bo'lmaydi. */}
+      <QollanmaSahifaBosh sahifa={yozuv} bolim={{ id: bolimYozuv.id, nom: bolimYozuv.nom }} />
       <Kontent />
     </article>
   );

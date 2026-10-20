@@ -142,14 +142,14 @@ function PayoutBlock({ payout }: { payout: NonNullable<SalaryDetail["payout"]> }
 function MonthlyBlock({ row, onAdjust }: { row: StaffRow; onAdjust?: () => void }) {
   const t = useT();
   const f = adjustmentFacts(row);
-  const lock = adjustLockReason(row.payment);
+  const lock = adjustLockReason(row.payment, t);
   return (
     <Block title={t("Oylik hisobi")}>
       {f.manual && row.adjustment ? (
         <>
           <Line
             left={t("Qo'lda")}
-            sub={`${row.adjustment.reason} · ${adjustmentMeta(row.adjustment)}`}
+            sub={`${row.adjustment.reason} · ${adjustmentMeta(row.adjustment, t)}`}
             right={formatPrice(row.adjustment.amount)}
           />
           <Line

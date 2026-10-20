@@ -1,3 +1,7 @@
+import type { Translate } from "@/components/notifications/notification-view";
+import { msg } from "@/i18n/msg";
+import { interpolate } from "@/i18n/translate";
+
 /**
  * Mock imtihon to'lovining usuli va manbai. Ishtirokchilar jadvali,
  * «To'lov qabul qilish» va «To'lovni tahrirlash» oynalari shu yerdan o'qiydi.
@@ -19,11 +23,18 @@ export const MOCK_PAYMENT_METHODS: MockPaymentMethod[] = [
   "CLICK",
 ];
 
-export const MOCK_PAYMENT_METHOD_LABELS: Record<MockPaymentMethod, string> = {
-  CASH: "Naqd",
-  PAYME: "Payme",
-  CLICK: "Click",
-};
+// Brand names (Payme, Click) are printed as they are, never through `t`.
+const CASH_WORD = msg("Naqd");
+
+export function mockPaymentMethodLabel(
+  method: MockPaymentMethod,
+  t: Translate = interpolate,
+): string {
+  if (method === "CASH") return t(CASH_WORD);
+  if (method === "PAYME") return "Payme";
+  if (method === "CLICK") return "Click";
+  return method;
+}
 
 interface PaymentView {
   paid: boolean;
@@ -32,8 +43,11 @@ interface PaymentView {
   paidFromBalance?: boolean;
 }
 
-function methodLabel(method: MockPaymentMethod | null): string | null {
-  return method ? (MOCK_PAYMENT_METHOD_LABELS[method] ?? method) : null;
+function methodLabel(
+  method: MockPaymentMethod | null,
+  t: Translate,
+): string | null {
+  return method ? mockPaymentMethodLabel(method, t) : null;
 }
 
 /**
@@ -41,13 +55,20 @@ function methodLabel(method: MockPaymentMethod | null): string | null {
  * Usuli saqlanmagan eski qo'lda qabul qilingan to'lovda `null` — u yerda
  * hech narsa taxmin qilinmaydi.
  */
-export function paymentMethodSummary(p: PaymentView): string | null {
+export function paymentMethodSummary(
+  p: PaymentView,
+  t: Translate = interpolate,
+): string | null {
   if (!p.paid) return null;
-  if (p.paymentSource === "BALANCE" || p.paidFromBalance) return "Balansdan";
-  if (p.paymentSource === "GATEWAY") {
-    return `${methodLabel(p.paymentMethod) ?? "Payme/Click"} · onlayn`;
+  if (p.paymentSource === "BALANCE" || p.paidFromBalance) {
+    return t("Balansdan");
   }
-  return methodLabel(p.paymentMethod);
+  if (p.paymentSource === "GATEWAY") {
+    return t("{method} · onlayn", {
+      method: methodLabel(p.paymentMethod, t) ?? "Payme/Click",
+    });
+  }
+  return methodLabel(p.paymentMethod, t);
 }
 
 /** Faqat admin qabul qilgan to'lovni tahrirlash va bekor qilish mumkin. */

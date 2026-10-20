@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { javobPaneliMatni, orinXabari, xatoYorligi } from "./natija-xabari";
+import { javobPaneliMatni, natijaQatorlari, orinXabari, xatoYorligi } from "./natija-xabari";
 
 describe("javobPaneliMatni", () => {
   it("a slip counts as correct and shows the right spelling", () => {
@@ -122,5 +122,42 @@ describe("xatoYorligi — soat formatlari", () => {
     expect(
       javobPaneliMatni({ isCorrect: false, richtig: "03:30", loesungWort: "halb vier" }).soz,
     ).toBe("halb vier");
+  });
+});
+
+describe("natijaQatorlari", () => {
+  const base = {
+    punkte: 50,
+    serie: 4,
+    serieYangi: true,
+    orin: { gruppe: { oldin: 3, hozir: 1 }, zentrum: { oldin: 9, hozir: 7 } },
+  };
+
+  it("no answer from the server draws nothing", () => {
+    expect(natijaQatorlari(null)).toEqual({ ball: null, serie: null, orin: null });
+  });
+
+  it("points, the streak on the first practice of the day, the group rank", () => {
+    expect(natijaQatorlari(base)).toEqual({
+      ball: 50,
+      serie: 4,
+      orin: "Guruhda 1-o'rin — 2 pog'ona ko'tarildingiz",
+    });
+  });
+
+  it("0 points and a later session show neither line", () => {
+    const r = natijaQatorlari({ ...base, punkte: 0, serieYangi: false });
+    expect(r.ball).toBeNull();
+    expect(r.serie).toBeNull();
+  });
+
+  it("an unchanged rank is not repeated", () => {
+    const r = natijaQatorlari({ ...base, orin: { gruppe: { oldin: 2, hozir: 2 }, zentrum: { oldin: 5, hozir: 5 } } });
+    expect(r.orin).toBeNull();
+  });
+
+  it("no group: the centre rank speaks", () => {
+    const r = natijaQatorlari({ ...base, orin: { gruppe: null, zentrum: { oldin: 9, hozir: 12 } } });
+    expect(r.orin).toBe("Markazda 12-o'rin — 3 pog'ona tushdingiz");
   });
 });

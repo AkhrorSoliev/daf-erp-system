@@ -1,3 +1,4 @@
+import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -20,12 +21,13 @@ const GREEN = "text-emerald-700 dark:text-emerald-300";
 const RED = "text-red-700 dark:text-red-300";
 
 export function SummaryCards({ total, reaching, problem, botActive }: Props) {
+  const t = useT();
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <Card label="Oluvchilar" value={total} />
-      <Card label="Hisobot yetadi" value={reaching} tone={GREEN} />
-      <Card label="Yetmaydi" value={problem} tone={problem > 0 ? RED : undefined} />
-      <Card label="Bot" value={botActive ? "ishlayapti" : "o'chiq"} tone={botActive ? GREEN : RED} />
+      <Card label={t("Oluvchilar")} value={total} />
+      <Card label={t("Hisobot yetadi")} value={reaching} tone={GREEN} />
+      <Card label={t("Hisobot yetmaydi")} value={problem} tone={problem > 0 ? RED : undefined} />
+      <Card label={t("Bot")} value={botActive ? t("ishlayapti") : t("o'chiq")} tone={botActive ? GREEN : RED} />
     </div>
   );
 }

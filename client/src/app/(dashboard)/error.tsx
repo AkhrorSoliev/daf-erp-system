@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { RefreshCw, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/i18n/use-t";
 
 /**
  * A page that crashes inside the dashboard. It is caught here, below the
@@ -17,6 +18,7 @@ export default function DashboardError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = useT();
   useEffect(() => {
     console.error("[App Error]", error);
   }, [error]);
@@ -26,13 +28,13 @@ export default function DashboardError({
       <div className="bg-destructive/10 rounded-full p-4">
         <TriangleAlert className="text-destructive size-8" aria-hidden />
       </div>
-      <h1 className="text-lg font-semibold">Sahifani ochib bo&apos;lmadi</h1>
+      <h1 className="text-lg font-semibold">{t("Sahifani ochib bo'lmadi")}</h1>
       <p className="text-muted-foreground text-sm">
-        Nimadir noto&apos;g&apos;ri ketdi. Qayta urinib ko&apos;ring yoki boshqa bo&apos;limga o&apos;ting.
+        {t("Nimadir noto'g'ri ketdi. Qayta urinib ko'ring yoki boshqa bo'limga o'ting.")}
       </p>
       <Button variant="outline" onClick={reset}>
         <RefreshCw className="mr-1.5 size-4" />
-        Qayta urinish
+        {t("Qayta urinish")}
       </Button>
     </div>
   );

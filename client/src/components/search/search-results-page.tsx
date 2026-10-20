@@ -21,6 +21,9 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
 import { canOpenEmployeeSettings } from "@/lib/settings-nav";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
+import { formatNumber } from "@/lib/format-utils";
 
 interface SearchItem {
   id: number | string;
@@ -44,27 +47,27 @@ const typeConfig: Record<
   }
 > = {
   students: {
-    label: "O'quvchilar",
+    label: msg("O'quvchilar"),
     icon: BookOpen,
     getUrl: (id) => `/students/profile/${id}`,
   },
   users: {
-    label: "Xodimlar",
+    label: msg("Xodimlar"),
     icon: Users,
     getUrl: () => `/settings/employees`,
   },
   teachers: {
-    label: "O'qituvchilar",
+    label: msg("O'qituvchilar"),
     icon: GraduationCap,
     getUrl: (id) => `/teachers/profile/${id}`,
   },
   groups: {
-    label: "Guruhlar",
+    label: msg("Guruhlar"),
     icon: UsersRound,
     getUrl: (id) => `/groups/${id}`,
   },
   courses: {
-    label: "Kurslar",
+    label: msg("Kurslar"),
     icon: Layers,
     getUrl: () => `/settings/courses`,
   },
@@ -73,6 +76,7 @@ const typeConfig: Record<
 const typeKeys = Object.keys(typeConfig);
 
 export function SearchResultsPage() {
+  const t = useT();
   const searchParams = useSearchParams();
   const router = useRouter();
   const can = usePermissions((s) => s.can);
@@ -160,7 +164,7 @@ export function SearchResultsPage() {
           <Input
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Qidirish..."
+            placeholder={t("Qidirish...")}
             className="pl-10 text-base h-11"
             autoFocus
           />
@@ -180,7 +184,7 @@ export function SearchResultsPage() {
                 onClick={() => updateUrl({ type: key, page: 1 })}
               >
                 <Icon className="size-3.5 mr-1.5" />
-                {config.label}
+                {t(config.label)}
               </Button>
             );
           })}
@@ -190,7 +194,7 @@ export function SearchResultsPage() {
       {/* Results */}
       {!type && q && (
         <p className="text-sm text-muted-foreground">
-          Kategoriya tanlang
+          {t("Kategoriya tanlang")}
         </p>
       )}
 
@@ -203,12 +207,12 @@ export function SearchResultsPage() {
       ) : result && currentType ? (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            {result.total} ta natija topildi
+            {t("{n} ta natija topildi", { n: formatNumber(result.total) })}
           </p>
 
           {result.data.length === 0 ? (
             <div className="text-center py-10 text-muted-foreground">
-              Natija topilmadi
+              {t("Natija topilmadi")}
             </div>
           ) : (
             <div className="space-y-1">
@@ -241,7 +245,7 @@ export function SearchResultsPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between pt-4">
               <p className="text-sm text-muted-foreground">
-                Sahifa {pageParam} / {totalPages}
+                {t("Sahifa {page} / {total}", { page: pageParam, total: totalPages })}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -251,7 +255,7 @@ export function SearchResultsPage() {
                   onClick={() => updateUrl({ page: pageParam - 1 })}
                 >
                   <ChevronLeft className="size-4" />
-                  Oldingi
+                  {t("Oldingi")}
                 </Button>
                 <Button
                   variant="outline"
@@ -259,7 +263,7 @@ export function SearchResultsPage() {
                   disabled={pageParam >= totalPages}
                   onClick={() => updateUrl({ page: pageParam + 1 })}
                 >
-                  Keyingi
+                  {t("Keyingi")}
                   <ChevronRight className="size-4" />
                 </Button>
               </div>

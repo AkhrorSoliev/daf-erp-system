@@ -1,8 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { tashkentDateStr } from '../../attendance/shared/date-utils';
+import {
+  tashkentDateStr,
+  utcMidnightFromDateStr,
+} from '../../common/date/tashkent';
 import { currentGroupId } from '../shared/student-scope';
-import { serieAus, stufeFuer, wochenStartUtc } from '../uebung/punkte';
+import {
+  serieAus,
+  stufeFuer,
+  wochenStartTag,
+  wochenStartUtc,
+} from '../uebung/punkte';
 
 export interface Fortschritt {
   gesamt: number;
@@ -31,7 +40,28 @@ export interface ReytingZeile {
   selbst: boolean;
 }
 
+/** What the session-end screen shows: this session's points, the streak, the rank before/after. */
+export interface SeansNatijasi {
+  punkte: number;
+  serie: number;
+  serieYangi: boolean;
+  orin: {
+    gruppe: { oldin: number; hozir: number } | null;
+    zentrum: { oldin: number; hozir: number };
+  };
+}
+
 export type ReytingQamrovi = 'gruppe' | 'zentrum';
+
+/** `oquvchiRaqamlari` so'rovining bitta qatori. */
+interface OquvchiRaqamlari {
+  punkte: number;
+  hozir: number;
+  oldin: number;
+  gesamt: number;
+  tage: string[];
+  heuteAttempts: number;
+}
 
 /** Haftalik jadvaldan qaytadigan bitta qatorning umumlashgan shakli. */
 interface HaftalikYigindi {
@@ -42,6 +72,11 @@ interface HaftalikYigindi {
 /** Markaz jadvalida TO'LIQ ko'rsatiladigan yuqori qatorlar soni — undan
  * pastdagilar faqat o'z qatori sifatida (haqiqiy o'rni bilan) qo'shiladi. */
 const ZENTRUM_TOP_CHEGARA = 50;
+
+/** The week's lower bound for the `@db.Date` column. */
+function montagGte(jetzt: Date): Date {
+  return utcMidnightFromDateStr(wochenStartTag(jetzt));
+}
 
 function ballOl(satr: HaftalikYigindi): number {
   return satr._sum.points ?? 0;
@@ -64,96 +99,113 @@ function saralaBarqaror<T extends HaftalikYigindi>(royxat: T[]): T[] {
 }
 
 /**
- * So'ragan o'quvchining o'z qatori ro'yxatda bo'lmasa (bu hafta hali
- * mashq qilmagan), nol ball bilan qo'shib beradi — aks holda o'z o'rnini
- * hech qachon hisoblab bo'lmaydi.
+ * Markazning haftalik ro'yxati — SQL'dagi `t` CTE. Markaz jadvali
+ * (`zentrumReytingi`) ham, o'rin (`oquvchiRaqamlari`: chip va seans oxiri) ham
+ * SHU bo'lakdan o'qiydi, shuning uchun ular bir xil populyatsiya va bir xil
+ * tartib bilan hisoblanadi.
+ *
+ * - Bir qator = bir o'quvchining shu haftadagi `SUM(points)`; qatori bor,
+ *   lekin 0 balli o'quvchi ham ro'yxatda.
+ * - So'ragan o'quvchining o'z qatori yo'q bo'lsa (bu hafta mashq qilmagan),
+ *   0 ball bilan QO'SHILADI — aks holda o'z o'rnini hech qachon hisoblab
+ *   bo'lmaydi, va u boshqalarning o'rnini ham surishi kerak (u qo'shilgan
+ *   ro'yxatdagi tartib — eski `oʻziniQoshib` qoidasi).
+ * - Tartib (chaqiruvchilarda): ball kamayishi, teng bo'lsa `studentId`
+ *   o'sishi (dizayn §6.2).
+ *
+ * Ro'yxat Node'ga tashilmaydi: ilgari har chaqiruv ~5 000 qatorni olib JS
+ * da saralardi va 50 parallel so'rovda event loop tiqilib p95 300–460 ms
+ * bo'lgan (S1 yuklama sinovi). `day` — `@db.Date`, shuning uchun chegara
+ * sana MATNI sifatida `::date` bilan beriladi, vaqt lahzasi emas.
+ *
+ * Bog'langan qiymatlar tartibi `[companyId, montagTag, studentId, …]` —
+ * spec'dagi soxta `$queryRaw` (`zentrum-sql.fake-spec.ts`) shunga tayanadi.
  */
-function oʻziniQoshib(
-  royxat: HaftalikYigindi[],
+function zentrumHaftaCte(
+  companyId: number,
+  montagTag: string,
   studentId: number,
-): HaftalikYigindi[] {
-  if (royxat.some((s) => s.studentId === studentId)) return royxat;
-  return [...royxat, { studentId, _sum: { points: 0 } }];
+): Prisma.Sql {
+  return Prisma.sql`haftalik AS (
+      SELECT "studentId", SUM(points)::int AS p
+      FROM "DafStudentDay"
+      WHERE "companyId" = ${companyId} AND day >= ${montagTag}::date
+      GROUP BY "studentId"
+    ),
+    t AS (
+      SELECT "studentId", p FROM haftalik
+      UNION ALL
+      SELECT ${studentId}::int, 0
+      WHERE NOT EXISTS (SELECT 1 FROM haftalik h WHERE h."studentId" = ${studentId})
+    )`;
 }
 
 function platziniTop(saralangan: HaftalikYigindi[], studentId: number): number {
   return saralangan.findIndex((s) => s.studentId === studentId) + 1;
 }
 
+/** The same list with one student's points lowered by `minus` (never below 0). */
+function ayir(
+  royxat: HaftalikYigindi[],
+  studentId: number,
+  minus: number,
+): HaftalikYigindi[] {
+  return royxat.map((s) =>
+    s.studentId === studentId
+      ? { studentId, _sum: { points: Math.max(0, ballOl(s) - minus) } }
+      : s,
+  );
+}
+
 @Injectable()
 export class FortschrittService {
+  private readonly logger = new Logger(FortschrittService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async uebersicht(studentId: number, companyId: number): Promise<Fortschritt> {
-    const [jamiy, urinishlar, groupId, faelligeWoerter] = await Promise.all([
-      this.prisma.dafAttempt.aggregate({
-        where: { studentId },
-        _sum: { points: true },
-      }),
-      // Butun tarix o'qiladi — `serieAus` yig'ilgan sanalar to'plamiga
-      // qarab hisoblaydi, haftalik oynaga qamalmaydi.
-      this.prisma.dafAttempt.findMany({
-        where: { studentId },
-        select: { createdAt: true },
-      }),
-      currentGroupId(this.prisma, studentId),
+    const hozir = new Date();
+    const heute = tashkentDateStr(hozir);
+    const montag = montagGte(hozir);
+
+    // Hamma so'rov BIR bosqichda: 50 o'quvchi bir vaqtda kelganda har
+    // ketma-ket bosqich ulanishlar navbatiga qaytadan turadi (S1 yuklama
+    // sinovi). Guruh zanjiri faqat `groupId` ga bog'liq.
+    const [faelligeWoerter, oz, wochePlatzGruppe] = await Promise.all([
       // `uebung.wiederholung()` bilan BIR XIL predikat (`dueAt <= hozir`)
       // — bu shu o'quvchi uchun so'ragan `student`ga tegishli qatorlar
       // ustida ishlaydi, deyarli bepul (`DafLexemeState` studentId bo'yicha
       // indekslangan).
       this.prisma.dafLexemeState.count({
-        where: { studentId, dueAt: { lte: new Date() } },
+        where: { studentId, dueAt: { lte: hozir } },
       } as any),
+      // Markaz o'rni `zentrumHaftaCte` orqali hisoblanadi — xuddi shu
+      // bo'lak `reyting('zentrum')` jadvalini quradi. Guruh uchun
+      // qilingan tuzatish (pastdagi izohga qarang) markazga tegishli emas
+      // edi: `zentrumReytingi` o'z qatorini FAQAT o'quvchi shu hafta
+      // urinish qilgan bo'lsa qo'shar edi, shuning uchun dushanba ertalab
+      // chip "1-o'rin" deb, Markaz jadvali esa "hech kim ball yig'magan"
+      // deb ikkitasi bir vaqtda ikki xil javob berardi.
+      // Umumiy ball, seriya kunlari va haftalik bal ham shu so'rovda.
+      this.oquvchiRaqamlari(
+        studentId,
+        companyId,
+        wochenStartTag(hozir),
+        heute,
+        0,
+      ),
+      // Guruh o'rni `gruppeHaftaligi` orqali hisoblanadi — xuddi shu
+      // funksiya `reyting('gruppe')` jadvalini quradi. Bitta joyda
+      // hisoblanmasa, ikki ekran bir xil savolga ikki xil javob berishi
+      // mumkin edi: bu haqiqiy xato bo'lib topilgan (mashq qilmagan a'zo
+      // o'z o'rnini past ko'rsatgan — "shu hafta mashq qilganlar"
+      // populyatsiyasi bilan hisoblangan eski versiya butun rosterni
+      // emas, faqat urinish qilganlarni ko'rgan).
+      this.gruppePlatz(studentId, companyId, montag),
     ]);
 
-    const gesamt = jamiy._sum.points ?? 0;
+    const gesamt = oz.gesamt;
     const { jetzt, naechste } = stufeFuer(gesamt);
-
-    const heute = tashkentDateStr(new Date());
-    // Seriya "mashq qilingan kun" bo'yicha sanaladi, "tugatilgan seans"
-    // emas: `DafLessonProgress.completedAt` har o'tishda ustiga yoziladi va
-    // tarix qolmaydi, urinishlar esa qoladi. Bu yumshoqroq — seansni
-    // boshlab tugatmagan o'quvchi ham seriyasini saqlaydi, "jazolamaslik"
-    // qaroriga mos.
-    const kunlar = urinishlar.map((u) => tashkentDateStr(u.createdAt));
-    const serie = serieAus(kunlar, heute);
-
-    const wochenStart = wochenStartUtc(new Date());
-
-    // Markaz o'rni `zentrumHaftaligi` orqali hisoblanadi — xuddi shu
-    // funksiya `reyting('zentrum')` jadvalini quradi. Guruh uchun
-    // qilingan tuzatish (pastdagi izohga qarang) markazga tegishli emas
-    // edi: `zentrumReytingi` o'z qatorini FAQAT o'quvchi shu hafta
-    // urinish qilgan bo'lsa qo'shar edi, shuning uchun dushanba ertalab
-    // chip "1-o'rin" deb, Markaz jadvali esa "hech kim ball yig'magan"
-    // deb ikkitasi bir vaqtda ikki xil javob berardi.
-    const zentrumSaralangan = await this.zentrumHaftaligi(
-      studentId,
-      companyId,
-      wochenStart,
-    );
-    const wochePunkte =
-      zentrumSaralangan.find((s) => s.studentId === studentId)?._sum.points ??
-      0;
-    const wochePlatzZentrum = platziniTop(zentrumSaralangan, studentId);
-
-    // Guruh o'rni `gruppeHaftaligi` orqali hisoblanadi — xuddi shu funksiya
-    // `reyting('gruppe')` jadvalini quradi. Bitta joyda hisoblanmasa, ikki
-    // ekran bir xil savolga ikki xil javob berishi mumkin edi: bu haqiqiy
-    // xato bo'lib topilgan (mashq qilmagan a'zo o'z o'rnini past ko'rsatgan
-    // — "shu hafta mashq qilganlar" populyatsiyasi bilan hisoblangan
-    // eski versiya butun rosterni emas, faqat urinish qilganlarni ko'rgan).
-    let wochePlatzGruppe: number | null = null;
-    if (groupId) {
-      const { saralangan } = await this.gruppeHaftaligi(
-        groupId,
-        companyId,
-        wochenStart,
-      );
-      if (saralangan.length > 0) {
-        wochePlatzGruppe = platziniTop(saralangan, studentId);
-      }
-    }
 
     return {
       gesamt,
@@ -161,12 +213,129 @@ export class FortschrittService {
       naechsteStufe: naechste
         ? { de: naechste.de, uz: naechste.uz, ab: naechste.ab }
         : null,
-      serie,
-      wochePunkte,
+      serie: serieAus(oz.tage, heute),
+      wochePunkte: oz.punkte,
       wochePlatzGruppe,
-      wochePlatzZentrum,
+      wochePlatzZentrum: oz.hozir,
       faelligeWoerter,
     };
+  }
+
+  /** O'quvchining guruh jadvalidagi o'rni; guruhsiz yoki bo'sh guruh — `null`. */
+  private async gruppePlatz(
+    studentId: number,
+    companyId: number,
+    montag: Date,
+  ): Promise<number | null> {
+    const groupId = await currentGroupId(this.prisma, studentId);
+    if (!groupId) return null;
+    const { saralangan } = await this.gruppeHaftaligi(
+      groupId,
+      companyId,
+      montag,
+    );
+    return saralangan.length > 0 ? platziniTop(saralangan, studentId) : null;
+  }
+
+  /**
+   * The session's result for the end screen (spec §5). "Before" = everyone
+   * else as now, this student's week without this session's share of it.
+   * Both ranks go through the same sort, so the two can be compared.
+   */
+  async seansNatijasi(
+    sessionId: string,
+    studentId: number,
+    companyId: number,
+  ): Promise<SeansNatijasi> {
+    const jetzt = new Date();
+    const heute = tashkentDateStr(jetzt);
+    const montag = montagGte(jetzt);
+    const montagUtc = wochenStartUtc(jetzt);
+
+    // Ikki zanjir parallel: seans urinishlari → markaz o'rni (`minus` ga
+    // muhtoj) va guruh → guruh ro'yxati (urinishlarni kutmaydi). Har
+    // ketma-ket bosqich 50 parallel so'rovda ulanishlar navbatiga qaytadan
+    // turadi (S1 yuklama sinovi).
+    const urinishlarP = this.prisma.dafAttempt.findMany({
+      where: { sessionId, studentId },
+      select: { points: true, createdAt: true, groupId: true },
+    });
+    const guruhP = currentGroupId(this.prisma, studentId).then(
+      async (groupId) =>
+        groupId
+          ? {
+              groupId,
+              ...(await this.gruppeHaftaligi(groupId, companyId, montag)),
+            }
+          : null,
+    );
+
+    const sum = (xs: { points: number }[]) =>
+      xs.reduce((s, x) => s + x.points, 0);
+    const shuHaftaOf = (xs: Awaited<typeof urinishlarP>) =>
+      xs.filter((u) => u.createdAt >= montagUtc);
+
+    const [urinishlar, oz, guruh] = await Promise.all([
+      urinishlarP,
+      urinishlarP.then((xs) =>
+        this.oquvchiRaqamlari(
+          studentId,
+          companyId,
+          wochenStartTag(jetzt),
+          heute,
+          sum(shuHaftaOf(xs)),
+        ),
+      ),
+      guruhP,
+    ]);
+
+    const shuHafta = shuHaftaOf(urinishlar);
+    const bugungi = urinishlar.filter(
+      (u) => tashkentDateStr(u.createdAt) === heute,
+    ).length;
+
+    let gruppe: SeansNatijasi['orin']['gruppe'] = null;
+    if (guruh && guruh.saralangan.length > 0) {
+      const minus = sum(shuHafta.filter((u) => u.groupId === guruh.groupId));
+      gruppe = {
+        oldin: platziniTop(
+          saralaBarqaror(ayir(guruh.saralangan, studentId, minus)),
+          studentId,
+        ),
+        hozir: platziniTop(guruh.saralangan, studentId),
+      };
+    }
+
+    return {
+      punkte: sum(urinishlar),
+      serie: serieAus(oz.tage, heute),
+      serieYangi: bugungi > 0 && oz.heuteAttempts === bugungi,
+      orin: {
+        gruppe,
+        zentrum: { oldin: oz.oldin, hozir: oz.hozir },
+      },
+    };
+  }
+
+  /**
+   * The end screen's figures are decoration: the lesson is already saved
+   * when this runs, so a failure here must not turn the answer into an
+   * error (the client would say «Natija saqlanmadi»).
+   */
+  async seansNatijasiXavfsiz(
+    sessionId: string | undefined,
+    studentId: number,
+    companyId: number,
+  ): Promise<SeansNatijasi | null> {
+    if (!sessionId) return null;
+    try {
+      return await this.seansNatijasi(sessionId, studentId, companyId);
+    } catch (err) {
+      this.logger.warn(
+        `Seans natijasi hisoblanmadi (sessionId=${sessionId}, studentId=${studentId}): ${(err as Error).message}`,
+      );
+      return null;
+    }
   }
 
   async reyting(
@@ -174,12 +343,12 @@ export class FortschrittService {
     companyId: number,
     scope: ReytingQamrovi,
   ): Promise<ReytingZeile[]> {
-    const wochenStart = wochenStartUtc(new Date());
+    const jetzt = new Date();
 
     if (scope === 'gruppe') {
-      return this.gruppeReytingi(studentId, companyId, wochenStart);
+      return this.gruppeReytingi(studentId, companyId, montagGte(jetzt));
     }
-    return this.zentrumReytingi(studentId, companyId, wochenStart);
+    return this.zentrumReytingi(studentId, companyId, wochenStartTag(jetzt));
   }
 
   /**
@@ -192,7 +361,7 @@ export class FortschrittService {
   private async gruppeReytingi(
     studentId: number,
     companyId: number,
-    wochenStart: Date,
+    montag: Date,
   ): Promise<ReytingZeile[]> {
     const groupId = await currentGroupId(this.prisma, studentId);
     if (!groupId) return [];
@@ -200,7 +369,7 @@ export class FortschrittService {
     const { saralangan, azoIdlari } = await this.gruppeHaftaligi(
       groupId,
       companyId,
-      wochenStart,
+      montag,
     );
     if (azoIdlari.length === 0) return [];
 
@@ -226,7 +395,7 @@ export class FortschrittService {
   private async gruppeHaftaligi(
     groupId: string,
     companyId: number,
-    wochenStart: Date,
+    montag: Date,
   ): Promise<{ saralangan: HaftalikYigindi[]; azoIdlari: number[] }> {
     const azolar = await this.prisma.enrollment.findMany({
       where: { groupId, status: 'ACTIVE' },
@@ -240,9 +409,9 @@ export class FortschrittService {
     // `groupId` yozuv paytida muhrlangan: ball topilgan paytdagi guruhga
     // tegishli, o'quvchining HOZIRGI guruhiga emas. Shu bitta so'rov bilan
     // guruh a'zolari sonidan qat'i nazar N+1 ga tushilmaydi.
-    const haftalik = await this.prisma.dafAttempt.groupBy({
+    const haftalik = await this.prisma.dafStudentDay.groupBy({
       by: ['studentId'],
-      where: { companyId, groupId, createdAt: { gte: wochenStart } },
+      where: { companyId, groupKey: groupId, day: { gte: montag } },
       _sum: { points: true },
     });
     const ballMap = new Map(haftalik.map((h) => [h.studentId, ballOl(h)]));
@@ -256,6 +425,72 @@ export class FortschrittService {
   }
 
   /**
+   * O'quvchining O'Z raqamlari BITTA so'rovda — `uebersicht` (chip) va
+   * `seansNatijasi` (oldin/hozir) shuni chaqiradi. Har alohida so'rov 50
+   * parallel chaqiruvda ulanish navbatiga qaytadan turardi (S1 yuklama
+   * sinovi: `uebersicht` 7 so'rovdan 5 taga tushdi).
+   *
+   * - `punkte`, `hozir` — markazdagi haftalik bal va o'rin. Jadval
+   *   (`zentrumReytingi`) bilan bir xil `zentrumHaftaCte` dan o'qiladi.
+   *   O'rin = (boshqalar ichida ballari ko'p, yoki teng ball va `studentId`
+   *   kichik bo'lganlar soni) + 1 — `row_number() OVER (ORDER BY p DESC,
+   *   "studentId")` bilan aynan bir xil, faqat ro'yxatni tashimaydi.
+   * - `oldin` — o'quvchining bali `minus` ga kamaytirilgan (0 dan past
+   *   emas), boshqalarniki o'sha; `minus = 0` da `oldin === hozir`.
+   * - `gesamt` — o'quvchining hamma kunlik qatorlari `SUM(points)`.
+   * - `tage` — `attempts > 0` bo'lgan kunlar (`YYYY-MM-DD`), seriya
+   *   `serieAus` bilan hisoblanadi (qoida o'zgarmaydi, 06.09 §7). Seriya
+   *   "mashq qilingan kun" bo'yicha, "tugatilgan seans" emas: seansni
+   *   boshlab tugatmagan o'quvchi ham seriyasini saqlaydi.
+   * - `heuteAttempts` — bugungi (Toshkent) urinishlar soni.
+   *
+   * Guruh tomonidagi `gruppeHaftaligi` tuzatishi markazga ham tegishli:
+   * mashq qilmagan o'quvchi ham o'rin oladi, va jadvalda ham shu o'rin
+   * bilan ko'rinadi (dizayn 6.2).
+   */
+  private async oquvchiRaqamlari(
+    studentId: number,
+    companyId: number,
+    montagTag: string,
+    heuteTag: string,
+    minus: number,
+  ): Promise<OquvchiRaqamlari> {
+    // Bog'langan qiymatlarning OXIRGI ikkitasi `minus`, `heuteTag` bo'lishi
+    // shart (soxta `$queryRaw`). O'rin bitta o'tishda (`COUNT FILTER`),
+    // korrelyatsiyali subso'rov emas: u reja narxini 228k ga ko'tarib
+    // `jit_above_cost` (100k) dan oshirardi va Postgres har chaqiruvda
+    // ~20 ms JIT kompilyatsiya qilardi.
+    const [satr] = await this.prisma.$queryRaw<OquvchiRaqamlari[]>(
+      Prisma.sql`/* oquvchi-raqamlari */
+      WITH ${zentrumHaftaCte(companyId, montagTag, studentId)},
+      mine AS (
+        SELECT day, points, attempts FROM "DafStudentDay"
+        WHERE "studentId" = ${studentId}
+      ),
+      q AS (SELECT "studentId" AS id, p FROM t WHERE "studentId" = ${studentId}),
+      o AS (SELECT id, p, GREATEST(p - ${minus}::int, 0) AS op FROM q),
+      r AS (
+        SELECT o.p AS punkte,
+          1 + (COUNT(*) FILTER (WHERE t."studentId" <> o.id
+            AND (t.p > o.p OR (t.p = o.p AND t."studentId" < o.id))))::int AS hozir,
+          1 + (COUNT(*) FILTER (WHERE t."studentId" <> o.id
+            AND (t.p > o.op OR (t.p = o.op AND t."studentId" < o.id))))::int AS oldin
+        FROM t CROSS JOIN o
+        GROUP BY o.id, o.p, o.op
+      )
+      SELECT r.punkte, r.hozir, r.oldin,
+        (SELECT COALESCE(SUM(points), 0)::int FROM mine) AS gesamt,
+        ARRAY(
+          SELECT DISTINCT to_char(day, 'YYYY-MM-DD') FROM mine WHERE attempts > 0
+        ) AS tage,
+        (SELECT COALESCE(SUM(attempts), 0)::int FROM mine
+          WHERE day = ${heuteTag}::date) AS "heuteAttempts"
+      FROM r`,
+    );
+    return satr;
+  }
+
+  /**
    * MARKAZ JADVALI FILIALGA CHEKLANMAYDI — bu ataylab qilingan istisno.
    *
    * Bu repoda deyarli hamma narsa filialga qulflangan
@@ -266,36 +501,7 @@ export class FortschrittService {
    *
    * Buni "xato" deb tuzatmang — qaror hujjatda
    * (`docs/superpowers/specs/2026-09-06-ball-va-yol-design.md`, 6.1).
-   */
-  /**
-   * Markazning haftalik saralangan ro'yxati (o'quvchining O'Z qatori
-   * MAJBURIY qo'shilgan, hatto nol ball bilan) — `uebersicht` (o'z
-   * o'rnini hisoblash uchun) va `zentrumReytingi` (jadval qurish uchun)
-   * IKKALASI HAM shu funksiyani chaqiradi.
    *
-   * Guruh tomonida xuddi shu nomdagi `gruppeHaftaligi` bilan qilingan
-   * tuzatish shu yerga ham ko'chirildi: ilgari `zentrumReytingi` o'z
-   * qatorini FAQAT `top`da bo'lmasa VA topilsa qo'shar edi — `groupBy`
-   * natijasida esa hech qachon mashq qilmagan o'quvchi umuman yo'q edi.
-   * Natijada `uebersicht`ning chipi (bu funksiya orqali) o'quvchini "1-
-   * o'rin" deb ko'rsatardi, `reyting('zentrum')` esa uni umuman
-   * qatorlarda ko'rsatmasdi — ikki ekran bitta o'quvchiga ikki xil javob
-   * berardi (dizayn 6.2: har bir o'quvchi ikkalasida ham bo'lishi shart).
-   */
-  private async zentrumHaftaligi(
-    studentId: number,
-    companyId: number,
-    wochenStart: Date,
-  ): Promise<HaftalikYigindi[]> {
-    const haftalik = await this.prisma.dafAttempt.groupBy({
-      by: ['studentId'],
-      where: { companyId, createdAt: { gte: wochenStart } },
-      _sum: { points: true },
-    });
-    return saralaBarqaror(oʻziniQoshib(haftalik, studentId));
-  }
-
-  /**
    * Markaz jadvalining qatorlari.
    *
    * Ro'yxat markazning TO'LIQ ro'yxati emas — TOP 50 + o'quvchining o'z
@@ -312,25 +518,24 @@ export class FortschrittService {
   private async zentrumReytingi(
     studentId: number,
     companyId: number,
-    wochenStart: Date,
+    montagTag: string,
   ): Promise<ReytingZeile[]> {
-    const saralangan = await this.zentrumHaftaligi(
-      studentId,
-      companyId,
-      wochenStart,
-    );
-    const darajali = saralangan.map((s, i) => ({
-      studentId: s.studentId,
-      punkte: ballOl(s),
-      platz: i + 1,
-    }));
-
-    const top = darajali.slice(0, ZENTRUM_TOP_CHEGARA);
-    const oʻzi = darajali.find((d) => d.studentId === studentId);
-    const qatorlar =
-      oʻzi && !top.some((d) => d.studentId === studentId)
-        ? [...top, oʻzi]
-        : top;
+    // `platz` to'liq ro'yxat ustidagi `row_number()` — o'z qatori TOP 50
+    // dan tashqarida bo'lsa ham haqiqiy o'rni bilan keladi. Chegara OXIRGI
+    // bog'langan qiymat bo'lishi shart (soxta `$queryRaw`).
+    const qatorlar = await this.prisma.$queryRaw<
+      { studentId: number; punkte: number; platz: number }[]
+    >(Prisma.sql`/* zentrum-top */
+      WITH ${zentrumHaftaCte(companyId, montagTag, studentId)},
+      r AS (
+        SELECT "studentId", p,
+               row_number() OVER (ORDER BY p DESC, "studentId") AS platz
+        FROM t
+      )
+      SELECT "studentId", p AS punkte, platz::int AS platz
+      FROM r
+      WHERE "studentId" = ${studentId} OR platz <= ${ZENTRUM_TOP_CHEGARA}
+      ORDER BY platz`);
 
     const idlar = qatorlar.map((q) => q.studentId);
     const talabalar = await this.prisma.student.findMany({

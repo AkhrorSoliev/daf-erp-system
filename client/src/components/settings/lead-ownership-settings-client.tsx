@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import {
   fetchOwnershipRules,
   saveOwnershipRules,
@@ -25,22 +27,22 @@ const FIELDS: {
 }[] = [
   {
     key: "maxUntouched",
-    label: "Harakatsiz lidlar chegarasi",
-    hint: "Bir xodim bir vaqtda nechta hali bog'lanilmagan lidni ushlab tura oladi",
+    label: msg("Harakatsiz lidlar chegarasi"),
+    hint: msg("Bir xodim bir vaqtda nechta hali bog'lanilmagan lidni ushlab tura oladi"),
     min: 1,
     max: 100,
   },
   {
     key: "firstActionHours",
-    label: "Birinchi harakat (ish soati)",
-    hint: "Lid olingandan keyin shuncha ish soati ichida qo'ng'iroq, izoh yoki topshiriq bo'lishi kerak",
+    label: msg("Birinchi harakat (ish soati)"),
+    hint: msg("Lid olingandan keyin shuncha ish soati ichida qo'ng'iroq, izoh yoki topshiriq bo'lishi kerak"),
     min: 1,
     max: 24,
   },
   {
     key: "followUpDays",
-    label: "Keyingi harakat (ish kuni)",
-    hint: "Oxirgi harakatdan keyin shuncha ish kunida yangi harakat bo'lmasa, lid umumiy ro'yxatga qaytadi",
+    label: msg("Keyingi harakat (ish kuni)"),
+    hint: msg("Oxirgi harakatdan keyin shuncha ish kunida yangi harakat bo'lmasa, lid umumiy ro'yxatga qaytadi"),
     min: 1,
     max: 14,
   },
@@ -50,6 +52,7 @@ const QUERY_KEY = ["lead-ownership-settings"];
 
 /** CEO-only (ADR-0093): the three numbers of the lead owner's clock. */
 export function LeadOwnershipSettingsClient() {
+  const t = useT();
   const queryClient = useQueryClient();
   // A draft exists only after an edit; until then the server's values show.
   const [draft, setDraft] = useState<OwnershipRules | null>(null);
@@ -66,9 +69,9 @@ export function LeadOwnershipSettingsClient() {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
       // Every card's deadline follows the new numbers.
       queryClient.invalidateQueries({ queryKey: ["leads"] });
-      toast.success("Saqlandi");
+      toast.success(t("Saqlandi"));
     },
-    onError: (err) => toast.error(getErrorMessage(err, "Saqlashda xatolik")),
+    onError: (err) => toast.error(getErrorMessage(err, t("Saqlashda xatolik"))),
   });
 
   const form = draft ?? data ?? null;
@@ -77,12 +80,12 @@ export function LeadOwnershipSettingsClient() {
     return (
       <div className="space-y-3">
         <SettingsPageHeader
-          title="Lidlar egaligi"
-          description="Lidni band qilish chegarasi va harakat muddatlari"
+          title={t("Lidlar egaligi")}
+          description={t("Lidni band qilish chegarasi va harakat muddatlari")}
         />
-        <p className="text-sm text-muted-foreground">Sozlamalarni yuklab bo&apos;lmadi.</p>
+        <p className="text-sm text-muted-foreground">{t("Sozlamalarni yuklab bo'lmadi.")}</p>
         <Button variant="outline" onClick={() => void refetch()}>
-          Qayta urinish
+          {t("Qayta urinish")}
         </Button>
       </div>
     );
@@ -104,40 +107,42 @@ export function LeadOwnershipSettingsClient() {
   return (
     <div>
       <SettingsPageHeader
-        title="Lidlar egaligi"
-        description="Lidni band qilish chegarasi va harakat muddatlari"
+        title={t("Lidlar egaligi")}
+        description={t("Lidni band qilish chegarasi va harakat muddatlari")}
       />
       <div className="max-w-xl space-y-5 rounded-lg border p-4">
-        {FIELDS.map((f) => (
-          <div key={f.key} className="space-y-1.5">
-            <Label htmlFor={f.key}>{f.label}</Label>
-            <Input
-              id={f.key}
-              type="number"
-              inputMode="numeric"
-              min={f.min}
-              max={f.max}
-              value={form[f.key]}
-              disabled={save.isPending}
-              className="max-w-28"
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                if (Number.isFinite(n)) setDraft({ ...form, [f.key]: n });
-              }}
-            />
-            <p className="text-xs text-muted-foreground">{f.hint}</p>
-          </div>
-        ))}
+        {FIELDS.map((f) => {
+          const { label, hint } = f;
+          return (
+            <div key={f.key} className="space-y-1.5">
+              <Label htmlFor={f.key}>{t(label)}</Label>
+              <Input
+                id={f.key}
+                type="number"
+                inputMode="numeric"
+                min={f.min}
+                max={f.max}
+                value={form[f.key]}
+                disabled={save.isPending}
+                className="max-w-28"
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  if (Number.isFinite(n)) setDraft({ ...form, [f.key]: n });
+                }}
+              />
+              <p className="text-xs text-muted-foreground">{t(hint)}</p>
+            </div>
+          );
+        })}
         <p className="text-xs text-muted-foreground">
-          Ish vaqti: dushanba–shanba, 08:00–18:00; bayram kunlari hisoblanmaydi.
-          O&apos;zgarish hamma lidning muddatiga darhol ta&apos;sir qiladi.
+          {t("Ish vaqti: dushanba–shanba, 08:00–18:00; bayram kunlari hisoblanmaydi. O'zgarish hamma lidning muddatiga darhol ta'sir qiladi.")}
         </p>
         <Button
           disabled={!draft || invalid || save.isPending}
           onClick={() => draft && save.mutate(draft)}
         >
           {save.isPending && <Loader2 className="size-4 animate-spin" />}
-          Saqlash
+          {t("Saqlash")}
         </Button>
       </div>
     </div>

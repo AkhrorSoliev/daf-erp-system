@@ -11,8 +11,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { TranslatedStatusBadge } from "@/components/shared/translated-status-badge";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { formatPhone } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
@@ -54,6 +55,7 @@ export function StudentLinkPicker({
   onChange,
   disabled,
 }: StudentLinkPickerProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const query = normalizeStudentSearch(useDebouncedValue(search, 300));
@@ -107,7 +109,7 @@ export function StudentLinkPicker({
             ) : (
               <span className="flex items-center gap-2 text-muted-foreground">
                 <Search className="size-4" />
-                O&apos;quvchini qidirish...
+                {t("O'quvchini qidirish...")}
               </span>
             )}
             <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
@@ -121,7 +123,7 @@ export function StudentLinkPicker({
             className="size-9 shrink-0"
             disabled={disabled}
             onClick={() => onChange(null)}
-            aria-label="O'quvchi bog'lanishini olib tashlash"
+            aria-label={t("O'quvchi bog'lanishini olib tashlash")}
           >
             <X className="size-4" />
           </Button>
@@ -136,7 +138,7 @@ export function StudentLinkPicker({
             <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
             <Input
               autoFocus
-              placeholder="Ism, telefon yoki ID..."
+              placeholder={t("Ism, telefon yoki ID...")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8"
@@ -146,20 +148,20 @@ export function StudentLinkPicker({
         <div className="max-h-60 space-y-1 overflow-y-auto overscroll-contain p-2">
           {query.length < MIN_QUERY_LENGTH ? (
             <p className="px-2 py-1.5 text-sm text-muted-foreground">
-              Kamida {MIN_QUERY_LENGTH} ta belgi yozing
+              {t("Kamida {n} ta belgi yozing", { n: MIN_QUERY_LENGTH })}
             </p>
           ) : isFetching && students.length === 0 ? (
             <p className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground">
               <Loader2 className="size-4 animate-spin" />
-              Qidirilmoqda...
+              {t("Qidirilmoqda...")}
             </p>
           ) : isError ? (
             <p className="px-2 py-1.5 text-sm text-destructive">
-              Qidirishda xatolik. Qayta urinib ko&apos;ring.
+              {t("Qidirishda xatolik. Qayta urinib ko'ring.")}
             </p>
           ) : students.length === 0 ? (
             <p className="px-2 py-1.5 text-sm text-muted-foreground">
-              O&apos;quvchi topilmadi
+              {t("O'quvchi topilmadi")}
             </p>
           ) : (
             students.map((s) => (
@@ -185,7 +187,7 @@ export function StudentLinkPicker({
                   </span>
                 </span>
                 {s.status !== "ACTIVE" && (
-                  <StatusBadge
+                  <TranslatedStatusBadge
                     entityType="students"
                     status={s.status}
                     className="shrink-0"

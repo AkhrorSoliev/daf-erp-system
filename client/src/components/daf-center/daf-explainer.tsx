@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/i18n/context";
 import { formatKunOy } from "@/components/groups/app-activity/activity-format";
 import type { Norma } from "./types";
 
@@ -17,45 +18,46 @@ export function DafExplainer({
   norma: Norma;
   kuzatuvBoshi: string | null;
 }) {
+  const t = useT();
   return (
     <details className="rounded-xl border bg-card px-4 py-3 text-sm">
-      <summary className="cursor-pointer font-medium">Raqamlar qanday hisoblanadi</summary>
+      <summary className="cursor-pointer font-medium">{t("Raqamlar qanday hisoblanadi")}</summary>
       <div className="mt-3 space-y-3 text-muted-foreground">
         <p>
-          <b className="text-foreground">Faol kun</b> — o&apos;quvchi o&apos;sha kuni o&apos;quv
-          bo&apos;limida kamida <b className="text-foreground">{norma.kunlikDaqiqa} daqiqa</b>{" "}
-          ishlagan yoki tugatilgan seanslarda kamida{" "}
-          <b className="text-foreground">{norma.kunlikSavol} ta</b> savolga javob bergan kun. Radio
-          tinglash bunga kirmaydi.
+          <b className="text-foreground">{t("Faol kun")}</b>
+          {" — "}
+          {t("o'quvchi o'sha kuni o'quv bo'limida kamida {minutes} daqiqa ishlagan yoki tugatilgan seanslarda kamida {questions} ta savolga javob bergan kun. Radio tinglash bunga kirmaydi.", {
+            minutes: norma.kunlikDaqiqa,
+            questions: norma.kunlikSavol,
+          })}
         </p>
         <p>
-          <b className="text-foreground">Holat</b> — haftada{" "}
-          <b className="text-foreground">{norma.haftalikKun} kun</b> faol bo&apos;lsa yashil,{" "}
-          <b className="text-foreground">{norma.sariqKun} kundan</b> boshlab sariq, kamroq
-          bo&apos;lsa qizil. 30 kunlik davrda talab shunga mutanosib o&apos;sadi. Normani CEO
-          sozlamalarda o&apos;zgartiradi.
+          <b className="text-foreground">{t("Holat")}</b>
+          {" — "}
+          {t("haftada {green} kun faol bo'lsa yashil, {yellow} kundan boshlab sariq, kamroq bo'lsa qizil. 30 kunlik davrda talab shunga mutanosib o'sadi. Normani CEO sozlamalarda o'zgartiradi.", {
+            green: norma.haftalikKun,
+            yellow: norma.sariqKun,
+          })}
         </p>
         <p>
-          <b className="text-foreground">Ikki xil «kirgan»</b> — «bir marta bo&apos;lsa ham kirgan»
-          butun tarix bo&apos;yicha, «davr ichida kirgan» esa faqat tanlangan davr bo&apos;yicha.
-          Ilgari kirib, keyin tashlab ketgan o&apos;quvchi «hech qachon kirmagan» emas.
+          <b className="text-foreground">{t("Ikki xil «kirgan»")}</b>
+          {" — "}
+          {t("«bir marta bo'lsa ham kirgan» butun tarix bo'yicha, «davr ichida kirgan» esa faqat tanlangan davr bo'yicha. Ilgari kirib, keyin tashlab ketgan o'quvchi «hech qachon kirmagan» emas.")}
         </p>
         <p>
-          <b className="text-foreground">O&apos;rtachalar</b> davrda kirganlar orasida hisoblanadi.{" "}
-          <b className="text-foreground">Normani bajarmoqda %</b> barcha faol o&apos;quvchiga
-          nisbatan — akkaunti yo&apos;qlar ham maxrajda turadi.{" "}
-          <b className="text-foreground">To&apos;g&apos;ri javob %</b> esa boshqacha: uning
-          maxraji — javob berilgan savollar soni, o&apos;quvchilar soni emas.
+          {t("O'rtachalar davrda kirganlar orasida hisoblanadi.")}{" "}
+          {t("«Normani bajarmoqda» foizi barcha faol o'quvchiga nisbatan — akkaunti yo'qlar ham maxrajda turadi.")}{" "}
+          {t("«To'g'ri javob» foizi esa boshqacha: uning maxraji — javob berilgan savollar soni, o'quvchilar soni emas.")}
         </p>
         <p>
-          <b className="text-foreground">To&apos;g&apos;ri javob</b> — tugatilgan seanslar
-          bo&apos;yicha. Guruh sahifasidagi foiz urinishlardan hisoblanadi, shuning uchun 1–2 foiz
-          farq qilishi mumkin.
+          <b className="text-foreground">{t("To'g'ri javob")}</b>
+          {" — "}
+          {t("tugatilgan seanslar bo'yicha. Guruh sahifasidagi foiz urinishlardan hisoblanadi, shuning uchun 1–2 foiz farq qilishi mumkin.")}
         </p>
         <p>
           {kuzatuvBoshi
-            ? `Kuzatuv ${formatKunOy(kuzatuvBoshi)} dan boshlangan — undan oldingi kunlar hech kimga hisoblanmaydi.`
-            : "Ilova faolligi hali qayd etilmagan."}
+            ? t("Kuzatuv {date} dan boshlangan — undan oldingi kunlar hech kimga hisoblanmaydi.", { date: formatKunOy(kuzatuvBoshi) })
+            : t("Ilova faolligi hali qayd etilmagan.")}
         </p>
       </div>
     </details>

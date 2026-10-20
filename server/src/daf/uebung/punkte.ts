@@ -71,6 +71,14 @@ export function stufeFuer(gesamt: number): {
 /** Toshkent UTC+5, yozgi vaqt yo'q. */
 const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
 
+/** The Monday ('YYYY-MM-DD', Tashkent) of the week `jetzt` falls in. */
+export function wochenStartTag(jetzt: Date): string {
+  const heute = tashkentDateStr(jetzt);
+  const wochentag = dayOfWeekForDateStr(heute); // 0 = yakshanba
+  const zurueck = wochentag === 0 ? 6 : wochentag - 1;
+  return addDaysToDateStr(heute, -zurueck);
+}
+
 /**
  * Joriy haftaning boshi — DUSHANBA, Toshkent yarim tuni, UTC lahzasi
  * sifatida.
@@ -82,11 +90,7 @@ const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
  * uchun hafta noto'g'ri joyda uzilardi.
  */
 export function wochenStartUtc(jetzt: Date): Date {
-  const heute = tashkentDateStr(jetzt);
-  const wochentag = dayOfWeekForDateStr(heute); // 0 = yakshanba
-  const zurueck = wochentag === 0 ? 6 : wochentag - 1;
-  const montag = addDaysToDateStr(heute, -zurueck);
-  const [my, mm, md] = montag.split('-').map(Number);
+  const [my, mm, md] = wochenStartTag(jetzt).split('-').map(Number);
   return new Date(Date.UTC(my, mm - 1, md) - TASHKENT_OFFSET_MS);
 }
 

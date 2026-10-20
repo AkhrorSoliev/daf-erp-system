@@ -16,6 +16,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { ruleMessage } from "@/components/settings/settings-form-parts";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import type { MockExamParticipant } from "./exam-detail-types";
@@ -53,6 +56,13 @@ const EMPTY_FORM: FormValues = {
   examTime: "",
 };
 
+// Rule messages stay Uzbek in the form state; drawn with `ruleMessage(t, …)`.
+const FIRST_NAME_REQUIRED = msg("Ismni kiriting");
+const LAST_NAME_REQUIRED = msg("Familiyani kiriting");
+const NAME_TOO_LONG = msg("100 belgi chegarasi");
+const PHONE_REQUIRED = msg("Telefon raqamini kiriting");
+const PHONE_PATTERN = msg("9 ta raqamdan iborat bo'lishi kerak");
+
 export function ManualParticipantDialog({
   examId,
   offeredLevels,
@@ -62,6 +72,7 @@ export function ManualParticipantDialog({
   onClose,
   onAdded,
 }: ManualParticipantDialogProps) {
+  const t = useT();
   const {
     register,
     handleSubmit,
@@ -115,10 +126,10 @@ export function ManualParticipantDialog({
         },
       );
       onAdded(data);
-      toast.success("Ishtirokchi qo'shildi");
+      toast.success(t("Ishtirokchi qo'shildi"));
       onClose();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Qo'shishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Qo'shishda xatolik yuz berdi")));
     } finally {
       setSubmitting(false);
     }
@@ -128,10 +139,11 @@ export function ManualParticipantDialog({
     <Dialog open={open} onOpenChange={(o) => !o && !submitting && onClose()}>
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
         <DialogHeader className="border-b px-6 py-4">
-          <DialogTitle>Ishtirokchini qo&apos;lda qo&apos;shish</DialogTitle>
+          <DialogTitle>{t("Ishtirokchini qo'lda qo'shish")}</DialogTitle>
           <DialogDescription>
-            Telegram botidan o&apos;tmagan ishtirokchini qo&apos;lda yozish.
-            Bunday ishtirokchiga natija Telegramda avtomatik yuborilmaydi.
+            {t(
+              "Telegram botidan o'tmagan ishtirokchini qo'lda yozish. Bunday ishtirokchiga natija Telegramda avtomatik yuborilmaydi.",
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -141,7 +153,7 @@ export function ManualParticipantDialog({
           className="flex-1 space-y-4 overflow-y-auto px-6 py-4"
         >
           <div className="space-y-1.5">
-            <Label>Markaz o&apos;quvchisi (ixtiyoriy)</Label>
+            <Label>{t("Markaz o'quvchisi (ixtiyoriy)")}</Label>
             <StudentLinkPicker
               value={linkedStudent}
               onChange={handleLinkChange}
@@ -149,56 +161,60 @@ export function ManualParticipantDialog({
             />
             <p className="text-xs text-muted-foreground">
               {hasStudentDiscount
-                ? "Ishtirokchi markazimiz o'quvchisi bo'lsa, uni tanlang: ism va telefon kartadan olinadi, DaF chegirmasi qo'llanadi (chetlatilgan va arxivdagilardan tashqari)."
-                : "Ishtirokchi markazimiz o'quvchisi bo'lsa, uni tanlang: ism va telefon kartadan olinadi, natijasi o'quvchi profilida ko'rinadi."}
+                ? t(
+                    "Ishtirokchi markazimiz o'quvchisi bo'lsa, uni tanlang: ism va telefon kartadan olinadi, DaF chegirmasi qo'llanadi (chetlatilgan va arxivdagilardan tashqari).",
+                  )
+                : t(
+                    "Ishtirokchi markazimiz o'quvchisi bo'lsa, uni tanlang: ism va telefon kartadan olinadi, natijasi o'quvchi profilida ko'rinadi.",
+                  )}
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="manual-firstName">Ism</Label>
+              <Label htmlFor="manual-firstName">{t("Ism")}</Label>
               <Input
                 id="manual-firstName"
                 placeholder="Aziz"
                 {...register("firstName", {
-                  required: "Ismni kiriting",
-                  maxLength: { value: 100, message: "100 belgi chegarasi" },
+                  required: FIRST_NAME_REQUIRED,
+                  maxLength: { value: 100, message: NAME_TOO_LONG },
                 })}
               />
               {errors.firstName && (
                 <p className="text-xs text-destructive">
-                  {errors.firstName.message}
+                  {ruleMessage(t, errors.firstName.message)}
                 </p>
               )}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="manual-lastName">Familiya</Label>
+              <Label htmlFor="manual-lastName">{t("Familiya")}</Label>
               <Input
                 id="manual-lastName"
                 placeholder="Karimov"
                 {...register("lastName", {
-                  required: "Familiyani kiriting",
-                  maxLength: { value: 100, message: "100 belgi chegarasi" },
+                  required: LAST_NAME_REQUIRED,
+                  maxLength: { value: 100, message: NAME_TOO_LONG },
                 })}
               />
               {errors.lastName && (
                 <p className="text-xs text-destructive">
-                  {errors.lastName.message}
+                  {ruleMessage(t, errors.lastName.message)}
                 </p>
               )}
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label>Telefon raqami</Label>
+            <Label>{t("Telefon raqami")}</Label>
             <Controller
               name="phone"
               control={control}
               rules={{
-                required: "Telefon raqamini kiriting",
+                required: PHONE_REQUIRED,
                 pattern: {
                   value: /^\d{9}$/,
-                  message: "9 ta raqamdan iborat bo'lishi kerak",
+                  message: PHONE_PATTERN,
                 },
               }}
               render={({ field }) => (
@@ -210,20 +226,21 @@ export function ManualParticipantDialog({
             />
             {errors.phone && (
               <p className="text-xs text-destructive">
-                {errors.phone.message}
+                {ruleMessage(t, errors.phone.message)}
               </p>
             )}
             {!linkedStudent && (
               <p className="text-xs text-muted-foreground">
-                Raqam markaz o&apos;quvchisining kartasidagi raqam bo&apos;lsa,
-                o&apos;quvchi avtomatik bog&apos;lanadi.
+                {t(
+                  "Raqam markaz o'quvchisining kartasidagi raqam bo'lsa, o'quvchi avtomatik bog'lanadi.",
+                )}
               </p>
             )}
           </div>
 
           {offeredLevels.length > 0 && (
             <div className="space-y-1.5">
-              <Label>Daraja (ixtiyoriy)</Label>
+              <Label>{t("Daraja (ixtiyoriy)")}</Label>
               <Controller
                 name="level"
                 control={control}
@@ -252,24 +269,24 @@ export function ManualParticipantDialog({
 
           {examTimes.length > 0 && (
             <div className="space-y-1.5">
-              <Label>Vaqt (ixtiyoriy)</Label>
+              <Label>{t("Vaqt (ixtiyoriy)")}</Label>
               <Controller
                 name="examTime"
                 control={control}
                 render={({ field }) => (
                   <div className="flex flex-wrap gap-2">
-                    {examTimes.map((t) => {
-                      const active = field.value === t;
+                    {examTimes.map((time) => {
+                      const active = field.value === time;
                       return (
                         <Button
-                          key={t}
+                          key={time}
                           type="button"
                           size="sm"
                           variant={active ? "default" : "outline"}
-                          onClick={() => field.onChange(active ? "" : t)}
+                          onClick={() => field.onChange(active ? "" : time)}
                           className="tabular-nums"
                         >
-                          🕐 {t}
+                          🕐 {time}
                         </Button>
                       );
                     })}
@@ -287,7 +304,7 @@ export function ManualParticipantDialog({
             onClick={onClose}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button
             type="submit"
@@ -295,7 +312,7 @@ export function ManualParticipantDialog({
             disabled={submitting}
           >
             {submitting && <Loader2 className="size-4 animate-spin" />}
-            Qo&apos;shish
+            {t("Qo'shish")}
           </Button>
         </DialogFooter>
       </DialogContent>

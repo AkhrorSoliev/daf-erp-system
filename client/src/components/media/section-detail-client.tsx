@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, RotateCcw } from "lucide-react";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,20 +35,20 @@ function BoshiSkeleton() {
  * holat harakatga chorlaydi).
  */
 function BoshiXato({ onRetry }: { onRetry: () => void }) {
+  const t = useT();
   return (
     <Card>
       <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm text-muted-foreground">
         <span>
-          Bu bo&apos;lim topilmadi yoki ma&apos;lumoti olinmadi — manzil
-          noto&apos;g&apos;ri bo&apos;lishi mumkin.
+          {t("Bu bo'lim topilmadi yoki ma'lumoti olinmadi — manzil noto'g'ri bo'lishi mumkin.")}
         </span>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={onRetry}>
             <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-            Qayta urinib ko&apos;rish
+            {t("Qayta urinish")}
           </Button>
           <Button asChild size="sm">
-            <Link href="/media">Media ro&apos;yxatiga qaytish</Link>
+            <Link href="/media">{t("Media ro'yxatiga qaytish")}</Link>
           </Button>
         </div>
       </CardContent>
@@ -67,6 +68,7 @@ function BoshiXato({ onRetry }: { onRetry: () => void }) {
  * uchun ikki alohida sahifa emas, ikkita YORLIQ (`?tab=`).
  */
 export function SectionDetailClient({ sectionId }: { sectionId: number }) {
+  const t = useT();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -85,7 +87,7 @@ export function SectionDetailClient({ sectionId }: { sectionId: number }) {
   // "Material" yorlig'i (to'liq javob) bir xil `/inhalt` javobining
   // ikki qismini ko'rsatadi. Kalitlar teng bo'lgani uchun React Query
   // ikkalasiga BITTA keshdan xizmat qiladi — bo'lim ochilganda bitta GET,
-  // va istalgan tarafning "Qayta urinib ko'rish"i ikkalasini yangilaydi
+  // va istalgan tarafning "Qayta urinish"i ikkalasini yangilaydi
   // (ko'rikda topilgan xato: sarlavha xom `axios`da qolib, panel bilan
   // bir xil URL'ni ikkinchi marta so'rardi).
   const {
@@ -177,7 +179,7 @@ export function SectionDetailClient({ sectionId }: { sectionId: number }) {
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href="/media">
             <ArrowLeft className="mr-1.5 h-4 w-4" />
-            Media
+            {t("Media")}
           </Link>
         </Button>
         <BoshiXato onRetry={handleRetry} />
@@ -191,7 +193,7 @@ export function SectionDetailClient({ sectionId }: { sectionId: number }) {
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href="/media">
             <ArrowLeft className="mr-1.5 h-4 w-4" />
-            Media
+            {t("Media")}
           </Link>
         </Button>
         <div className="flex flex-wrap items-center gap-2">
@@ -206,8 +208,8 @@ export function SectionDetailClient({ sectionId }: { sectionId: number }) {
 
       <Tabs value={tab} onValueChange={handleTabChange}>
         <TabsList>
-          <TabsTrigger value="material">Material</TabsTrigger>
-          <TabsTrigger value="savollar">Savollar</TabsTrigger>
+          <TabsTrigger value="material">{t("Material")}</TabsTrigger>
+          <TabsTrigger value="savollar">{t("Savollar")}</TabsTrigger>
         </TabsList>
         <TabsContent value="material">
           <MediaInhaltPanel sectionId={sectionId} />

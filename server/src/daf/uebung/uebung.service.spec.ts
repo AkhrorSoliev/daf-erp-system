@@ -361,6 +361,8 @@ function fakePrisma() {
       findUnique: jest.fn(async () => null),
       upsert: jest.fn(async () => ({ id: 1 })),
     },
+    $executeRaw: jest.fn(async () => 1),
+    $transaction: jest.fn(async (ops: Promise<unknown>[]) => Promise.all(ops)),
     dafAttempt: {
       create: jest.fn(async () => ({ id: 1 })),
       findMany: jest.fn(async () => []),

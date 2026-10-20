@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useEditBranch } from "@/hooks/use-edit-branch";
 import { EditBranchForm } from "./edit-branch-form";
+import { useT } from "@/i18n/context";
 import type { Branch } from "@/hooks/use-edit-branch";
 
 interface EditBranchDrawerProps {
@@ -18,6 +19,7 @@ interface EditBranchDrawerProps {
 }
 
 export function EditBranchDrawer({ onSaved }: EditBranchDrawerProps) {
+  const t = useT();
   const { open, mode, branch, submitting, closeDrawer } = useEditBranch();
 
   const isAdd = mode === "add";
@@ -33,12 +35,12 @@ export function EditBranchDrawer({ onSaved }: EditBranchDrawerProps) {
       >
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle className="text-lg">
-            {isAdd ? "Yangi filial qo'shish" : "Filialni tahrirlash"}
+            {isAdd ? t("Yangi filial qo'shish") : t("Filialni tahrirlash")}
           </SheetTitle>
           <SheetDescription>
             {isAdd
-              ? "Yangi filial ma'lumotlarini kiriting"
-              : "Filial ma\u2019lumotlarini o\u2018zgartirish"}
+              ? t("Yangi filial ma'lumotlarini kiriting")
+              : t("Filial ma'lumotlarini o'zgartirish")}
           </SheetDescription>
         </SheetHeader>
 
@@ -55,10 +57,10 @@ export function EditBranchDrawer({ onSaved }: EditBranchDrawerProps) {
         <SheetFooter className="border-t px-6 py-4">
           <div className="flex w-full justify-end gap-3">
             <Button type="button" variant="outline" onClick={closeDrawer}>
-              Bekor qilish
+              {t("Bekor qilish")}
             </Button>
             <Button type="submit" form="edit-branch-form" disabled={submitting}>
-              {submitting ? "Saqlanmoqda..." : isAdd ? "Qo'shish" : "Saqlash"}
+              {submitting ? t("Saqlanmoqda...") : isAdd ? t("Qo'shish") : t("Saqlash")}
             </Button>
           </div>
         </SheetFooter>

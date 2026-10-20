@@ -28,7 +28,7 @@ export const EXIT_REASON_COMMENT_ERROR =
 /**
  * True when an exit reason reads like a move to another group («Boshqa
  * guruhga ko'chdi»): the student did not leave, so the removal is settled as
- * a transfer (the unheld lessons come back, ADR-0114). Apostrophe variants
+ * a transfer (the unheld lessons come back, ADR-0115). Apostrophe variants
  * are normalised before matching.
  *
  * Client mirror: `looksLikeGroupMove` in client/src/lib/exit-reason-utils.ts

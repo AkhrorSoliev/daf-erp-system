@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPrice } from "@/lib/format-utils";
@@ -28,7 +29,7 @@ import type { MockExamParticipant } from "./exam-detail-types";
 import { participantFee } from "./mock-fee";
 import {
   MOCK_PAYMENT_METHODS,
-  MOCK_PAYMENT_METHOD_LABELS,
+  mockPaymentMethodLabel,
   type MockPaymentMethod,
 } from "./mock-payment";
 
@@ -45,6 +46,7 @@ export function MarkPaidDialog({
   onClose,
   onMarked,
 }: MarkPaidDialogProps) {
+  const t = useT();
   const [method, setMethod] = useState<MockPaymentMethod>("CASH");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -66,10 +68,10 @@ export function MarkPaidDialog({
         { method, note: note.trim() || undefined },
       );
       onMarked(data);
-      toast.success("To'lov qabul qilindi");
+      toast.success(t("To'lov qabul qilindi"));
       onClose();
     } catch (error) {
-      toast.error(getErrorMessage(error, "To'lovni belgilashda xatolik"));
+      toast.error(getErrorMessage(error, t("To'lovni belgilashda xatolik")));
     } finally {
       setSubmitting(false);
     }
@@ -82,25 +84,26 @@ export function MarkPaidDialog({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>To&apos;lov qabul qilish</DialogTitle>
+          <DialogTitle>{t("To'lov qabul qilish")}</DialogTitle>
           <DialogDescription>
             {participant?.firstName} {participant?.lastName} —{" "}
             <span className="font-medium">
               {/* Ishtirokchi to'lashi kerak bo'lgan summa (DaF chegirmasi
                   bilan), imtihonning to'liq narxi emas. */}
-              {formatPrice(
-                participant
-                  ? participantFee(participant, examPrice)
-                  : examPrice,
-              )}{" "}
-              so&apos;m
+              {t("{amount} so'm", {
+                amount: formatPrice(
+                  participant
+                    ? participantFee(participant, examPrice)
+                    : examPrice,
+                ),
+              })}
             </span>
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="method">To&apos;lov turi</Label>
+            <Label htmlFor="method">{t("To'lov turi")}</Label>
             <Select
               value={method}
               onValueChange={(v) => setMethod(v as MockPaymentMethod)}
@@ -112,7 +115,7 @@ export function MarkPaidDialog({
               <SelectContent>
                 {MOCK_PAYMENT_METHODS.map((m) => (
                   <SelectItem key={m} value={m}>
-                    {MOCK_PAYMENT_METHOD_LABELS[m]}
+                    {mockPaymentMethodLabel(m, t)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -120,12 +123,12 @@ export function MarkPaidDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="note">Izoh (ixtiyoriy)</Label>
+            <Label htmlFor="note">{t("Izoh (ixtiyoriy)")}</Label>
             <Textarea
               id="note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Masalan: kassaga naxt to'lov, chek raqami..."
+              placeholder={t("Masalan: kassaga naqd to'lov, chek raqami...")}
               rows={3}
               maxLength={500}
               disabled={submitting}
@@ -140,11 +143,11 @@ export function MarkPaidDialog({
             onClick={onClose}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button type="button" onClick={handleSubmit} disabled={submitting}>
             {submitting && <Loader2 className="size-4 animate-spin" />}
-            Qabul qilish
+            {t("Qabul qilish")}
           </Button>
         </DialogFooter>
       </DialogContent>
