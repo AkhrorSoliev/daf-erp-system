@@ -190,7 +190,11 @@ export function NatijaEkrani({
   const qator = natijaQatorlari(natija);
   const sanaladiganBall = useSanaladiganBall(qator.ball);
   const yutuqlarBormi =
-    qator.ball != null || qator.serie != null || qator.orin != null;
+    qator.ball != null ||
+    qator.serie != null ||
+    qator.orin != null ||
+    qator.maqsad != null ||
+    qator.nishonlar.length > 0;
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col justify-center gap-4 px-4 py-8">
@@ -245,6 +249,14 @@ export function NatijaEkrani({
                 {qator.orin}
               </p>
             ) : null}
+            {qator.maqsad ? (
+              <p className="w-full text-sm font-bold text-success">{qator.maqsad}</p>
+            ) : null}
+            {qator.nishonlar.map((matn) => (
+              <p key={matn} className="w-full text-sm font-bold text-ink-900">
+                {matn}
+              </p>
+            ))}
           </Card>
         ) : null}
 

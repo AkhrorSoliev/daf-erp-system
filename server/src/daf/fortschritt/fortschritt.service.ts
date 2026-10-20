@@ -1,17 +1,31 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import type { DafDailyGoal } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   tashkentDateStr,
   utcMidnightFromDateStr,
 } from '../../common/date/tashkent';
 import { currentGroupId } from '../shared/student-scope';
+import { reytingIsmi } from '../shared/reyting-ismi';
+import { liganiYangilaXavfsiz } from '../liga/liga-seans';
+import { ligaJavobi, type LigaJavobi } from '../liga/liga-xona';
+import { guruhlarJavobi, type GuruhlarJavobi } from '../liga/guruhlar-jadvali';
+import { nishonlarniBerXavfsiz, woerterSoni } from '../nishon/nishon-berish';
 import {
+  MAQSAD_BALL,
+  maqsadDarajasi,
+  maqsadHolati,
   serieAus,
   stufeFuer,
   wochenStartTag,
   wochenStartUtc,
+  yangiBajarildi,
+  type MaqsadHolati,
 } from '../uebung/punkte';
+import { nishonlarRoyxati, type NishonQatori } from '../nishon/nishonlar';
+import { bugunBoshmi, maqsadniSaqla } from './maqsad';
+import { eslatmalarniSaqla } from '../eslatma/eslatma-sozlama';
 
 export interface Fortschritt {
   gesamt: number;
@@ -30,6 +44,12 @@ export interface Fortschritt {
    * javob beradi — taxmin emas.
    */
   faelligeWoerter: number;
+  /** Kunlik maqsad (spec S2 1.3): daraja, maqsad balli, bugungi ball, holat. */
+  maqsad: MaqsadHolati;
+  /** S4: Telegram eslatmalari yoqilganmi (sozlama qatori yo'q = yoqilgan). */
+  eslatmalar: boolean;
+  /** S4: karta botga ulangan va chat uzilmagan (ADR-0066 belgisi yo'q). */
+  telegramUlangan: boolean;
 }
 
 export interface ReytingZeile {
@@ -49,6 +69,15 @@ export interface SeansNatijasi {
     gruppe: { oldin: number; hozir: number } | null;
     zentrum: { oldin: number; hozir: number };
   };
+  /** Kunlik maqsad: `yangiBajarildi` — shu seans uni kesib o'tdi (spec S2 1.3). */
+  maqsad: {
+    ball: number;
+    hozir: number;
+    bajarildi: boolean;
+    yangiBajarildi: boolean;
+  };
+  /** Shu seans bergan nishon kalitlari (spec S2 2.3). */
+  yangiNishonlar: string[];
 }
 
 export type ReytingQamrovi = 'gruppe' | 'zentrum';
@@ -61,6 +90,11 @@ interface OquvchiRaqamlari {
   gesamt: number;
   tage: string[];
   heuteAttempts: number;
+  heutePunkte: number;
+  /** `DafStudentSetting.dailyGoal`, qator yo'q bo'lsa `null`. */
+  dailyGoal: string | null;
+  eslatmalar: boolean;
+  telegramUlangan: boolean;
 }
 
 /** Haftalik jadvaldan qaytadigan bitta qatorning umumlashgan shakli. */
@@ -171,14 +205,15 @@ export class FortschrittService {
     // Hamma so'rov BIR bosqichda: 50 o'quvchi bir vaqtda kelganda har
     // ketma-ket bosqich ulanishlar navbatiga qaytadan turadi (S1 yuklama
     // sinovi). Guruh zanjiri faqat `groupId` ga bog'liq.
-    const [faelligeWoerter, oz, wochePlatzGruppe] = await Promise.all([
+    const faelligeP = this.prisma.dafLexemeState.count({
+      where: { studentId, dueAt: { lte: hozir } },
+    } as any);
+    const [faelligeWoerter, oz, wochePlatzGruppe, bosh] = await Promise.all([
       // `uebung.wiederholung()` bilan BIR XIL predikat (`dueAt <= hozir`)
       // — bu shu o'quvchi uchun so'ragan `student`ga tegishli qatorlar
       // ustida ishlaydi, deyarli bepul (`DafLexemeState` studentId bo'yicha
       // indekslangan).
-      this.prisma.dafLexemeState.count({
-        where: { studentId, dueAt: { lte: hozir } },
-      } as any),
+      faelligeP,
       // Markaz o'rni `zentrumHaftaCte` orqali hisoblanadi — xuddi shu
       // bo'lak `reyting('zentrum')` jadvalini quradi. Guruh uchun
       // qilingan tuzatish (pastdagi izohga qarang) markazga tegishli emas
@@ -202,6 +237,10 @@ export class FortschrittService {
       // populyatsiyasi bilan hisoblangan eski versiya butun rosterni
       // emas, faqat urinish qilganlarni ko'rgan).
       this.gruppePlatz(studentId, companyId, montag),
+      // Kam yo'l: so'z bor bo'lsa so'rovsiz `false` (spec S2 1.3); so'z yo'q
+      // bo'lsa dars so'rovi sanash bilan ketma-ket, lekin qolgan so'rovlar
+      // bilan PARALLEL — kritik yo'l uzaymaydi.
+      faelligeP.then((n) => bugunBoshmi(this.prisma, studentId, n)),
     ]);
 
     const gesamt = oz.gesamt;
@@ -218,6 +257,9 @@ export class FortschrittService {
       wochePlatzGruppe,
       wochePlatzZentrum: oz.hozir,
       faelligeWoerter,
+      maqsad: maqsadHolati(maqsadDarajasi(oz.dailyGoal), oz.heutePunkte, bosh),
+      eslatmalar: oz.eslatmalar,
+      telegramUlangan: oz.telegramUlangan,
     };
   }
 
@@ -275,6 +317,20 @@ export class FortschrittService {
     const shuHaftaOf = (xs: Awaited<typeof urinishlarP>) =>
       xs.filter((u) => u.createdAt >= montagUtc);
 
+    // So'z soni seriyaga bog'liq emas: birinchi bosqichda parallel. Yiqilsa
+    // `null` (nishon berilmaydi) — bu yerda tashlanmaydi, aks holda
+    // `urinishlarP` yiqilganda ushlanmagan rad etish qoladi.
+    const woerterP = woerterSoni(this.prisma, studentId).catch(() => null);
+    // S3: liga holati — bitta so'rov, birinchi bosqich bilan parallel; xonaga
+    // qo'shilish (haftada bir marta) va kechikkan hisob ham shu zanjirda.
+    // Hech qachon otmaydi: `null` bo'lsa liga nishonlari berilmaydi.
+    const ligaP = liganiYangilaXavfsiz(
+      this.prisma,
+      studentId,
+      companyId,
+      jetzt,
+    );
+
     const [urinishlar, oz, guruh] = await Promise.all([
       urinishlarP,
       urinishlarP.then((xs) =>
@@ -290,9 +346,10 @@ export class FortschrittService {
     ]);
 
     const shuHafta = shuHaftaOf(urinishlar);
-    const bugungi = urinishlar.filter(
+    const bugungiUrinishlar = urinishlar.filter(
       (u) => tashkentDateStr(u.createdAt) === heute,
-    ).length;
+    );
+    const bugungi = bugungiUrinishlar.length;
 
     let gruppe: SeansNatijasi['orin']['gruppe'] = null;
     if (guruh && guruh.saralangan.length > 0) {
@@ -306,14 +363,56 @@ export class FortschrittService {
       };
     }
 
+    const serie = serieAus(oz.tage, heute);
+    const ball = MAQSAD_BALL[maqsadDarajasi(oz.dailyGoal)];
+    // Seansdan oldingi bugungi ball = hozir − seansning BUGUNGI qismi
+    // (yarim tundan oldingi qismi kechaga tushgan).
+    const kesdi = yangiBajarildi(
+      ball,
+      oz.heutePunkte,
+      sum(bugungiUrinishlar),
+      false,
+    );
+    // `bosh` faqat maqsad kesilganda o'qiladi — kuniga ko'pi bilan bir marta.
+    // Nishonlar shu yerda (seriya yangilangan); xatosi o'zi ushlanadi,
+    // natija `null` ga tushmaydi. `bosh` yiqilsa faqat `yangiBajarildi`
+    // pasayadi (false): nishonlar allaqachon yozilgan bo'lishi mumkin va
+    // keyingi INSERT ularni qaytarmaydi, natijani yo'qotib bo'lmaydi.
+    const [bosh, yangiNishonlar] = await Promise.all([
+      kesdi
+        ? bugunBoshmi(this.prisma, studentId).catch((err: Error) => {
+            this.logger.warn(
+              `Bosh holat o'qilmadi (studentId=${studentId}): ${err.message}`,
+            );
+            return true;
+          })
+        : Promise.resolve(false),
+      nishonlarniBerXavfsiz(
+        this.prisma,
+        studentId,
+        companyId,
+        serie,
+        woerterP,
+        ligaP,
+      ),
+    ]);
+
     return {
       punkte: sum(urinishlar),
-      serie: serieAus(oz.tage, heute),
+      serie,
       serieYangi: bugungi > 0 && oz.heuteAttempts === bugungi,
       orin: {
         gruppe,
         zentrum: { oldin: oz.oldin, hozir: oz.hozir },
       },
+      // `bajarildi` faqat ballga qarab: `bosh` kesilgandagina o'qiladi.
+      maqsad: {
+        ball,
+        hozir: oz.heutePunkte,
+        bajarildi: oz.heutePunkte >= ball,
+        yangiBajarildi: kesdi && !bosh,
+      },
+      yangiNishonlar,
     };
   }
 
@@ -336,6 +435,39 @@ export class FortschrittService {
       );
       return null;
     }
+  }
+
+  /** `PATCH .../maqsad` — o'quvchi faqat o'zining maqsadini o'zgartiradi. */
+  maqsadniOzgartir(
+    studentId: number,
+    companyId: number,
+    daraja: DafDailyGoal,
+  ): Promise<MaqsadHolati> {
+    return maqsadniSaqla(this.prisma, studentId, companyId, daraja);
+  }
+
+  /** `PATCH .../eslatmalar` — S4: o'quvchi faqat o'z eslatmalarini o'zgartiradi. */
+  eslatmalarniOzgartir(
+    studentId: number,
+    companyId: number,
+    yoqilgan: boolean,
+  ): Promise<{ eslatmalar: boolean }> {
+    return eslatmalarniSaqla(this.prisma, studentId, companyId, yoqilgan);
+  }
+
+  /** `GET .../nishonlar` — hamma katalog, o'quvchining o'z nishonlari bilan. Yozmaydi. */
+  nishonlar(studentId: number, companyId: number): Promise<NishonQatori[]> {
+    return nishonlarRoyxati(this.prisma, studentId, companyId, new Date());
+  }
+
+  /** `GET .../liga` — o'quvchining xonasi va darajasi (spec S3 §4). Yozmaydi. */
+  liga(studentId: number): Promise<LigaJavobi> {
+    return ligaJavobi(this.prisma, studentId, new Date());
+  }
+
+  /** `GET .../guruhlar` — markazning haftalik guruhlar jadvali (spec S3 §2). Yozmaydi. */
+  guruhlar(studentId: number, companyId: number): Promise<GuruhlarJavobi> {
+    return guruhlarJavobi(this.prisma, studentId, companyId, new Date());
   }
 
   async reyting(
@@ -443,6 +575,15 @@ export class FortschrittService {
    *   "mashq qilingan kun" bo'yicha, "tugatilgan seans" emas: seansni
    *   boshlab tugatmagan o'quvchi ham seriyasini saqlaydi.
    * - `heuteAttempts` — bugungi (Toshkent) urinishlar soni.
+   * - `heutePunkte` — bugungi (Toshkent) ball, hamma `groupKey` (kunlik
+   *   maqsad, spec S2 1.1).
+   * - `dailyGoal` — `DafStudentSetting` dagi tanlov yoki `null`. Shu so'rovga
+   *   CTE sifatida qo'shilgan: alohida `findUnique` 50 parallel o'quvchida
+   *   ulanish navbatiga yana bir joy olardi.
+   * - `eslatmalar`, `telegramUlangan` — S4: `remindersEnabled` (qator yo'q =
+   *   true) va kartaning botga ulanganligi; `sozlama` / `ulanish` CTE lari,
+   *   alohida so'rov yo'q. `ulanish` `o` CTE sidan OLDIN turadi: oxirgi ikki
+   *   bog'langan qiymat hamon `minus`, `heuteTag`.
    *
    * Guruh tomonidagi `gruppeHaftaligi` tuzatishi markazga ham tegishli:
    * mashq qilmagan o'quvchi ham o'rin oladi, va jadvalda ham shu o'rin
@@ -468,6 +609,14 @@ export class FortschrittService {
         WHERE "studentId" = ${studentId}
       ),
       q AS (SELECT "studentId" AS id, p FROM t WHERE "studentId" = ${studentId}),
+      sozlama AS (
+        SELECT "dailyGoal"::text AS g, "remindersEnabled" AS e FROM "DafStudentSetting"
+        WHERE "studentId" = ${studentId}
+      ),
+      ulanish AS (
+        SELECT ("telegramChatId" IS NOT NULL AND "telegramDisconnectedAt" IS NULL) AS u
+        FROM "Student" WHERE id = ${studentId}
+      ),
       o AS (SELECT id, p, GREATEST(p - ${minus}::int, 0) AS op FROM q),
       r AS (
         SELECT o.p AS punkte,
@@ -477,14 +626,22 @@ export class FortschrittService {
             AND (t.p > o.op OR (t.p = o.op AND t."studentId" < o.id))))::int AS oldin
         FROM t CROSS JOIN o
         GROUP BY o.id, o.p, o.op
+      ),
+      bugun AS (
+        SELECT COALESCE(SUM(points), 0)::int AS p,
+               COALESCE(SUM(attempts), 0)::int AS a
+        FROM mine WHERE day = ${heuteTag}::date
       )
       SELECT r.punkte, r.hozir, r.oldin,
         (SELECT COALESCE(SUM(points), 0)::int FROM mine) AS gesamt,
         ARRAY(
           SELECT DISTINCT to_char(day, 'YYYY-MM-DD') FROM mine WHERE attempts > 0
         ) AS tage,
-        (SELECT COALESCE(SUM(attempts), 0)::int FROM mine
-          WHERE day = ${heuteTag}::date) AS "heuteAttempts"
+        (SELECT a FROM bugun) AS "heuteAttempts",
+        (SELECT p FROM bugun) AS "heutePunkte",
+        (SELECT g FROM sozlama) AS "dailyGoal",
+        COALESCE((SELECT e FROM sozlama), true) AS eslatmalar,
+        COALESCE((SELECT u FROM ulanish), false) AS "telegramUlangan"
       FROM r`,
     );
     return satr;
@@ -542,9 +699,7 @@ export class FortschrittService {
       where: { id: { in: idlar } },
       select: { id: true, firstName: true, lastName: true },
     });
-    const nomMap = new Map(
-      talabalar.map((t) => [t.id, `${t.firstName} ${t.lastName}`]),
-    );
+    const nomMap = new Map(talabalar.map((t) => [t.id, reytingIsmi(t)]));
 
     return qatorlar.map((q) => ({
       studentId: q.studentId,
@@ -564,9 +719,7 @@ export class FortschrittService {
       where: { id: { in: idlar } },
       select: { id: true, firstName: true, lastName: true },
     });
-    const nomMap = new Map(
-      talabalar.map((t) => [t.id, `${t.firstName} ${t.lastName}`]),
-    );
+    const nomMap = new Map(talabalar.map((t) => [t.id, reytingIsmi(t)]));
 
     return saralangan.map((s, i) => ({
       studentId: s.studentId,

@@ -6,6 +6,7 @@ import { Fire, Medal, Star, Trophy } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "../../lumio";
 import { useFortschritt } from "../queries";
+import { MaqsadKartasi } from "./maqsad-kartasi";
 import { qisqaRaqam } from "./yol-tuzilishi";
 
 /**
@@ -59,13 +60,20 @@ function Belgi({
   return <span className="shrink-0">{badan}</span>;
 }
 
-/** Skelet holati — belgilar yo'q bo'lib ketmaydi, sahifa sakramaydi. */
-function YolTepasiSkelet() {
+/**
+ * Skelet holati — belgilar yo'q bo'lib ketmaydi, sahifa sakramaydi. Maqsad kartasi
+ * (81 px + 12 px oraliq) uchun ham joy qoldiriladi: usiz ma'lumot kelgach butun
+ * yo'l 93 px pastga tushardi.
+ */
+export function YolTepasiSkelet() {
   return (
-    <div aria-hidden className="flex items-center gap-1.5 sm:gap-2">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <Skeleton key={i} className="h-8 w-16 rounded-pill sm:w-20" />
-      ))}
+    <div aria-hidden className="space-y-3">
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-8 w-16 rounded-pill sm:w-20" />
+        ))}
+      </div>
+      <Skeleton className="h-[81px] sm:max-w-md" />
     </div>
   );
 }
@@ -83,6 +91,8 @@ function YolTepasiSkelet() {
  * `useFortschritt` yiqilsa BUTUNLAY yashiriladi. Ball ekranning bezagi,
  * maqsadi emas — mashqning o'zi maqsad, shuning uchun bu yon so'rovning
  * qulashi butun yo'lni to'sishi noto'g'ri bo'lardi.
+ *
+ * Ostida kunlik maqsad kartasi (S2) — to'rt belgidan keyingi qator, telefonda to'liq kenglikda.
  */
 export function YolTepasi() {
   const { data, isLoading, isError } = useFortschritt();
@@ -92,32 +102,39 @@ export function YolTepasi() {
   if (!data) return null;
 
   return (
-    <div className="flex items-center gap-1.5 sm:gap-2">
-      <Belgi
-        icon={<Medal size={18} weight="fill" />}
-        tone="text-grape-500"
-        value={data.stufe.de}
-      />
-      <Belgi
-        icon={<Star size={18} weight="fill" />}
-        tone="text-amber-500"
-        value={qisqaRaqam(data.gesamt)}
-        suffix=" ball"
-      />
-      <Belgi
-        icon={<Fire size={18} weight="fill" />}
-        tone="text-coral-500"
-        value={qisqaRaqam(data.serie)}
-        suffix=" kun"
-      />
-      <Belgi
-        icon={<Trophy size={18} weight="fill" />}
-        tone="text-sky-500"
-        value={qisqaRaqam(data.wochePlatzZentrum)}
-        suffix="-o'rin"
-        href="/portal/lernen/reyting"
-        ariaLabel={`Reyting: ${data.wochePlatzZentrum}-o'rin`}
-      />
+    <div className="space-y-3">
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        <Belgi
+          icon={<Medal size={18} weight="fill" />}
+          tone="text-grape-500"
+          value={data.stufe.de}
+        />
+        <Belgi
+          icon={<Star size={18} weight="fill" />}
+          tone="text-amber-500"
+          value={qisqaRaqam(data.gesamt)}
+          suffix=" ball"
+        />
+        <Belgi
+          icon={<Fire size={18} weight="fill" />}
+          tone="text-coral-500"
+          value={qisqaRaqam(data.serie)}
+          suffix=" kun"
+        />
+        <Belgi
+          icon={<Trophy size={18} weight="fill" />}
+          tone="text-sky-500"
+          value={qisqaRaqam(data.wochePlatzZentrum)}
+          suffix="-o'rin"
+          href="/portal/lernen/reyting"
+          ariaLabel={`Reyting: ${data.wochePlatzZentrum}-o'rin`}
+        />
+      </div>
+      {data.maqsad ? (
+        <div className="sm:max-w-md">
+          <MaqsadKartasi maqsad={data.maqsad} />
+        </div>
+      ) : null}
     </div>
   );
 }

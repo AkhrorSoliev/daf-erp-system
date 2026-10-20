@@ -147,6 +147,7 @@ function fakeDayPrisma() {
       ),
     },
     dafLexemeState: { count: jest.fn(async () => 0) },
+    dafLesson: { findFirst: jest.fn(async () => ({ id: 1 })) },
   } as any;
 }
 

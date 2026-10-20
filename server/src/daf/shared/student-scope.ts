@@ -1,4 +1,4 @@
-import { PrismaService } from '../../prisma/prisma.service';
+import type { Prisma } from '@prisma/client';
 
 /**
  * O'quvchining hozirgi guruhi — urinish yozuviga MUHRLANADI.
@@ -11,7 +11,7 @@ import { PrismaService } from '../../prisma/prisma.service';
  * Bir nechta faol yozilish bo'lsa eng yangisi olinadi.
  */
 export async function currentGroupId(
-  prisma: PrismaService,
+  prisma: Pick<Prisma.TransactionClient, 'enrollment'>,
   studentId: number,
 ): Promise<string | null> {
   const enrollment = await prisma.enrollment.findFirst({

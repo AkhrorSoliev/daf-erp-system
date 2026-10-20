@@ -30,7 +30,7 @@ describe('exitReasonRequiresComment', () => {
   });
 });
 
-describe('looksLikeGroupMove (ADR-0115)', () => {
+describe('looksLikeGroupMove (ADR-0118)', () => {
   it.each([
     "Boshqa guruhga ko'chdi",
     'Boshqa guruhga kochdi',

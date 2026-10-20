@@ -64,7 +64,7 @@ function recordingPrisma() {
 
 interface Route {
   handler: string;
-  verb: 'get' | 'post';
+  verb: 'get' | 'post' | 'patch';
   url: string;
 }
 
@@ -85,7 +85,7 @@ function controllerRoutes(): Route[] {
       | undefined;
     if (path === undefined || method === undefined) continue;
     const verb = RequestMethod[method].toLowerCase();
-    if (verb !== 'get' && verb !== 'post') {
+    if (verb !== 'get' && verb !== 'post' && verb !== 'patch') {
       throw new Error(`${handler}: add ${verb} support to this spec`);
     }
     routes.push({
@@ -197,8 +197,8 @@ describe('DafPortalController — a token without studentId', () => {
       .send({});
   }
 
-  it('reads every route from the controller (16 when written)', () => {
-    expect(ROUTES.length).toBeGreaterThanOrEqual(16);
+  it('reads every route from the controller (18 when written)', () => {
+    expect(ROUTES.length).toBeGreaterThanOrEqual(18);
     expect(ROUTES).toContainEqual({
       handler: 'getLevels',
       verb: 'get',
