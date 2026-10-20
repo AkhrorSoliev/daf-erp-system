@@ -59,6 +59,6 @@ describe("commentStateLabel", () => {
   it("names the three states", () => {
     expect(commentStateLabel("WRITTEN")).toEqual({ text: "Yozdi", tone: "green" });
     expect(commentStateLabel("NOT_WRITTEN")).toEqual({ text: "Yozmadi", tone: "muted" });
-    expect(commentStateLabel("PENDING")).toEqual({ text: "Kutilmoqda", tone: "amber" });
+    expect(commentStateLabel("PENDING")).toEqual({ text: "Izoh kutilmoqda", tone: "amber" });
   });
 });

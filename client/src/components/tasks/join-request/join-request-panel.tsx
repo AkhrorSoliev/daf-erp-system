@@ -15,6 +15,7 @@ import { formatPhone } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { LEAD_STATUS_LABELS, type LeadStatus } from "@/hooks/use-leads-board";
 import { useCan, usePermissionsReady } from "@/hooks/use-permissions";
+import { useT } from "@/i18n/context";
 import { canApprove, decidedLine, initialGroupId, joinRequestNotes, requestedAtText, type JoinNote, type JoinRequestView } from "./join-request-rules";
 
 // Blue and yellow, not sky and amber: outside the student portal those two
@@ -27,6 +28,7 @@ const TONE: Record<JoinNote["tone"], string> = {
 
 /** «Yangi o'quvchi so'rovi» (ADR-0080): the request, what the server found, and the decision. */
 export function JoinRequestPanel({ taskId, onDecided }: { taskId: string; onDecided: () => void }) {
+  const t = useT();
   // Every route behind the panel is `students.enroll`: without it the read
   // would only come back 403, so it is not sent.
   const ready = usePermissionsReady();
@@ -44,17 +46,17 @@ export function JoinRequestPanel({ taskId, onDecided }: { taskId: string; onDeci
   const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
 
   if (!ready || (allowed && isLoading)) return <Skeleton className="h-44 w-full" />;
-  if (!allowed) return <p className="rounded-md bg-muted px-3 py-2 text-sm">Javob berish uchun ruxsat yo&apos;q</p>;
+  if (!allowed) return <p className="rounded-md bg-muted px-3 py-2 text-sm">{t("Javob berish uchun ruxsat yo'q")}</p>;
   if (isError || !data) {
     return (
       <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-        <span>So&apos;rovni yuklab bo&apos;lmadi</span>
-        <Button variant="outline" size="sm" onClick={() => void refetch()}>Qayta urinish</Button>
+        <span>{t("So'rovni yuklab bo'lmadi")}</span>
+        <Button variant="outline" size="sm" onClick={() => void refetch()}>{t("Qayta urinish")}</Button>
       </div>
     );
   }
 
-  const decided = decidedLine(data);
+  const decided = decidedLine(data, t);
   if (decided) {
     return (
       <p className="rounded-md bg-muted px-3 py-2 text-sm">
@@ -68,19 +70,19 @@ export function JoinRequestPanel({ taskId, onDecided }: { taskId: string; onDeci
   }
 
   const groupId = picked ?? initialGroupId(data);
-  const leadLabel = data.lead ? (LEAD_STATUS_LABELS[data.lead.status as LeadStatus] ?? null) : null;
-  const notes = joinRequestNotes(data, groupId, leadLabel);
+  const leadStatus = data.lead ? (LEAD_STATUS_LABELS[data.lead.status as LeadStatus] ?? null) : null;
+  const notes = joinRequestNotes(data, groupId, leadStatus ? t(leadStatus) : null, t);
 
   const approve = async () => {
     if (!groupId) return;
     setBusy("approve");
     try {
       const res = await api.post<{ studentId: number; delivered: boolean }>(`/student-join-requests/${data.id}/approve`, { groupId });
-      toast.success(`O'quvchi guruhga qo'shildi — #${res.data.studentId}`);
-      if (!res.data.delivered) toast.error("Xabar Telegram'ga yetmadi — o'quvchi parolni botdagi «Parolni tiklash» orqali oladi");
+      toast.success(t("O'quvchi guruhga qo'shildi — #{id}", { id: String(res.data.studentId) }));
+      if (!res.data.delivered) toast.error(t("Xabar Telegram'ga yetmadi — o'quvchi parolni botdagi «Parolni tiklash» orqali oladi"));
       onDecided();
     } catch (e) {
-      toast.error(getErrorMessage(e, "Tasdiqlashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(e, t("Tasdiqlashda xatolik yuz berdi")));
     } finally {
       setBusy(null);
       void refetch();
@@ -91,12 +93,12 @@ export function JoinRequestPanel({ taskId, onDecided }: { taskId: string; onDeci
     setBusy("reject");
     try {
       await api.post(`/student-join-requests/${data.id}/reject`, { reason: reason.trim() });
-      toast.success("So'rov rad etildi");
+      toast.success(t("So'rov rad etildi"));
       setRejectOpen(false);
       setReason("");
       onDecided();
     } catch (e) {
-      toast.error(getErrorMessage(e, "Rad etishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(e, t("Rad etishda xatolik yuz berdi")));
     } finally {
       setBusy(null);
       void refetch();
@@ -115,14 +117,14 @@ export function JoinRequestPanel({ taskId, onDecided }: { taskId: string; onDeci
           {data.telegramUsername && (
             <a href={`https://t.me/${data.telegramUsername}`} target="_blank" rel="noreferrer" className="text-primary hover:underline">@{data.telegramUsername}</a>
           )}
-          <p className="text-xs text-muted-foreground">So&apos;rov: {requestedAtText(data.createdAt)}</p>
+          <p className="text-xs text-muted-foreground">{t("So'rov: {date}", { date: requestedAtText(data.createdAt) })}</p>
         </div>
       </div>
 
       <div className="flex items-center gap-2 text-sm">
-        <span className="shrink-0 text-muted-foreground">Guruh</span>
+        <span className="shrink-0 text-muted-foreground">{t("Guruh")}</span>
         <Select value={groupId ?? undefined} onValueChange={setPicked}>
-          <SelectTrigger className="w-full"><SelectValue placeholder="Guruhni tanlang" /></SelectTrigger>
+          <SelectTrigger className="w-full"><SelectValue placeholder={t("Guruhni tanlang")} /></SelectTrigger>
           <SelectContent>
             {data.groups.map((g) => (
               <SelectItem key={g.id} value={g.id}>{g.name}{g.teacherName ? ` — ${g.teacherName}` : ""}</SelectItem>
@@ -134,23 +136,23 @@ export function JoinRequestPanel({ taskId, onDecided }: { taskId: string; onDeci
       {notes.map((n) => <p key={n.text} className={cn("rounded-md px-3 py-2 text-xs", TONE[n.tone])}>{n.text}</p>)}
 
       <div className="flex justify-end gap-2">
-        <Button variant="outline" disabled={busy !== null} onClick={() => setRejectOpen(true)}>Rad etish</Button>
+        <Button variant="outline" disabled={busy !== null} onClick={() => setRejectOpen(true)}>{t("Rad etish")}</Button>
         <Button disabled={!canApprove(data, groupId) || busy !== null} onClick={() => void approve()}>
-          {busy === "approve" && <Loader2 className="mr-1.5 size-4 animate-spin" />}Tasdiqlash
+          {busy === "approve" && <Loader2 className="mr-1.5 size-4 animate-spin" />}{t("Tasdiqlash")}
         </Button>
       </div>
 
       <Dialog open={rejectOpen} onOpenChange={(open) => { if (busy === null) setRejectOpen(open); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>So&apos;rovni rad etish</DialogTitle>
-            <DialogDescription>Sabab faqat xodimlarga ko&apos;rinadi. O&apos;quvchiga sababsiz, muloyim xabar boradi.</DialogDescription>
+            <DialogTitle>{t("So'rovni rad etish")}</DialogTitle>
+            <DialogDescription>{t("Sabab faqat xodimlarga ko'rinadi. O'quvchiga sababsiz, muloyim xabar boradi.")}</DialogDescription>
           </DialogHeader>
-          <Textarea value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} placeholder="Masalan: bu odam markazda o'qimaydi" />
+          <Textarea value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} placeholder={t("Masalan: bu odam markazda o'qimaydi")} />
           <DialogFooter>
-            <Button variant="outline" disabled={busy !== null} onClick={() => setRejectOpen(false)}>Bekor qilish</Button>
+            <Button variant="outline" disabled={busy !== null} onClick={() => setRejectOpen(false)}>{t("Bekor qilish")}</Button>
             <Button variant="destructive" disabled={!reason.trim() || busy !== null} onClick={() => void reject()}>
-              {busy === "reject" && <Loader2 className="mr-1.5 size-4 animate-spin" />}Rad etish
+              {busy === "reject" && <Loader2 className="mr-1.5 size-4 animate-spin" />}{t("Rad etish")}
             </Button>
           </DialogFooter>
         </DialogContent>

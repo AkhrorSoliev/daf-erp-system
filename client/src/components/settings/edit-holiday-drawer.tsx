@@ -12,12 +12,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { useEditHoliday, type Holiday } from "@/hooks/use-edit-holiday";
 import { EditHolidayForm } from "./edit-holiday-form";
+import { useT } from "@/i18n/context";
 
 interface EditHolidayDrawerProps {
   onSaved?: (holiday: Holiday) => void;
 }
 
 export function EditHolidayDrawer({ onSaved }: EditHolidayDrawerProps) {
+  const t = useT();
   const { open, mode, holiday, submitting, closeDrawer } = useEditHoliday();
   const isAdd = mode === "add";
 
@@ -34,13 +36,13 @@ export function EditHolidayDrawer({ onSaved }: EditHolidayDrawerProps) {
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle className="text-lg">
             {isAdd
-              ? "Yangi dam olish kuni qo'shish"
-              : "Dam olish kunini tahrirlash"}
+              ? t("Yangi dam olish kuni qo'shish")
+              : t("Dam olish kunini tahrirlash")}
           </SheetTitle>
           <SheetDescription>
             {isAdd
-              ? "Yangi bayram ma'lumotlarini kiriting"
-              : "Bayram ma'lumotlarini o'zgartirish"}
+              ? t("Yangi bayram ma'lumotlarini kiriting")
+              : t("Bayram ma'lumotlarini o'zgartirish")}
           </SheetDescription>
         </SheetHeader>
 
@@ -62,7 +64,7 @@ export function EditHolidayDrawer({ onSaved }: EditHolidayDrawerProps) {
               onClick={closeDrawer}
               disabled={submitting}
             >
-              Bekor qilish
+              {t("Bekor qilish")}
             </Button>
             <Button
               type="submit"
@@ -72,7 +74,7 @@ export function EditHolidayDrawer({ onSaved }: EditHolidayDrawerProps) {
               {submitting && (
                 <Loader2 className="mr-2 size-4 animate-spin" />
               )}
-              {isAdd ? "Qo'shish" : "Saqlash"}
+              {isAdd ? t("Qo'shish") : t("Saqlash")}
             </Button>
           </div>
         </SheetFooter>

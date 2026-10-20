@@ -26,6 +26,9 @@ import {
   newHolidayBranchId,
   toHoliday,
 } from "@/lib/holiday-scope";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
+import { ruleMessage } from "./settings-form-parts";
 
 interface EditHolidayFormProps {
   holiday: Holiday | null;
@@ -50,6 +53,7 @@ export function EditHolidayForm({
   formId,
   isAdd,
 }: EditHolidayFormProps) {
+  const t = useT();
   const setSubmitting = useEditHoliday((s) => s.setSubmitting);
   // Identity, not a capability: a centre-wide holiday is the CEO's alone.
   const isCeo = useAuth((s) => s.user?.roles.some((r) => r.id === 1) ?? false);
@@ -72,7 +76,7 @@ export function EditHolidayForm({
     if (!values.date) {
       form.setError("date", {
         type: "required",
-        message: "Sana tanlanishi shart",
+        message: msg("Sana tanlanishi shart"),
       });
       return;
     }
@@ -80,7 +84,7 @@ export function EditHolidayForm({
     if (values.endDate && values.endDate < values.date) {
       form.setError("endDate", {
         type: "invalid",
-        message: "Tugash sanasi boshlanish sanasidan oldin bo'lishi mumkin emas",
+        message: msg("Tugash sanasi boshlanish sanasidan oldin bo'lishi mumkin emas"),
       });
       return;
     }
@@ -107,7 +111,7 @@ export function EditHolidayForm({
     if (isAdd) {
       const branchId = newHolidayBranchId(isCeo, values.scope, selectedBranch);
       if (branchId === undefined) {
-        toast.error("Filial tanlanmagan — yuqoridan filialni tanlang");
+        toast.error(t("Filial tanlanmagan — yuqoridan filialni tanlang"));
         return;
       }
       if (branchId !== null) payload.branchId = branchId;
@@ -117,12 +121,12 @@ export function EditHolidayForm({
     try {
       if (isAdd) {
         const { data } = await api.post("/holidays", payload);
-        toast.success("Bayram muvaffaqiyatli qo'shildi");
+        toast.success(t("Bayram muvaffaqiyatli qo'shildi"));
         onSaved?.(toHoliday(data));
       } else {
         if (!holiday) return;
         const { data } = await api.patch(`/holidays/${holiday.id}`, payload);
-        toast.success("Bayram muvaffaqiyatli yangilandi");
+        toast.success(t("Bayram muvaffaqiyatli yangilandi"));
         onSaved?.(toHoliday(data));
       }
       onClose();
@@ -131,8 +135,8 @@ export function EditHolidayForm({
         getErrorMessage(
           err,
           isAdd
-            ? "Bayram qo'shishda xatolik yuz berdi"
-            : "Bayramni yangilashda xatolik yuz berdi",
+            ? t("Bayram qo'shishda xatolik yuz berdi")
+            : t("Bayramni yangilashda xatolik yuz berdi"),
         ),
       );
     } finally {
@@ -148,39 +152,42 @@ export function EditHolidayForm({
     >
       <section className="space-y-5 px-6 py-5">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Bayram ma&apos;lumotlari
+          {t("Bayram ma'lumotlari")}
         </h3>
 
         <div className="space-y-1.5">
-          <Label htmlFor="name">Bayram nomi</Label>
+          <Label htmlFor="name">{t("Bayram nomi")}</Label>
           <Input
             id="name"
-            placeholder="Masalan: Mustaqillik kuni"
+            placeholder={t("Masalan: Mustaqillik kuni")}
             {...form.register("name", {
-              required: "Bayram nomi kiritilishi shart",
-              maxLength: { value: 200, message: "200 belgidan oshmasligi kerak" },
+              required: msg("Bayram nomi kiritilishi shart"),
+              maxLength: {
+                value: 200,
+                message: msg("{n} belgidan oshmasligi kerak"),
+              },
             })}
           />
           {form.formState.errors.name && (
             <p className="text-sm text-destructive">
-              {form.formState.errors.name.message}
+              {ruleMessage(t, form.formState.errors.name.message, { n: 200 })}
             </p>
           )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label htmlFor="date">Boshlanish sanasi</Label>
+            <Label htmlFor="date">{t("Boshlanish sanasi")}</Label>
             <Controller
               name="date"
               control={form.control}
-              rules={{ required: "Sana tanlanishi shart" }}
+              rules={{ required: msg("Sana tanlanishi shart") }}
               render={({ field }) => (
                 <DatePicker
                   id="date"
                   value={field.value}
                   onChange={(d) => field.onChange(d ?? null)}
-                  placeholder="Sanani tanlang"
+                  placeholder={t("Sanani tanlang")}
                   maxDate={endDate ?? undefined}
                   defaultMonth={endDate ?? undefined}
                 />
@@ -188,13 +195,13 @@ export function EditHolidayForm({
             />
             {form.formState.errors.date && (
               <p className="text-sm text-destructive">
-                {form.formState.errors.date.message}
+                {ruleMessage(t, form.formState.errors.date.message)}
               </p>
             )}
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="endDate">Tugash sanasi (ixtiyoriy)</Label>
+            <Label htmlFor="endDate">{t("Tugash sanasi (ixtiyoriy)")}</Label>
             <Controller
               name="endDate"
               control={form.control}
@@ -203,7 +210,7 @@ export function EditHolidayForm({
                   id="endDate"
                   value={field.value}
                   onChange={(d) => field.onChange(d ?? null)}
-                  placeholder="Bir kunlik bayram"
+                  placeholder={t("Bir kunlik bayram")}
                   minDate={startDate ?? undefined}
                   defaultMonth={startDate ?? undefined}
                 />
@@ -211,19 +218,20 @@ export function EditHolidayForm({
             />
             {form.formState.errors.endDate && (
               <p className="text-sm text-destructive">
-                {form.formState.errors.endDate.message}
+                {ruleMessage(t, form.formState.errors.endDate.message)}
               </p>
             )}
           </div>
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Bayram bir necha kun davom etsa, tugash sanasini tanlang. Bir kunlik
-          bayram uchun tugash sanasini bo&apos;sh qoldiring.
+          {t(
+            "Bayram bir necha kun davom etsa, tugash sanasini tanlang. Bir kunlik bayram uchun tugash sanasini bo'sh qoldiring.",
+          )}
         </p>
 
         <div className="space-y-1.5">
-          <Label htmlFor="scope">Kimga</Label>
+          <Label htmlFor="scope">{t("Kimga")}</Label>
           {isAdd && isCeo ? (
             <Controller
               name="scope"
@@ -235,7 +243,7 @@ export function EditHolidayForm({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={CENTRE_WIDE}>
-                      {CENTRE_WIDE_LABEL}
+                      {t(CENTRE_WIDE_LABEL)}
                     </SelectItem>
                     {holidayBranchChoices(selectedBranch, branches).map((b) => (
                       <SelectItem key={b.id} value={String(b.id)}>
@@ -249,18 +257,18 @@ export function EditHolidayForm({
           ) : (
             <p id="scope" className="text-sm font-medium">
               {isAdd
-                ? (selectedBranch?.name ?? "Filial tanlanmagan")
+                ? (selectedBranch?.name ?? t("Filial tanlanmagan"))
                 : holiday
-                  ? holidayScopeLabel(holiday)
+                  ? holidayScopeLabel(holiday, t)
                   : ""}
             </p>
           )}
           <p className="text-xs text-muted-foreground">
             {!isAdd
-              ? "Bayram kimniki ekanini o'zgartirib bo'lmaydi: kerak bo'lsa, o'chirib, qaytadan qo'shing."
+              ? t("Bayram kimniki ekanini o'zgartirib bo'lmaydi: kerak bo'lsa, o'chirib, qaytadan qo'shing.")
               : isCeo
-                ? "«Butun markaz» — hamma filialda dam olish kuni. Filial tanlansa, bayram faqat o'sha filial guruhlariga tegadi."
-                : "Bayram faqat shu filial guruhlariga tegadi. Butun markaz bayramini CEO qo'shadi."}
+                ? t("«Butun markaz» — hamma filialda dam olish kuni. Filial tanlansa, bayram faqat o'sha filial guruhlariga tegadi.")
+                : t("Bayram faqat shu filial guruhlariga tegadi. Butun markaz bayramini CEO qo'shadi.")}
           </p>
         </div>
       </section>

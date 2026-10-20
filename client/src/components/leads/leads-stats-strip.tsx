@@ -16,6 +16,7 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useLeadsBoard } from "@/hooks/use-leads-board";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useT } from "@/i18n/context";
 import { LEAD_FILTER_SCHEMA } from "./lead-filter-schema";
 import {
   LEAD_STATS_PERIODS,
@@ -34,6 +35,7 @@ import {
  * the strip; the board works without it.
  */
 export function LeadsStatsStrip() {
+  const t = useT();
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
   // Bumped by every lead create / edit / move / delete on the board.
@@ -61,39 +63,43 @@ export function LeadsStatsStrip() {
     <div className="grid gap-3 lg:grid-cols-[2fr_3fr]">
       <section className="space-y-1.5">
         <div className="flex h-6 items-center px-0.5 text-xs text-muted-foreground">
-          Hozir
+          {t("Hozir")}
         </div>
         <div className="grid grid-cols-2 gap-2">
           <StatCard
             icon={<LayoutGrid className="size-4" />}
-            label="Doskada"
+            label={t("Doskada")}
             value={data?.now.onBoard}
-            sub="ustunlarda kutyapti"
+            sub={t("ustunlarda kutyapti")}
             loading={isPending}
             onClick={() => open("onBoard")}
-            hint="Doskani ko'rsatish"
+            hint={t("Doskani ko'rsatish")}
           />
           <StatCard
             icon={<PhoneOff className="size-4" />}
-            label="Qo'ng'iroq qilinmagan"
+            label={t("Qo'ng'iroq qilinmagan")}
             value={data?.now.uncalled}
             sub={
               data && data.now.uncalledOverWeek > 0
-                ? `${formatNumber(data.now.uncalledOverWeek)} tasi 7 kundan ortiq`
-                : "hammasiga qo'ng'iroq qilingan"
+                ? t("{n} tasi 7 kundan ortiq", {
+                    n: formatNumber(data.now.uncalledOverWeek),
+                  })
+                : t("hammasiga qo'ng'iroq qilingan")
             }
             tone="urgent"
             loading={isPending}
             active={uncalledCardActive(leadFilters)}
             onClick={() => open("uncalled")}
-            hint="Qo'ng'iroq qilinmagan yangi lidlar ro'yxatini ochish"
+            hint={t("Qo'ng'iroq qilinmagan yangi lidlar ro'yxatini ochish")}
           />
         </div>
       </section>
 
       <section className="space-y-1.5">
         <div className="flex h-6 items-center justify-between gap-2 px-0.5">
-          <span className="text-xs text-muted-foreground">Davr bo'yicha</span>
+          <span className="text-xs text-muted-foreground">
+            {t("Davr bo'yicha")}
+          </span>
           <div className="flex overflow-hidden rounded-md border text-xs">
             {LEAD_STATS_PERIODS.map((p) => (
               <button
@@ -108,7 +114,7 @@ export function LeadsStatsStrip() {
                     : "text-muted-foreground hover:bg-muted",
                 )}
               >
-                {p.label}
+                {t(p.label)}
               </button>
             ))}
           </div>
@@ -116,34 +122,34 @@ export function LeadsStatsStrip() {
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           <StatCard
             icon={<UserPlus className="size-4" />}
-            label="Yangi lidlar"
+            label={t("Yangi lidlar")}
             value={data?.flow.created}
-            sub={(data && topSourcesLine(data.flow.topSources)) ?? "doskaga tushdi"}
+            sub={(data && topSourcesLine(data.flow.topSources)) ?? t("doskaga tushdi")}
             loading={isPending}
             active={leadFilters.karta === "created"}
             onClick={() => open("created")}
-            hint="Shu davrda kelgan lidlar ro'yxatini ochish"
+            hint={t("Shu davrda kelgan lidlar ro'yxatini ochish")}
           />
           <StatCard
             icon={<GraduationCap className="size-4" />}
-            label="O'quvchi bo'ldi"
+            label={t("O'quvchi bo'ldi")}
             value={data?.flow.converted}
-            sub="guruhga qo'shildi"
+            sub={t("guruhga qo'shildi")}
             tone="good"
             loading={isPending}
             active={leadFilters.karta === "converted"}
             onClick={() => open("converted")}
-            hint="Shu davrda o'quvchi bo'lganlar ro'yxatini ochish"
+            hint={t("Shu davrda o'quvchi bo'lganlar ro'yxatini ochish")}
           />
           <StatCard
             icon={<UserX className="size-4" />}
-            label="Yo'qotildi"
+            label={t("Yo'qotildi")}
             value={data?.flow.lost}
-            sub="arxivga o'tdi"
+            sub={t("arxivga o'tdi")}
             loading={isPending}
             active={leadFilters.karta === "lost"}
             onClick={() => open("lost")}
-            hint="Shu davrda yo'qotilganlar ro'yxatini ochish"
+            hint={t("Shu davrda yo'qotilganlar ro'yxatini ochish")}
           />
         </div>
       </section>

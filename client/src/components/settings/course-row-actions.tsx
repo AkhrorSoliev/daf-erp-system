@@ -17,6 +17,7 @@ import {
 import { useEditCourse } from "@/hooks/use-edit-course";
 import type { Course } from "@/hooks/use-edit-course";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 
 interface CourseRowActionsProps {
   course: Course;
@@ -24,15 +25,16 @@ interface CourseRowActionsProps {
 }
 
 export function CourseRowActions({ course, onDeleted }: CourseRowActionsProps) {
+  const t = useT();
   const { openDrawer } = useEditCourse();
 
   const handleDelete = async () => {
     try {
       await api.delete(`/courses/${course.id}`);
-      toast.success("Kurs muvaffaqiyatli o'chirildi");
+      toast.success(t("Kurs muvaffaqiyatli o'chirildi"));
       onDeleted?.(course.id);
     } catch {
-      toast.error("Kursni o'chirishda xatolik yuz berdi");
+      toast.error(t("Kursni o'chirishda xatolik yuz berdi"));
     }
   };
 
@@ -47,20 +49,20 @@ export function CourseRowActions({ course, onDeleted }: CourseRowActionsProps) {
               onClick={(e) => e.stopPropagation()}
             >
               <MoreHorizontal className="size-4" />
-              <span className="sr-only">Amallar</span>
+              <span className="sr-only">{t("Amallar")}</span>
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent>Amallar</TooltipContent>
+        <TooltipContent>{t("Amallar")}</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
         <DropdownMenuItem onClick={() => openDrawer(course)}>
           <Pencil className="mr-2 size-4" />
-          Tahrirlash
+          {t("Tahrirlash")}
         </DropdownMenuItem>
         <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
           <Trash2 className="mr-2 size-4" />
-          O&apos;chirish
+          {t("O'chirish")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

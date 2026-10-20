@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 import { useAuth } from "@/hooks/use-auth";
 import { PossibleDeductionsInfo } from "@/components/payments/possible-deductions-info";
 import {
@@ -77,9 +78,11 @@ interface BreakdownResponse {
   };
 }
 
-const fmtSom = (v: number) => `${v.toLocaleString("uz-UZ")} so'm`;
+const fmtSom = (v: number, t: (s: string) => string) =>
+  `${v.toLocaleString("uz-UZ")} ${t("so'm")}`;
 
 export function TeacherSalaryClient() {
+  const t = useT();
   const userId = useAuth((s) => s.user?.id) ?? 0;
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
@@ -99,9 +102,9 @@ export function TeacherSalaryClient() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Mening oyligim</h1>
+        <h1 className="text-2xl font-bold">{t("Mening oyligim")}</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Joriy davrdagi kutilayotgan va real oyligingiz hisoboti
+          {t("Joriy davrdagi kutilayotgan va real oyligingiz hisoboti")}
         </p>
       </div>
 
@@ -112,9 +115,9 @@ export function TeacherSalaryClient() {
       {!summary?.isFixedMonthly && (
         <Card>
           <CardHeader>
-            <CardTitle>Guruhlaringiz</CardTitle>
+            <CardTitle>{t("Guruhlaringiz")}</CardTitle>
             <CardDescription>
-              Har bir guruhdagi aktiv o&apos;quvchilar soni va stavkangiz
+              {t("Har bir guruhdagi aktiv o'quvchilar soni va stavkangiz")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -122,17 +125,17 @@ export function TeacherSalaryClient() {
               <Skeleton className="h-32 w-full" />
             ) : !summary?.groups.length ? (
               <p className="text-muted-foreground text-sm py-4 text-center">
-                Sizga biriktirilgan aktiv guruh yo&apos;q
+                {t("Sizga biriktirilgan aktiv guruh yo'q")}
               </p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-12 border-r">#</TableHead>
-                    <TableHead>Guruh</TableHead>
-                    <TableHead>Aktiv o&apos;quvchilar</TableHead>
-                    <TableHead>Foiz / qoida</TableHead>
-                    <TableHead className="text-right">Kurs narxi</TableHead>
+                    <TableHead>{t("Guruh")}</TableHead>
+                    <TableHead>{t("Aktiv o'quvchilar")}</TableHead>
+                    <TableHead>{t("Foiz / qoida")}</TableHead>
+                    <TableHead className="text-right">{t("Kurs narxi")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -147,11 +150,11 @@ export function TeacherSalaryClient() {
                         {g.salaryType === "PERCENTAGE"
                           ? `${g.salaryValue}%`
                           : g.salaryType
-                            ? fmtSom(g.salaryValue)
+                            ? fmtSom(g.salaryValue, t)
                             : "—"}
                       </TableCell>
                       <TableCell className="text-right">
-                        {fmtSom(g.coursePrice)}
+                        {fmtSom(g.coursePrice, t)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -165,11 +168,11 @@ export function TeacherSalaryClient() {
       {/* Current-cycle breakdown */}
       <Card>
         <CardHeader>
-          <CardTitle>Joriy davr — har dars uchun batafsil</CardTitle>
+          <CardTitle>{t("Joriy davr — har dars uchun batafsil")}</CardTitle>
           <CardDescription>
             {breakdown
               ? `${format(new Date(breakdown.period.periodStart), "dd.MM.yyyy")} — ${format(new Date(breakdown.period.periodEnd), "dd.MM.yyyy")}`
-              : "Yuklanyapti..."}
+              : t("Yuklanyapti...")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -177,7 +180,7 @@ export function TeacherSalaryClient() {
             <Skeleton className="h-40 w-full" />
           ) : !breakdown?.lines.length ? (
             <p className="text-muted-foreground text-sm py-4 text-center">
-              Hozircha bu davrda yozilgan oylik yo&apos;q
+              {t("Hozircha bu davrda yozilgan oylik yo'q")}
             </p>
           ) : (
             <BreakdownTable lines={breakdown.lines} totals={breakdown.totals} />
@@ -197,18 +200,19 @@ export function BreakdownTable({
   lines: BreakdownLine[];
   totals: BreakdownResponse["totals"];
 }) {
+  const t = useT();
   return (
     <div className="space-y-4">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="w-12 border-r">#</TableHead>
-            <TableHead>Sana</TableHead>
-            <TableHead>O&apos;quvchi</TableHead>
-            <TableHead>Guruh</TableHead>
-            <TableHead>Dars narxi</TableHead>
-            <TableHead>Foiz / qoida</TableHead>
-            <TableHead className="text-right">Yozilgan</TableHead>
+            <TableHead>{t("Sana")}</TableHead>
+            <TableHead>{t("O'quvchi")}</TableHead>
+            <TableHead>{t("Guruh")}</TableHead>
+            <TableHead>{t("Dars narxi")}</TableHead>
+            <TableHead>{t("Foiz / qoida")}</TableHead>
+            <TableHead className="text-right">{t("Yozilgan")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -232,7 +236,7 @@ export function BreakdownTable({
                       variant="outline"
                       className="text-[10px] py-0 h-4 no-underline border-purple-300 bg-purple-50 text-purple-800 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300"
                     >
-                      Oldingi oydan
+                      {t("Oldingi oydan")}
                     </Badge>
                   )}
                 </div>
@@ -241,8 +245,11 @@ export function BreakdownTable({
               <TableCell>
                 {l.configVersion ? (
                   <Badge variant="outline">
-                    {breakdownRateLabel(l.configVersion, l.rateBasis)}
-                    {l.configVersion.scope === "GROUP" && " (guruh)"}
+                    {l.configVersion.scope === "GROUP"
+                      ? t("{rate} (guruh)", {
+                          rate: breakdownRateLabel(l.configVersion, l.rateBasis, t),
+                        })
+                      : breakdownRateLabel(l.configVersion, l.rateBasis, t)}
                   </Badge>
                 ) : (
                   "—"
@@ -258,27 +265,29 @@ export function BreakdownTable({
       <div className="flex flex-col gap-1 text-sm pt-2 border-t">
         <div className="flex justify-between">
           <span className="text-muted-foreground">
-            Aktiv yozuvlar ({totals.accrualCount} ta):
+            {t("Aktiv yozuvlar ({n} ta):", { n: totals.accrualCount })}
           </span>
           <span className="font-medium">
-            {totals.amountTotal.toLocaleString("uz-UZ")} so&apos;m
+            {totals.amountTotal.toLocaleString("uz-UZ")} {t("so'm")}
           </span>
         </div>
         {totals.carriedOverCount > 0 && (
           <div className="flex justify-between text-purple-700 dark:text-purple-300">
             <span>
-              Shundan oldingi oydan ({totals.carriedOverCount} ta dars):
+              {t("Shundan oldingi oydan ({n} ta dars):", {
+                n: totals.carriedOverCount,
+              })}
             </span>
             <span className="font-medium">
-              {totals.carriedOverTotal.toLocaleString("uz-UZ")} so&apos;m
+              {totals.carriedOverTotal.toLocaleString("uz-UZ")} {t("so'm")}
             </span>
           </div>
         )}
         {totals.reversedCount > 0 && (
           <div className="flex justify-between text-muted-foreground">
-            <span>Bekor qilingan ({totals.reversedCount} ta):</span>
+            <span>{t("Bekor qilingan ({n} ta):", { n: totals.reversedCount })}</span>
             <span>
-              {totals.reversedTotal.toLocaleString("uz-UZ")} so&apos;m
+              {totals.reversedTotal.toLocaleString("uz-UZ")} {t("so'm")}
             </span>
           </div>
         )}

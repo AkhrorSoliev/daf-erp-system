@@ -12,11 +12,13 @@ import { Textarea } from "@/components/ui/textarea";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useTasks, type TaskAccess, type TaskDetail } from "@/hooks/use-tasks";
+import { useT } from "@/i18n/context";
 import { isOpenStatus } from "./task-labels";
 import { useTaskWrite } from "./use-task-write";
 
-/** «Nusxa olish» and «Bekor qilish»; draws nothing when the viewer has neither. */
+/** «Nusxa olish» and «Topshiriqni bekor qilish»; draws nothing when the viewer has neither. */
 export function TaskDrawerMenu({ task, access }: { task: TaskDetail; access: TaskAccess }) {
+  const t = useT();
   const { busy, run } = useTaskWrite();
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState("");
@@ -30,18 +32,18 @@ export function TaskDrawerMenu({ task, access }: { task: TaskDetail; access: Tas
     setCopying(true);
     try {
       await api.post(`/tasks/${task.id}/duplicate`);
-      toast.success("Topshiriqdan nusxa olindi");
+      toast.success(t("Topshiriqdan nusxa olindi"));
       void useTasks.getState().fetchBoard();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Nusxa olishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Nusxa olishda xatolik yuz berdi")));
     } finally {
       setCopying(false);
     }
   };
   const cancel = async () => {
-    const ok = await run(api.post(`/tasks/${task.id}/cancel`, { reason: reason.trim() || undefined }), "Bekor qilishda xatolik yuz berdi");
+    const ok = await run(api.post(`/tasks/${task.id}/cancel`, { reason: reason.trim() || undefined }), t("Bekor qilishda xatolik yuz berdi"));
     if (ok) {
-      toast.success("Topshiriq bekor qilindi");
+      toast.success(t("Topshiriq bekor qilindi"));
       setCancelling(false);
       setReason("");
     }
@@ -53,14 +55,14 @@ export function TaskDrawerMenu({ task, access }: { task: TaskDetail; access: Tas
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon-sm" disabled={copying}>
             {copying ? <Loader2 className="size-4 animate-spin" /> : <MoreHorizontal className="size-4" />}
-            <span className="sr-only">Amallar</span>
+            <span className="sr-only">{t("Amallar")}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => void duplicate()}><Copy className="mr-2 size-4" />Nusxa olish</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => void duplicate()}><Copy className="mr-2 size-4" />{t("Nusxa olish")}</DropdownMenuItem>
           {canCancel && (
             <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setCancelling(true)}>
-              <Ban className="mr-2 size-4" />Bekor qilish
+              <Ban className="mr-2 size-4" />{t("Topshiriqni bekor qilish")}
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
@@ -69,14 +71,14 @@ export function TaskDrawerMenu({ task, access }: { task: TaskDetail; access: Tas
       <AlertDialog open={cancelling} onOpenChange={(o) => { if (!busy) { setCancelling(o); if (!o) setReason(""); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Topshiriq bekor qilinsinmi?</AlertDialogTitle>
-            <AlertDialogDescription>Topshiriq yopiladi — uni qayta ochib bo&apos;lmaydi.</AlertDialogDescription>
+            <AlertDialogTitle>{t("Topshiriq bekor qilinsinmi?")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("Topshiriq yopiladi — uni qayta ochib bo'lmaydi.")}</AlertDialogDescription>
           </AlertDialogHeader>
-          <Textarea aria-label="Bekor qilish sababi" rows={3} maxLength={1000} placeholder="Sabab (ixtiyoriy)" value={reason} onChange={(e) => setReason(e.target.value)} />
+          <Textarea aria-label={t("Bekor qilish sababi")} rows={3} maxLength={1000} placeholder={t("Sabab (ixtiyoriy)")} value={reason} onChange={(e) => setReason(e.target.value)} />
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={busy}>Orqaga</AlertDialogCancel>
+            <AlertDialogCancel disabled={busy}>{t("Orqaga")}</AlertDialogCancel>
             <AlertDialogAction variant="destructive" disabled={busy} onClick={(e) => { e.preventDefault(); void cancel(); }}>
-              {busy && <Loader2 className="mr-1 size-4 animate-spin" />}Bekor qilish
+              {busy && <Loader2 className="mr-1 size-4 animate-spin" />}{t("Topshiriqni bekor qilish")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

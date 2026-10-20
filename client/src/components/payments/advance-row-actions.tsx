@@ -2,6 +2,9 @@
 
 import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/i18n/context";
+import { interpolate } from "@/i18n/translate";
+import type { Translate } from "./record-payment-admission";
 import { monthLabel } from "./salary-utils";
 
 /**
@@ -37,20 +40,21 @@ function isoDay(iso: string): string {
  * oyga to'g'ri kelmasligi mumkin, shuning uchun davr OXIRI qaysi oyga
  * tushsa — o'sha oy nomi olinadi.
  */
-export function settledLabel(a: EditableAdvance): string | null {
+export function settledLabel(a: EditableAdvance, t: Translate = interpolate): string | null {
   if (!a.settled) return null;
-  if (!a.settledPeriodEnd) return "Oylikka hisoblangan";
-  return `${monthLabel(a.settledPeriodEnd.slice(0, 7))} oyligiga hisoblangan`;
+  if (!a.settledPeriodEnd) return t("Oylikka hisoblangan");
+  return t("{month} oyligiga hisoblangan", { month: monthLabel(a.settledPeriodEnd.slice(0, 7), t) });
 }
 
 /** Tugma ustidagi to'liq sabab — oy nomi emas, aniq davr. */
-function settledTitle(a: EditableAdvance): string {
+function settledTitle(a: EditableAdvance, t: Translate): string {
   if (a.settledPeriodStart && a.settledPeriodEnd) {
-    return `Bu avans ${isoDay(a.settledPeriodStart)}–${isoDay(
-      a.settledPeriodEnd,
-    )} oyligiga hisoblangan — o'zgartirib bo'lmaydi`;
+    return t("Bu avans {from}–{to} oyligiga hisoblangan — o'zgartirib bo'lmaydi", {
+      from: isoDay(a.settledPeriodStart),
+      to: isoDay(a.settledPeriodEnd),
+    });
   }
-  return "Bu avans oylikka hisoblangan — o'zgartirib bo'lmaydi";
+  return t("Bu avans oylikka hisoblangan — o'zgartirib bo'lmaydi");
 }
 
 /**
@@ -69,8 +73,9 @@ export function AdvanceRowActions({
   onEdit: (a: EditableAdvance) => void;
   onDelete: (a: EditableAdvance) => void;
 }) {
+  const t = useT();
   const disabled = advance.settled;
-  const reason = disabled ? settledTitle(advance) : undefined;
+  const reason = disabled ? settledTitle(advance, t) : undefined;
 
   return (
     <div className="flex shrink-0 items-center gap-0.5">
@@ -78,8 +83,8 @@ export function AdvanceRowActions({
         variant="ghost"
         size="icon-sm"
         disabled={disabled}
-        title={reason ?? "Tahrirlash"}
-        aria-label="Avansni tahrirlash"
+        title={reason ?? t("Tahrirlash")}
+        aria-label={t("Avansni tahrirlash")}
         onClick={() => onEdit(advance)}
       >
         <Pencil className="size-4" />
@@ -89,8 +94,8 @@ export function AdvanceRowActions({
         size="icon-sm"
         className="text-destructive hover:text-destructive"
         disabled={disabled}
-        title={reason ?? "O'chirish"}
-        aria-label="Avansni o'chirish"
+        title={reason ?? t("O'chirish")}
+        aria-label={t("Avansni o'chirish")}
         onClick={() => onDelete(advance)}
       >
         <Trash2 className="size-4" />

@@ -19,9 +19,11 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useLeadsBoard } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
+import { useT } from "@/i18n/context";
 
 /** One confirmation dialog for deleting a column, a section, or a lead. */
 export function DeleteConfirmDialog() {
+  const t = useT();
   const deleteTarget = useLeadsUi((s) => s.deleteTarget);
   const closeDelete = useLeadsUi((s) => s.closeDelete);
   const applyColumnRemove = useLeadsBoard((s) => s.applyColumnRemove);
@@ -51,21 +53,21 @@ export function DeleteConfirmDialog() {
       if (deleteTarget.kind === "column") {
         await api.delete(`/lead-columns/${deleteTarget.id}`);
         applyColumnRemove(deleteTarget.id);
-        toast.success("Ustun o'chirildi");
+        toast.success(t("Ustun o'chirildi"));
       } else if (deleteTarget.kind === "section") {
         await api.delete(`/lead-sections/${deleteTarget.id}`);
         applySectionRemove(deleteTarget.columnId ?? "", deleteTarget.id);
-        toast.success("Bo'lim arxivga ko'chirildi");
+        toast.success(t("Bo'lim arxivga ko'chirildi"));
       } else {
         await api.delete(`/leads/${deleteTarget.id}`, {
           data: { reason: reason.trim() },
         });
         applyLeadRemove(deleteTarget.sectionId ?? "", deleteTarget.id);
-        toast.success("Lid yo'qotilgan deb belgilandi");
+        toast.success(t("Lid yo'qotilgan deb belgilandi"));
       }
       closeDelete();
     } catch (error) {
-      toast.error(getErrorMessage(error, "O'chirishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("O'chirishda xatolik yuz berdi")));
     } finally {
       setDeleting(false);
     }
@@ -73,17 +75,27 @@ export function DeleteConfirmDialog() {
 
   const title =
     kind === "column"
-      ? "Ustunni o'chirish"
+      ? t("Ustunni o'chirish")
       : kind === "section"
-        ? "Bo'limni o'chirish"
-        : "Lidni o'chirish";
+        ? t("Bo'limni o'chirish")
+        : t("Lidni o'chirish");
 
+  const name = deleteTarget?.name ?? "";
   const description =
     kind === "column"
-      ? "ustuni arxivga ko'chiriladi. Ustun faqat ichida bo'lim qolmaganda o'chiriladi."
+      ? t(
+          "«{name}» ustuni arxivga ko'chiriladi. Ustun faqat ichida bo'lim qolmaganda o'chiriladi.",
+          { name },
+        )
       : kind === "section"
-        ? "bo'limi va undagi barcha lidlar arxivga ko'chiriladi. Ularni keyinchalik arxivdan tiklash mumkin."
-        : "lidi «Yo'qotilgan» deb belgilanadi va arxivga ko'chiriladi. Uni keyinchalik arxivdan tiklash mumkin.";
+        ? t(
+            "«{name}» bo'limi va undagi barcha lidlar arxivga ko'chiriladi. Ularni keyinchalik arxivdan tiklash mumkin.",
+            { name },
+          )
+        : t(
+            "«{name}» lidi «Yo'qotilgan» deb belgilanadi va arxivga ko'chiriladi. Uni keyinchalik arxivdan tiklash mumkin.",
+            { name },
+          );
 
   return (
     <AlertDialog
@@ -93,21 +105,21 @@ export function DeleteConfirmDialog() {
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>
-            &laquo;{deleteTarget?.name}&raquo; {description}
-          </AlertDialogDescription>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
 
         {isLead && (
           <div className="space-y-1.5">
             <Label htmlFor="lost-reason">
-              Yo&apos;qotilish sababi <span className="text-destructive">*</span>
+              {t("Yo'qotilish sababi")} <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id="lost-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Masalan: narx qimmat keldi, javob bermadi, boshqa markazga ketdi..."
+              placeholder={t(
+                "Masalan: narx qimmat keldi, javob bermadi, boshqa markazga ketdi...",
+              )}
               maxLength={500}
               rows={3}
               disabled={deleting}
@@ -118,7 +130,7 @@ export function DeleteConfirmDialog() {
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={deleting}>
-            Bekor qilish
+            {t("Bekor qilish")}
           </AlertDialogCancel>
           <Button
             type="button"
@@ -127,7 +139,7 @@ export function DeleteConfirmDialog() {
             variant="destructive"
           >
             {deleting && <Loader2 className="mr-2 size-4 animate-spin" />}
-            O&apos;chirish
+            {t("O'chirish")}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

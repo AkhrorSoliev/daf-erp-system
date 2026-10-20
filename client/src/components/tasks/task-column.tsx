@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { TaskCard as TaskCardData, TaskStatus } from "@/hooks/use-tasks";
+import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { STATUS_COLUMNS } from "./task-labels";
 import { TaskCard } from "./task-card";
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export function TaskColumn({ status, items, loading, cursor, onMore, collapsed, onToggle, dragEnabled, showAssignees }: Props) {
+  const t = useT();
   const { setNodeRef, isOver } = useDroppable({ id: status, disabled: !dragEnabled });
   const { label, dot } = STATUS_COLUMNS.find((c) => c.id === status)!;
   // «+»: more cards wait behind the cursor.
@@ -41,10 +43,10 @@ export function TaskColumn({ status, items, loading, cursor, onMore, collapsed, 
               <ChevronsRight className="size-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right">Ustunni ochish</TooltipContent>
+          <TooltipContent side="right">{t("Ustunni ochish")}</TooltipContent>
         </Tooltip>
         <Badge variant="secondary" className="mb-3 shrink-0">{count}</Badge>
-        <span className="text-xs font-semibold [writing-mode:vertical-lr] rotate-180 select-none">{label}</span>
+        <span className="text-xs font-semibold [writing-mode:vertical-lr] rotate-180 select-none">{t(label)}</span>
       </div>
     );
   }
@@ -54,7 +56,7 @@ export function TaskColumn({ status, items, loading, cursor, onMore, collapsed, 
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className={cn("size-2.5 rounded-full", dot)} />
-          <h3 className="text-sm font-semibold truncate">{label}</h3>
+          <h3 className="text-sm font-semibold truncate">{t(label)}</h3>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <Badge variant="secondary">{count}</Badge>
@@ -62,15 +64,15 @@ export function TaskColumn({ status, items, loading, cursor, onMore, collapsed, 
             <TooltipTrigger asChild>
               <Button type="button" variant="ghost" size="icon-xs" onClick={onToggle}><ChevronsLeft className="size-4" /></Button>
             </TooltipTrigger>
-            <TooltipContent>Ustunni yopish</TooltipContent>
+            <TooltipContent>{t("Ustunni yopish")}</TooltipContent>
           </Tooltip>
         </div>
       </div>
       <div className="flex flex-col gap-2 min-h-25">
-        {items.map((t) => <TaskCard key={t.id} task={t} dragEnabled={dragEnabled} showAssignees={showAssignees} />)}
-        {items.length === 0 && !loading && <p className="text-xs text-muted-foreground text-center py-8">Topshiriqlar yo&apos;q</p>}
-        {cursor && <Button variant="ghost" size="sm" onClick={onMore} disabled={loading}>Yana</Button>}
-        {status === "DONE" && <p className="text-[11px] text-muted-foreground text-center">Oxirgi 14 kun</p>}
+        {items.map((task) => <TaskCard key={task.id} task={task} dragEnabled={dragEnabled} showAssignees={showAssignees} />)}
+        {items.length === 0 && !loading && <p className="text-xs text-muted-foreground text-center py-8">{t("Topshiriqlar yo'q")}</p>}
+        {cursor && <Button variant="ghost" size="sm" onClick={onMore} disabled={loading}>{t("Yana")}</Button>}
+        {status === "DONE" && <p className="text-[11px] text-muted-foreground text-center">{t("Oxirgi 14 kun")}</p>}
       </div>
     </div>
   );

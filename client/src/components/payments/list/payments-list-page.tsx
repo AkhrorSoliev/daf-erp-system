@@ -10,6 +10,7 @@ import { RecordPaymentDialog } from "@/components/payments/record-payment-dialog
 import { CorrectPaymentDialog } from "@/components/students/correct-payment-dialog";
 import { useCan } from "@/hooks/use-permissions";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useT } from "@/i18n/context";
 import { downloadAuthedFile } from "@/lib/download-file";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { tashkentNow } from "@/lib/tashkent-time";
@@ -35,6 +36,7 @@ const CLEARED: Partial<PaymentFilters> = {
  * holders only — the summary card, then the totals line, the table and the pager.
  */
 export function PaymentsListPage() {
+  const t = useT();
   const { filters: raw, setFilters } = useUrlFilters(PAYMENTS_LIST_SCHEMA);
   const filters = raw as PaymentFilters;
   const qc = useQueryClient();
@@ -67,6 +69,7 @@ export function PaymentsListPage() {
   const tableLoading = isPending || lastPage !== null || (isPlaceholderData && !data?.data.length);
   // The clicked row is used as it is when it is on this page and the list is neither showing a kept answer nor refetching (after a cancel or a correction the row is stale until the answer lands; the drawer then reads rows/:id).
   const openId = filters.tolov || null;
+  const partFilter = PART_FILTER[filters.nimaga as keyof typeof PART_FILTER];
   const openRow = !isPlaceholderData && !isFetching ? data?.data.find((r) => r.id === openId) : undefined;
 
   // Any filter or period change puts the list back on page 1; the period keeps the filters.
@@ -82,7 +85,7 @@ export function PaymentsListPage() {
     try {
       await downloadAuthedFile(`/payments/list/excel?${qs}`, `tolovlar-${params.startDate}-${params.endDate}.xlsx`);
     } catch (e) {
-      toast.error(getErrorMessage(e, "Excel yuklab olishda xatolik"));
+      toast.error(getErrorMessage(e, t("Excel yuklab olishda xatolik")));
     } finally {
       setExporting(false);
     }
@@ -92,19 +95,19 @@ export function PaymentsListPage() {
     <div className="space-y-4">
       <div className="space-y-1">
         <Link href="/payments/overview" className="text-sm text-muted-foreground hover:text-foreground">
-          ← Umumiy ma&apos;lumotlar
+          {t("← Umumiy ma'lumotlar")}
         </Link>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="font-heading text-lg font-semibold tracking-tight">To&apos;lovlar</h1>
+          <h1 className="font-heading text-lg font-semibold tracking-tight">{t("To'lovlar")}</h1>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" onClick={exportExcel} disabled={!params || exporting}>
               {exporting ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Download className="mr-2 size-4" />}
-              Excel
+              {t("Excel")}
             </Button>
             {canRecord && (
               <Button onClick={() => setRecording(true)}>
                 <Plus className="mr-2 size-4" />
-                To&apos;lov qayd qilish
+                {t("To'lov qayd qilish")}
               </Button>
             )}
           </div>
@@ -129,12 +132,12 @@ export function PaymentsListPage() {
       <PaymentsFilterBar filters={filters} options={options.data} onChange={onChange} onClear={() => setFilters(CLEARED)} />
 
       {params === null ? (
-        <p className="text-sm text-muted-foreground">Oraliqning boshi va oxirini tanlang</p>
+        <p className="text-sm text-muted-foreground">{t("Oraliqning boshi va oxirini tanlang")}</p>
       ) : isError ? (
         <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-          <p>Ma&apos;lumotni yuklab bo&apos;lmadi</p>
+          <p>{t("Ma'lumotni yuklab bo'lmadi")}</p>
           <Button variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>
-            Qayta urinish
+            {t("Qayta urinish")}
           </Button>
         </div>
       ) : (
@@ -144,7 +147,7 @@ export function PaymentsListPage() {
             <PaymentsTotalsLine
               totals={data.totals}
               holat={filters.holat}
-              partLabel={PART_FILTER[filters.nimaga as keyof typeof PART_FILTER]?.label ?? null}
+              partLabel={partFilter ? t(partFilter.label) : null}
             />
           )}
           {/* The previous page stays dimmed and inert until the next one answers. */}

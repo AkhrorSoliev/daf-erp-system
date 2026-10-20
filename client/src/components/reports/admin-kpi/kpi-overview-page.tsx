@@ -7,6 +7,7 @@ import { BlockError, BlockSkeleton } from "@/components/payments/overview/block-
 import { addMonths, currentMonthKey } from "@/components/payments/salary-utils";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useCan } from "@/hooks/use-permissions";
+import { useT } from "@/i18n/context";
 import { KpiAdminTable } from "./kpi-admin-table";
 import { KpiAttention } from "./kpi-attention";
 import { KpiDailyChart, KpiMonthsChart } from "./kpi-charts";
@@ -39,6 +40,7 @@ export function KpiOverviewPage() {
 
 /** Every figure is the server's; the page only formats. */
 function KpiOverview() {
+  const t = useT();
   const { filters, setFilter, setFilters } = useUrlFilters(FILTERS);
   const current = currentMonthKey();
   const month = kpiMonth(filters.oy, current);
@@ -51,7 +53,7 @@ function KpiOverview() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="font-heading text-lg font-semibold tracking-tight">Xodimlar KPI</h2>
+        <h2 className="font-heading text-lg font-semibold tracking-tight">{t("Xodimlar KPI")}</h2>
         <div className="flex flex-wrap items-center gap-3">
           <MonthStepper
             value={month}
@@ -61,7 +63,7 @@ function KpiOverview() {
           />
           <div className="flex items-center gap-2">
             <Label htmlFor="kpi-compare" className="text-sm text-muted-foreground">
-              Taqqoslash
+              {t("Taqqoslash")}
             </Label>
             <MonthPicker
               id="kpi-compare"
@@ -78,12 +80,12 @@ function KpiOverview() {
       {q.isPending ? (
         <BlockSkeleton className="h-64" />
       ) : q.isError ? (
-        <BlockError title="Xodimlar KPI" onRetry={() => void q.refetch()} />
+        <BlockError title={t("Xodimlar KPI")} onRetry={() => void q.refetch()} />
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border px-3 py-2 text-sm">
-            <span className={q.data.status.enabled ? undefined : "text-destructive"}>{switchText(q.data.status)}</span>
-            <span className="text-muted-foreground">Kuzatuv: pul hali berilmaydi</span>
+            <span className={q.data.status.enabled ? undefined : "text-destructive"}>{switchText(q.data.status, t)}</span>
+            <span className="text-muted-foreground">{t("Kuzatuv: pul hali berilmaydi")}</span>
           </div>
           <KpiSummaryCards data={q.data} isCurrent={month === current} />
           <KpiAttention signals={q.data.signals} onOpen={open} />
@@ -97,7 +99,7 @@ function KpiOverview() {
             <KpiMonthsChart data={q.data.months} />
           </div>
           <section className="space-y-3">
-            <h3 className="font-medium">Administratorlar</h3>
+            <h3 className="font-medium">{t("Administratorlar")}</h3>
             <p
               className={
                 q.data.unownedConversions > 0
@@ -105,7 +107,7 @@ function KpiOverview() {
                   : "text-sm text-muted-foreground"
               }
             >
-              {unownedConversionsText(q.data.unownedConversions)}
+              {unownedConversionsText(q.data.unownedConversions, t)}
             </p>
             <KpiAdminTable
               rows={q.data.rows}
@@ -116,7 +118,7 @@ function KpiOverview() {
             <dl className="space-y-1 text-xs text-muted-foreground">
               {KPI_DEFINITIONS.map((d) => (
                 <div key={d.term}>
-                  <dt className="inline font-medium text-foreground">{d.term}</dt> — <dd className="inline">{d.text}</dd>
+                  <dt className="inline font-medium text-foreground">{t(d.term)}</dt> — <dd className="inline">{t(d.text)}</dd>
                 </div>
               ))}
             </dl>

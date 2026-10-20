@@ -189,7 +189,7 @@ describe("planCellToggle and confirmCopy", () => {
       alsoTitle: "Birga o'chadi",
       alsoLabels: ["Bekor qilish, ko'chirish va o'rinbosarni o'chirish"],
       warning: null,
-      confirm: "O'chirish",
+      confirm: "O'chirib qo'yish",
     });
   });
 

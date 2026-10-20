@@ -7,11 +7,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useT } from "@/i18n/context";
 import { formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import {
   STATUS_COLORS,
   STATUS_HINTS,
+  statusText,
   type DebtHistoryResponse,
   type DebtStatusFilter,
 } from "../debt-history/types";
@@ -38,6 +40,7 @@ export function DebtStatusFilterBar({
   value,
   onChange,
 }: Props) {
+  const t = useT();
   if (isLoading || !data) return <Skeleton className="h-20 w-full" />;
 
   const { byStatus } = data.current;
@@ -49,28 +52,30 @@ export function DebtStatusFilterBar({
   return (
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
       <Tile
-        label="Hammasi"
+        label={t("Hammasi")}
         color="#64748b"
         amount={total}
         count={totalCount}
         share={100}
         selected={value === "all"}
-        hint="Barcha qarzdorlar — hozir o'qiyotgani ham, ketgani ham."
+        hint={t("Barcha qarzdorlar — hozir o'qiyotgani ham, ketgani ham.")}
         onClick={() => onChange("all")}
       />
       {byStatus.map((s) => {
+        const hint = STATUS_HINTS[s.status];
         const target: DebtStatusFilter =
           s.status === "ACTIVE" ? "active" : "inactive";
         return (
           <Tile
             key={s.status}
-            label={s.label}
+            label={statusText(s.status, t, s.label)}
             color={STATUS_COLORS[s.status] ?? "#94a3b8"}
             amount={s.amount}
             count={s.count}
             share={s.share}
             selected={value === target}
-            hint={STATUS_HINTS[s.status]}
+            // STATUS_HINTS are the client's own texts (debt-history/types.ts); a missing one stays undefined.
+            hint={hint && t(hint)}
             onClick={() => onChange(value === target ? "all" : target)}
           />
         );
@@ -98,6 +103,7 @@ function Tile({
   hint?: string;
   onClick: () => void;
 }) {
+  const t = useT();
   const tile = (
     <button
       type="button"
@@ -122,7 +128,7 @@ function Tile({
         {formatPrice(amount)}
       </span>
       <span className="text-xs text-muted-foreground">
-        {count} ta · {share}%
+        {t("{n} ta", { n: count })} · {share}%
       </span>
     </button>
   );

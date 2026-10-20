@@ -51,7 +51,8 @@ export const GROUP_LABEL: Record<NotificationGroup, string> = {
   task: msg("Topshiriqlar"),
   attendance: msg("Davomat"),
   payment: msg("To'lovlar"),
-  system: msg("Tizim"),
+  // «Tizim» alone is the colour mode key (ru «Системная»).
+  system: msg("Tizim xabarlari"),
 };
 
 export interface AppNotification {

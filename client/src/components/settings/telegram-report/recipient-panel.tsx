@@ -11,6 +11,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useT } from "@/i18n/context";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { previewRecipient, type BranchOption, type Recipient, type RecipientPatch } from "./telegram-report-api";
 import { LAYOUTS, SECTIONS, SEND_TIMES, type ReportSection } from "./telegram-report-labels";
@@ -33,12 +34,14 @@ interface Props {
 
 /** Mount with `key={recipient.id}` so the preview never outlives its recipient. */
 export function RecipientPanel({ recipient: r, branches, now, busy, testing, checking, onPatch, onTest, onCheck, onRemove }: Props) {
+  const t = useT();
   // undefined = not loaded, null = the server had no branch to print.
   const [preview, setPreview] = useState<string | null | undefined>(undefined);
   const [previewing, setPreviewing] = useState(false);
   // Bumped on every patch: a preview that started before the last patch is stale.
   const patchSeq = useRef(0);
-  const meta = reachMeta(r, now);
+  const meta = reachMeta(r, now, t);
+  const layoutHint = LAYOUTS.find((l) => l.value === r.layout)?.hint;
 
   // A saved change makes the loaded sample stale.
   const patch = (p: RecipientPatch) => { patchSeq.current += 1; setPreview(undefined); onPatch(p); };
@@ -55,7 +58,7 @@ export function RecipientPanel({ recipient: r, branches, now, busy, testing, che
       const { text } = await previewRecipient(r.id);
       if (seq === patchSeq.current) setPreview(text);
     } catch (e) {
-      toast.error(getErrorMessage(e, "Namunani yuklab bo'lmadi"));
+      toast.error(getErrorMessage(e, t("Namunani yuklab bo'lmadi")));
     } finally {
       setPreviewing(false);
     }
@@ -70,35 +73,35 @@ export function RecipientPanel({ recipient: r, branches, now, busy, testing, che
           <ReachPill meta={meta} />
           <span className="text-xs text-muted-foreground">{meta.note}</span>
         </div>
-        {r.noBranch && <p className="text-xs text-destructive">Filial tanlanmagan — hisobot bormaydi.</p>}
+        {r.noBranch && <p className="text-xs text-destructive">{t("Filial tanlanmagan — hisobot bormaydi.")}</p>}
       </div>
 
       <div className="space-y-1.5">
-        <Label>Vaqt</Label>
+        <Label>{t("Vaqt")}</Label>
         <Select value={r.sendTime} disabled={busy} onValueChange={(v) => patch({ sendTime: v })}>
           <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-          <SelectContent>{SEND_TIMES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+          <SelectContent>{SEND_TIMES.map((time) => <SelectItem key={time} value={time}>{time}</SelectItem>)}</SelectContent>
         </Select>
       </div>
 
       <div className="space-y-1.5">
-        <Label>Ko&apos;rinish</Label>
+        <Label>{t("Shakl")}</Label>
         <Select value={r.layout} disabled={busy} onValueChange={(v) => patch({ layout: v as Recipient["layout"] })}>
           <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
           <SelectContent>
             {LAYOUTS.map((l) => (
-              <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+              <SelectItem key={l.value} value={l.value}>{t(l.label)}</SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground">{LAYOUTS.find((l) => l.value === r.layout)?.hint}</p>
+        <p className="text-xs text-muted-foreground">{layoutHint && t(layoutHint)}</p>
       </div>
 
       <div className="space-y-2">
-        <Label>Filiallar</Label>
+        <Label>{t("Filiallar")}</Label>
         <label className="flex items-center gap-2 text-sm">
           <Checkbox checked={r.allBranches} disabled={busy} onCheckedChange={(v) => patch({ allBranches: v === true })} />
-          Barcha filiallar <span className="text-xs text-muted-foreground">(keyin ochilganlar ham)</span>
+          {t("Barcha filiallar")} <span className="text-xs text-muted-foreground">{t("(keyin ochilganlar ham)")}</span>
         </label>
         {!r.allBranches && (
           <div className="flex flex-wrap gap-x-4 gap-y-2 pl-6">
@@ -113,7 +116,7 @@ export function RecipientPanel({ recipient: r, branches, now, busy, testing, che
       </div>
 
       <div className="space-y-2">
-        <Label>Bo&apos;limlar</Label>
+        <Label>{t("Bo'limlar")}</Label>
         <div className="grid gap-2">
           {SECTIONS.map((s) => (
             <label key={s.value} className="flex items-center gap-2 text-sm">
@@ -122,8 +125,8 @@ export function RecipientPanel({ recipient: r, branches, now, busy, testing, che
                 disabled={busy || (r.sections.length === 1 && r.sections.includes(s.value))}
                 onCheckedChange={(v) => toggleSection(s.value, v === true)}
               />
-              {s.label}
-              {s.money && <span className="text-xs text-muted-foreground">· pul</span>}
+              {t(s.label)}
+              {s.money && <span className="text-xs text-muted-foreground">· {t("pul")}</span>}
             </label>
           ))}
         </div>
@@ -132,11 +135,11 @@ export function RecipientPanel({ recipient: r, branches, now, busy, testing, che
       {preview !== undefined && (
         <div className="space-y-1.5">
           {preview === null ? (
-            <p className="text-xs text-muted-foreground">Filial tanlanmagan — namuna yo&apos;q</p>
+            <p className="text-xs text-muted-foreground">{t("Filial tanlanmagan — namuna yo'q")}</p>
           ) : (
             <>
               <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-lg bg-muted p-3 text-xs">{preview}</pre>
-              <p className="text-xs text-muted-foreground">Namuna hozirgi raqamlar bilan</p>
+              <p className="text-xs text-muted-foreground">{t("Namuna hozirgi raqamlar bilan")}</p>
             </>
           )}
         </div>
@@ -145,31 +148,31 @@ export function RecipientPanel({ recipient: r, branches, now, busy, testing, che
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" disabled={previewing || busy} onClick={() => void loadPreview()}>
           {previewing ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}
-          Namunani ko&apos;rish
+          {t("Namunani ko'rish")}
         </Button>
         <Button variant="outline" size="sm" disabled={testing || r.reach === "UNLINKED" || r.reach === "BLOCKED"} onClick={onTest}>
           {testing ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-          Hozir yuborish
+          {t("Hozir yuborish")}
         </Button>
         <Button variant="outline" size="sm" disabled={checking} onClick={onCheck}>
           {checking ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
-          Ulanishni tekshirish
+          {t("Ulanishni tekshirish")}
         </Button>
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="ghost" size="sm" className="text-destructive" disabled={busy}>
-              <Trash2 className="size-4" /> Olib tashlash
+              <Trash2 className="size-4" /> {t("Olib tashlash")}
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>{r.name} ro&apos;yxatdan olib tashlansinmi?</AlertDialogTitle>
-              <AlertDialogDescription>Unga hisobot boshqa bormaydi. Keyin qayta qo&apos;shish mumkin.</AlertDialogDescription>
+              <AlertDialogTitle>{t("{name} ro'yxatdan olib tashlansinmi?", { name: r.name })}</AlertDialogTitle>
+              <AlertDialogDescription>{t("Unga hisobot boshqa bormaydi. Keyin qayta qo'shish mumkin.")}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+              <AlertDialogCancel>{t("Bekor qilish")}</AlertDialogCancel>
               <AlertDialogAction variant="destructive" onClick={onRemove}>
-                Olib tashlash
+                {t("Olib tashlash")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

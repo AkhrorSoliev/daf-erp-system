@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatBalance, formatPrice } from "@/lib/format-utils";
 import { useAuth } from "@/hooks/use-auth";
-import { EXPENSE_METHOD_LABELS } from "./expenses/expenses-labels";
+import { useT } from "@/i18n/context";
+import { methodLabel } from "./expenses/expenses-labels";
 import { employeeRoleLabel } from "./employee-advance-select";
 import type { AdvanceRow } from "./salary-advances-tab";
 import {
@@ -41,12 +42,13 @@ export function SalaryAdvanceDayPanel({
   onEdit: (a: EditableAdvance) => void;
   onDelete: (a: EditableAdvance) => void;
 }) {
+  const t = useT();
   const user = useAuth((s) => s.user);
   if (date === null) {
     return (
       <div className="flex min-h-[200px] items-center justify-center rounded-lg border border-dashed p-6">
         <p className="text-center text-sm text-muted-foreground">
-          Tafsilotni ko&apos;rish uchun kalendardan kun tanlang.
+          {t("Tafsilotni ko'rish uchun kalendardan kun tanlang.")}
         </p>
       </div>
     );
@@ -76,14 +78,14 @@ export function SalaryAdvanceDayPanel({
       <div className="border-b px-4 py-3">
         <p className="font-medium">{longDay(date)}</p>
         <p className="text-sm text-muted-foreground">
-          Jami {formatBalance(total)} · {rows.length} ta
+          {t("Jami {amount} · {n} ta", { amount: formatBalance(total, t("so'm")), n: rows.length })}
         </p>
       </div>
 
       <div className="flex-1 divide-y">
         {rows.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-            Bu kunda avans berilmagan.
+            {t("Bu kunda avans berilmagan.")}
           </p>
         ) : (
           rows.map((a) => (
@@ -94,7 +96,7 @@ export function SalaryAdvanceDayPanel({
                     {a.user.firstName} {a.user.lastName}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {employeeRoleLabel(a.user.roles)}
+                    {employeeRoleLabel(a.user.roles, t)}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -112,7 +114,7 @@ export function SalaryAdvanceDayPanel({
               </div>
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className="font-normal">
-                  {EXPENSE_METHOD_LABELS[a.paymentMethod] ?? a.paymentMethod}
+                  {methodLabel(a.paymentMethod, t)}
                 </Badge>
                 {a.description && a.description !== "Avans" && (
                   <span className="text-xs text-muted-foreground">
@@ -121,7 +123,8 @@ export function SalaryAdvanceDayPanel({
                 )}
                 {a.createdBy && (
                   <span className="text-xs text-muted-foreground">
-                    · {a.createdBy.firstName} {a.createdBy.lastName} bergan
+                    ·{" "}
+                    {t("{name} bergan", { name: `${a.createdBy.firstName} ${a.createdBy.lastName}` })}
                   </span>
                 )}
               </div>
@@ -129,7 +132,7 @@ export function SalaryAdvanceDayPanel({
                   `title` ga tashlanmaydi, matn bo'lib turadi. */}
               {a.settled && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {settledLabel(toEditable(a))}
+                  {settledLabel(toEditable(a), t)}
                 </p>
               )}
             </div>
@@ -146,7 +149,7 @@ export function SalaryAdvanceDayPanel({
             onClick={() => onAdd(date)}
           >
             <HandCoins className="size-4" />
-            Bu kunga avans qo&apos;shish
+            {t("Bu kunga avans qo'shish")}
           </Button>
         </div>
       )}

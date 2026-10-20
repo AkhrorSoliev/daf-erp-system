@@ -1,5 +1,8 @@
+"use client";
+
 import { Fragment, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/i18n/context";
 import { formatBalance, formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { dayMonth } from "../overview/overview-math";
@@ -43,42 +46,44 @@ const sameRate = (a: RateRef | null | undefined, b: RateRef | null | undefined) 
   !!a && !!b && a.salaryType === b.salaryType && a.value === b.value;
 
 function GroupsBlock({ row, month }: { row: TeacherRow; month: string }) {
+  const t = useT();
   const groups = row.groups ?? [];
-  const split = splitLine(row);
+  const split = splitLine(row, t);
   if (groups.length === 0 && row.carriedIn <= 0 && !split) return null;
   return (
-    <Block title="Guruhlar bo'yicha">
+    <Block title={t("Guruhlar bo'yicha")}>
       {groups.map((g) => (
         <Line
           key={g.groupId}
           left={g.name}
           sub={
             <>
-              {g.students} o&apos;quvchi · {g.lessons} dars
+              {t("{students} o'quvchi · {lessons} dars", { students: g.students, lessons: g.lessons })}
               {/* The group's own rate, only where it is not the general one. */}
-              {g.rate && !sameRate(g.rate, row.rate) && <> · {rateText(g.rate, "teacher", undefined, month)}</>}
+              {g.rate && !sameRate(g.rate, row.rate) && <> · {rateText(g.rate, "teacher", undefined, month, t)}</>}
             </>
           }
           right={formatPrice(g.amount)}
         />
       ))}
-      {row.carriedIn > 0 && <Line left="Oldingi oydan" right={formatPrice(row.carriedIn)} />}
+      {row.carriedIn > 0 && <Line left={t("Oldingi oydan")} right={formatPrice(row.carriedIn)} />}
       {split && <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">{split}</p>}
     </Block>
   );
 }
 
 function AdvancesBlock({ items }: { items: AdvanceItem[] }) {
+  const t = useT();
   return (
-    <Block title="Avanslar — shu oylikdan ushlanadi">
+    <Block title={t("Avanslar — shu oylikdan ushlanadi")}>
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Avans olinmagan</p>
+        <p className="text-sm text-muted-foreground">{t("Avans olinmagan")}</p>
       ) : (
         items.map((a) => (
           <Line
             key={a.id}
             // `date` is a calendar day (`@db.Date`): read it off the string.
-            left={`${dayMonth(a.date.slice(0, 10))} · ${a.paymentMethod === "CASH" ? "naqd" : "karta"}`}
+            left={`${dayMonth(a.date.slice(0, 10))} · ${a.paymentMethod === "CASH" ? t("naqd") : t("karta")}`}
             right={formatPrice(a.amount)}
           />
         ))
@@ -94,10 +99,11 @@ function signed({ value, sign }: CalcLine): string {
 }
 
 function CalcBlock({ detail }: { detail: SalaryDetail }) {
-  const note = advanceAheadNote(detail);
+  const t = useT();
+  const note = advanceAheadNote(detail, t);
   return (
-    <Block title="Hisob">
-      {calcLines(detail).map((l) => (
+    <Block title={t("Hisob")}>
+      {calcLines(detail, t).map((l) => (
         <Fragment key={l.label}>
           <div
             className={cn(
@@ -116,7 +122,8 @@ function CalcBlock({ detail }: { detail: SalaryDetail }) {
 }
 
 function PayoutBlock({ payout }: { payout: NonNullable<SalaryDetail["payout"]> }) {
-  const p = payoutLines(payout);
+  const t = useT();
+  const p = payoutLines(payout, t);
   return (
     <div className="flex flex-col gap-1 rounded-lg bg-green-500/15 px-4 py-3 text-sm">
       <div className="font-semibold">{p.title}</div>
@@ -133,31 +140,32 @@ function PayoutBlock({ payout }: { payout: NonNullable<SalaryDetail["payout"]> }
 
 /** The staff member's pay for the month: the formula, or the CEO's figure with the formula beside it (ADR-0112). */
 function MonthlyBlock({ row, onAdjust }: { row: StaffRow; onAdjust?: () => void }) {
+  const t = useT();
   const f = adjustmentFacts(row);
-  const lock = adjustLockReason(row.payment);
+  const lock = adjustLockReason(row.payment, t);
   return (
-    <Block title="Oylik hisobi">
+    <Block title={t("Oylik hisobi")}>
       {f.manual && row.adjustment ? (
         <>
           <Line
-            left="Qo'lda"
-            sub={`${row.adjustment.reason} · ${adjustmentMeta(row.adjustment)}`}
+            left={t("Qo'lda")}
+            sub={`${row.adjustment.reason} · ${adjustmentMeta(row.adjustment, t)}`}
             right={formatPrice(row.adjustment.amount)}
           />
           <Line
-            left={<span className="text-muted-foreground line-through">Tizim hisobi</span>}
+            left={<span className="text-muted-foreground line-through">{t("Tizim hisobi")}</span>}
             right={<span className="text-muted-foreground line-through">{formatPrice(f.formula)}</span>}
           />
         </>
       ) : (
-        <Line left="Tizim hisobi" right={formatPrice(f.formula)} />
+        <Line left={t("Tizim hisobi")} right={formatPrice(f.formula)} />
       )}
       {onAdjust &&
         (lock ? (
           <p className="text-xs text-muted-foreground">{lock}</p>
         ) : (
           <Button variant="outline" size="sm" className="self-start" onClick={onAdjust}>
-            {f.manual ? "O'zgartirish" : "To'g'rilash"}
+            {f.manual ? t("O'zgartirish") : t("To'g'rilash")}
           </Button>
         ))}
     </Block>
@@ -174,17 +182,18 @@ export function SalaryDrawerBody({
   /** Opens the correction dialog; absent for a viewer without `salary.adjust`. */
   onAdjust?: () => void;
 }) {
+  const t = useT();
   const { row } = detail;
   const teacherRow = "fullDeserved" in row ? row : null;
   const coverage = "fullDeserved" in row ? undefined : row.coverage;
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-lg border bg-card px-4 py-3">
-        <div className="text-xs text-muted-foreground">{drawerTotalLabel(state, row.payment)}</div>
-        <div className="mt-1 text-2xl font-semibold tabular-nums">{formatBalance(row.netToPay)}</div>
+        <div className="text-xs text-muted-foreground">{drawerTotalLabel(state, row.payment, t)}</div>
+        <div className="mt-1 text-2xl font-semibold tabular-nums">{formatBalance(row.netToPay, t("so'm"))}</div>
       </div>
-      <Block title="Stavka">
-        <p className="text-sm">{rateText(row.rate, detail.kind, coverage, detail.month)}</p>
+      <Block title={t("Stavka")}>
+        <p className="text-sm">{rateText(row.rate, detail.kind, coverage, detail.month, t)}</p>
       </Block>
       {!teacherRow && <MonthlyBlock row={row as StaffRow} onAdjust={onAdjust} />}
       {teacherRow && <GroupsBlock row={teacherRow} month={detail.month} />}

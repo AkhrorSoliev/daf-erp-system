@@ -1,5 +1,7 @@
 import { format, isSameDay, subDays } from "date-fns";
 import { formatPhone } from "@/lib/format-utils";
+import { interpolate } from "@/i18n/translate";
+import type { Translate } from "@/components/notifications/notification-view";
 import {
   STAGE_LABELS,
   type AnswerValue,
@@ -11,11 +13,15 @@ import {
 } from "./types";
 
 /** «Bugun, 14:05» — admin «bu bugungi story'danmi?» degan savolga tez javob oladi. */
-export function formatSubmittedAt(iso: string, now: Date = new Date()): string {
+export function formatSubmittedAt(
+  iso: string,
+  now: Date = new Date(),
+  t: Translate = interpolate,
+): string {
   const date = new Date(iso);
   const time = format(date, "HH:mm");
-  if (isSameDay(date, now)) return `Bugun, ${time}`;
-  if (isSameDay(date, subDays(now, 1))) return `Kecha, ${time}`;
+  if (isSameDay(date, now)) return t("Bugun, {time}", { time });
+  if (isSameDay(date, subDays(now, 1))) return t("Kecha, {time}", { time });
   return format(date, "dd.MM.yyyy, HH:mm");
 }
 
@@ -37,9 +43,10 @@ export function displayPhone(row: SubmissionRow): string {
 export function answerText(
   column: SubmissionFieldColumn,
   value: AnswerValue | undefined,
+  t: Translate = interpolate,
 ): string {
   if (value === undefined || value === "") return "";
-  if (typeof value === "boolean") return value ? "Ha" : "Yo'q";
+  if (typeof value === "boolean") return value ? t("Ha") : t("Yo'q");
   const option = column.options?.find((o) => o.value === value);
   return option ? option.label : String(value);
 }
@@ -87,6 +94,7 @@ function stageAfterCall(
   return row.stage;
 }
 
+// The CSV is a file people keep: its headers and cells stay Uzbek (no `t`).
 const CSV_HEADERS = [
   "Ism",
   "Familiya",

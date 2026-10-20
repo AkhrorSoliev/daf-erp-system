@@ -7,6 +7,7 @@ import api from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import { freshSessionFrom } from "@/lib/fresh-session";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
 
 /**
  * "Log out other devices" (ADR-0030). The server ends every session of the
@@ -18,6 +19,7 @@ export function useLogoutOthers() {
   // renders auth state.
   const setAuth = useAuth((s) => s.setAuth);
   const queryClient = useQueryClient();
+  const t = useT();
   const [pending, setPending] = useState(false);
 
   const logoutOthers = useCallback(async () => {
@@ -28,19 +30,19 @@ export function useLogoutOthers() {
       if (session) {
         setAuth(session.user, session.accessToken, session.refreshToken);
       }
-      toast.success("Boshqa qurilmalardagi kirishlar tugatildi");
+      toast.success(t("Boshqa qurilmalardagi kirishlar tugatildi"));
       // The list of devices on the profile (ADR-0113) just lost every row but this one.
       queryClient.invalidateQueries({ queryKey: ["user-sessions"] });
       return true;
     } catch (error) {
       toast.error(
-        getErrorMessage(error, "Boshqa qurilmalardan chiqib bo'lmadi"),
+        getErrorMessage(error, t("Boshqa qurilmalardan chiqib bo'lmadi")),
       );
       return false;
     } finally {
       setPending(false);
     }
-  }, [setAuth, queryClient]);
+  }, [setAuth, queryClient, t]);
 
   return { logoutOthers, pending };
 }

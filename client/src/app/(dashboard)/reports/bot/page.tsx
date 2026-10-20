@@ -1,18 +1,16 @@
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ReportPageHeader } from "@/components/reports/report-page-header";
+import { msg } from "@/i18n/msg";
 import { BotReportClient } from "@/components/reports/bot/bot-report-client";
 
 export default function BotReportPage() {
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="font-heading text-xl font-bold tracking-tight">
-          Bot hisoboti
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Telegram kanaliga bot orqali qo&apos;shilganlar statistikasi
-        </p>
-      </div>
+      <ReportPageHeader
+        title={msg("Bot hisoboti")}
+        description={msg("Telegram kanaliga bot orqali qo'shilganlar statistikasi")}
+      />
       {/* BotReportClient oyni URL'dan o'qiydi (useSearchParams) — Next.js
           statik prerender uchun uni Suspense bilan o'rashni talab qiladi. */}
       <Suspense

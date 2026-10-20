@@ -12,6 +12,7 @@ import {
   hasArchiveFilter,
   type ArchiveFilters,
 } from "./archive-url";
+import { useT } from "@/i18n/context";
 
 /**
  * Qidiruv, «Kim tomonidan» va sana oralig'i. Hammasi URL'da; `onChange` sahifani
@@ -30,6 +31,7 @@ export function ArchiveFilterBar({
   onChange: (update: Partial<ArchiveFilters>) => void;
   onClear: () => void;
 }) {
+  const t = useT();
   const onSearch = useCallback((q: string) => onChange({ q }), [onChange]);
   const from = dayToDate(filters.dan);
   const to = dayToDate(filters.gacha);
@@ -39,22 +41,22 @@ export function ArchiveFilterBar({
       <UrlSearchBox
         value={filters.q}
         onSearch={onSearch}
-        label="Arxivdan qidirish"
-        placeholder="Ism, telefon yoki sabab bo'yicha..."
+        label={t("Arxivdan qidirish")}
+        placeholder={t("Ism, telefon yoki sabab bo'yicha...")}
       />
       <MultiSelectCombobox
         className="w-full sm:w-56"
         options={archivers.map((a) => ({ value: String(a.id), label: a.name }))}
         selected={filters.kim}
         onChange={(kim) => onChange({ kim })}
-        placeholder="Barcha xodimlar"
-        searchPlaceholder="Xodim qidirish..."
+        placeholder={t("Barcha xodimlar")}
+        searchPlaceholder={t("Xodim qidirish...")}
       />
       <DatePicker
         className="w-full sm:w-40"
         value={from}
         onChange={(d) => onChange({ dan: dateToDay(d) })}
-        placeholder="Dan"
+        placeholder={t("Dan")}
         maxDate={to}
         defaultMonth={to}
       />
@@ -62,14 +64,14 @@ export function ArchiveFilterBar({
         className="w-full sm:w-40"
         value={to}
         onChange={(d) => onChange({ gacha: dateToDay(d) })}
-        placeholder="Gacha"
+        placeholder={t("Gacha")}
         minDate={from}
         defaultMonth={from}
       />
       {hasArchiveFilter(filters) && (
         <Button variant="ghost" onClick={onClear}>
           <X className="size-4" />
-          Tozalash
+          {t("Tozalash")}
         </Button>
       )}
     </div>

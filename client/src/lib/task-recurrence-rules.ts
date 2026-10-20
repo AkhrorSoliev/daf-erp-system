@@ -1,21 +1,30 @@
 import type { RecurrenceFreq, TaskRecurrenceBadge, TaskRecurrenceView } from "@/hooks/use-tasks";
+import { msg } from "@/i18n/msg";
+import { interpolate, type Params } from "@/i18n/translate";
 
-/** The server's numbering, 1 = dushanba … 6 = shanba; Sunday is never a run day. */
-export const WEEKDAYS: { id: number; short: string; name: string }[] = [
-  { id: 1, short: "Du", name: "dushanba" },
-  { id: 2, short: "Se", name: "seshanba" },
-  { id: 3, short: "Cho", name: "chorshanba" },
-  { id: 4, short: "Pa", name: "payshanba" },
-  { id: 5, short: "Ju", name: "juma" },
-  { id: 6, short: "Sh", name: "shanba" },
+/** The page's `t`; without it the texts read in Uzbek as written. */
+type Translate = (source: string, params?: Params) => string;
+
+/**
+ * The server's numbering, 1 = dushanba … 6 = shanba; Sunday is never a run day.
+ * `every` is the one-day badge as a whole text: in ru the word for «every» agrees with the day.
+ */
+export const WEEKDAYS: { id: number; short: string; name: string; every: string }[] = [
+  { id: 1, short: msg("Du"), name: msg("dushanba"), every: msg("Har dushanba") },
+  { id: 2, short: msg("Se"), name: msg("seshanba"), every: msg("Har seshanba") },
+  { id: 3, short: msg("Cho"), name: msg("chorshanba"), every: msg("Har chorshanba") },
+  { id: 4, short: msg("Pa"), name: msg("payshanba"), every: msg("Har payshanba") },
+  { id: 5, short: msg("Ju"), name: msg("juma"), every: msg("Har juma") },
+  { id: 6, short: msg("Sh"), name: msg("shanba"), every: msg("Har shanba") },
 ];
 
 export type RecurrenceChoice = "NONE" | RecurrenceFreq;
+// «Takrorlanmaydi», not «Yo'q»: the dictionary's «Yo'q» is a plain «No».
 export const RECURRENCE_CHOICES: { id: RecurrenceChoice; label: string }[] = [
-  { id: "NONE", label: "Yo'q" },
-  { id: "DAILY", label: "Har kuni" },
-  { id: "WEEKLY", label: "Har hafta" },
-  { id: "MONTHLY", label: "Har oy" },
+  { id: "NONE", label: msg("Takrorlanmaydi") },
+  { id: "DAILY", label: msg("Har kuni") },
+  { id: "WEEKLY", label: msg("Har hafta") },
+  { id: "MONTHLY", label: msg("Har oy") },
 ];
 
 export interface RecurrenceForm { freq: RecurrenceChoice; weekdays: number[]; dayOfMonth: number; time: string }
@@ -23,17 +32,18 @@ const DEFAULT_TIME = "18:00";
 export const EMPTY_RECURRENCE: RecurrenceForm = { freq: "NONE", weekdays: [1], dayOfMonth: 1, time: DEFAULT_TIME };
 
 /** The card badge (spec screen 1): «Har kuni», «Har dushanba», «Har oyning 5-sanasi». */
-export function recurrenceBadge(r: TaskRecurrenceBadge): string {
-  if (r.freq === "DAILY") return "Har kuni";
-  if (r.freq === "MONTHLY") return `Har oyning ${r.dayOfMonth}-sanasi`;
+export function recurrenceBadge(r: TaskRecurrenceBadge, t: Translate = interpolate): string {
+  if (r.freq === "DAILY") return t("Har kuni");
+  if (r.freq === "MONTHLY") return t("Har oyning {day}-sanasi", { day: String(r.dayOfMonth) });
   const days = WEEKDAYS.filter((d) => r.weekdays.includes(d.id));
-  if (days.length === 1) return `Har ${days[0].name}`;
-  if (days.length === 2) return `Har ${days[0].name} va ${days[1].name}`;
-  return `Har hafta: ${days.map((d) => d.short).join(", ")}`;
+  const [first, second] = days;
+  if (days.length === 1) return t(first.every);
+  if (days.length === 2) return t("Har {first} va {second}", { first: t(first.name), second: t(second.name) });
+  return t("Har hafta: {days}", { days: days.map((d) => t(d.short)).join(", ") });
 }
 
 /** The sheet's line: «Har dushanba, 10:00». */
-export const recurrenceLine = (r: TaskRecurrenceBadge & { dueTime: string }) => `${recurrenceBadge(r)}, ${r.dueTime}`;
+export const recurrenceLine = (r: TaskRecurrenceBadge & { dueTime: string }, t: Translate = interpolate) => `${recurrenceBadge(r, t)}, ${r.dueTime}`;
 
 /** `POST /tasks` → `recurrence`, and `PATCH …/recurrences/:id` → `schedule`; undefined = a one-off task. */
 export function recurrencePayload(f: RecurrenceForm): { freq: RecurrenceFreq; weekdays?: number[]; dayOfMonth?: number; dueTime: string } | undefined {

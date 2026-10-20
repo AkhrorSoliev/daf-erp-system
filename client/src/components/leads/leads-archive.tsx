@@ -44,6 +44,7 @@ import { originOf } from "./archive/restore-lead-model";
 import { RestoreLeadDialog, type RestoreLeadTarget } from "./restore-lead-dialog";
 import { ArchivedLeadPanel } from "./archive/archived-lead-panel";
 import { useArchivePanelUrl } from "./archive/archive-panel-url";
+import { useT } from "@/i18n/context";
 
 interface LeadsArchiveProps {
   /** When rendered inside /settings/archive, returns to the category grid. */
@@ -64,6 +65,7 @@ const toRestoreTarget = (lead: ArchivedLead): RestoreLeadTarget => ({
 const NO_COLUMNS: BoardColumn[] = [];
 
 export function LeadsArchive({ onBack }: LeadsArchiveProps) {
+  const t = useT();
   const queryClient = useQueryClient();
   const { filters, setFilters } = useUrlFilters(LEADS_ARCHIVE_SCHEMA);
   const canRestore = useCan("leads.manage");
@@ -166,13 +168,13 @@ export function LeadsArchive({ onBack }: LeadsArchiveProps) {
             )}
           </TooltipTrigger>
           <TooltipContent>
-            {onBack ? "Arxivga qaytish" : "Lidlarga qaytish"}
+            {onBack ? t("Arxivga qaytish") : t("Lidlarga qaytish")}
           </TooltipContent>
         </Tooltip>
         <div>
-          <h2 className="text-lg font-semibold tracking-tight">Lidlar arxivi</h2>
+          <h2 className="text-lg font-semibold tracking-tight">{t("Lidlar arxivi")}</h2>
           <p className="text-xs text-muted-foreground">
-            O&apos;chirilgan lidlar va bo&apos;limlar — tiklash mumkin
+            {t("O'chirilgan lidlar va bo'limlar — tiklash mumkin")}
           </p>
         </div>
       </div>
@@ -198,10 +200,12 @@ export function LeadsArchive({ onBack }: LeadsArchiveProps) {
       >
         <TabsList>
           <TabsTrigger value="lidlar">
-            Lidlar{countLabel(summary.data?.leads)}
+            {t("Lidlar")}
+            {countLabel(summary.data?.leads)}
           </TabsTrigger>
           <TabsTrigger value="bolimlar">
-            Bo&apos;limlar{countLabel(summary.data?.sections)}
+            {t("Bo'limlar")}
+            {countLabel(summary.data?.sections)}
           </TabsTrigger>
         </TabsList>
         <TabsContent value="lidlar" className="mt-3">

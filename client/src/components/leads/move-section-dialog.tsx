@@ -20,11 +20,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useLeadsBoard } from "@/hooks/use-leads-board";
+import { leadColumnName, useLeadsBoard } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
+import { useT } from "@/i18n/context";
 
 /** Keyboard-friendly fallback for moving a section to another column. */
 export function MoveSectionDialog() {
+  const t = useT();
   const moveTarget = useLeadsUi((s) => s.moveSection);
   const closeMoveSection = useLeadsUi((s) => s.closeMoveSection);
   const board = useLeadsBoard((s) => s.board);
@@ -45,7 +47,7 @@ export function MoveSectionDialog() {
   async function handleConfirm() {
     if (!moveTarget) return;
     if (!target) {
-      toast.error("Ustunni tanlang");
+      toast.error(t("Ustunni tanlang"));
       return;
     }
     setSubmitting(true);
@@ -68,23 +70,24 @@ export function MoveSectionDialog() {
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Bo&apos;limni ko&apos;chirish</DialogTitle>
+          <DialogTitle>{t("Bo'limni ko'chirish")}</DialogTitle>
           <DialogDescription>
-            &laquo;{moveTarget?.name}&raquo; bo&apos;limi ko&apos;chiriladigan
-            ustunni tanlang
+            {t("«{name}» bo'limi ko'chiriladigan ustunni tanlang", {
+              name: moveTarget?.name ?? "",
+            })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-1.5">
-          <Label>Ustun</Label>
+          <Label>{t("Ustun")}</Label>
           <Select value={target} onValueChange={setTarget}>
             <SelectTrigger>
-              <SelectValue placeholder="Ustunni tanlang" />
+              <SelectValue placeholder={t("Ustunni tanlang")} />
             </SelectTrigger>
             <SelectContent>
               {columns.map((col) => (
                 <SelectItem key={col.id} value={col.id}>
-                  {col.name}
+                  {leadColumnName(col, t)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -98,11 +101,11 @@ export function MoveSectionDialog() {
             onClick={closeMoveSection}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button type="button" onClick={handleConfirm} disabled={submitting}>
             {submitting && <Loader2 className="size-4 animate-spin" />}
-            Ko&apos;chirish
+            {t("Bo'limni ko'chirish")}
           </Button>
         </DialogFooter>
       </DialogContent>

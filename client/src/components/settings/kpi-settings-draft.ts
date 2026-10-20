@@ -1,4 +1,6 @@
 import { ruleError, settingsPatch } from "@/components/reports/admin-kpi/kpi-format";
+import type { Translate } from "@/components/notifications/notification-view";
+import { interpolate } from "@/i18n/translate";
 import type { KpiRuleMode, KpiSettings, KpiSettingsPatch } from "@/components/reports/admin-kpi/kpi-types";
 
 /** A rule being edited: the number stays a string, so clearing the field does not snap it to 0. */
@@ -23,13 +25,13 @@ export function toDraft(s: KpiSettings): KpiDraft {
   };
 }
 
-export function draftError(rule: DraftRule): string | null {
-  if (rule.text === "") return "Qiymatni kiriting";
-  return ruleError({ mode: rule.mode, value: Number(rule.text) });
+export function draftError(rule: DraftRule, t: Translate = interpolate): string | null {
+  if (rule.text === "") return t("Qiymatni kiriting");
+  return ruleError({ mode: rule.mode, value: Number(rule.text) }, t);
 }
 
-export function rangeHint(mode: KpiRuleMode): string {
-  return mode === "PERCENT" ? "0 dan 100 gacha, butun foiz" : "0 dan 10 000 000 so'mgacha";
+export function rangeHint(mode: KpiRuleMode, t: Translate = interpolate): string {
+  return mode === "PERCENT" ? t("0 dan 100 gacha, butun foiz") : t("0 dan 10 000 000 so'mgacha");
 }
 
 /** What would be sent; empty while any field is invalid, so nothing half-typed goes out. */

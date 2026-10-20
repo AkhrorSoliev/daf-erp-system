@@ -3,6 +3,12 @@
  * sinaladi). Hech qanday hisob-kitob serverniki; bu yerda faqat matn tanlanadi.
  */
 
+import { msg } from "@/i18n/msg";
+import { interpolate, type Params } from "@/i18n/translate";
+
+/** Translates a text; the default fills placeholders and keeps the Uzbek source. */
+type Translate = (source: string, params?: Params) => string;
+
 export type DetailType = "students" | "groups";
 
 export function isDetailType(t: string): t is DetailType {
@@ -22,9 +28,26 @@ export function archiveReason(item: {
 
 export function personName(
   p?: { firstName?: string | null; lastName?: string | null } | null,
+  t: Translate = interpolate,
 ): string {
   const name = [p?.firstName, p?.lastName].filter(Boolean).join(" ").trim();
-  return name || "Noma'lum";
+  return name || t("Noma'lum");
+}
+
+/**
+ * An enrollment status in the sheet speaks about the student (ru «Активный»,
+ * «Выбыл»), so the words live here; an unknown code is data and gives `null`.
+ */
+const ENROLLMENT_LABELS: Record<string, string> = {
+  ACTIVE: msg("Faol"),
+  FROZEN: msg("Muzlatilgan"),
+  COMPLETED: msg("Tugatgan"),
+  DROPPED: msg("Chiqdi"),
+  TRANSFERRED: msg("O'tkazildi"),
+};
+
+export function enrollmentStatusLabel(status: string): string | null {
+  return ENROLLMENT_LABELS[status] ?? null;
 }
 
 /** Yon oynada ro'yxat qisqa turadi; `total` serverning `_count` jami soni. */

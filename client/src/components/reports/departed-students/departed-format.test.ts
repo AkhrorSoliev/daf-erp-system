@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { STATE_LABEL, capitalize, formatDay, formatPer100, formatShare, formatStudyMonths, monthFull, monthShort, previousLabel, rangeLabel } from "./departed-format";
+import { capitalize, formatDay, formatPer100, formatShare, formatStudyMonths, monthFull, monthShort, previousLabel, rangeLabel } from "./departed-format";
 
 describe("formatPer100", () => {
   it("below 10 one decimal with a comma, from 10 whole, no data a dash", () => {
@@ -45,12 +45,6 @@ describe("previousLabel", () => {
   });
   it("a legacy 12m link reads like 6m", () => {
     expect(previousLabel("12m", { startDate: "2026-05-03" })).toBe("oldingi 6 oyda");
-  });
-});
-
-describe("STATE_LABEL", () => {
-  it("names the three states", () => {
-    expect(STATE_LABEL).toEqual({ ketgan: "Ketgan", kutilmoqda: "Kutilmoqda", qaytgan: "Qaytgan" });
   });
 });
 

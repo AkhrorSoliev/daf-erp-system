@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { ArchivedSection, BoardColumn } from "./archive-types";
+import { leadColumnName } from "@/hooks/use-leads-board";
+import { useT } from "@/i18n/context";
 
 // ---------------------------------------------------------------------------
 // Restore a section — pick a column + with / without its leads
@@ -46,6 +48,7 @@ export function RestoreSectionDialog({
   onClose: () => void;
   onRestored: (result: { restoredLeadCount: number }) => void;
 }) {
+  const t = useT();
   const [columnId, setColumnId] = useState("");
   const [withLeads, setWithLeads] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -68,7 +71,7 @@ export function RestoreSectionDialog({
   async function handleConfirm() {
     if (!target) return;
     if (!columnId) {
-      toast.error("Ustunni tanlang");
+      toast.error(t("Ustunni tanlang"));
       return;
     }
     setSubmitting(true);
@@ -77,10 +80,10 @@ export function RestoreSectionDialog({
         `/lead-sections/${target.id}/restore`,
         { targetColumnId: columnId, withLeads: hasLeads ? withLeads : false },
       );
-      toast.success("Bo'lim tiklandi");
+      toast.success(t("Bo'lim tiklandi"));
       onRestored({ restoredLeadCount: data.restoredLeadCount ?? 0 });
     } catch (error) {
-      toast.error(getErrorMessage(error, "Tiklashda xatolik"));
+      toast.error(getErrorMessage(error, t("Tiklashda xatolik")));
     } finally {
       setSubmitting(false);
     }
@@ -90,36 +93,37 @@ export function RestoreSectionDialog({
     <Dialog open={open} onOpenChange={(o) => !o && !submitting && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Bo&apos;limni tiklash</DialogTitle>
+          <DialogTitle>{t("Bo'limni tiklash")}</DialogTitle>
           <DialogDescription>
-            &laquo;{target?.name}&raquo; bo&apos;limi qaytariladigan ustunni
-            tanlang
+            {t("«{name}» bo'limi qaytariladigan ustunni tanlang", {
+              name: target?.name ?? "",
+            })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
           {columnsFailed && (
             <p className="text-xs text-destructive">
-              Ustunlarni yuklab bo&apos;lmadi. Oynani yopib, qayta oching.
+              {t("Ustunlarni yuklab bo'lmadi. Oynani yopib, qayta oching.")}
             </p>
           )}
 
           <div className="space-y-1.5">
-            <Label>Ustun</Label>
+            <Label>{t("Ustun")}</Label>
             <Select
               value={columnId}
               onValueChange={setColumnId}
               disabled={columnsLoading}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Ustunni tanlang" />
+                <SelectValue placeholder={t("Ustunni tanlang")} />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectLabel>Ustunlar</SelectLabel>
+                  <SelectLabel>{t("Ustunlar")}</SelectLabel>
                   {columns.map((col) => (
                     <SelectItem key={col.id} value={col.id}>
-                      {col.name}
+                      {leadColumnName(col, t)}
                     </SelectItem>
                   ))}
                 </SelectGroup>
@@ -129,7 +133,9 @@ export function RestoreSectionDialog({
 
           {hasLeads && (
             <div className="space-y-1.5">
-              <Label>Ichidagi lidlar ({target?.leadCount} ta)</Label>
+              <Label>
+                {t("Ichidagi lidlar ({n} ta)", { n: target?.leadCount ?? 0 })}
+              </Label>
               <div className="grid grid-cols-2 gap-2">
                 <Button
                   type="button"
@@ -137,7 +143,7 @@ export function RestoreSectionDialog({
                   onClick={() => setWithLeads(true)}
                   className={cn("h-auto py-2 text-xs", !withLeads && "font-normal")}
                 >
-                  Lidlari bilan
+                  {t("Lidlari bilan")}
                 </Button>
                 <Button
                   type="button"
@@ -145,13 +151,13 @@ export function RestoreSectionDialog({
                   onClick={() => setWithLeads(false)}
                   className={cn("h-auto py-2 text-xs", withLeads && "font-normal")}
                 >
-                  Lidlarsiz (bo&apos;sh)
+                  {t("Lidlarsiz (bo'sh)")}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
                 {withLeads
-                  ? "Bo'lim ichidagi arxivlangan lidlar bilan birga tiklanadi."
-                  : "Faqat bo'lim tiklanadi; lidlar arxivda qoladi."}
+                  ? t("Bo'lim ichidagi arxivlangan lidlar bilan birga tiklanadi.")
+                  : t("Faqat bo'lim tiklanadi; lidlar arxivda qoladi.")}
               </p>
             </div>
           )}
@@ -164,7 +170,7 @@ export function RestoreSectionDialog({
             onClick={onClose}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button
             type="button"
@@ -172,7 +178,7 @@ export function RestoreSectionDialog({
             disabled={submitting || columnsLoading || columnsFailed}
           >
             {submitting && <Loader2 className="size-4 animate-spin" />}
-            Tiklash
+            {t("Tiklash")}
           </Button>
         </DialogFooter>
       </DialogContent>

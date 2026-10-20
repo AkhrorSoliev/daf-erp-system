@@ -1,9 +1,12 @@
+import { useEffect } from "react";
 import { create } from "zustand";
 import axios from "axios";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { registerBranchScopedStore } from "@/lib/branch-scoped-stores";
+import { useT } from "@/i18n/use-t";
+import { msg } from "@/i18n/msg";
 // task-labels only `import type`s from this file, so there is no runtime cycle.
 import { STATUS_COLUMNS } from "@/components/tasks/task-labels";
 import type { CallOutcome, CallReason } from "@/components/outreach/outreach-types";
@@ -69,6 +72,20 @@ let lastLoadReq = 0;
 let lastReloadReq = 0;
 
 type StoreView = Exclude<TaskView, "workload">;
+
+// The store's own toast fallbacks are msg() texts; every page root that drives
+// the store (the tasks page, the entity panel, the header button) calls
+// useTasksTranslator() to hand its `t` in (identity until then, and on the server).
+let translate: (source: string) => string = (source) => source;
+export function setTasksTranslator(fn: (source: string) => string): void {
+  translate = fn;
+}
+export function useTasksTranslator(): void {
+  const t = useT();
+  useEffect(() => setTasksTranslator(t), [t]);
+}
+/** A `msg()` text in the language handed in by useTasksTranslator(); for the sibling file store (`use-task-files.ts`). */
+export const tasksText = (source: string): string => translate(source);
 
 interface TasksState {
   view: StoreView;
@@ -145,7 +162,7 @@ export const useTasks = create<TasksState>((set, get) => ({
     } catch (error) {
       if (get().columns[status].reqId !== reqId) return;
       set((s) => ({ columns: { ...s.columns, [status]: { ...s.columns[status], loading: false } } }));
-      toast.error(getErrorMessage(error, "Topshiriqlarni yuklashda xatolik"));
+      toast.error(getErrorMessage(error, translate(msg("Topshiriqlarni yuklashda xatolik"))));
     }
   },
   fetchBoard: async () => { await Promise.all(BOARD_STATUSES.map((s) => get().fetchColumn(s))); },
@@ -207,7 +224,7 @@ export const useTasks = create<TasksState>((set, get) => ({
     } catch (error) {
       if (stale()) return;
       set({ detail: null, openTaskId: null });
-      toast.error(getErrorMessage(error, "Topshiriq topilmadi"));
+      toast.error(getErrorMessage(error, translate(msg("Topshiriq topilmadi"))));
     }
   },
   reloadDetail: async (id) => {

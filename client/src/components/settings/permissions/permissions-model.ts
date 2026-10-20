@@ -1,3 +1,7 @@
+import { roleTitle } from "@/components/profile/profile-roles";
+import type { Translate } from "@/components/notifications/notification-view";
+import { msg } from "@/i18n/msg";
+import { interpolate } from "@/i18n/translate";
 import { planToggle, withRequirements, type DepGraph } from "@/lib/permission-deps";
 import type { PermissionKey } from "@/lib/permission-keys";
 import type {
@@ -12,10 +16,16 @@ import type {
  * `GET /permissions` (spec §8, ADR-0087). The components only draw these,
  * so the tests here cover what the CEO reads: locks, dots, counts and the
  * confirm text.
+ *
+ * Every sentence here takes an optional last `t` (identity by default, so the
+ * Uzbek output is unchanged). Capability labels, section names and lock
+ * reasons come from the server catalog: they are data and are never passed
+ * through `t`. Role names go through the shared `roleTitle`.
  */
 
-export const DANGER_WARNING =
-  "Bu amal pulga ta'sir qiladi yoki qaytarib bo'lmaydi. Ishonchingiz komilmi?";
+export const DANGER_WARNING = msg(
+  "Bu amal pulga ta'sir qiladi yoki qaytarib bo'lmaydi. Ishonchingiz komilmi?",
+);
 
 export function depGraph(o: PermissionsOverview): DepGraph {
   return Object.fromEntries(o.catalog.map((e) => [e.key, { requires: e.requires }]));
@@ -27,8 +37,9 @@ function entryOf(o: PermissionsOverview, key: PermissionKey): CatalogEntry {
   return entry;
 }
 
-function roleLabel(o: PermissionsOverview, roleId: number): string {
-  return o.roles.find((r) => r.id === roleId)?.label ?? `Rol ${roleId}`;
+function roleLabel(o: PermissionsOverview, roleId: number, t: Translate): string {
+  const role = o.roles.find((r) => r.id === roleId);
+  return role ? roleTitle({ id: role.id, name: role.label }, t) : t("Rol {id}", { id: roleId });
 }
 
 function heldBy(o: PermissionsOverview, roleId: number): Set<string> {
@@ -70,9 +81,9 @@ export function sectionCount(
 }
 
 /** «—» when every key of the section is locked for the role: nothing to count. */
-export function sectionCountLabel(c: { on: number; total: number }): string {
+export function sectionCountLabel(c: { on: number; total: number }, t: Translate = interpolate): string {
   if (c.total === 0) return "—";
-  return `${c.total} tadan ${c.on} tasi`;
+  return t("{total} tadan {on} tasi", { total: c.total, on: c.on });
 }
 
 export interface ConfirmPlan {
@@ -93,21 +104,36 @@ export interface ConfirmPlan {
   refusal: string | null;
 }
 
-/** The server's `lockedMessage` (role-permissions.service.ts), word for word. */
-function lockedMessage(o: PermissionsOverview, key: PermissionKey, roleId: number, verb: string): string {
+/** The server's `lockedMessage` (role-permissions.service.ts), word for word in Uzbek. */
+function lockedMessage(
+  o: PermissionsOverview,
+  key: PermissionKey,
+  roleId: number,
+  on: boolean,
+  t: Translate,
+): string {
   const e = entryOf(o, key);
-  return `${e.label}: ${roleLabel(o, roleId)} uchun ${verb} bo'lmaydi — ${e.lockReasons[roleId] ?? ""}`;
+  const params = { name: e.label, role: roleLabel(o, roleId, t), reason: e.lockReasons[roleId] ?? "" };
+  return on
+    ? t("{name}: {role} uchun yoqib bo'lmaydi — {reason}", params)
+    : t("{name}: {role} uchun o'zgartirib bo'lmaydi — {reason}", params);
 }
 
 /** Mirrors the server's `assertAllowed`: the key itself, and for a grant everything it requires. */
-function refusalOf(o: PermissionsOverview, roleId: number, key: PermissionKey, on: boolean): string | null {
+function refusalOf(
+  o: PermissionsOverview,
+  roleId: number,
+  key: PermissionKey,
+  on: boolean,
+  t: Translate,
+): string | null {
   if (!entryOf(o, key).allowedRoles.includes(roleId)) {
-    return lockedMessage(o, key, roleId, on ? "yoqib" : "o'zgartirib");
+    return lockedMessage(o, key, roleId, on, t);
   }
   if (!on) return null;
   for (const pulled of withRequirements([key], depGraph(o))) {
     if (!entryOf(o, pulled as PermissionKey).allowedRoles.includes(roleId)) {
-      return lockedMessage(o, pulled as PermissionKey, roleId, "yoqib");
+      return lockedMessage(o, pulled as PermissionKey, roleId, true, t);
     }
   }
   return null;
@@ -118,8 +144,9 @@ export function planCellToggle(
   roleId: number,
   key: PermissionKey,
   on: boolean,
+  t: Translate = interpolate,
 ): ConfirmPlan {
-  const refusal = refusalOf(o, roleId, key, on);
+  const refusal = refusalOf(o, roleId, key, on, t);
   if (refusal) return { roleId, key, on, also: [], changes: [], danger: false, refusal };
   // The graph is the catalog, so every key planToggle returns is a PermissionKey.
   const also = planToggle(heldBy(o, roleId), key, on, depGraph(o)).also as PermissionKey[];
@@ -138,41 +165,45 @@ export function planCellToggle(
 
 export interface ConfirmCopy {
   title: string;
-  alsoTitle: "Birga yoqiladi" | "Birga o'chadi" | null;
+  alsoTitle: string | null;
   alsoLabels: string[];
   warning: string | null;
   confirm: string;
 }
 
-export function confirmCopy(o: PermissionsOverview, plan: ConfirmPlan): ConfirmCopy {
+export function confirmCopy(o: PermissionsOverview, plan: ConfirmPlan, t: Translate = interpolate): ConfirmCopy {
   const also = new Set<string>(plan.also);
-  const verb = plan.on ? "yoqilsinmi" : "o'chirilsinmi";
+  const params = { role: roleLabel(o, plan.roleId, t), name: entryOf(o, plan.key).label };
   return {
-    title: `${roleLabel(o, plan.roleId)}: «${entryOf(o, plan.key).label}» ${verb}?`,
-    alsoTitle: also.size === 0 ? null : plan.on ? "Birga yoqiladi" : "Birga o'chadi",
+    title: plan.on ? t("{role}: «{name}» yoqilsinmi?", params) : t("{role}: «{name}» o'chirilsinmi?", params),
+    alsoTitle: also.size === 0 ? null : plan.on ? t("Birga yoqiladi") : t("Birga o'chadi"),
     alsoLabels: o.catalog.filter((e) => also.has(e.key)).map((e) => e.label),
-    warning: plan.danger ? DANGER_WARNING : null,
-    confirm: plan.on ? "Yoqish" : "O'chirish",
+    warning: plan.danger ? t(DANGER_WARNING) : null,
+    confirm: plan.on ? t("Yoqish") : t("O'chirib qo'yish"),
   };
 }
 
 /** «Boshlang'ich holatga qaytarish»: every cell that differs from the default, as it will become. */
-export function resetCopy(o: PermissionsOverview, roleId: number): { title: string; lines: string[] } {
+export function resetCopy(
+  o: PermissionsOverview,
+  roleId: number,
+  t: Translate = interpolate,
+): { title: string; lines: string[] } {
   const held = heldBy(o, roleId);
   return {
-    title: `${roleLabel(o, roleId)}: boshlang'ich holatga qaytarilsinmi?`,
+    title: t("{role}: boshlang'ich holatga qaytarilsinmi?", { role: roleLabel(o, roleId, t) }),
     lines: o.catalog
       .filter((e) => held.has(e.key) !== e.defaultRoles.includes(roleId))
-      .map((e) => `«${e.label}» ${held.has(e.key) ? "o'chadi" : "yoqiladi"}`),
+      .map((e) => (held.has(e.key) ? t("«{name}» o'chadi", { name: e.label }) : t("«{name}» yoqiladi", { name: e.label }))),
   };
 }
 
 /** One «O'zgarishlar tarixi» row's text; date and author are drawn beside it. */
-export function historyLine(o: PermissionsOverview, item: PermissionHistoryItem): string {
+export function historyLine(o: PermissionsOverview, item: PermissionHistoryItem, t: Translate = interpolate): string {
   const parts = item.changes.map((c) => {
     const entry = o.catalog.find((e) => e.key === c.key);
-    const name = entry ? `«${entry.label}»` : "o'chirilgan imkoniyat";
-    return `${name} ${c.granted ? "yoqildi" : "o'chirildi"}`;
+    const name = entry ? `«${entry.label}»` : t("o'chirilgan imkoniyat");
+    return c.granted ? t("{name} yoqildi", { name }) : t("{name} o'chirildi", { name });
   });
-  return `${roleLabel(o, item.roleId)}: ${parts.join(", ")}`;
+  return `${roleLabel(o, item.roleId, t)}: ${parts.join(", ")}`;
 }

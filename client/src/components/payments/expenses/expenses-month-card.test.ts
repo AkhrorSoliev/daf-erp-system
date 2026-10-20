@@ -75,9 +75,9 @@ describe("ExpensesMissingCard (spec B6 §3.3)", () => {
     expect(t).toContain("Shimol filiali — bu oy bitta ham xarajat yozilmagan");
     expect(t).toContain(MISSING_FOOTNOTE);
   });
-  it("«Yozish» on each gap row only with expenses.manage", () => {
-    expect(text(missing()).match(/Yozish/g)?.length).toBe(2);
-    expect(text(missing({}, false))).not.toContain("Yozish");
+  it("«Xarajatni yozish» on each gap row only with expenses.manage", () => {
+    expect(text(missing()).match(/Xarajatni yozish/g)?.length).toBe(2);
+    expect(text(missing({}, false))).not.toContain("Xarajatni yozish");
   });
   it("one branch in scope: no branch name", () => {
     expect(text(missing({ multiBranch: false }))).toContain(norm(`Kommunal — sentabrda ${formatBalance(4_700_000)}`));

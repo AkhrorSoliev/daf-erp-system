@@ -28,6 +28,8 @@ import {
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
+import { markedText } from "./debt-history/marked-text";
 import { monthLabel } from "./salary-utils";
 
 interface SettleRow {
@@ -88,6 +90,7 @@ export function SettleMonthDialog({
   onOpenChange,
   onSettled,
 }: Props) {
+  const t = useT();
   const [paidAt, setPaidAt] = useState<Date>(() => new Date());
   // How much left each account, keyed by account id. A branch's payroll is
   // routinely part cash and part card, so this is an amount per account rather
@@ -175,14 +178,15 @@ export function SettleMonthDialog({
         },
       );
       toast.success(
-        `${res.data.count} ta oylik to'langan deb belgilandi — ${formatPrice(
-          res.data.total,
-        )} so'm`,
+        t("{n} ta oylik to'langan deb belgilandi — {amount} so'm", {
+          n: res.data.count,
+          amount: formatPrice(res.data.total),
+        }),
       );
       onSettled();
       onOpenChange(false);
     } catch (err) {
-      toast.error(getErrorMessage(err, "Tasdiqlashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("Tasdiqlashda xatolik yuz berdi")));
     } finally {
       setSubmitting(false);
     }
@@ -193,11 +197,12 @@ export function SettleMonthDialog({
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>
-            {monthLabel(preview?.month ?? month)} oyligi — to&apos;langanini
-            tasdiqlash
+            {t("{month} oyligi — to'langanini tasdiqlash", {
+              month: monthLabel(preview?.month ?? month, t),
+            })}
           </DialogTitle>
           <DialogDescription>
-            Tizimdan tashqarida berilgan oylikni rasmiylashtirish.
+            {t("Tizimdan tashqarida berilgan oylikni rasmiylashtirish.")}
           </DialogDescription>
         </DialogHeader>
 
@@ -209,17 +214,20 @@ export function SettleMonthDialog({
             </div>
           ) : rows.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              Bu oyda to&apos;lanmagan oylik yo&apos;q.
+              {t("Bu oyda to'lanmagan oylik yo'q.")}
             </p>
           ) : (
             <>
               <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                 <span>
-                  Bu amal qaytarilmaydi. Tizim{" "}
-                  <b className="tabular-nums">{formatPrice(total)} so&apos;m</b>ni
-                  kassadan chiqim qilib yozadi va {rows.length} ta xodim
-                  balansidan ayiradi.
+                  {markedText(
+                    t(
+                      "Bu amal qaytarilmaydi. Tizim **{amount} so'm**ni kassadan chiqim qilib yozadi va {n} ta xodim balansidan ayiradi.",
+                      { amount: formatPrice(total), n: rows.length },
+                    ),
+                    "tabular-nums",
+                  )}
                 </span>
               </div>
 
@@ -228,9 +236,9 @@ export function SettleMonthDialog({
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-12 border-r">#</TableHead>
-                      <TableHead>Xodim</TableHead>
-                      <TableHead>Filial</TableHead>
-                      <TableHead className="text-right">Summa</TableHead>
+                      <TableHead>{t("Xodim")}</TableHead>
+                      <TableHead>{t("Filial")}</TableHead>
+                      <TableHead className="text-right">{t("Summa")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -250,7 +258,7 @@ export function SettleMonthDialog({
                     ))}
                     <TableRow className="bg-muted/40 font-semibold">
                       <TableCell className="border-r" />
-                      <TableCell colSpan={2}>JAMI</TableCell>
+                      <TableCell colSpan={2}>{t("JAMI")}</TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatPrice(total)}
                       </TableCell>
@@ -260,7 +268,7 @@ export function SettleMonthDialog({
               </div>
 
               <div className="space-y-2">
-                <Label>Pul qachon berilgan?</Label>
+                <Label>{t("Pul qachon berilgan?")}</Label>
                 <DatePicker
                   value={paidAt}
                   onChange={(d) => d && setPaidAt(d)}
@@ -272,12 +280,13 @@ export function SettleMonthDialog({
               {branchState.map((b) => (
                 <div key={b.branchId} className="space-y-2">
                   <Label>
-                    {b.branchName} — qaysi hisobdan qancha chiqdi?
+                    {t("{branch} — qaysi hisobdan qancha chiqdi?", { branch: b.branchName })}
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    Bir qismi naqd, bir qismi karta bo&apos;lsa — ikkalasiga ham
-                    yozing. Yig&apos;indisi {formatPrice(b.owed)} so&apos;m
-                    bo&apos;lishi kerak.
+                    {t(
+                      "Bir qismi naqd, bir qismi karta bo'lsa — ikkalasiga ham yozing. Yig'indisi {amount} so'm bo'lishi kerak.",
+                      { amount: formatPrice(b.owed) },
+                    )}
                   </p>
 
                   {b.branchAccounts.map((a) => {
@@ -289,7 +298,7 @@ export function SettleMonthDialog({
                           <p className="truncate text-sm">
                             {a.name}{" "}
                             <span className="text-muted-foreground">
-                              ({a.type === "CASH" ? "naqd pul" : "bank / karta"})
+                              ({a.type === "CASH" ? t("naqd pul") : t("bank / karta")})
                             </span>
                           </p>
                           <p
@@ -299,8 +308,12 @@ export function SettleMonthDialog({
                                 : "text-xs text-muted-foreground"
                             }
                           >
-                            Hozir {formatPrice(a.balance)}
-                            {taken > 0 && ` → keyin ${formatPrice(after)}`} so&apos;m
+                            {taken > 0
+                              ? t("Hozir {balance} → keyin {after} so'm", {
+                                  balance: formatPrice(a.balance),
+                                  after: formatPrice(after),
+                                })
+                              : t("Hozir {balance} so'm", { balance: formatPrice(a.balance) })}
                           </p>
                         </div>
                         <Input
@@ -328,17 +341,17 @@ export function SettleMonthDialog({
                     }
                   >
                     {b.remaining === 0
-                      ? `To'g'ri — jami ${formatPrice(b.named)} so'm`
+                      ? t("To'g'ri — jami {amount} so'm", { amount: formatPrice(b.named) })
                       : b.remaining > 0
-                        ? `Yana ${formatPrice(b.remaining)} so'm taqsimlanmagan`
-                        : `${formatPrice(-b.remaining)} so'm ortiqcha yozilgan`}
+                        ? t("Yana {amount} so'm taqsimlanmagan", { amount: formatPrice(b.remaining) })
+                        : t("{amount} so'm ortiqcha yozilgan", { amount: formatPrice(-b.remaining) })}
                   </p>
                 </div>
               ))}
 
               <div className="space-y-2">
                 <Label htmlFor="settle-total">
-                  Tasdiqlash uchun jami summani yozing: {total}
+                  {t("Tasdiqlash uchun jami summani yozing: {total}", { total })}
                 </Label>
                 <Input
                   id="settle-total"
@@ -349,7 +362,7 @@ export function SettleMonthDialog({
                   onChange={(e) => setTypedTotal(e.target.value)}
                 />
                 {typedTotal.length > 0 && !totalMatches && (
-                  <p className="text-xs text-destructive">Summa mos kelmadi</p>
+                  <p className="text-xs text-destructive">{t("Summa mos kelmadi")}</p>
                 )}
               </div>
             </>
@@ -362,11 +375,11 @@ export function SettleMonthDialog({
             onClick={() => onOpenChange(false)}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit}>
             {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
-            To&apos;langanini tasdiqlash
+            {t("To'langanini tasdiqlash")}
           </Button>
         </DialogFooter>
       </DialogContent>

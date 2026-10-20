@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useTasks, type TaskView } from "@/hooks/use-tasks";
+import { useTasks, useTasksTranslator, type TaskView } from "@/hooks/use-tasks";
+import { useT } from "@/i18n/context";
 import { useTaskCounts } from "@/hooks/use-task-counts";
 import { TaskBoard } from "./task-board";
 import { TaskList } from "./task-list";
@@ -25,6 +26,8 @@ const MANAGER_ROLES = [1, 2];
 // switch, after BranchQuerySync has reset the store, so the mount effect below
 // already loads the new branch's board.
 export function TasksPageClient() {
+  const t = useT();
+  useTasksTranslator();
   const user = useAuth((s) => s.user);
   const isManager = user?.roles.some((r) => MANAGER_ROLES.includes(r.id)) ?? false;
   const layout = useTasks((s) => s.layout);
@@ -38,7 +41,7 @@ export function TasksPageClient() {
   const searchParams = useSearchParams();
 
   // Only the four known tabs; «Barchasi» and «Yuklama» are for managers.
-  const asked = TABS.find((t) => t === searchParams.get("tab")) ?? "my";
+  const asked = TABS.find((v) => v === searchParams.get("tab")) ?? "my";
   const tab: TaskView = (asked === "all" || asked === "workload") && !isManager ? "my" : asked;
   const urlTask = searchParams.get("task");
 
@@ -90,26 +93,26 @@ export function TasksPageClient() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold tracking-tight">Topshiriqlar</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("Topshiriqlar")}</h1>
         <div className="flex gap-2">
           <TaskRecurrencesButton />
-          <Button onClick={() => openCreate({})}><Plus className="mr-1 size-4" />Yangi topshiriq</Button>
+          <Button onClick={() => openCreate({})}><Plus className="mr-1 size-4" />{t("Yangi topshiriq")}</Button>
         </div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Tabs value={tab} onValueChange={setTab} className="max-w-full overflow-x-auto">
           <TabsList>
-            <TabsTrigger value="my">Menga berilgan <span className="ml-1 text-muted-foreground">{counts.my}</span></TabsTrigger>
-            <TabsTrigger value="created">Men bergan <span className="ml-1 text-muted-foreground">{counts.created}</span></TabsTrigger>
-            {isManager && <TabsTrigger value="all">Barchasi</TabsTrigger>}
-            {isManager && <TabsTrigger value="workload">Yuklama</TabsTrigger>}
+            <TabsTrigger value="my">{t("Menga berilgan")} <span className="ml-1 text-muted-foreground">{counts.my}</span></TabsTrigger>
+            <TabsTrigger value="created">{t("Men bergan")} <span className="ml-1 text-muted-foreground">{counts.created}</span></TabsTrigger>
+            {isManager && <TabsTrigger value="all">{t("Barchasi")}</TabsTrigger>}
+            {isManager && <TabsTrigger value="workload">{t("Yuklama")}</TabsTrigger>}
           </TabsList>
         </Tabs>
         {showBoard && (
           <Tabs value={layout} onValueChange={(v) => setLayout(v as "board" | "list")}>
             <TabsList>
-              <TabsTrigger value="board"><LayoutGrid className="size-4" /><span className="ml-1 hidden sm:inline">Doska</span></TabsTrigger>
-              <TabsTrigger value="list"><List className="size-4" /><span className="ml-1 hidden sm:inline">Ro&apos;yxat</span></TabsTrigger>
+              <TabsTrigger value="board"><LayoutGrid className="size-4" /><span className="ml-1 hidden sm:inline">{t("Doska")}</span></TabsTrigger>
+              <TabsTrigger value="list"><List className="size-4" /><span className="ml-1 hidden sm:inline">{t("Ro'yxat")}</span></TabsTrigger>
             </TabsList>
           </Tabs>
         )}

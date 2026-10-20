@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/i18n/context";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { foizRangi } from "@/components/groups/app-activity/activity-format";
 import { formatNumber } from "@/lib/format-utils";
@@ -18,24 +19,25 @@ const kasr = (n: number | null) => (n === null ? "—" : String(n).replace(".", 
 export function DafFiliallarTable({ qatorlar }: { qatorlar: MarkazFilialQatori[] }) {
   const branches = useBranchSwitcher((s) => s.branches);
   const selectBranch = useBranchSwitcher((s) => s.selectBranch);
+  const t = useT();
 
   return (
     <div className="rounded-xl border bg-card">
       <div className="px-4 pt-4">
-        <h3 className="text-base font-semibold">Filiallar</h3>
-        <p className="text-xs text-muted-foreground">Qatorga bosilsa o&apos;sha filial tanlanadi</p>
+        <h3 className="text-base font-semibold">{t("Filiallar")}</h3>
+        <p className="text-xs text-muted-foreground">{t("Qatorga bosilsa o'sha filial tanlanadi")}</p>
       </div>
       <div className="overflow-x-auto p-2">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Filial</TableHead>
-              <TableHead className="text-right">O&apos;quvchi</TableHead>
-              <TableHead className="text-right">Qamrov</TableHead>
-              <TableHead className="text-right">Norma</TableHead>
-              <TableHead className="text-right">O&apos;rt. faol kun</TableHead>
-              <TableHead className="text-right">To&apos;g&apos;ri javob</TableHead>
-              <TableHead className="text-right">Tugatilgan dars</TableHead>
+              <TableHead>{t("Filial")}</TableHead>
+              <TableHead className="text-right">{t("O'quvchilar")}</TableHead>
+              <TableHead className="text-right">{t("Qamrov")}</TableHead>
+              <TableHead className="text-right">{t("Norma")}</TableHead>
+              <TableHead className="text-right">{t("O'rt. faol kun")}</TableHead>
+              <TableHead className="text-right">{t("To'g'ri javob")}</TableHead>
+              <TableHead className="text-right">{t("Tugatilgan darslar")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

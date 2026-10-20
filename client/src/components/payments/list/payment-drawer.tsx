@@ -8,17 +8,17 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useCan } from "@/hooks/use-permissions";
+import { useT } from "@/i18n/context";
 import { formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
+import { paymentMethodLabel } from "@/components/payments/overview/overview-math";
 import {
   correctionLocked, drawerState, footerHints, headerLine, periodNote, reversalLine, sourceText, sumLabel,
 } from "./payment-drawer-model";
 import type { PaymentRow, PeriodView } from "./payments-list-types";
-import { METHOD_FILTER, receiptText, receivedByText } from "./payments-format";
+import { receiptText, receivedByText } from "./payments-format";
 import { usePaymentRow } from "./payments-queries";
 import { PART_PILL, PILL_BASE } from "./payments-table";
-
-const METHOD_LABEL = Object.fromEntries(METHOD_FILTER.map((m) => [m.value, m.label]));
 
 type Period = { startDate: string; endDate: string };
 
@@ -39,6 +39,7 @@ export function PaymentDrawer({ id, period, initialRow, initialPeriod, onClose, 
   onCorrect: (row: PaymentRow) => void;
   onReverse: (row: PaymentRow) => void;
 }) {
+  const t = useT();
   const query = usePaymentRow(initialRow ? null : id, period);
   const row = initialRow ?? query.data?.row;
   const view = initialRow ? initialPeriod : query.data?.period;
@@ -51,22 +52,22 @@ export function PaymentDrawer({ id, period, initialRow, initialPeriod, onClose, 
           {/* pr-8 keeps the name clear of the sheet's own close button. */}
           <div className="min-w-0 pr-8">
             <SheetTitle className="truncate">
-              {name || "To'lov"}
-              {row?.student.archived && <> <span className={cn(PILL_BASE, "bg-muted align-middle text-muted-foreground")}>arxivda</span></>}
+              {name || t("To'lov")}
+              {row?.student.archived && <> <span className={cn(PILL_BASE, "bg-muted align-middle text-muted-foreground")}>{t("arxivda")}</span></>}
             </SheetTitle>
-            <SheetDescription>{row ? headerLine(row) : "Yuklanmoqda…"}</SheetDescription>
+            <SheetDescription>{row ? headerLine(row, t) : t("Yuklanmoqda…")}</SheetDescription>
           </div>
         </SheetHeader>
         {state === "notFound" ? (
           <div className="space-y-3 p-6 text-sm">
-            <p className="font-medium">To&apos;lov bu filialda topilmadi</p>
-            <p className="text-muted-foreground">Tepadagi filial tanlovini tekshiring.</p>
-            <Button variant="outline" onClick={onClose}>Yopish</Button>
+            <p className="font-medium">{t("To'lov bu filialda topilmadi")}</p>
+            <p className="text-muted-foreground">{t("Tepadagi filial tanlovini tekshiring.")}</p>
+            <Button variant="outline" onClick={onClose}>{t("Yopish")}</Button>
           </div>
         ) : state === "error" ? (
           <div className="space-y-3 p-6 text-sm">
-            <p>Ma&apos;lumotni yuklab bo&apos;lmadi</p>
-            <Button variant="outline" onClick={() => query.refetch()}>Qayta urinish</Button>
+            <p>{t("Ma'lumotni yuklab bo'lmadi")}</p>
+            <Button variant="outline" onClick={() => query.refetch()}>{t("Qayta urinish")}</Button>
           </div>
         ) : !row || !view ? (
           <div className="space-y-3 p-6">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-10" />)}</div>
@@ -93,19 +94,20 @@ const LinkButton = ({ onClick, children }: { onClick: () => void; children: Reac
   <button type="button" onClick={onClick} className="text-sm font-medium text-primary hover:underline">{children}</button>
 );
 
-/** «Bu pul nimaga ketdi»: the parts, or the reason there are none. */
+/** «Bu pul nimaga ketdi»: the parts, or the reason there are none. The part pills are the server's wording. */
 function WhereItWent({ row, period, onOpen }: { row: PaymentRow; period: PeriodView; onOpen: (id: string) => void }) {
+  const t = useT();
   if (row.status === "REVERSED") {
     return row.correctedBy ? (
       <div className="space-y-2 text-sm">
-        <p>To&apos;lov tuzatilgan — o&apos;rniga {formatPrice(row.correctedBy.amount)} so&apos;mlik to&apos;lov yozilgan.</p>
-        <LinkButton onClick={() => onOpen(row.correctedBy!.id)}>Yangi to&apos;lovni ochish →</LinkButton>
+        <p>{t("To'lov tuzatilgan — o'rniga {amount} so'mlik to'lov yozilgan.", { amount: formatPrice(row.correctedBy.amount) })}</p>
+        <LinkButton onClick={() => onOpen(row.correctedBy!.id)}>{t("Yangi to'lovni ochish →")}</LinkButton>
       </div>
     ) : (
-      <p className="text-sm text-muted-foreground">To&apos;lov bekor qilingan — pul hech narsaga ketmagan, balans o&apos;zgarmagan.</p>
+      <p className="text-sm text-muted-foreground">{t("To'lov bekor qilingan — pul hech narsaga ketmagan, balans o'zgarmagan.")}</p>
     );
   }
-  if (!row.parts) return <p className="text-sm text-muted-foreground">Bu to&apos;lovni hisoblab bo&apos;lmadi.</p>;
+  if (!row.parts) return <p className="text-sm text-muted-foreground">{t("Bu to'lovni hisoblab bo'lmadi.")}</p>;
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1.5">
@@ -113,7 +115,7 @@ function WhereItWent({ row, period, onOpen }: { row: PaymentRow; period: PeriodV
           <span key={`${p.kind}-${p.monthKey}`} className={cn(PILL_BASE, PART_PILL[p.kind])}>{p.label} {formatPrice(p.amount)}</span>
         ))}
       </div>
-      <p className="text-xs text-muted-foreground">{periodNote(period)}</p>
+      <p className="text-xs text-muted-foreground">{periodNote(period, t)}</p>
     </div>
   );
 }
@@ -122,6 +124,7 @@ function WhereItWent({ row, period, onOpen }: { row: PaymentRow; period: PeriodV
 export function PaymentDrawerBody({ row, period, onOpen, onCorrect, onReverse }: {
   row: PaymentRow; period: PeriodView; onOpen: (id: string) => void; onCorrect: () => void; onReverse: () => void;
 }) {
+  const t = useT();
   const canCorrect = useCan("payments.correct");
   const canUndo = useCan("money.undo");
   const isCeo = useAuth((s) => s.user?.roles.some((r) => r.name === "CEO") ?? false);
@@ -131,55 +134,55 @@ export function PaymentDrawerBody({ row, period, onOpen, onCorrect, onReverse }:
   const showCorrect = canCorrect && completed && row.source === "ADMIN_MANUAL";
   const locked = correctionLocked(row, isCeo, now);
   const showUndo = canUndo && completed;
-  const hints = footerHints({ correct: canCorrect, undo: canUndo });
-  const reversed = reversalLine(row);
+  const hints = footerHints({ correct: canCorrect, undo: canUndo }, t);
+  const reversed = reversalLine(row, t);
   const balance = completed && row.balanceBefore !== null && row.balanceAfter !== null ? row : null;
 
   return (
     <>
       <div className="flex-1 space-y-5 overflow-y-auto px-6 py-4">
         <div className="rounded-lg border bg-muted/40 px-4 py-3">
-          <p className="text-xs text-muted-foreground">{sumLabel(row)}</p>
-          <p className={cn("text-2xl font-semibold tabular-nums", row.status === "REVERSED" && "line-through")}>{formatPrice(row.amount)} so&apos;m</p>
+          <p className="text-xs text-muted-foreground">{sumLabel(row, t)}</p>
+          <p className={cn("text-2xl font-semibold tabular-nums", row.status === "REVERSED" && "line-through")}>{formatPrice(row.amount)} {t("so'm")}</p>
         </div>
 
         <div className="divide-y">
-          <Line label="Usul">
-            {METHOD_LABEL[row.method] ?? row.method}
-            {row.online && <> <span className={cn(PILL_BASE, "bg-muted text-muted-foreground")}>onlayn</span></>}
+          <Line label={t("Usul")}>
+            {paymentMethodLabel(row.method, t)}
+            {row.online && <> <span className={cn(PILL_BASE, "bg-muted text-muted-foreground")}>{t("onlayn")}</span></>}
           </Line>
-          <Line label="Manba">{sourceText(row)}</Line>
-          <Line label="Qabul qildi">{receivedByText(row)}</Line>
-          <Line label="Kvitansiya">{receiptText(row)}</Line>
-          <Line label="Izoh">{row.note || "—"}</Line>
-          <Line label="Guruh">{row.groups.length ? row.groups.map((g) => g.name).join(", ") : "—"}</Line>
+          <Line label={t("Manba")}>{sourceText(row, t)}</Line>
+          <Line label={t("Qabul qildi")}>{receivedByText(row, t)}</Line>
+          <Line label={t("Kvitansiya")}>{receiptText(row, t)}</Line>
+          <Line label={t("Izoh")}>{row.note || "—"}</Line>
+          <Line label={t("Guruh")}>{row.groups.length ? row.groups.map((g) => g.name).join(", ") : "—"}</Line>
         </div>
 
         {row.correctsPayment && (
           <div className="space-y-1 text-sm">
-            <p>Bu to&apos;lov {formatPrice(row.correctsPayment.amount)} so&apos;mlik to&apos;lovni tuzatgan</p>
-            <LinkButton onClick={() => onOpen(row.correctsPayment!.id)}>Eski to&apos;lovni ochish →</LinkButton>
+            <p>{t("Bu to'lov {amount} so'mlik to'lovni tuzatgan", { amount: formatPrice(row.correctsPayment.amount) })}</p>
+            <LinkButton onClick={() => onOpen(row.correctsPayment!.id)}>{t("Eski to'lovni ochish →")}</LinkButton>
           </div>
         )}
 
         <section className="space-y-2">
-          <Heading>Bu pul nimaga ketdi</Heading>
+          <Heading>{t("Bu pul nimaga ketdi")}</Heading>
           <WhereItWent row={row} period={period} onOpen={onOpen} />
         </section>
 
         {balance && (
           <section className="space-y-1">
-            <Heading>Balans</Heading>
+            <Heading>{t("Balans")}</Heading>
             <p className="text-sm tabular-nums">
-              {formatPrice(balance.balanceBefore!)} → <strong>{formatPrice(balance.balanceAfter!)} so&apos;m</strong>
+              {formatPrice(balance.balanceBefore!)} → <strong>{formatPrice(balance.balanceAfter!)} {t("so'm")}</strong>
             </p>
-            <p className="text-xs text-muted-foreground">To&apos;lov paytidagi balans</p>
+            <p className="text-xs text-muted-foreground">{t("To'lov paytidagi balans")}</p>
           </section>
         )}
 
         {reversed && (
           <section className="space-y-1">
-            <Heading>Bekor qilindi</Heading>
+            <Heading>{t("Bekor qilindi")}</Heading>
             <p className="text-sm">{reversed}</p>
           </section>
         )}
@@ -190,22 +193,22 @@ export function PaymentDrawerBody({ row, period, onOpen, onCorrect, onReverse }:
           <Button variant="outline" asChild>
             <a href={`${apiUrl}/receipts/payment/${row.id}.pdf`} target="_blank" rel="noopener noreferrer">
               <FileText className="mr-2 size-4" />
-              Kvitansiya
+              {t("Kvitansiya")}
             </a>
           </Button>
           {!row.student.archived && (
             <Button variant="outline" asChild>
-              <Link href={`/students/profile/${row.student.id}`}>O&apos;quvchi profili</Link>
+              <Link href={`/students/profile/${row.student.id}`}>{t("O'quvchi profili")}</Link>
             </Button>
           )}
-          {showCorrect && <Button variant="outline" onClick={onCorrect} disabled={locked}>Tuzatish</Button>}
+          {showCorrect && <Button variant="outline" onClick={onCorrect} disabled={locked}>{t("Tuzatish")}</Button>}
           {showUndo && (
             <Button variant="outline" className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={onReverse}>
-              Bekor qilish
+              {t("To'lovni bekor qilish")}
             </Button>
           )}
         </div>
-        {showCorrect && locked && <p className="text-xs text-muted-foreground">72 soatdan oldingi to&apos;lovni faqat CEO tuzatadi</p>}
+        {showCorrect && locked && <p className="text-xs text-muted-foreground">{t("72 soatdan oldingi to'lovni faqat CEO tuzatadi")}</p>}
         {hints.map((h) => <p key={h} className="text-xs text-muted-foreground">{h}</p>)}
       </div>
     </>

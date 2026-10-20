@@ -1,4 +1,7 @@
+import type { Translate } from "@/components/notifications/notification-view";
 import { clampMonth } from "@/components/payments/overview/overview-math";
+import { msg } from "@/i18n/msg";
+import { interpolate } from "@/i18n/translate";
 import { addMonths } from "@/components/payments/salary-utils";
 import { formatNumber, formatPrice } from "@/lib/format-utils";
 import { tashkentDdMm, tashkentWallClock } from "@/lib/tashkent-time";
@@ -26,14 +29,14 @@ export function kpiCompare(bilan: string, month: string): string {
 export type DeltaUnit = "count" | "som" | "pct";
 
 /** «▲ 2», «▼ 20 000 so'm», «▲ 5 foiz punkt», or «o'zgarmadi». */
-export function deltaLine(value: number, compare: number, unit: DeltaUnit): string {
-  if (value === compare) return "o'zgarmadi";
+export function deltaLine(value: number, compare: number, unit: DeltaUnit, t: Translate = interpolate): string {
+  if (value === compare) return t("o'zgarmadi");
   const diff = Math.abs(value - compare);
   const text =
     unit === "som"
-      ? `${formatPrice(diff)} so'm`
+      ? `${formatPrice(diff)} ${t("so'm")}`
       : unit === "pct"
-        ? `${formatNumber(diff)} foiz punkt`
+        ? t("{n} foiz punkt", { n: formatNumber(diff) })
         : formatNumber(diff);
   return `${value > compare ? "▲" : "▼"} ${text}`;
 }
@@ -53,8 +56,8 @@ export function deltaOrNull(
 }
 
 /** A compare figure with its unit: «5», «20 000 so'm», «55%». */
-export function compareText(compare: number, unit: DeltaUnit): string {
-  if (unit === "som") return `${formatPrice(compare)} so'm`;
+export function compareText(compare: number, unit: DeltaUnit, t: Translate = interpolate): string {
+  if (unit === "som") return `${formatPrice(compare)} ${t("so'm")}`;
   return unit === "pct" ? `${formatNumber(compare)}%` : formatNumber(compare);
 }
 
@@ -70,14 +73,15 @@ export function ratioText(pct: number | null, part: number, whole: number): stri
 }
 
 /** «KPI hisoblash o'chiq (20.10 dan)» (spec §7.4). */
-export function switchText(s: { enabled: boolean; changedAt: string | null }): string {
-  const since = s.changedAt ? ` (${tashkentDdMm(s.changedAt)} dan)` : "";
-  return `KPI hisoblash ${s.enabled ? "yoqilgan" : "o'chiq"}${since}`;
+export function switchText(s: { enabled: boolean; changedAt: string | null }, t: Translate = interpolate): string {
+  if (!s.changedAt) return s.enabled ? t("KPI hisoblash yoqilgan") : t("KPI hisoblash o'chiq");
+  const date = tashkentDdMm(s.changedAt);
+  return s.enabled ? t("KPI hisoblash yoqilgan ({date} dan)", { date }) : t("KPI hisoblash o'chiq ({date} dan)", { date });
 }
 
 export const RESULT_TYPE_LABEL: Record<KpiResultType, string> = {
-  LEAD_PAID: "Lid to'lov qildi",
-  PROMISE_KEPT: "Va'da bajarildi",
+  LEAD_PAID: msg("Lid to'lov qildi"),
+  PROMISE_KEPT: msg("Va'da bajarildi"),
 };
 
 /** dd.MM.yyyy on the Tashkent clock. */
@@ -86,11 +90,11 @@ export function dayText(iso: string): string {
 }
 
 /** The settings form's check; the server checks again. */
-export function ruleError(rule: KpiRule): string | null {
-  if (!Number.isInteger(rule.value)) return "Butun son kiriting";
-  if (rule.value < 0) return "Manfiy bo'lishi mumkin emas";
-  if (rule.mode === "PERCENT" && rule.value > 100) return "Foiz 0 dan 100 gacha bo'ladi";
-  if (rule.mode === "FIXED" && rule.value > KPI_MAX_SOM) return "Summa 10 000 000 so'mdan oshmasin";
+export function ruleError(rule: KpiRule, t: Translate = interpolate): string | null {
+  if (!Number.isInteger(rule.value)) return t("Butun son kiriting");
+  if (rule.value < 0) return t("Manfiy bo'lishi mumkin emas");
+  if (rule.mode === "PERCENT" && rule.value > 100) return t("Foiz 0 dan 100 gacha bo'ladi");
+  if (rule.mode === "FIXED" && rule.value > KPI_MAX_SOM) return t("Summa 10 000 000 so'mdan oshmasin");
   return null;
 }
 
@@ -109,32 +113,38 @@ export function settingsPatch(saved: KpiSettings, draft: KpiSettings): KpiSettin
 /** The metric definitions of spec §7.7, printed under the table. */
 export const KPI_DEFINITIONS = [
   {
-    term: "Lid → to'lov",
-    text: "oyda xodimga kelgan lidlar (o'zi band qilgan yoki unga berilgan, har lid bir marta) dan nechtasida uning «Lid to'lov qildi» natijasi bor. Joriy oyda hali to'lamaganlar ham hisobda.",
+    term: msg("Lid → to'lov"),
+    text: msg(
+      "oyda xodimga kelgan lidlar (o'zi band qilgan yoki unga berilgan, har lid bir marta) dan nechtasida uning «Lid to'lov qildi» natijasi bor. Joriy oyda hali to'lamaganlar ham hisobda.",
+    ),
   },
   {
-    term: "Va'da bajarilishi",
-    text: "xodim yozgan, va'da kuni shu oyga tushgan va'dalardan bajarilganlari: bajarilgan / (bajarilgan + buzilgan). Ochiq va'da kirmaydi.",
+    term: msg("Va'da bajarilishi"),
+    text: msg(
+      "xodim yozgan, va'da kuni shu oyga tushgan va'dalardan bajarilganlari: bajarilgan / (bajarilgan + buzilgan). Ochiq va'da kirmaydi.",
+    ),
   },
   {
-    term: "Qaytgan lidlar",
-    text: "shu oyda muddati o'tib xodimdan umumiy ro'yxatga qaytgan lidlar.",
+    term: msg("Qaytgan lidlar"),
+    text: msg("shu oyda muddati o'tib xodimdan umumiy ro'yxatga qaytgan lidlar."),
   },
   {
-    term: "Taqqoslash",
-    text: "joriy oy taqqoslanayotgan oyning shu kunigacha bo'lgan qismi bilan solishtiriladi.",
+    term: msg("Taqqoslash"),
+    text: msg("joriy oy taqqoslanayotgan oyning shu kunigacha bo'lgan qismi bilan solishtiriladi."),
   },
 ] as const;
 
-/** Y-axis tick for sums: 1 200 000 → «1,2 mln», smaller ones in full. */
 /** The line under «Administratorlar»: converted leads nobody had claimed (CEO, 17.10.2026). */
-export function unownedConversionsText(n: number): string {
-  if (n === 0) return "Egasiz o'quvchiga aylangan lid yo'q — hamma lid band qilinib ishlangan.";
-  return `Egasiz o'quvchiga aylangan lidlar: ${n} ta — ularni hech kim band qilmagan, natija hech kimga yozilmadi.`;
+export function unownedConversionsText(n: number, t: Translate = interpolate): string {
+  if (n === 0) return t("Egasiz o'quvchiga aylangan lid yo'q — hamma lid band qilinib ishlangan.");
+  return t("Egasiz o'quvchiga aylangan lidlar: {n} ta — ularni hech kim band qilmagan, natija hech kimga yozilmadi.", {
+    n,
+  });
 }
 
-export function axisSom(v: number): string {
-  return v >= 1_000_000 ? `${formatNumber(v / 1_000_000, { maximumFractionDigits: 1 })} mln` : formatPrice(v);
+/** Y-axis tick for sums: 1 200 000 → «1,2 mln», smaller ones in full. */
+export function axisSom(v: number, t: Translate = interpolate): string {
+  return v >= 1_000_000 ? `${formatNumber(v / 1_000_000, { maximumFractionDigits: 1 })} ${t("mln")}` : formatPrice(v);
 }
 
 const ADMINISTRATOR_ROLE_ID = 3;

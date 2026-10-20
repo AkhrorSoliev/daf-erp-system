@@ -9,6 +9,7 @@ import { MonthStepper } from "@/components/shared/month-stepper";
 import { ExportOptionsPopover } from "@/components/payments/export-options-popover";
 import { RecordPaymentDialog } from "@/components/payments/record-payment-dialog";
 import { currentMonthKey } from "@/components/payments/salary-utils";
+import { useT } from "@/i18n/context";
 import { useCan, usePermissionsReady } from "@/hooks/use-permissions";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { CashCard } from "./cash-card";
@@ -30,6 +31,7 @@ const FILTERS = { month: { type: "string" as const, defaultValue: "" } };
  * money endpoint for them — it is CEO/BD on the server (ADR-0067).
  */
 export function OverviewPage() {
+  const t = useT();
   const canSeeMoney = useCan("reports.finance");
   // The "recent payments only" layout is the answer for a viewer WITHOUT the
   // capability, so it waits for the list: until then it is not known who that is.
@@ -52,7 +54,7 @@ export function OverviewPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="font-heading text-lg font-semibold tracking-tight">Umumiy ma&apos;lumotlar</h2>
+        <h2 className="font-heading text-lg font-semibold tracking-tight">{t("Umumiy ma'lumotlar")}</h2>
         <div className="flex flex-wrap items-center gap-2">
           {canSeeMoney && (
             <>
@@ -67,7 +69,7 @@ export function OverviewPage() {
           )}
           <Button data-tour="payment-record" onClick={() => setRecording(true)}>
             <Plus className="mr-2 size-4" />
-            To&apos;lov qayd qilish
+            {t("To'lov qayd qilish")}
           </Button>
         </div>
       </div>
@@ -88,9 +90,9 @@ export function OverviewPage() {
       {(isCurrent || minimalLayout) && (
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="font-heading text-base font-semibold">Oxirgi to&apos;lovlar</h3>
+            <h3 className="font-heading text-base font-semibold">{t("Oxirgi to'lovlar")}</h3>
             <Link href="/payments/list" className="text-sm font-medium text-primary hover:underline">
-              Barcha to&apos;lovlar →
+              {t("Barcha to'lovlar →")}
             </Link>
           </div>
           <RecentPayments />

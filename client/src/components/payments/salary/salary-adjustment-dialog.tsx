@@ -15,9 +15,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PriceInput } from "@/components/ui/price-input";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
-import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { som } from "../overview/overview-math";
 import { adjustmentError, diffText, REASON_MAX } from "./salary-adjustment-model";
 import { useInvalidateSalary } from "./salary-queries";
 import type { StaffRow } from "./salary-types";
@@ -40,6 +41,7 @@ export function SalaryAdjustmentDialog({ row, month, onClose }: Props) {
 }
 
 function AdjustmentForm({ row, month, onClose }: { row: StaffRow; month: string; onClose: () => void }) {
+  const t = useT();
   const invalidate = useInvalidateSalary();
   const formula = row.calculated ?? row.monthly;
   const [amount, setAmount] = useState(String(row.monthly));
@@ -56,12 +58,12 @@ function AdjustmentForm({ row, month, onClose }: { row: StaffRow; month: string;
     setBusy("save");
     try {
       await api.put(base, { month, amount: value, reason: reason.trim() });
-      toast.success("Oylik to'g'rilandi");
+      toast.success(t("Oylik to'g'rilandi"));
       // Financial data: refetch, never patch the cache by hand.
       await invalidate();
       onClose();
     } catch (err) {
-      toast.error(getErrorMessage(err, "To'g'rilashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("To'g'rilashda xatolik yuz berdi")));
     } finally {
       setBusy(null);
     }
@@ -71,11 +73,11 @@ function AdjustmentForm({ row, month, onClose }: { row: StaffRow; month: string;
     setBusy("revert");
     try {
       await api.delete(base, { params: { month } });
-      toast.success("Oylik hisobga qaytarildi");
+      toast.success(t("Oylik hisobga qaytarildi"));
       await invalidate();
       onClose();
     } catch (err) {
-      toast.error(getErrorMessage(err, "Hisobga qaytarishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("Hisobga qaytarishda xatolik yuz berdi")));
     } finally {
       setBusy(null);
     }
@@ -85,37 +87,37 @@ function AdjustmentForm({ row, month, onClose }: { row: StaffRow; month: string;
     <Dialog open onOpenChange={(open) => !open && busy === null && onClose()}>
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
         <DialogHeader className="border-b px-6 py-4">
-          <DialogTitle>{`${row.user.firstName} ${row.user.lastName} — oylikni to'g'rilash`}</DialogTitle>
+          <DialogTitle>{t("{name} — oylikni to'g'rilash", { name: `${row.user.firstName} ${row.user.lastName}` })}</DialogTitle>
           <DialogDescription>
-            Tizim hisobi: {formatPrice(formula)} so&apos;m. Siz kiritgan summa hisobning o&apos;rniga ishlaydi.
+            {t("Tizim hisobi: {amount}. Siz kiritgan summa hisobning o'rniga ishlaydi.", { amount: som(formula, t) })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="adj-amount">Oylik (avansgacha)</Label>
+            <Label htmlFor="adj-amount">{t("Oylik (avansgacha)")}</Label>
             <PriceInput
               id="adj-amount"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               disabled={busy !== null}
             />
-            <p className="min-h-4 text-xs text-muted-foreground">{value == null ? "" : diffText(value, formula)}</p>
+            <p className="min-h-4 text-xs text-muted-foreground">{value == null ? "" : diffText(value, formula, t)}</p>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="adj-reason">Sabab</Label>
+            <Label htmlFor="adj-reason">{t("Sabab")}</Label>
             <Input
               id="adj-reason"
               value={reason}
               maxLength={REASON_MAX}
-              placeholder="Masalan: oy o'rtasidan ishga kelgan"
+              placeholder={t("Masalan: oy o'rtasidan ishga kelgan")}
               onChange={(e) => setReason(e.target.value)}
               disabled={busy !== null}
             />
           </div>
           {confirmRevert && (
             <p className="rounded-md bg-muted px-3 py-2 text-sm">
-              Qo&apos;lda summa o&apos;chadi, oylik {formatPrice(formula)} so&apos;m bo&apos;ladi. Tasdiqlaysizmi?
+              {t("Qo'lda summa o'chadi, oylik {amount} bo'ladi. Tasdiqlaysizmi?", { amount: som(formula, t) })}
             </p>
           )}
         </div>
@@ -125,19 +127,19 @@ function AdjustmentForm({ row, month, onClose }: { row: StaffRow; month: string;
             (confirmRevert ? (
               <Button variant="destructive" onClick={revert} disabled={busy !== null}>
                 {busy === "revert" && <Loader2 className="animate-spin" data-icon="inline-start" />}
-                Ha, hisobga qaytarish
+                {t("Ha, hisobga qaytarish")}
               </Button>
             ) : (
               <Button variant="outline" onClick={() => setConfirmRevert(true)} disabled={busy !== null}>
-                Hisobga qaytarish
+                {t("Hisobga qaytarish")}
               </Button>
             ))}
           <Button variant="outline" onClick={onClose} disabled={busy !== null}>
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button onClick={save} disabled={!!error || busy !== null}>
             {busy === "save" && <Loader2 className="animate-spin" data-icon="inline-start" />}
-            Saqlash
+            {t("Saqlash")}
           </Button>
         </DialogFooter>
       </DialogContent>

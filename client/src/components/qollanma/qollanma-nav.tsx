@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
+import { useT } from "@/i18n/context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { bolimlar } from "@/qollanma/bolimlar";
@@ -19,6 +20,7 @@ function havolaKlassi(faol: boolean) {
 export function QollanmaNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const user = useAuth((s) => s.user);
+  const t = useT();
 
   if (!user) {
     return (
@@ -33,7 +35,7 @@ export function QollanmaNav({ onNavigate }: { onNavigate?: () => void }) {
   const guruhlar = bolimlarRolUchun(bolimlar, sahifalar, user.roles.map((r) => r.id));
 
   return (
-    <nav aria-label="Qo'llanma bo'limlari" className="space-y-6">
+    <nav aria-label={t("Qo'llanma bo'limlari")} className="space-y-6">
       <div className="space-y-0.5">
         <Link
           href="/qollanma"
@@ -41,7 +43,7 @@ export function QollanmaNav({ onNavigate }: { onNavigate?: () => void }) {
           aria-current={pathname === "/qollanma" ? "page" : undefined}
           className={havolaKlassi(pathname === "/qollanma")}
         >
-          Bosh sahifa
+          {t("Bosh sahifa")}
         </Link>
         <Link
           href="/qollanma/yangiliklar"
@@ -49,7 +51,7 @@ export function QollanmaNav({ onNavigate }: { onNavigate?: () => void }) {
           aria-current={pathname === "/qollanma/yangiliklar" ? "page" : undefined}
           className={havolaKlassi(pathname === "/qollanma/yangiliklar")}
         >
-          Nima yangi
+          {t("Nima yangi")}
         </Link>
       </div>
       {guruhlar.map(({ bolim, sahifalar: royxat }) => (

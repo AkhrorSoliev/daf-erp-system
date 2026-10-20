@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useT } from "@/i18n/context";
 import { formatNumber } from "@/lib/format-utils";
 import { ageText, pctText } from "./audience-format";
 import type { AudienceCutRow } from "./audience-types";
@@ -8,22 +9,24 @@ import type { AudienceCutRow } from "./audience-types";
  * Blocks 4 and 5: the same figures per course or branch. Not paginated on
  * purpose: it is a whole-picture summary (a handful of rows), like the months
  * table of the departed report. A dash means the server had too few known.
+ * `title` and `nameHead` are `msg()` texts, translated here. Row names are the server's.
  */
 export function AudienceCutTable({ title, nameHead, rows }: { title: string; nameHead: string; rows: AudienceCutRow[] }) {
+  const t = useT();
   return (
     <Card>
       <CardContent className="flex flex-col gap-3">
-        <p className="text-sm font-medium text-muted-foreground">{title}</p>
+        <p className="text-sm font-medium text-muted-foreground">{t(title)}</p>
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>{nameHead}</TableHead>
-              <TableHead className="text-right">O&apos;quvchi</TableHead>
-              <TableHead className="text-right">Jinsi aniq</TableHead>
-              <TableHead className="text-right">Erkak</TableHead>
-              <TableHead className="text-right">Ayol</TableHead>
-              <TableHead className="text-right">O&apos;rtacha yosh</TableHead>
+              <TableHead>{t(nameHead)}</TableHead>
+              <TableHead className="text-right">{t("O'quvchilar")}</TableHead>
+              <TableHead className="text-right">{t("Jinsi aniq")}</TableHead>
+              <TableHead className="text-right">{t("Erkaklar")}</TableHead>
+              <TableHead className="text-right">{t("Ayollar")}</TableHead>
+              <TableHead className="text-right">{t("O'rtacha yosh")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -35,7 +38,7 @@ export function AudienceCutTable({ title, nameHead, rows }: { title: string; nam
                 <TableCell className="text-right tabular-nums">{formatNumber(r.genderKnown)}</TableCell>
                 {r.malePct === null ? (
                   <TableCell colSpan={2} className="text-center text-xs text-muted-foreground">
-                    yetarli ma&apos;lumot yo&apos;q
+                    {t("yetarli ma'lumot yo'q")}
                   </TableCell>
                 ) : (
                   <>
@@ -48,7 +51,9 @@ export function AudienceCutTable({ title, nameHead, rows }: { title: string; nam
             ))}
           </TableBody>
         </Table>
-        <p className="text-xs text-muted-foreground">Jinsi yoki yoshi aniq o&apos;quvchi 5 tadan kam bo&apos;lsa, foiz ko&apos;rsatilmaydi.</p>
+        <p className="text-xs text-muted-foreground">
+          {t("Jinsi yoki yoshi aniq o'quvchi 5 tadan kam bo'lsa, foiz ko'rsatilmaydi.")}
+        </p>
       </CardContent>
     </Card>
   );

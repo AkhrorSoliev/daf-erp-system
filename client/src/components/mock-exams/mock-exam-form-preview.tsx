@@ -16,6 +16,7 @@ import {
 import { PhoneInput } from "@/components/ui/phone-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
+import { useT } from "@/i18n/context";
 import type { MockExamFormFieldShape } from "@/lib/schemas/mock-exam-form-schema";
 
 interface Props {
@@ -26,27 +27,28 @@ interface Props {
 // Live preview of the form as Telegram users will see it on the bot's web
 // form. The bot scene (Faza 4) walks through the same questions one by one.
 export function MockExamFormPreview({ examTitle, fields }: Props) {
+  const t = useT();
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Eye className="size-3.5" />
         <span>
-          Ishtirokchi bot orqali shu savollarga javob beradi
+          {t("Ishtirokchi bot orqali shu savollarga javob beradi")}
         </span>
       </div>
       <div className="rounded-lg border bg-muted/30 p-4 sm:p-5">
         <div className="rounded-md border bg-background p-5 shadow-sm sm:p-6">
           <h2 className="break-words text-lg font-semibold">
-            {examTitle || "Imtihon nomi"}
+            {examTitle || t("Imtihon nomi")}
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Ro&apos;yxatga olish
+            {t("Ro'yxatga olish")}
           </p>
 
           <div className="mt-5 space-y-4">
             {fields.length === 0 ? (
               <p className="rounded-md border border-dashed px-3 py-6 text-center text-xs text-muted-foreground">
-                Maydon qo&apos;shilmagan
+                {t("Maydon qo'shilmagan")}
               </p>
             ) : (
               fields.map((field) => (
@@ -57,7 +59,7 @@ export function MockExamFormPreview({ examTitle, fields }: Props) {
 
           <Button type="button" disabled className="mt-5 w-full opacity-90">
             <Send className="size-4" />
-            Yuborish (demo)
+            {t("Yuborish (demo)")}
           </Button>
         </div>
       </div>
@@ -66,13 +68,14 @@ export function MockExamFormPreview({ examTitle, fields }: Props) {
 }
 
 function PreviewField({ field }: { field: MockExamFormFieldShape }) {
+  const t = useT();
   const [localValue, setLocalValue] = useState<unknown>(
     field.type === "checkbox" ? false : "",
   );
 
   const labelEl = (
     <Label className="text-sm font-medium">
-      {field.label || "Maydon nomi"}
+      {field.label || t("Maydon nomi")}
       {field.required && <span className="ml-0.5 text-destructive">*</span>}
     </Label>
   );
@@ -112,7 +115,7 @@ function PreviewField({ field }: { field: MockExamFormFieldShape }) {
           onValueChange={(v) => setLocalValue(v)}
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder={field.placeholder ?? "Tanlang"} />
+            <SelectValue placeholder={field.placeholder ?? t("Tanlang")} />
           </SelectTrigger>
           <SelectContent>
             {field.options && field.options.length > 0 ? (
@@ -123,7 +126,7 @@ function PreviewField({ field }: { field: MockExamFormFieldShape }) {
               ))
             ) : (
               <div className="px-3 py-2 text-xs text-muted-foreground">
-                Variantlar qo&apos;shilmagan
+                {t("Variantlar qo'shilmagan")}
               </div>
             )}
           </SelectContent>
@@ -157,7 +160,7 @@ function PreviewField({ field }: { field: MockExamFormFieldShape }) {
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Variantlar qo&apos;shilmagan
+            {t("Variantlar qo'shilmagan")}
           </p>
         )}
       </div>
@@ -173,7 +176,7 @@ function PreviewField({ field }: { field: MockExamFormFieldShape }) {
           className="mt-0.5"
         />
         <span>
-          {field.label || "Maydon nomi"}
+          {field.label || t("Maydon nomi")}
           {field.required && (
             <span className="ml-0.5 text-destructive">*</span>
           )}

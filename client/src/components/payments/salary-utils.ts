@@ -2,6 +2,8 @@
 
 import { formatNumber } from "@/lib/format-utils";
 import { msg } from "@/i18n/msg";
+import { interpolate } from "@/i18n/translate";
+import type { Translate } from "./record-payment-admission";
 
 /**
  * The unit a rate is written in: «month» — per student per MONTH, «cycle» —
@@ -20,13 +22,14 @@ export type RateBasis = "month" | "cycle";
 export function breakdownRateLabel(
   rate: { salaryType: string; value: number },
   rateBasis: RateBasis,
+  t: Translate = interpolate,
 ): string {
   if (rate.salaryType === "PERCENTAGE") return `${rate.value}%`;
   const value = formatNumber(rate.value);
   if (rate.salaryType === "FIXED_PER_STUDENT") {
-    return rateBasis === "month" ? `${value}/o'quvchi/oy` : `${value}/tsikl`;
+    return rateBasis === "month" ? t("{value}/o'quvchi/oy", { value }) : t("{value}/tsikl", { value });
   }
-  return `${value}/oy`;
+  return t("{value}/oy", { value });
 }
 
 /**
@@ -34,9 +37,9 @@ export function breakdownRateLabel(
  * breakdown drawer's CSV (opened in Excel) both read it.
  */
 export const SALARY_TYPE_LABELS: Record<string, string> = {
-  PERCENTAGE: "Foiz",
-  FIXED_PER_STUDENT: "O'quvchi boshiga",
-  FIXED_MONTHLY: "Oylik",
+  PERCENTAGE: msg("Foiz"),
+  FIXED_PER_STUDENT: msg("O'quvchi boshiga"),
+  FIXED_MONTHLY: msg("Oylik"),
 };
 
 export const SALARY_STATUS_LABELS: Record<string, string> = {
@@ -62,11 +65,11 @@ export const SALARY_STATUS_CELL: Record<string, string> = {
 };
 
 const ROLE_LABELS: Record<number, string> = {
-  1: "Direktor",
-  2: "Filial direktori",
-  3: "Administrator",
-  4: "O'qituvchi",
-  5: "Kassir",
+  1: msg("Direktor"),
+  2: msg("Filial direktori"),
+  3: msg("Administrator"),
+  4: msg("O'qituvchi"),
+  5: msg("Kassir"),
 };
 
 /**
@@ -92,11 +95,17 @@ const ROLE_IDS_BY_NAME: Record<string, number> = {
  * to the role NAME («Cashier») for an employee with no job title, so a role name
  * is said in Uzbek; any other text is a real job title and passes through.
  */
-export function staffRoleText(position: string | null | undefined): string {
+export function staffRoleText(
+  position: string | null | undefined,
+  t: (source: string) => string = (source) => source,
+): string {
   const p = position?.trim();
-  if (!p) return "Xodim";
+  if (!p) return t("Xodim");
   const id = ROLE_IDS_BY_NAME[p];
-  return id ? ROLE_LABELS[id] : p;
+  // A typed job title is data: only the role names are translated.
+  if (!id) return p;
+  const label = ROLE_LABELS[id];
+  return t(label);
 }
 
 /** Same, for the nested `{ role: { id } }` shape the user endpoints return. */
@@ -111,11 +120,16 @@ export function primaryRoleLabel(
  * role-less employee has — a cleaner carries no role by design. Employees
  * created before the column exists fall back to their role.
  */
-export function positionLabel(user: {
-  position?: string | null;
-  roles?: { id: number }[];
-}): string {
-  return user.position?.trim() || roleLabel(user.roles);
+export function positionLabel(
+  user: {
+    position?: string | null;
+    roles?: { id: number }[];
+  },
+  t: (source: string) => string = (source) => source,
+): string {
+  // A typed job title is data: only the role name is translated.
+  const role = roleLabel(user.roles);
+  return user.position?.trim() || t(role);
 }
 
 const UZ_MONTHS = [
@@ -160,6 +174,9 @@ export function monthShort(
   const month = UZ_MONTHS[(m - 1 + 12) % 12];
   return t(month);
 }
+
+/** Languages whose month names are capitalised in the middle of a sentence (German nouns, English months). */
+export const keepsMonthCapital = (locale: string): boolean => locale === "de" || locale === "en";
 
 /** Current Tashkent month key. */
 export function currentMonthKey(): string {

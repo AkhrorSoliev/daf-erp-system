@@ -20,6 +20,10 @@ import {
   parseStatsPeriod,
 } from "../lead-stats";
 import { fetchOwnerSummary, type OwnerSummaryRow } from "./ownership-api";
+import { useT } from "@/i18n/context";
+
+// «Bu hafta» → «bu hafta» mid-sentence; only the first letter, so German nouns keep theirs.
+const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 
 /**
  * «Xodimlar bo'yicha» under the stats strip (ADR-0093): one card per person.
@@ -30,14 +34,15 @@ import { fetchOwnerSummary, type OwnerSummaryRow } from "./ownership-api";
  * board works without it.
  */
 export function LeadOwnersStrip() {
+  const t = useT();
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
   const revision = useLeadsBoard((s) => s.revision);
   const { filters: statsFilters } = useUrlFilters(LEAD_STATS_SCHEMA);
   const { filters, setFilters } = useUrlFilters(LEAD_FILTER_SCHEMA);
   const period = parseStatsPeriod(statsFilters.period);
-  const periodLabel =
-    LEAD_STATS_PERIODS.find((p) => p.value === period)?.label ?? "";
+  const periodItem = LEAD_STATS_PERIODS.find((p) => p.value === period);
+  const periodLabel = periodItem ? lowerFirst(t(periodItem.label)) : "";
   // The list shows exactly this owner's leads.
   const active = (value: string) =>
     filters.masul.length === 1 && filters.masul[0] === value;
@@ -56,10 +61,11 @@ export function LeadOwnersStrip() {
   return (
     <section className="space-y-1.5">
       <div className="flex h-6 items-baseline justify-between gap-2 px-0.5 text-xs text-muted-foreground">
-        <span>Xodimlar bo&apos;yicha</span>
+        <span>{t("Xodimlar bo'yicha")}</span>
         <span>
-          Davr: {periodLabel.toLowerCase()} · bosing — ro&apos;yxatda shu
-          lidlar chiqadi
+          {t("Davr: {period} · bosing — ro'yxatda shu lidlar chiqadi", {
+            period: periodLabel,
+          })}
         </span>
       </div>
       <TooltipProvider>
@@ -88,16 +94,16 @@ export function LeadOwnersStrip() {
                         active("none") && "ring-2 ring-primary",
                       )}
                     >
-                      <p className="text-sm font-medium">Hech kimda yo&apos;q</p>
+                      <p className="text-sm font-medium">{t("Hech kimda yo'q")}</p>
                       <p className="mt-1.5 text-xs text-muted-foreground">
-                        Egasiz lidlar
+                        {t("Egasiz lidlar")}
                       </p>
                       <p className="flex items-baseline gap-1.5">
                         <span className="text-2xl font-medium tabular-nums">
                           {formatNumber(data.unowned)}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          ta lid
+                          {t("ta lid")}
                         </span>
                       </p>
                     </button>
@@ -119,6 +125,7 @@ function OwnerCard({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const t = useT();
   return (
     <button
       type="button"
@@ -130,22 +137,23 @@ function OwnerCard({
       )}
     >
       <p className="truncate text-sm font-medium">{row.name}</p>
-      <p className="mt-1.5 text-xs text-muted-foreground">Hozir qo&apos;lida</p>
+      <p className="mt-1.5 text-xs text-muted-foreground">{t("Hozir qo'lida")}</p>
       <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
         <span className="text-2xl font-medium tabular-nums">
           {formatNumber(row.held)}
         </span>
-        <span className="text-xs text-muted-foreground">ta lid</span>
+        <span className="text-xs text-muted-foreground">{t("ta lid")}</span>
         {row.untouched > 0 && (
           <Tooltip>
             <TooltipTrigger asChild>
               <span className="rounded-md bg-yellow-100 px-2 py-0.5 text-[11px] text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200">
-                {formatNumber(row.untouched)} tasiga tegilmagan
+                {t("{n} tasiga tegilmagan", { n: formatNumber(row.untouched) })}
               </span>
             </TooltipTrigger>
             <TooltipContent>
-              Qo&apos;ng&apos;iroq, izoh yoki topshiriq hali yo&apos;q. Muddati
-              o&apos;tsa lid umumiy ro&apos;yxatga qaytadi.
+              {t(
+                "Qo'ng'iroq, izoh yoki topshiriq hali yo'q. Muddati o'tsa lid umumiy ro'yxatga qaytadi.",
+              )}
             </TooltipContent>
           </Tooltip>
         )}
@@ -153,19 +161,23 @@ function OwnerCard({
       <div className="mt-2 flex gap-3 border-t pt-2">
         <Metric
           value={row.taken}
-          label="olgan"
-          hint="Shu davrda band qilgan yoki unga berilgan lidlar. Bir lid bir marta sanaladi."
+          label={t("olgan")}
+          hint={t(
+            "Shu davrda band qilgan yoki unga berilgan lidlar. Bir lid bir marta sanaladi.",
+          )}
         />
         <Metric
           value={row.expired}
-          label="muddatda qaytgan"
+          label={t("muddatda qaytgan")}
           warn={row.expired > 0}
-          hint="Muddatida harakat qilinmagani uchun tizim umumiy ro'yxatga qaytargan lidlar."
+          hint={t(
+            "Muddatida harakat qilinmagani uchun tizim umumiy ro'yxatga qaytargan lidlar.",
+          )}
         />
         <Metric
           value={row.converted}
-          label="o'quvchi bo'lgan"
-          hint="Shu davrda o'quvchiga aylangan lidlari."
+          label={t("o'quvchi bo'lgan")}
+          hint={t("Shu davrda o'quvchiga aylangan lidlari.")}
         />
       </div>
     </button>

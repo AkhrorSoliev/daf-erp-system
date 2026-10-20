@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/i18n/context";
 import { FILE_URL_REFRESH_MS, formatDuration } from "./task-file-rules";
 import { useTaskFiles } from "./use-task-files";
 
@@ -12,6 +13,7 @@ import { useTaskFiles } from "./use-task-files";
  * student presses play.
  */
 export function TaskVoicePlayer({ taskId, fileId, src, durationSec }: { taskId: string; fileId: string; src: string; durationSec: number | null }) {
+  const t = useT();
   const ref = useRef<HTMLAudioElement>(null);
   const [fast, setFast] = useState(false);
   // The link on the element and when the list that held it was read.
@@ -58,7 +60,7 @@ export function TaskVoicePlayer({ taskId, fileId, src, durationSec }: { taskId: 
         }}
       />
       {durationSec !== null && <span className="text-xs text-muted-foreground">{formatDuration(durationSec)}</span>}
-      <Button type="button" size="xs" variant="outline" onClick={toggle} aria-label="Tezlik">{fast ? "1,5x" : "1x"}</Button>
+      <Button type="button" size="xs" variant="outline" onClick={toggle} aria-label={t("Tezlik")}>{fast ? "1,5x" : "1x"}</Button>
     </div>
   );
 }

@@ -18,8 +18,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useT } from "@/i18n/context";
 import { formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
+import { monthLabel } from "../salary-utils";
+import { markedText } from "./marked-text";
 import type { DebtHistoryResponse, DebtMonth } from "./types";
 
 /**
@@ -76,6 +79,7 @@ interface Props {
 }
 
 export function DebtFlowTable({ data, isLoading, onSelectMonth }: Props) {
+  const t = useT();
   const months = data?.months ?? [];
   // The column sums to today's live debt by construction; using `current` makes
   // that identity visible instead of asserted, and keeps the row honest if a
@@ -86,10 +90,9 @@ export function DebtFlowTable({ data, isLoading, onSelectMonth }: Props) {
   return (
     <div className="space-y-2">
       <div>
-        <h2 className="text-base font-semibold">Oylar bo&apos;yicha qarz</h2>
+        <h2 className="text-base font-semibold">{t("Oylar bo'yicha qarz")}</h2>
         <p className="text-sm text-muted-foreground">
-          Har oy oxirida qancha qarz bo&apos;lgan. Kimlar ekanini ko&apos;rish
-          uchun oyni bosing.
+          {t("Har oy oxirida qancha qarz bo'lgan. Kimlar ekanini ko'rish uchun oyni bosing.")}
         </p>
       </div>
 
@@ -98,31 +101,24 @@ export function DebtFlowTable({ data, isLoading, onSelectMonth }: Props) {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead className="min-w-32">Oy</TableHead>
-              <HintHead label="Qarz" className="text-right">
+              <TableHead className="min-w-32">{t("Oy")}</TableHead>
+              <HintHead label={t("Qarz")} className="text-right">
                 <span className="space-y-1.5">
                   <span className="block">
-                    <b>Bugungi kunda</b> shu oydan qolgan qarz — o&apos;sha
-                    oyda o&apos;tilgan, lekin hali ham to&apos;lanmagan
-                    darslar.
+                    {markedText(t("**Bugungi kunda** shu oydan qolgan qarz — o'sha oyda o'tilgan, lekin hali ham to'lanmagan darslar."))}
                   </span>
                   <span className="block">
-                    Keyin to&apos;langan qarz bu yerda qolmaydi. Shuning uchun
-                    ustunlar bir-birini takrorlamaydi va qo&apos;shilganda
-                    bugungi jami qarzni beradi.
+                    {t("Keyin to'langan qarz bu yerda qolmaydi. Shuning uchun ustunlar bir-birini takrorlamaydi va qo'shilganda bugungi jami qarzni beradi.")}
                   </span>
                 </span>
               </HintHead>
-              <HintHead label="Qarzdorlar" className="text-right">
+              <HintHead label={t("Qarzdorlar")} className="text-right">
                 <span className="space-y-1.5">
                   <span className="block">
-                    Shu oy qarzi <b>hozir ham</b> yopilmagan o&apos;quvchilar
-                    soni. To&apos;lab yuborganlar bu yerga kirmaydi.
+                    {markedText(t("Shu oy qarzi **hozir ham** yopilmagan o'quvchilar soni. To'lab yuborganlar bu yerga kirmaydi."))}
                   </span>
                   <span className="block">
-                    Bir o&apos;quvchining qarzi bir necha oyga tarqalgan
-                    bo&apos;lishi mumkin, shuning uchun bu ustun
-                    qo&apos;shilmaydi — «Jami» qatorida takrorsiz son turadi.
+                    {t("Bir o'quvchining qarzi bir necha oyga tarqalgan bo'lishi mumkin, shuning uchun bu ustun qo'shilmaydi — «Jami» qatorida takrorsiz son turadi.")}
                   </span>
                 </span>
               </HintHead>
@@ -145,8 +141,7 @@ export function DebtFlowTable({ data, isLoading, onSelectMonth }: Props) {
                   colSpan={6}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
-                  Tanlangan kesimda ma&apos;lumot yo&apos;q — holat filtrini
-                  kengaytirib ko&apos;ring.
+                  {t("Tanlangan kesimda ma'lumot yo'q — holat filtrini kengaytirib ko'ring.")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -161,7 +156,7 @@ export function DebtFlowTable({ data, isLoading, onSelectMonth }: Props) {
                   </TableCell>
                   <TableCell className="font-medium">
                     <span className="inline-flex flex-wrap items-center gap-1.5">
-                      {m.label}
+                      {monthLabel(m.monthKey, t)}
                       {m.isCurrent && (
                         <TooltipProvider>
                           <Tooltip>
@@ -170,12 +165,11 @@ export function DebtFlowTable({ data, isLoading, onSelectMonth }: Props) {
                                 variant="outline"
                                 className="h-4 px-1 text-[10px] font-normal text-sky-700 dark:text-sky-400"
                               >
-                                hali tugamagan
+                                {t("hali tugamagan")}
                               </Badge>
                             </TooltipTrigger>
                             <TooltipContent className="max-w-64">
-                              Oy hali tugamagan. Bu qatordagi raqam har kuni
-                              o&apos;zgaradi; oy tugagach qotib qoladi.
+                              {t("Oy hali tugamagan. Bu qatordagi raqam har kuni o'zgaradi; oy tugagach qotib qoladi.")}
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -188,14 +182,11 @@ export function DebtFlowTable({ data, isLoading, onSelectMonth }: Props) {
                                 variant="outline"
                                 className="h-4 px-1 text-[10px] font-normal text-amber-700 dark:text-amber-400"
                               >
-                                o&apos;tish davri
+                                {t("o'tish davri")}
                               </Badge>
                             </TooltipTrigger>
                             <TooltipContent className="max-w-64">
-                              Eski tizimdan yangisiga o&apos;tilgan oy. Bu
-                              oydagi to&apos;lovlar to&apos;liq kiritilmagan,
-                              shuning uchun raqamga boshqa oylar kabi ishonib
-                              bo&apos;lmaydi.
+                              {t("Eski tizimdan yangisiga o'tilgan oy. Bu oydagi to'lovlar to'liq kiritilmagan, shuning uchun raqamga boshqa oylar kabi ishonib bo'lmaydi.")}
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -207,12 +198,12 @@ export function DebtFlowTable({ data, isLoading, onSelectMonth }: Props) {
                       formatPrice(m.monthUnpaid)
                     ) : (
                       <span className="font-normal text-green-700 dark:text-green-400">
-                        to&apos;liq yopilgan
+                        {t("to'liq yopilgan")}
                       </span>
                     )}
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-muted-foreground">
-                    {m.agedDebtorCount > 0 ? `${m.agedDebtorCount} ta` : "—"}
+                    {m.agedDebtorCount > 0 ? t("{n} ta", { n: m.agedDebtorCount }) : "—"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     <ChevronRight className="size-4" />
@@ -226,7 +217,7 @@ export function DebtFlowTable({ data, isLoading, onSelectMonth }: Props) {
             <TableFooter>
               <TableRow>
                 <TableCell className="border-r" />
-                <TableCell className="font-semibold">Jami</TableCell>
+                <TableCell className="font-semibold">{t("Jami")}</TableCell>
                 {/* Headcount is the UNIQUE number, not the column sum: 204 of
                     the 450 debtors carry debt from more than one month, so
                     adding the per-month counts would report 659 people. */}
@@ -237,7 +228,7 @@ export function DebtFlowTable({ data, isLoading, onSelectMonth }: Props) {
                     debtors owe from more than one month, so adding the
                     per-month counts would report 659 people. */}
                 <TableCell className="text-right font-semibold tabular-nums">
-                  {totalDebtors} ta
+                  {t("{n} ta", { n: totalDebtors })}
                 </TableCell>
                 <TableCell />
               </TableRow>
@@ -247,12 +238,12 @@ export function DebtFlowTable({ data, isLoading, onSelectMonth }: Props) {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Jami{" "}
-        <span className="font-medium text-foreground">
-          {formatPrice(totalDebt)}
-        </span>{" "}
-        so&apos;m — bu tepadagi «Hozirgi qarz» bilan bir xil raqam, faqat
-        oylarga bo&apos;lingan holda.
+        {markedText(
+          t("Jami **{amount}** so'm — bu tepadagi «Hozirgi qarz» bilan bir xil raqam, faqat oylarga bo'lingan holda.", {
+            amount: formatPrice(totalDebt),
+          }),
+          "font-medium text-foreground",
+        )}
       </p>
     </div>
   );

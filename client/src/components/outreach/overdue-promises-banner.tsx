@@ -6,6 +6,7 @@ import { ArrowUpRight, CalendarClock } from "lucide-react";
 import api from "@/lib/api";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useT } from "@/i18n/context";
 import type { DebtSplit } from "@/components/payments/overview/types";
 
 interface DebtorSummary {
@@ -29,6 +30,7 @@ interface DebtorSummary {
  * one people stop seeing.
  */
 export function OverduePromisesBanner() {
+  const t = useT();
   const { selectedBranch } = useBranchSwitcher();
 
   const { data } = useQuery({
@@ -56,17 +58,18 @@ export function OverduePromisesBanner() {
         </div>
         <div>
           <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
-            {formatNumber(data.overduePromises)} ta to&apos;lov sanasi
-            o&apos;tib ketgan
+            {t("{n} ta to'lov sanasi o'tib ketgan", { n: formatNumber(data.overduePromises) })}
           </p>
           <p className="text-xs text-amber-800/80 dark:text-amber-300/80">
-            O&apos;qiyotganlar qarzi {formatBalance(data.split.studying.total)} ·{" "}
-            {formatNumber(data.openPromises)} ta sana kutilmoqda
+            {t("O'qiyotganlar qarzi {amount} · {n} ta sana kutilmoqda", {
+              amount: formatBalance(data.split.studying.total, t("so'm")),
+              n: formatNumber(data.openPromises),
+            })}
           </p>
         </div>
       </div>
       <span className="flex items-center gap-1 whitespace-nowrap text-sm font-medium text-amber-900 dark:text-amber-200">
-        Ro&apos;yxatni ochish
+        {t("Ro'yxatni ochish")}
         <ArrowUpRight className="size-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
       </span>
     </Link>

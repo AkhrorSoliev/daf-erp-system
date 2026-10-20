@@ -1,8 +1,24 @@
+import { useEffect } from "react";
 import { create } from "zustand";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { registerBranchScopedStore } from "@/lib/branch-scoped-stores";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
+
+// The store's toast fallbacks are msg() texts; the page roots that drive the
+// store call useMockExamsBoardTranslator() to hand their `t` in (identity
+// until then).
+let translate: (source: string) => string = (source) => source;
+export function useMockExamsBoardTranslator(): void {
+  const t = useT();
+  useEffect(() => {
+    translate = t;
+  }, [t]);
+}
+const LOAD_FAILED = msg("Yuklashda xatolik");
+const ORDER_FAILED = msg("Tartibni saqlashda xatolik");
 
 // ---------------------------------------------------------------------------
 // Types
@@ -104,7 +120,7 @@ export const useMockExamsBoard = create<BoardState>((set, get) => ({
       set({ sections, exams, loading: false, loaded: true });
     } catch (error) {
       set({ loading: false });
-      toast.error(getErrorMessage(error, "Yuklashda xatolik"));
+      toast.error(getErrorMessage(error, translate(LOAD_FAILED)));
     }
   },
 
@@ -155,7 +171,7 @@ export const useMockExamsBoard = create<BoardState>((set, get) => ({
       });
     } catch (error) {
       set({ sections: original });
-      toast.error(getErrorMessage(error, "Tartibni saqlashda xatolik"));
+      toast.error(getErrorMessage(error, translate(ORDER_FAILED)));
     }
   },
 
@@ -210,11 +226,11 @@ export const useMockExamsBoard = create<BoardState>((set, get) => ({
 // ---------------------------------------------------------------------------
 
 export const MOCK_EXAM_STATUS_LABELS: Record<MockExamStatus, string> = {
-  REGISTRATION_OPEN: "Ro'yxat ochiq",
-  REGISTRATION_CLOSED: "Ro'yxat yopiq",
-  GRADING: "Baholanmoqda",
-  ANNOUNCED: "E'lon qilingan",
-  ARCHIVED: "Arxivlangan",
+  REGISTRATION_OPEN: msg("Ro'yxat ochiq"),
+  REGISTRATION_CLOSED: msg("Ro'yxat yopiq"),
+  GRADING: msg("Baholanmoqda"),
+  ANNOUNCED: msg("E'lon qilingan"),
+  ARCHIVED: msg("Arxivlangan"),
 };
 
 export const MOCK_EXAM_STATUS_COLORS: Record<MockExamStatus, string> = {
@@ -269,46 +285,50 @@ export const MOCK_EXAM_TRANSITION_INFO: Record<
 > = {
   REGISTRATION_OPEN: {
     REGISTRATION_CLOSED: {
-      label: "Ro'yxatni yopish",
-      description:
+      label: msg("Ro'yxatni yopish"),
+      description: msg(
         "Yangi ro'yxatga olishlar to'xtaydi. Mavjud ishtirokchilar saqlanib qoladi.",
+      ),
       kind: "forward",
     },
   },
   REGISTRATION_CLOSED: {
     GRADING: {
-      label: "Baholashni boshlash",
-      description:
+      label: msg("Baholashni boshlash"),
+      description: msg(
         "Ishtirokchilarga ballar kiritish bo'limi ochiladi. Yangi ishtirokchi qo'shib bo'lmaydi.",
+      ),
       kind: "forward",
     },
     REGISTRATION_OPEN: {
-      label: "Ro'yxatni qayta ochish",
-      description: "Ishtirokchilar yana ro'yxatdan o'ta oladi.",
+      label: msg("Ro'yxatni qayta ochish"),
+      description: msg("Ishtirokchilar yana ro'yxatdan o'ta oladi."),
       kind: "rollback",
       destructive: true,
     },
   },
   GRADING: {
     ANNOUNCED: {
-      label: "Natijalarni e'lon qilish",
-      description:
+      label: msg("Natijalarni e'lon qilish"),
+      description: msg(
         "PDF avtomatik yaratiladi va Telegram orqali ishtirokchilarga yuboriladi. Bekor qilib bo'lmaydi.",
+      ),
       kind: "announce",
       requiresConfirm: true,
     },
     REGISTRATION_CLOSED: {
-      label: "Baholashni to'xtatish",
-      description: "Kiritilgan ballar saqlanadi, baholashni keyin davom ettirish mumkin.",
+      label: msg("Baholashni to'xtatish"),
+      description: msg("Kiritilgan ballar saqlanadi, baholashni keyin davom ettirish mumkin."),
       kind: "rollback",
       destructive: true,
     },
   },
   ANNOUNCED: {
     ARCHIVED: {
-      label: "Arxivga ko'chirish",
-      description:
+      label: msg("Arxivga ko'chirish"),
+      description: msg(
         "Imtihon yopiladi va ro'yxat sahifasida ko'rinmaydi. Tahrirlash mumkin emas.",
+      ),
       kind: "archive",
       requiresConfirm: true,
     },

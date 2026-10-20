@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { buildTaggedFormLink } from "@/lib/public-form-link";
 import { isReservedLeadSource } from "@/lib/reserved-lead-sources";
@@ -26,12 +27,12 @@ interface LeadSourceLite {
 // moment the first lead arrives through the tagged link.
 const DEFAULT_SOURCES = ["Telegram", "Instagram"];
 
-async function copyText(text: string, message: string) {
+async function copyText(text: string, message: string, failed: string) {
   try {
     await navigator.clipboard.writeText(text);
     toast.success(message);
   } catch {
-    toast.error("Nusxalashda xatolik");
+    toast.error(failed);
   }
 }
 
@@ -53,7 +54,8 @@ interface Props {
  *   who signed up by themselves, and a form lead must not be mixed into them.
  *   The server ignores such a tag too.
  */
-export function CopyFormLinkButton({ slug, label = "Havolani nusxalash", className }: Props) {
+export function CopyFormLinkButton({ slug, label, className }: Props) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [sources, setSources] = useState<string[]>(DEFAULT_SOURCES);
   const [custom, setCustom] = useState("");
@@ -70,7 +72,8 @@ export function CopyFormLinkButton({ slug, label = "Havolani nusxalash", classNa
   async function copyWithSource(name: string) {
     await copyText(
       buildTaggedFormLink(slug, name),
-      `Havola nusxalandi — manba: ${name}`,
+      t("Havola nusxalandi — manba: {name}", { name }),
+      t("Nusxalashda xatolik"),
     );
   }
 
@@ -79,7 +82,7 @@ export function CopyFormLinkButton({ slug, label = "Havolani nusxalash", classNa
     if (!name) return;
     if (isReservedLeadSource(name)) {
       toast.error(
-        `«${name}» — tizim manbasi, havola uchun boshqa nom tanlang`,
+        t("«{name}» — tizim manbasi, havola uchun boshqa nom tanlang", { name }),
       );
       return;
     }
@@ -101,15 +104,16 @@ export function CopyFormLinkButton({ slug, label = "Havolani nusxalash", classNa
       <DialogTrigger asChild>
         <Button type="button" size="sm" variant="outline" className={className}>
           <ClipboardCopy className="size-3.5" />
-          {label}
+          {label ?? t("Havolani nusxalash")}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Havolani nusxalash</DialogTitle>
+          <DialogTitle>{t("Havolani nusxalash")}</DialogTitle>
           <DialogDescription>
-            Manbani tanlang — lid qaysi havoladan kelganini bilib turasiz
-            (Instagram, Telegram yoki reklama nomi).
+            {t(
+              "Manbani tanlang — lid qaysi havoladan kelganini bilib turasiz (Instagram, Telegram yoki reklama nomi).",
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -138,7 +142,7 @@ export function CopyFormLinkButton({ slug, label = "Havolani nusxalash", classNa
                   void addAndCopy();
                 }
               }}
-              placeholder="Boshqa manba (masalan: reklama_may)"
+              placeholder={t("Boshqa manba (masalan: reklama_may)")}
               maxLength={100}
               disabled={adding}
             />
@@ -153,7 +157,7 @@ export function CopyFormLinkButton({ slug, label = "Havolani nusxalash", classNa
               ) : (
                 <Plus className="size-4" />
               )}
-              Qo&apos;shish
+              {t("Qo'shish")}
             </Button>
           </div>
         </div>

@@ -21,9 +21,11 @@ import {
 } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useT } from "@/i18n/context";
 import {
   FIELD_TYPE_LABELS,
   TYPES_WITH_OPTIONS,
+  mockExamFormError,
   type MockExamFormValues,
   type FormFieldType,
 } from "@/lib/schemas/mock-exam-form-schema";
@@ -56,12 +58,14 @@ export function MockExamFieldEditor({
   onRemove,
   canRemove,
 }: Props) {
+  const t = useT();
   const fieldType = useWatch({
     control,
     name: `fields.${index}.type`,
   }) as FormFieldType;
 
   const showOptions = TYPES_WITH_OPTIONS.includes(fieldType);
+  const typeLabel = FIELD_TYPE_LABELS[fieldType];
 
   return (
     <div className="rounded-lg border bg-background">
@@ -74,12 +78,12 @@ export function MockExamFieldEditor({
               <div className="flex-1 min-w-40">
                 <Input
                   {...field}
-                  placeholder="Foydalanuvchiga ko'rinadigan nom"
+                  placeholder={t("Foydalanuvchiga ko'rinadigan nom")}
                   maxLength={200}
                 />
                 {fieldState.error?.message && (
                   <p className="mt-1 text-xs text-destructive">
-                    {fieldState.error.message}
+                    {mockExamFormError(t, fieldState.error.message)}
                   </p>
                 )}
               </div>
@@ -95,20 +99,20 @@ export function MockExamFieldEditor({
           disabled={!canRemove}
           title={
             canRemove
-              ? "Maydonni o'chirish"
-              : "Asosiy maydonlarni (ism/familiya/telefon) o'chirib bo'lmaydi"
+              ? t("Maydonni o'chirish")
+              : t("Asosiy maydonlarni (ism/familiya/telefon) o'chirib bo'lmaydi")
           }
         >
           <Trash2 className="size-4" />
-          <span className="sr-only">O&apos;chirish</span>
+          <span className="sr-only">{t("O'chirish")}</span>
         </Button>
       </div>
 
       <div className="flex items-center gap-2 border-b bg-muted/20 px-3 py-1.5 text-xs text-muted-foreground">
         <span>
-          Tur:{" "}
+          {t("Tur:")}{" "}
           <span className="font-medium text-foreground">
-            {FIELD_TYPE_LABELS[fieldType]}
+            {typeLabel ? t(typeLabel) : fieldType}
           </span>
         </span>
       </div>
@@ -129,6 +133,7 @@ function OptionsEditor({
   control: Control<MockExamFormValues>;
   fieldIndex: number;
 }) {
+  const t = useT();
   const { fields, append, remove } = useFieldArray({
     control,
     name: `fields.${fieldIndex}.options`,
@@ -138,7 +143,7 @@ function OptionsEditor({
     <div className="space-y-2 rounded-md border border-dashed bg-muted/30 p-2">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-muted-foreground">
-          Variantlar
+          {t("Variantlar")}
         </span>
         <Button
           type="button"
@@ -150,12 +155,12 @@ function OptionsEditor({
           }
         >
           <Plus className="size-3.5" />
-          Variant qo&apos;shish
+          {t("Variant qo'shish")}
         </Button>
       </div>
       {fields.length === 0 ? (
         <p className="text-xs text-muted-foreground">
-          Variant yo&apos;q — kamida bittasini qo&apos;shing
+          {t("Variant yo'q — kamida bittasini qo'shing")}
         </p>
       ) : (
         <ul className="space-y-1.5">
@@ -168,7 +173,7 @@ function OptionsEditor({
                   <Input
                     {...field}
                     className="h-8 flex-1"
-                    placeholder="Ko'rinadigan matn"
+                    placeholder={t("Ko'rinadigan matn")}
                     maxLength={200}
                   />
                 )}
@@ -180,7 +185,7 @@ function OptionsEditor({
                   <Input
                     {...field}
                     className="h-8 w-32"
-                    placeholder="qiymat"
+                    placeholder={t("qiymat")}
                     maxLength={100}
                   />
                 )}
@@ -193,7 +198,7 @@ function OptionsEditor({
                 onClick={() => remove(optIdx)}
               >
                 <Trash2 className="size-3.5" />
-                <span className="sr-only">Variantni o&apos;chirish</span>
+                <span className="sr-only">{t("Variantni o'chirish")}</span>
               </Button>
             </li>
           ))}

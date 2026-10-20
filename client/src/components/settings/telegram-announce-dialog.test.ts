@@ -86,7 +86,7 @@ describe("TelegramAnnounceDialog — Uzbek only", () => {
     );
 
     expect(source).toContain(
-      "Ko'rinish tayyor — ${data.recipientCount} ta guruhga yuboriladi",
+      "Ko'rinish tayyor — {n} ta guruhga yuboriladi",
     );
     expect(source).not.toContain("Preview tayyor");
   });

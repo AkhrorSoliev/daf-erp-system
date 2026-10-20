@@ -26,6 +26,8 @@ import {
   type DeparturePolicy,
   type DeparturePreview,
   type MonthlyRow,
+  type WithheldWarning,
+  withheldWarning,
 } from "./departure-money";
 
 interface DepartureMoneyBlockProps {
@@ -38,6 +40,8 @@ interface DepartureMoneyBlockProps {
   context: DepartureContext;
   /** An expulsion closes every group the student is in: name each one. */
   showGroupNames?: boolean;
+  /** The picked exit reason reads like a move to another group. */
+  looksLikeMove?: boolean;
   disabled?: boolean;
 }
 
@@ -55,6 +59,7 @@ export function DepartureMoneyBlock({
   onPolicyChange,
   context,
   showGroupNames = false,
+  looksLikeMove = false,
   disabled = false,
 }: DepartureMoneyBlockProps) {
   const t = useT();
@@ -77,6 +82,10 @@ export function DepartureMoneyBlock({
   const shown = offered.includes(policy) ? policy : DEFAULT_DEPARTURE_POLICY;
   const consequence = departureConsequence(preview, shown, t);
   const first = rows[0].month;
+  const warning =
+    context === "removal"
+      ? withheldWarning(preview, { looksLikeMove }, t)
+      : null;
 
   return (
     <section className="flex flex-col gap-3 border-t pt-3">
@@ -88,6 +97,8 @@ export function DepartureMoneyBlock({
           showGroupName={showGroupNames || rows.length > 1}
         />
       ))}
+
+      {warning && <WithheldBox warning={warning} />}
 
       {offered.length > 1 ? (
         <div
@@ -218,6 +229,22 @@ function ConsequenceBox({ consequence }: { consequence: Consequence }) {
         {consequence.line && (
           <p className="text-xs leading-relaxed">{consequence.line}</p>
         )}
+      </div>
+    </div>
+  );
+}
+
+function WithheldBox({ warning }: { warning: WithheldWarning }) {
+  const box =
+    warning.tone === "danger"
+      ? "border-red-300 bg-red-50 text-red-900 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"
+      : TONES.warning.box;
+  return (
+    <div role="alert" className={cn("flex items-start gap-2 rounded-md border p-3", box)}>
+      <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+      <div className="flex flex-col gap-0.5">
+        <p className="text-sm font-medium">{warning.title}</p>
+        <p className="text-xs leading-relaxed">{warning.body}</p>
       </div>
     </div>
   );

@@ -19,6 +19,7 @@ import { useArchivePanelUrl } from "./archive-panel-url";
 import { useArchivedLeadDetail } from "./archive-queries";
 import { ArchivedLeadInfo } from "./archived-lead-info";
 import { originOf } from "./restore-lead-model";
+import { useT } from "@/i18n/context";
 
 const statusOf = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } } | null)?.response?.status;
@@ -41,29 +42,30 @@ export function ArchivedLeadPanel({
   onClose: () => void;
   onRestore: (target: RestoreLeadTarget) => void;
 }) {
+  const t = useT();
   const { tab, setTab } = useArchivePanelUrl();
   const query = useArchivedLeadDetail(leadId);
   const lead = query.data;
   const notFound = query.isError && statusOf(query.error) === 404;
 
   return (
-    <Sheet open={open}onOpenChange={(o) => !o && onClose()}>
+    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent
         side="right"
         className="flex flex-col overflow-hidden p-0 sm:max-w-md"
       >
         <SheetHeader className="border-b px-6 py-4">
-          <SheetTitle className="text-lg">Arxivdagi lid</SheetTitle>
+          <SheetTitle className="text-lg">{t("Arxivdagi lid")}</SheetTitle>
           <SheetDescription>
-            Lid haqida ma&apos;lumot — bu yerda hech narsa o&apos;zgarmaydi
+            {t("Lid haqida ma'lumot — bu yerda hech narsa o'zgarmaydi")}
           </SheetDescription>
         </SheetHeader>
 
         {notFound ? (
-          <Message text="Bu lid arxivda topilmadi" />
+          <Message text={t("Bu lid arxivda topilmadi")} />
         ) : query.isError && !lead ? (
           <Message
-            text="Lidni yuklab bo'lmadi"
+            text={t("Lidni yuklab bo'lmadi")}
             onRetry={() => query.refetch()}
           />
         ) : !lead ? (
@@ -79,9 +81,9 @@ export function ArchivedLeadPanel({
             className="flex flex-1 flex-col overflow-hidden"
           >
             <TabsList className="mx-6 mt-3 grid w-auto grid-cols-3">
-              <TabsTrigger value="malumot">Ma&apos;lumot</TabsTrigger>
-              <TabsTrigger value="izohlar">Izohlar</TabsTrigger>
-              <TabsTrigger value="tarix">Tarix</TabsTrigger>
+              <TabsTrigger value="malumot">{t("Ma'lumot")}</TabsTrigger>
+              <TabsTrigger value="izohlar">{t("Izohlar")}</TabsTrigger>
+              <TabsTrigger value="tarix">{t("Tarix")}</TabsTrigger>
             </TabsList>
             <div className="flex-1 overflow-y-auto px-6 py-5">
               <TabsContent value="malumot" className="mt-0">
@@ -89,7 +91,7 @@ export function ArchivedLeadPanel({
               </TabsContent>
               <TabsContent value="izohlar" className="mt-0 space-y-4">
                 <p className="text-xs text-muted-foreground">
-                  Arxivdagi lidga yangi izoh yozib bo&apos;lmaydi.
+                  {t("Arxivdagi lidga yangi izoh yozib bo'lmaydi.")}
                 </p>
                 <CommentList entityType="Lead" entityId={lead.id} readOnly />
               </TabsContent>
@@ -118,13 +120,13 @@ export function ArchivedLeadPanel({
                 }
               >
                 <RotateCcw className="mr-2 size-4" />
-                Tiklash
+                {t("Tiklash")}
               </Button>
             ) : (
               <span />
             )}
             <Button variant="outline" size="sm" onClick={onClose}>
-              Yopish
+              {t("Yopish")}
             </Button>
           </div>
         </SheetFooter>
@@ -134,12 +136,13 @@ export function ArchivedLeadPanel({
 }
 
 function Message({ text, onRetry }: { text: string; onRetry?: () => void }) {
+  const t = useT();
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-5 text-center">
       <p className="text-sm text-muted-foreground">{text}</p>
       {onRetry && (
         <Button variant="outline" size="sm" onClick={onRetry}>
-          Qayta urinish
+          {t("Qayta urinish")}
         </Button>
       )}
     </div>

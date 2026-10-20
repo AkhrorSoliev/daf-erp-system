@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatNumber, formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/context";
 import { pctText, SAME_AS_OVERVIEW, summaryTitle } from "./group-payments-format";
 import type { GpSummary } from "./group-payments-types";
 
@@ -22,10 +23,11 @@ export function GroupPaymentsSummarySkeleton() {
 }
 
 function Figure({ label, value, sub, danger }: { label: string; value: number; sub: string; danger?: boolean }) {
+  const t = useT();
   return (
     <div>
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p className={cn("font-heading text-2xl font-semibold tabular-nums", danger && "text-destructive")}>{formatPrice(value)} so&apos;m</p>
+      <p className={cn("font-heading text-2xl font-semibold tabular-nums", danger && "text-destructive")}>{formatPrice(value)} {t("so'm")}</p>
       <p className="text-xs text-muted-foreground">{sub}</p>
     </div>
   );
@@ -42,24 +44,29 @@ function Chip({ dot, label, count }: { dot: string; label: string; count: number
 
 /** The month's card (spec B5 §3.3): the overview's first row, cut by group. The table's filters never change it. */
 export function GroupPaymentsSummary({ month, summary }: { month: string; summary: GpSummary }) {
+  const t = useT();
   return (
     <Card>
       <CardContent className="space-y-4">
-        <p className="text-sm font-medium text-muted-foreground">{summaryTitle(month)}</p>
+        <p className="text-sm font-medium text-muted-foreground">{summaryTitle(month, t)}</p>
         {summary.groups === 0 ? (
-          <p className="text-sm text-muted-foreground">Bu oyda hisob yozilmagan</p>
+          <p className="text-sm text-muted-foreground">{t("Bu oyda hisob yozilmagan")}</p>
         ) : (
           <>
             <div className="grid gap-4 sm:grid-cols-3">
-              <Figure label="Hisoblandi" value={summary.charged} sub={`${formatNumber(summary.groups)} guruh · ${formatNumber(summary.students)} o'quvchi`} />
-              <Figure label="To'landi" value={summary.paid} sub={pctText(summary.paidPct)} />
-              <Figure label="Qoldi" value={summary.unpaid} sub={`guruhlarning o'rtachasi ${pctText(summary.avgGroupPct)}`} danger />
+              <Figure
+                label={t("Hisoblandi")}
+                value={summary.charged}
+                sub={t("{groups} guruh · {students} o'quvchi", { groups: formatNumber(summary.groups), students: formatNumber(summary.students) })}
+              />
+              <Figure label={t("To'landi")} value={summary.paid} sub={pctText(summary.paidPct)} />
+              <Figure label={t("Qoldi")} value={summary.unpaid} sub={t("guruhlarning o'rtachasi {pct}", { pct: pctText(summary.avgGroupPct) })} danger />
             </div>
             <div className="flex flex-wrap gap-2">
-              <Chip dot="bg-emerald-500" label="To'liq to'lagan guruh" count={summary.fullyPaidGroups} />
-              <Chip dot="bg-destructive" label="Yarmidan kami to'langan" count={summary.underHalfGroups} />
+              <Chip dot="bg-emerald-500" label={t("To'liq to'lagan guruh")} count={summary.fullyPaidGroups} />
+              <Chip dot="bg-destructive" label={t("Yarmidan kami to'langan")} count={summary.underHalfGroups} />
             </div>
-            <p className="text-xs text-emerald-700 dark:text-emerald-400">✓ {SAME_AS_OVERVIEW}</p>
+            <p className="text-xs text-emerald-700 dark:text-emerald-400">✓ {t(SAME_AS_OVERVIEW)}</p>
           </>
         )}
       </CardContent>

@@ -1,10 +1,14 @@
+"use client";
+
 import { CircleCheck, Lock } from "lucide-react";
+import { useT } from "@/i18n/context";
 import { transferLine } from "./refunds-format";
 import type { TransferState } from "./refunds-types";
 
 /** «Markaz hisobiga o'tkazish» condition (spec §5.2), in the drawer and in «Yechib olish» alike. */
 export function TransferNote({ transfer }: { transfer: TransferState }) {
-  const { allowed, text } = transferLine(transfer);
+  const t = useT();
+  const { allowed, text } = transferLine(transfer, t);
   if (!text) return null;
   if (allowed) {
     return (

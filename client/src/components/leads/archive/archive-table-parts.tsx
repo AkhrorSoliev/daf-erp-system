@@ -11,6 +11,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { TableCell, TableRow } from "@/components/ui/table";
 import type { DeletedBy } from "./archive-types";
+import { useT } from "@/i18n/context";
 
 export function deletedByName(by: DeletedBy | null): string {
   if (!by) return "—";
@@ -19,18 +20,19 @@ export function deletedByName(by: DeletedBy | null): string {
 
 /** The «⋯» menu with the one action an archived row has. */
 export function RestoreMenu({ onRestore }: { onRestore: () => void }) {
+  const t = useT();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon-xs">
           <MoreHorizontal className="size-4" />
-          <span className="sr-only">Amallar</span>
+          <span className="sr-only">{t("Amallar")}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={onRestore}>
           <RotateCcw className="mr-2 size-4" />
-          Tiklash
+          {t("Tiklash")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -57,11 +59,12 @@ export function ArchiveEmptyStates({
   isError: boolean;
   isEmpty: boolean;
   filtered: boolean;
-  /** «lid» or «bo'lim». */
-  noun: string;
+  /** Which list is empty: the texts differ per noun. */
+  noun: "lid" | "bo'lim";
   onRetry: () => void;
   onClear: () => void;
 }) {
+  const t = useT();
   if (isPending) {
     return (
       <>
@@ -80,9 +83,9 @@ export function ArchiveEmptyStates({
       <TableRow>
         <TableCell colSpan={span} className="h-24 text-center">
           <div className="flex flex-col items-center gap-2 text-muted-foreground">
-            Arxivni yuklab bo&apos;lmadi
+            {t("Arxivni yuklab bo'lmadi")}
             <Button variant="outline" size="sm" onClick={onRetry}>
-              Qayta urinish
+              {t("Qayta urinish")}
             </Button>
           </div>
         </TableCell>
@@ -95,12 +98,16 @@ export function ArchiveEmptyStates({
         <TableCell colSpan={span} className="h-24 text-center text-muted-foreground">
           <div className="flex flex-col items-center gap-2">
             <Archive className="size-7 text-muted-foreground/50" />
-            {filtered
-              ? `Filtrga mos ${noun} topilmadi — filtrni tozalab ko'ring`
-              : `Arxivda ${noun} yo'q — o'chirilgan ${noun}lar shu yerda saqlanadi`}
+            {noun === "lid"
+              ? filtered
+                ? t("Filtrga mos lid topilmadi — filtrni tozalab ko'ring")
+                : t("Arxivda lid yo'q — o'chirilgan lidlar shu yerda saqlanadi")
+              : filtered
+                ? t("Filtrga mos bo'lim topilmadi — filtrni tozalab ko'ring")
+                : t("Arxivda bo'lim yo'q — o'chirilgan bo'limlar shu yerda saqlanadi")}
             {filtered && (
               <Button variant="outline" size="sm" onClick={onClear}>
-                Filtrni tozalash
+                {t("Filtrni tozalash")}
               </Button>
             )}
           </div>

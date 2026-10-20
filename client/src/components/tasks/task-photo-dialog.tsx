@@ -4,11 +4,13 @@ import { Camera, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import type { TaskDetail } from "@/hooks/use-tasks";
+import { useT } from "@/i18n/context";
 import { PHOTO_ACCEPT } from "./task-file-rules";
 import { useTaskFiles } from "./use-task-files";
 
 /** Spec screen 18: the photo is added first, then the task goes to review. */
 export function TaskPhotoDialog({ task, open, onOpenChange, onSend }: { task: TaskDetail; open: boolean; onOpenChange: (o: boolean) => void; onSend: () => void }) {
+  const t = useT();
   const input = useRef<HTMLInputElement>(null);
   const files = useTaskFiles((s) => s.files);
   const listIsOurs = useTaskFiles((s) => s.taskId === task.id);
@@ -31,14 +33,14 @@ export function TaskPhotoDialog({ task, open, onOpenChange, onSend }: { task: Ta
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
         <DialogHeader className="border-b px-6 py-4">
-          <DialogTitle>Rasm bilan yuborish</DialogTitle>
-          <DialogDescription>{"Bajarilgan ishning rasmini qo'shing. Rasm qo'shilmaguncha topshiriq tekshiruvga yuborilmaydi."}</DialogDescription>
+          <DialogTitle>{t("Rasm bilan yuborish")}</DialogTitle>
+          <DialogDescription>{t("Bajarilgan ishning rasmini qo'shing. Rasm qo'shilmaguncha topshiriq tekshiruvga yuborilmaydi.")}</DialogDescription>
         </DialogHeader>
         <div className="flex-1 space-y-3 overflow-y-auto px-6 py-4">
           {/* No `capture`: a phone offers the camera and the gallery itself. */}
-          <input ref={input} type="file" accept={PHOTO_ACCEPT} multiple hidden aria-label="Rasm tanlash" onChange={(e) => pick(e.target.files)} />
+          <input ref={input} type="file" accept={PHOTO_ACCEPT} multiple hidden aria-label={t("Rasm tanlash")} onChange={(e) => pick(e.target.files)} />
           <Button type="button" variant="outline" disabled={uploading} onClick={() => input.current?.click()}>
-            {uploading ? <Loader2 className="mr-1 size-4 animate-spin" /> : <Camera className="mr-1 size-4" />}Rasm tanlash
+            {uploading ? <Loader2 className="mr-1 size-4 animate-spin" /> : <Camera className="mr-1 size-4" />}{t("Rasm tanlash")}
           </Button>
           {added.length > 0 && (
             <div className="grid grid-cols-3 gap-2">
@@ -50,8 +52,8 @@ export function TaskPhotoDialog({ task, open, onOpenChange, onSend }: { task: Ta
           )}
         </div>
         <DialogFooter className="border-t px-6 py-4">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Bekor qilish</Button>
-          <Button type="button" disabled={!hasFreshPhoto || uploading} onClick={() => { onSend(); onOpenChange(false); }}>Tekshiruvga yuborish</Button>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{t("Bekor qilish")}</Button>
+          <Button type="button" disabled={!hasFreshPhoto || uploading} onClick={() => { onSend(); onOpenChange(false); }}>{t("Tekshiruvga yuborish")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -2,6 +2,7 @@
 
 import { FileText, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/i18n/context";
 import { MonthStepper } from "@/components/shared/month-stepper";
 import { EXPENSES_FIRST_MONTH } from "./expenses-url";
 
@@ -17,9 +18,10 @@ export function ExpensesHeader({ month, current, canManage, exporting, pdfDisabl
   onPdf: () => void;
   onAdd: () => void;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <h2 className="font-heading text-lg font-semibold tracking-tight">Xarajatlar</h2>
+      <h2 className="font-heading text-lg font-semibold tracking-tight">{t("Xarajatlar")}</h2>
       <div className="flex flex-wrap items-center gap-2">
         <MonthStepper value={month} min={EXPENSES_FIRST_MONTH} max={current} onChange={onMonth} />
         <Button variant="outline" onClick={onPdf} disabled={exporting || pdfDisabled}>
@@ -29,7 +31,7 @@ export function ExpensesHeader({ month, current, canManage, exporting, pdfDisabl
         {canManage && (
           <Button onClick={onAdd}>
             <Plus className="mr-2 size-4" />
-            Xarajat qo&apos;shish
+            {t("Xarajat qo'shish")}
           </Button>
         )}
       </div>

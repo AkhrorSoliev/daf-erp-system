@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { MonthStepper } from "@/components/shared/month-stepper";
 import { currentMonthKey } from "@/components/payments/salary-utils";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useT } from "@/i18n/context";
 import { downloadAuthedFile } from "@/lib/download-file";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,7 @@ import {
 
 /** «Markaz faoliyati» (spec B7b §4). Every figure is the server's; the page only formats. */
 export function CenterActivityPage() {
+  const t = useT();
   const { filters: raw, setFilters } = useUrlFilters(CENTER_ACTIVITY_SCHEMA);
   const filters = raw as CenterActivityFilters;
   const [exporting, setExporting] = useState(false);
@@ -42,7 +44,7 @@ export function CenterActivityPage() {
       ).toString();
       await downloadAuthedFile(`/reports/center-activity/excel?${qs}`, excelFileName(month));
     } catch (e) {
-      toast.error(getErrorMessage(e, "Excel yuklab olishda xatolik"));
+      toast.error(getErrorMessage(e, t("Excel yuklab olishda xatolik")));
     } finally {
       setExporting(false);
     }
@@ -52,10 +54,10 @@ export function CenterActivityPage() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-0.5">
-          <h2 className="font-heading text-lg font-semibold tracking-tight">Markaz faoliyati</h2>
+          <h2 className="font-heading text-lg font-semibold tracking-tight">{t("Markaz faoliyati")}</h2>
           {onlyBranch && (
             <p className="text-sm text-muted-foreground">
-              {onlyBranch.name} · {onlyBranch.rooms} xona
+              {onlyBranch.name} · {t("{n} xona", { n: onlyBranch.rooms })}
             </p>
           )}
         </div>
@@ -68,26 +70,26 @@ export function CenterActivityPage() {
           />
           <Button variant="outline" onClick={exportExcel} disabled={exporting}>
             {exporting ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Download className="mr-2 size-4" />}
-            Excel
+            {t("Excel")}
           </Button>
         </div>
       </div>
 
       {isError ? (
         <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-          <p>Ma&apos;lumotni yuklab bo&apos;lmadi</p>
+          <p>{t("Ma'lumotni yuklab bo'lmadi")}</p>
           {/* A stale or out-of-scope ?filial= makes the server answer 400; asking again would repeat it, so retry without it. */}
           <Button
             variant="outline" size="sm" className="mt-3"
             onClick={() => (filters.filial > 0 ? setFilters({ filial: 0 }) : refetch())}
           >
-            Qayta urinish
+            {t("Qayta urinish")}
           </Button>
         </div>
       ) : fresh && fresh.rooms.length === 0 ? (
         <>
           <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-            Bu oyda xonasi bor ochiq guruh yo&apos;q — oyni o&apos;zgartirib ko&apos;ring
+            {t("Bu oyda xonasi bor ochiq guruh yo'q — oyni o'zgartirib ko'ring")}
           </div>
           <CenterActivityMonths months={fresh.months} selected={month} />
         </>
@@ -107,8 +109,8 @@ export function CenterActivityPage() {
               <CenterActivityMonths months={fresh.months} selected={month} />
               {(fresh.notes.deletedLater > 0 || fresh.notes.unplaced > 0) && (
                 <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                  {fresh.notes.deletedLater > 0 && <p>shundan {fresh.notes.deletedLater} ta guruh keyin o&apos;chirilgan</p>}
-                  {fresh.notes.unplaced > 0 && <p>{fresh.notes.unplaced} ta guruhga xona yoki o&apos;rin soni belgilanmagan</p>}
+                  {fresh.notes.deletedLater > 0 && <p>{t("shundan {n} ta guruh keyin o'chirilgan", { n: fresh.notes.deletedLater })}</p>}
+                  {fresh.notes.unplaced > 0 && <p>{t("{n} ta guruhga xona yoki o'rin soni belgilanmagan", { n: fresh.notes.unplaced })}</p>}
                 </div>
               )}
             </>

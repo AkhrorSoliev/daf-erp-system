@@ -12,6 +12,7 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import type { LeadCard } from "@/hooks/use-leads-board";
 import { assignLead, fetchAssignable, type AssignableStaff } from "./ownership-api";
 import { ownerInitials, ownerName } from "./ownership-format";
+import { useT } from "@/i18n/context";
 
 /** More than this many people: a search box appears (searchable select rule). */
 const SEARCH_FROM = 7;
@@ -28,6 +29,7 @@ export function LeadOwnerAssign({
   disabled?: boolean;
   onAssigned: (card: LeadCard) => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [staff, setStaff] = useState<AssignableStaff[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -56,10 +58,10 @@ export function LeadOwnerAssign({
     setSaving(person.id);
     try {
       onAssigned(await assignLead(leadId, person.id));
-      toast.success(`Lid ${ownerName(person)}ga berildi`);
+      toast.success(t("Lid {name}ga berildi", { name: ownerName(person) }));
       setOpen(false);
     } catch (error) {
-      toast.error(getErrorMessage(error, "Lidni berib bo'lmadi"));
+      toast.error(getErrorMessage(error, t("Lidni berib bo'lmadi")));
     } finally {
       setSaving(null);
     }
@@ -75,13 +77,13 @@ export function LeadOwnerAssign({
       <PopoverTrigger asChild>
         <Button size="sm" variant="outline" disabled={disabled}>
           <UserCog className="size-4" />
-          Boshqaga berish
+          {t("Boshqaga berish")}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-64 p-2">
         {staff && staff.length > SEARCH_FROM && (
           <Input
-            placeholder="Xodim qidirish..."
+            placeholder={t("Xodim qidirish...")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="mb-2 h-8"
@@ -90,9 +92,9 @@ export function LeadOwnerAssign({
         <div className="max-h-60 overflow-y-auto overscroll-contain">
           {failed ? (
             <div className="space-y-2 px-2 py-3 text-sm text-muted-foreground">
-              <p>Ro&apos;yxatni yuklab bo&apos;lmadi</p>
+              <p>{t("Ro'yxatni yuklab bo'lmadi")}</p>
               <Button size="sm" variant="outline" onClick={() => void load()}>
-                Qayta urinish
+                {t("Qayta urinish")}
               </Button>
             </div>
           ) : staff === null ? (
@@ -103,7 +105,7 @@ export function LeadOwnerAssign({
             </div>
           ) : shown.length === 0 ? (
             <p className="px-2 py-3 text-sm text-muted-foreground">
-              Lid beriladigan xodim topilmadi
+              {t("Lid beriladigan xodim topilmadi")}
             </p>
           ) : (
             shown.map((p) => (

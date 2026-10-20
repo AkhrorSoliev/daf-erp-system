@@ -55,6 +55,6 @@ describe("«Bekor qilish» dialog (spec §3.3)", () => {
     expect(text).toContain(`Vali Aliyev · ${num(620_000)} so'm`);
     expect(text).toContain(`Bekor qilinsa, ${num(620_000)} so'm o'quvchi balansiga qaytadi`);
     expect(text).toContain("Sabab");
-    expect(disabledButton(raw, "Bekor qilish")).toBe(true);
+    expect(disabledButton(raw, "rovni bekor qilish")).toBe(true);
   });
 });

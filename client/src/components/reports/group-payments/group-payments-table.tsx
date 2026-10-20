@@ -6,6 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatNumber, formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/context";
 import { PILL_BASE } from "@/components/payments/list/payments-table";
 import { FIRST_COLUMN, GROUP_MARK_LABEL, pctText, pctTone, type Tone } from "./group-payments-format";
 import type { GpRow, Kesim } from "./group-payments-types";
@@ -19,8 +21,13 @@ export const TONE_PILL: Record<Tone, string> = {
   muted: "bg-muted text-muted-foreground",
 };
 
-const headsOf = (kesim: Kesim) => ["#", FIRST_COLUMN[kesim], ...(kesim === "guruh" ? ["Ustoz"] : []), "O'quvchi", "Hisoblandi", "To'landi", "Qoldi", "Foiz", "To'lamagan"];
-const RIGHT = new Set(["O'quvchi", "Hisoblandi", "To'landi", "Qoldi", "To'lamagan"]);
+const STUDENTS = msg("O'quvchilar");
+const CHARGED = msg("Hisoblandi");
+const PAID = msg("To'landi");
+const LEFT = msg("Qoldi");
+const UNPAID = msg("To'lamagan");
+const headsOf = (kesim: Kesim) => ["#", FIRST_COLUMN[kesim], ...(kesim === "guruh" ? [msg("Ustoz")] : []), STUDENTS, CHARGED, PAID, LEFT, msg("Foiz"), UNPAID];
+const RIGHT = new Set<string>([STUDENTS, CHARGED, PAID, LEFT, UNPAID]);
 const MutedZero = () => <span className="text-muted-foreground">0</span>;
 
 function PctCell({ pct }: { pct: number | null }) {
@@ -35,6 +42,7 @@ function PctCell({ pct }: { pct: number | null }) {
 }
 
 function RowView({ row, kesim, index, onOpen }: { row: GpRow; kesim: Kesim; index: number; onOpen?: (id: string) => void }) {
+  const t = useT();
   const open = onOpen ? () => onOpen(row.id) : undefined;
   const onKeyDown = (e: KeyboardEvent) => {
     if (open && (e.key === "Enter" || e.key === " ")) {
@@ -48,9 +56,10 @@ function RowView({ row, kesim, index, onOpen }: { row: GpRow; kesim: Kesim; inde
       <TableCell>
         <div className="font-semibold">
           {row.name}
-          {row.marks.map((m) => (
-            <span key={m} className={cn(PILL_BASE, "ml-1 bg-muted align-middle text-muted-foreground")}>{GROUP_MARK_LABEL[m]}</span>
-          ))}
+          {row.marks.map((m) => {
+            const mark = GROUP_MARK_LABEL[m];
+            return <span key={m} className={cn(PILL_BASE, "ml-1 bg-muted align-middle text-muted-foreground")}>{t(mark)}</span>;
+          })}
         </div>
         <div className="text-xs text-muted-foreground">{row.sub}</div>
       </TableCell>
@@ -82,15 +91,16 @@ export function GroupPaymentsTable({ kesim, rows, loading, offset, emptyMonth, o
   /** Given when a filter is set: the empty state then offers to clear it. */
   onClear?: () => void;
 }) {
+  const t = useT();
   if (!loading && rows && rows.length === 0) {
     return (
       <div className="rounded-md border p-8 text-center text-sm text-muted-foreground">
         {emptyMonth ? (
-          <p>Bu oyda hisob yozilmagan</p>
+          <p>{t("Bu oyda hisob yozilmagan")}</p>
         ) : (
           <>
-            <p>Hech narsa topilmadi</p>
-            {onClear && <Button variant="outline" size="sm" className="mt-3" onClick={onClear}>Tozalash</Button>}
+            <p>{t("Hech narsa topilmadi")}</p>
+            {onClear && <Button variant="outline" size="sm" className="mt-3" onClick={onClear}>{t("Tozalash")}</Button>}
           </>
         )}
       </div>
@@ -103,7 +113,7 @@ export function GroupPaymentsTable({ kesim, rows, loading, offset, emptyMonth, o
         <TableHeader>
           <TableRow>
             {heads.map((h, i) => (
-              <TableHead key={h} className={i === 0 ? "w-12 border-r" : RIGHT.has(h) ? "text-right" : undefined}>{h}</TableHead>
+              <TableHead key={h} className={i === 0 ? "w-12 border-r" : RIGHT.has(h) ? "text-right" : undefined}>{h === "#" ? h : t(h)}</TableHead>
             ))}
           </TableRow>
         </TableHeader>

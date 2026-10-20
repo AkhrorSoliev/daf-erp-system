@@ -130,7 +130,7 @@ describe("DebtPage — the other tabs", () => {
 
   it("O'qimayotganlar: the kind chips with their counts, Holat and Oxirgi guruh", () => {
     const text = render("tab=chiqqan", { ...RESPONSE, data: [{ ...ROW, kind: "frozen", otherPart: 0 }] });
-    for (const chip of [`Hammasi · ${num(3)}`, `Guruhsiz · ${num(1)}`, `Muzlatilgan · ${num(1)}`, `Ketgan · ${num(1)}`]) expect(text).toContain(chip);
+    for (const chip of [`Hammasi · ${num(3)}`, `Guruhsiz · ${num(1)}`, `Muzlatilganlar · ${num(1)}`, `Ketganlar · ${num(1)}`]) expect(text).toContain(chip);
     expect(text).toContain("# O'quvchi Holat Oxirgi guruh Qarz Qaysi oylardan Oxirgi aloqa");
     expect(text).toContain("muzlatilgan A1-01");
   });

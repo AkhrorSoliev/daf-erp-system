@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { draftError, draftPatch, toDraft, type ParticipationSettings } from "./participation-settings-draft";
+import { draftError, draftPatch, isDirty, toDraft, type ParticipationSettings } from "./participation-settings-draft";
 
 const saved: ParticipationSettings = {
   minAttendancePercent: 80,
@@ -9,6 +9,12 @@ const saved: ParticipationSettings = {
 };
 
 describe("participation settings draft", () => {
+  it("is dirty only when the text differs from the saved numbers", () => {
+    expect(isDirty(saved, toDraft(saved))).toBe(false);
+    expect(isDirty(saved, { ...toDraft(saved), maxLate: "" })).toBe(true);
+    expect(isDirty(saved, { ...toDraft(saved), maxLate: "25" })).toBe(true);
+  });
+
   it("starts from the saved numbers as text", () => {
     expect(toDraft(saved)).toEqual({
       attendance: "80",

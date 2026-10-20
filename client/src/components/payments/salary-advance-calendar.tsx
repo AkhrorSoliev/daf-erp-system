@@ -1,10 +1,12 @@
 "use client";
 
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { cn } from "@/lib/utils";
 import { formatPrice } from "@/lib/format-utils";
 import type { AdvanceDay } from "./salary-advances-tab";
 
-const WEEKDAYS = ["Du", "Se", "Ch", "Pa", "Ju", "Sh", "Ya"];
+const WEEKDAYS = [msg("Du"), msg("Se"), msg("Ch"), msg("Pa"), msg("Ju"), msg("Sh"), msg("Ya")];
 
 /**
  * To'rt pog'onali amber shkala — katakning oydagi eng katta kunga nisbati.
@@ -41,6 +43,7 @@ export function SalaryAdvanceCalendar({
   selectedDate: string | null;
   onSelect: (date: string) => void;
 }) {
+  const t = useT();
   const [year, m] = month.split("-").map(Number);
   const daysInMonth = new Date(Date.UTC(year, m, 0)).getUTCDate();
   // getUTCDay: Yakshanba=0. Dushanbadan boshlanadigan setkaga o'tkazamiz.
@@ -65,7 +68,7 @@ export function SalaryAdvanceCalendar({
             key={w}
             className="py-1 text-center text-xs font-medium text-muted-foreground"
           >
-            {w}
+            {t(w)}
           </div>
         ))}
       </div>
@@ -84,8 +87,8 @@ export function SalaryAdvanceCalendar({
               onClick={() => onSelect(date)}
               aria-label={
                 day
-                  ? `${dayNum}-kun, ${formatPrice(day.total)} so'm avans`
-                  : `${dayNum}-kun, avans yo'q`
+                  ? t("{day}-kun, {amount} so'm avans", { day: dayNum, amount: formatPrice(day.total) })
+                  : t("{day}-kun, avans yo'q", { day: dayNum })
               }
               aria-pressed={selected}
               className={cn(
@@ -111,7 +114,7 @@ export function SalaryAdvanceCalendar({
                     {formatPrice(day.total)}
                   </span>
                   <span className="block text-[8px] text-muted-foreground sm:text-[9px]">
-                    so&apos;m
+                    {t("so'm")}
                   </span>
                 </span>
               )}

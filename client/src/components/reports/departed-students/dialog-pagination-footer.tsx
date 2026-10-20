@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useT } from "@/i18n/use-t";
 
 interface DialogPaginationFooterProps {
   isLoading: boolean;
@@ -33,17 +34,18 @@ export function DialogPaginationFooter({
   onPageChange,
   onPageSizeChange,
 }: DialogPaginationFooterProps) {
+  const t = useT();
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 shrink-0">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         {isLoading ? (
           <span className="inline-flex items-center gap-2">
             <Loader2 className="size-4 animate-spin" />
-            Yuklanmoqda...
+            {t("Yuklanmoqda...")}
           </span>
         ) : (
           <>
-            <span>Sahifada:</span>
+            <span>{t("Sahifada:")}</span>
             <Select
               value={String(pageSize)}
               onValueChange={(v) => onPageSizeChange(Number(v))}
@@ -60,7 +62,7 @@ export function DialogPaginationFooter({
               </SelectContent>
             </Select>
             <span>
-              Jami:{" "}
+              {t("Jami:")}{" "}
               <span className="tabular-nums">
                 {total.toLocaleString("uz-UZ")}
               </span>
@@ -79,7 +81,7 @@ export function DialogPaginationFooter({
           className="h-8 w-8"
           disabled={page <= 1 || isLoading}
           onClick={() => onPageChange(page - 1)}
-          aria-label="Oldingi"
+          aria-label={t("Oldingi")}
         >
           <ChevronLeft className="size-4" />
         </Button>
@@ -89,7 +91,7 @@ export function DialogPaginationFooter({
           className="h-8 w-8"
           disabled={page >= totalPages || isLoading}
           onClick={() => onPageChange(page + 1)}
-          aria-label="Keyingi"
+          aria-label={t("Keyingi")}
         >
           <ChevronRight className="size-4" />
         </Button>

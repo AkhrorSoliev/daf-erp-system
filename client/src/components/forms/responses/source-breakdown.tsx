@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { NO_SOURCE_TOKEN, type SubmissionSourceCount } from "./types";
 
@@ -11,10 +12,11 @@ interface Props {
 
 /** «Instagram 30 · Telegram 12» — qaysi havola ishlagani, va bir vaqtda manba filtri. */
 export function SourceBreakdown({ sources, value, onChange }: Props) {
+  const t = useT();
   if (sources.length === 0) return null;
   return (
     <div className="flex flex-wrap items-center gap-1 text-sm">
-      <span className="mr-1 text-muted-foreground">Manba:</span>
+      <span className="mr-1 text-muted-foreground">{t("Manba")}:</span>
       {sources.map((source) => {
         const token = source.id ?? NO_SOURCE_TOKEN;
         const active = value.includes(token);
@@ -31,7 +33,7 @@ export function SourceBreakdown({ sources, value, onChange }: Props) {
               active ? "bg-primary/10 font-medium text-primary" : "hover:bg-muted",
             )}
           >
-            {source.name ?? "Belgilanmagan"}{" "}
+            {source.name ?? t("Manbasiz")}{" "}
             <span className="tabular-nums text-muted-foreground">{source.count}</span>
           </button>
         );

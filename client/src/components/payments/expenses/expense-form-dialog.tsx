@@ -23,9 +23,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_LABELS, EXPENSE_METHOD_LABELS } from "./expenses-labels";
+import { categoryLabel, EXPENSE_CATEGORIES, EXPENSE_METHOD_LABELS } from "./expenses-labels";
 import { ExpenseSourceField, NO_SOURCE } from "./expense-source-field";
 import type { ExpensePreset, ExpenseRow } from "./expenses-types";
 
@@ -48,6 +49,7 @@ export function ExpenseFormDialog({
   branchId,
   onSaved,
 }: ExpenseFormDialogProps) {
+  const t = useT();
   const isEdit = !!expense;
 
   const [category, setCategory] = useState<string>("OTHER");
@@ -103,21 +105,21 @@ export function ExpenseFormDialog({
       };
       if (isEdit) {
         await api.patch(`/expenses/${expense!.id}`, payload);
-        toast.success("Xarajat yangilandi");
+        toast.success(t("Xarajat yangilandi"));
       } else {
         // Every expense belongs to exactly one branch — a branch-less one
         // would sit in no branch's profit calculation at all.
         if (!targetBranchId) {
-          toast.error("Avval filialni tanlang — xarajat filialsiz saqlanmaydi");
+          toast.error(t("Avval filialni tanlang — xarajat filialsiz saqlanmaydi"));
           return;
         }
         await api.post("/expenses", { ...payload, branchId: targetBranchId });
-        toast.success("Xarajat qayd qilindi");
+        toast.success(t("Xarajat qayd qilindi"));
       }
       onOpenChange(false);
       onSaved();
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err, "Xarajatni saqlashda xatolik"));
+      toast.error(getErrorMessage(err, t("Xarajatni saqlashda xatolik")));
     } finally {
       setSubmitting(false);
     }
@@ -133,12 +135,12 @@ export function ExpenseFormDialog({
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>
-            {isEdit ? "Xarajatni tahrirlash" : "Xarajat qo'shish"}
+            {isEdit ? t("Xarajatni tahrirlash") : t("Xarajat qo'shish")}
           </DialogTitle>
         </DialogHeader>
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
           <div className="space-y-2">
-            <Label>Turkum</Label>
+            <Label>{t("Turkum")}</Label>
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger>
                 <SelectValue />
@@ -146,7 +148,7 @@ export function ExpenseFormDialog({
               <SelectContent>
                 {EXPENSE_CATEGORIES.map((k) => (
                   <SelectItem key={k} value={k}>
-                    {EXPENSE_CATEGORY_LABELS[k]}
+                    {categoryLabel(k, t)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -156,7 +158,7 @@ export function ExpenseFormDialog({
             <ExpenseSourceField value={sourceId} onChange={setSourceId} current={expense?.leadSource} />
           )}
           <div className="space-y-2">
-            <Label>To&apos;lov turi</Label>
+            <Label>{t("To'lov turi")}</Label>
             <Select
               value={paymentMethod}
               onValueChange={(v) => setPaymentMethod(v as "CASH" | "CARD")}
@@ -167,14 +169,14 @@ export function ExpenseFormDialog({
               <SelectContent>
                 {Object.entries(EXPENSE_METHOD_LABELS).map(([k, v]) => (
                   <SelectItem key={k} value={k}>
-                    {v}
+                    {t(v)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Summa</Label>
+            <Label>{t("Summa")}</Label>
             <div className="relative">
               <Input
                 placeholder="0"
@@ -184,25 +186,25 @@ export function ExpenseFormDialog({
                 className="pr-12"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                so&apos;m
+                {t("so'm")}
               </span>
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Tavsif</Label>
+            <Label>{t("Tavsif")}</Label>
             <Textarea
-              placeholder="Xarajat haqida..."
+              placeholder={t("Xarajat haqida...")}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
             />
           </div>
           <div className="space-y-2">
-            <Label>Sana</Label>
+            <Label>{t("Sana")}</Label>
             <DatePicker
               value={date}
               onChange={(d) => setDate(d ?? null)}
-              placeholder="Sanani tanlang"
+              placeholder={t("Sanani tanlang")}
             />
           </div>
         </div>
@@ -212,14 +214,14 @@ export function ExpenseFormDialog({
             onClick={() => onOpenChange(false)}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={rawAmount < 1 || !description.trim() || !date || submitting}
           >
             {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
-            Saqlash
+            {t("Saqlash")}
           </Button>
         </DialogFooter>
       </DialogContent>

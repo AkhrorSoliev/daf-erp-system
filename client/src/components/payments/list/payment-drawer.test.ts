@@ -81,9 +81,9 @@ describe("PaymentDrawerBody (spec B4 §3.8)", () => {
 
   it("the buttons follow the capabilities, the source, the status and the 72-hour rule", () => {
     const manual = { ...ROW, source: "ADMIN_MANUAL" as const };
-    expect(norm(raw(manual))).not.toMatch(/Tuzatish|Bekor qilish/);
+    expect(norm(raw(manual))).not.toMatch(/Tuzatish|To.lovni bekor qilish/);
     const both = raw(manual, ["payments.correct", "money.undo"]);
-    expect(norm(both)).toContain("Tuzatish Bekor qilish");
+    expect(norm(both)).toContain("Tuzatish To'lovni bekor qilish");
     expect(norm(both)).toContain("Tuzatish: summa o'zgarsa sabab yozish majburiy.");
     expect(norm(raw(ROW, ["payments.correct"]))).not.toMatch(/ Tuzatish /); // gateway payments are not corrected
     const old = { ...manual, createdAt: "2026-01-01T00:00:00.000Z" };
@@ -91,7 +91,7 @@ describe("PaymentDrawerBody (spec B4 §3.8)", () => {
     expect(locked).toMatch(/<button[^>]*\sdisabled=""[^>]*>Tuzatish/);
     expect(norm(locked)).toContain("72 soatdan oldingi to'lovni faqat CEO tuzatadi");
     expect(raw(old, ["payments.correct"], true)).not.toMatch(/<button[^>]*\sdisabled=""[^>]*>Tuzatish/);
-    expect(norm(raw({ ...manual, status: "REVERSED", parts: null }, ["payments.correct", "money.undo"]))).not.toContain("Tuzatish Bekor qilish");
+    expect(norm(raw({ ...manual, status: "REVERSED", parts: null }, ["payments.correct", "money.undo"]))).not.toContain("Tuzatish To'lovni bekor qilish");
   });
 
   it("an archived student has no profile button", () => {

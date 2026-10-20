@@ -70,7 +70,7 @@ describe("payment drawer model (spec B4 §3.8)", () => {
   it("footerHints come from the capabilities", () => {
     expect(footerHints({ correct: true, undo: true })).toEqual([
       "Tuzatish: summa o'zgarsa sabab yozish majburiy.",
-      "Bekor qilish: sabab yozish majburiy.",
+      "To'lovni bekor qilish: sabab yozish majburiy.",
     ]);
     expect(footerHints({ correct: true, undo: false })).toEqual(["Tuzatish: summa o'zgarsa sabab yozish majburiy."]);
     expect(footerHints({ correct: false, undo: false })).toEqual([]);

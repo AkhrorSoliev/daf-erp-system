@@ -6,6 +6,7 @@ import { Download, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { DebtFlowTable } from "../debt-history/debt-flow-table";
 import { MonthCohortDialog } from "../debt-history/month-cohort-dialog";
@@ -41,6 +42,7 @@ import { useDebtFilters } from "./debt-filters-provider";
  * status tiles survive as a filter bar because they scope that table.
  */
 export function MonthlyDebtView() {
+  const t = useT();
   const { filters, setFilters } = useDebtFilters();
   const statusFilter = (filters.holat || "all") as DebtStatusFilter;
   const [target, setTarget] = useState<DebtMonth | null>(null);
@@ -70,7 +72,7 @@ export function MonthlyDebtView() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      toast.error(getErrorMessage(e, "Excel yuklab olishda xatolik"));
+      toast.error(getErrorMessage(e, t("Excel yuklab olishda xatolik")));
     } finally {
       setExporting(false);
     }
@@ -80,10 +82,8 @@ export function MonthlyDebtView() {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Qarz oyma-oy qanday o&apos;zgargan: qancha qo&apos;shilgan, qanchasi
-          to&apos;langan va oy oxirida qancha qolgan.{" "}
-          <span className="whitespace-nowrap">Butun kompaniya bo&apos;yicha</span>{" "}
-          — bu jadval filialga bo&apos;linmaydi.
+          {t("Qarz oyma-oy qanday o'zgargan: qancha qo'shilgan, qanchasi to'langan va oy oxirida qancha qolgan.")}{" "}
+          {t("Butun kompaniya bo'yicha — bu jadval filialga bo'linmaydi.")}
         </p>
         <Button
           variant="outline"
@@ -96,7 +96,7 @@ export function MonthlyDebtView() {
           ) : (
             <Download className="size-4" />
           )}
-          Excel yuklab olish
+          {t("Excel yuklab olish")}
         </Button>
       </div>
 

@@ -1,3 +1,6 @@
+import type { Translate } from "@/components/notifications/notification-view";
+import { interpolate } from "@/i18n/translate";
+
 export type ScoreMap = Map<string, string>;
 
 export const scoreKey = (pid: string, sid: string) => `${pid}:${sid}`;
@@ -25,6 +28,7 @@ export function buildScoresPayload(
   dirtyParticipantIds: Iterable<string>,
   edits: ScoreMap,
   initial: ScoreMap,
+  t: Translate = interpolate,
 ): BuildScoresResult {
   const participants: ScoresPayloadEntry[] = [];
 
@@ -42,13 +46,18 @@ export function buildScoresPayload(
       if (!Number.isFinite(n)) {
         return {
           ok: false,
-          error: `Ball noto'g'ri kiritildi: ${subject.name}`,
+          error: t("Ball noto'g'ri kiritildi: {subject}", {
+            subject: subject.name,
+          }),
         };
       }
       if (n < 0 || n > subject.maxScore) {
         return {
           ok: false,
-          error: `Ball 0 dan ${subject.maxScore} gacha bo'lishi kerak (${subject.name})`,
+          error: t("Ball 0 dan {max} gacha bo'lishi kerak ({subject})", {
+            max: subject.maxScore,
+            subject: subject.name,
+          }),
         };
       }
       scores.push({ subjectId: subject.id, score: n });

@@ -1,6 +1,6 @@
 import { msg } from "@/i18n/msg";
 
-// Only the student, user (teacher) and group labels are `msg()`-translated; the other entities' labels are still raw Uzbek.
+// Only the student, user (teacher), group and branch labels are `msg()`-translated; the other entities' labels are still raw Uzbek.
 
 type BadgeVariant = "default" | "secondary" | "destructive" | "outline" | "ghost";
 
@@ -48,10 +48,10 @@ const COURSE_STATUS: Record<string, StatusConfig> = {
 
 // ─── Branch ───────────────────────────────────────────
 const BRANCH_STATUS: Record<string, StatusConfig> = {
-  ACTIVE: { label: "Faol", variant: "default" },
-  INACTIVE: { label: "Nofaol", variant: "secondary" },
-  CLOSED: { label: "Yopilgan", variant: "destructive" },
-  ARCHIVED: { label: "Arxivlangan", variant: "ghost" },
+  ACTIVE: { label: msg("Faol"), variant: "default" },
+  INACTIVE: { label: msg("Nofaol"), variant: "secondary" },
+  CLOSED: { label: msg("Yopilgan"), variant: "destructive" },
+  ARCHIVED: { label: msg("Arxivlangan"), variant: "ghost" },
 };
 
 // ─── Room ─────────────────────────────────────────────

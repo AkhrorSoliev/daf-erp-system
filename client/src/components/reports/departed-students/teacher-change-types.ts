@@ -1,3 +1,5 @@
+import { msg } from "@/i18n/msg";
+
 export interface RetentionMetrics {
   totalTeacherChanges: number;
   departedAfterTeacherChange: number;
@@ -44,7 +46,7 @@ export const CHANGE_TYPE_LABELS: Record<
   TeacherChangeRow["changeType"],
   string
 > = {
-  ADDED: "Qo'shildi",
-  REMOVED: "Olib tashlandi",
-  REPLACED: "Almashtirildi",
+  ADDED: msg("Ustoz qo'shildi"),
+  REMOVED: msg("Ustoz olib tashlandi"),
+  REPLACED: msg("Ustoz almashtirildi"),
 };

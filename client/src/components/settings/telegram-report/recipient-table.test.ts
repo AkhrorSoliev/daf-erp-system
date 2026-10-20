@@ -33,7 +33,7 @@ describe("RecipientTable", () => {
   it("marks the selected row and shows the problem pills", () => {
     const out = html([base, { ...base, id: 2, name: "Dilnoza", reach: "BLOCKED", blockedAt: "2026-10-16T10:00:00Z" }]);
     expect(out).toContain('aria-selected="true"');
-    expect(out).toContain("Yetmaydi");
+    expect(out).toContain("Yetib bormaydi");
     expect(out).toContain("botni bloklagan");
   });
 

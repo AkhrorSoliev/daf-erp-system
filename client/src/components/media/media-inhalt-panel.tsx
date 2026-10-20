@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { RotateCcw } from "lucide-react";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,17 +36,18 @@ function OvozHujayrasi({ url }: { url: string | null }) {
 }
 
 function WoerterBlock({ woerter }: { woerter: InhaltWort[] }) {
+  const t = useT();
   if (woerter.length === 0) return null;
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-semibold">So&apos;zlar</h3>
+      <h3 className="text-sm font-semibold">{t("So'zlar")}</h3>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Nemischa</TableHead>
-            <TableHead>Tarjima</TableHead>
-            <TableHead className="w-14">Ovoz</TableHead>
-            <TableHead className="w-24">Holat</TableHead>
+            <TableHead>{t("Nemischa")}</TableHead>
+            <TableHead>{t("Tarjima")}</TableHead>
+            <TableHead className="w-14">{t("Ovoz")}</TableHead>
+            <TableHead className="w-24">{t("Holat")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -63,9 +65,9 @@ function WoerterBlock({ woerter }: { woerter: InhaltWort[] }) {
                   <Badge
                     variant="outline"
                     className="text-muted-foreground"
-                    title="Bu so'zdan hech qachon savol tuzilmaydi va chalg'ituvchi sifatida ham ishlatilmaydi — shuning uchun mashqda ko'rinmaydi"
+                    title={t("Bu so'zdan hech qachon savol tuzilmaydi va chalg'ituvchi sifatida ham ishlatilmaydi — shuning uchun mashqda ko'rinmaydi")}
                   >
-                    Passiv
+                    {t("Passiv")}
                   </Badge>
                 )}
               </TableCell>
@@ -79,6 +81,7 @@ function WoerterBlock({ woerter }: { woerter: InhaltWort[] }) {
 
 /** Gap va ibora bir xil shaklda: nemischa, tarjima, ovoz. */
 function ZeileBlock({ title, rows }: { title: string; rows: InhaltZeile[] }) {
+  const t = useT();
   if (rows.length === 0) return null;
   return (
     <div className="space-y-2">
@@ -86,9 +89,9 @@ function ZeileBlock({ title, rows }: { title: string; rows: InhaltZeile[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Nemischa</TableHead>
-            <TableHead>Tarjima</TableHead>
-            <TableHead className="w-14">Ovoz</TableHead>
+            <TableHead>{t("Nemischa")}</TableHead>
+            <TableHead>{t("Tarjima")}</TableHead>
+            <TableHead className="w-14">{t("Ovoz")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -117,10 +120,11 @@ function DialogBlock({
   dialoge?: InhaltDialog[];
   rows: InhaltDialogZeile[];
 }) {
+  const t = useT();
   if (dialoge.length === 0 && rows.length === 0) return null;
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-semibold">Dialoglar</h3>
+      <h3 className="text-sm font-semibold">{t("Dialoglar")}</h3>
       {dialoge.map((d) => (
         <div key={d.id} className="space-y-2 rounded-md border p-3">
           <div className="flex items-center justify-between gap-3">
@@ -136,9 +140,9 @@ function DialogBlock({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-28">So&apos;zlovchi</TableHead>
-                <TableHead>Nemischa</TableHead>
-                <TableHead>Tarjima</TableHead>
+                <TableHead className="w-28">{t("So'zlovchi")}</TableHead>
+                <TableHead>{t("Nemischa")}</TableHead>
+                <TableHead>{t("Tarjima")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -212,6 +216,7 @@ export function MediaInhaltPanel({ sectionId }: { sectionId: number }) {
   // bo'lgani uchun React Query ularni BITTA keshdan ta'minlaydi: bo'lim
   // ochilganda `/inhalt`ga bitta GET, va ikkalasidan istalgani `refetch()`
   // chaqirsa — ikkalasi ham yangilanadi.
+  const t = useT();
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["media-inhalt", sectionId],
     queryFn: () =>
@@ -233,10 +238,8 @@ export function MediaInhaltPanel({ sectionId }: { sectionId: number }) {
           deb hisoblardi — aslida ikkalasi ham to'g'ri, faqat ko'lami
           boshqa. */}
       <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">Ko&apos;lam:</span> faqat
-        SHU bo&apos;limning materiali. Oldingi bo&apos;limlarga tegishli
-        so&apos;z, gap yoki ibora bu ro&apos;yxatda ko&apos;rinmaydi —
-        &quot;Savollar&quot; yorlig&apos;i esa ularni ham hisobga oladi.
+        <span className="font-medium text-foreground">{t("Ko'lam:")}</span>{" "}
+        {t("faqat shu bo'limning materiali. Oldingi bo'limlarga tegishli so'z, gap yoki ibora bu ro'yxatda ko'rinmaydi — «Savollar» yorlig'i esa ularni ham hisobga oladi.")}
       </div>
 
       {isLoading && (
@@ -250,10 +253,10 @@ export function MediaInhaltPanel({ sectionId }: { sectionId: number }) {
       {!isLoading && isError && (
         <Card>
           <CardContent className="flex items-center justify-between gap-3 p-4 text-sm text-muted-foreground">
-            <span>Bo&apos;lim materiali olinmadi</span>
+            <span>{t("Bo'lim materiali olinmadi")}</span>
             <Button variant="outline" size="sm" onClick={() => refetch()}>
               <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-              Qayta urinib ko&apos;rish
+              {t("Qayta urinish")}
             </Button>
           </CardContent>
         </Card>
@@ -262,9 +265,7 @@ export function MediaInhaltPanel({ sectionId }: { sectionId: number }) {
       {!isLoading && !isError && data && sectionInhaltBosh(data) && (
         <Card>
           <CardContent className="p-4 text-sm text-muted-foreground">
-            Bu bo&apos;limda hali material yo&apos;q — kontentni bazaga
-            yozadigan seed skriptini (`daf:seed`/`daf:inhalt-seed`) ishga
-            tushiring.
+            {t("Bu bo'limda hali material yo'q — kontentni bazaga yozadigan seed skriptini ({scripts}) ishga tushiring.", { scripts: "`daf:seed`/`daf:inhalt-seed`" })}
           </CardContent>
         </Card>
       )}
@@ -272,8 +273,8 @@ export function MediaInhaltPanel({ sectionId }: { sectionId: number }) {
       {!isLoading && !isError && data && !sectionInhaltBosh(data) && (
         <>
           <WoerterBlock woerter={data.woerter} />
-          <ZeileBlock title="Gaplar" rows={data.saetze} />
-          <ZeileBlock title="Iboralar" rows={data.phrasen} />
+          <ZeileBlock title={t("Gaplar")} rows={data.saetze} />
+          <ZeileBlock title={t("Iboralar")} rows={data.phrasen} />
           <DialogBlock dialoge={data.dialoge} rows={data.dialogZeilen} />
         </>
       )}
