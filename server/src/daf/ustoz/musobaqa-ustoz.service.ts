@@ -109,13 +109,35 @@ export class MusobaqaUstozService {
     }));
   }
 
+  /**
+   * Bir vaqtda kelgan so'rovlar BIR S3 so'rovini bo'lishadi (markaz+hafta
+   * bo'yicha, tugagach o'chadi — eskirgan javob yo'q). 50 ta parallel so'rovda
+   * baza ulanishlari navbati p95 ni 200 ms dan oshirgan edi.
+   */
+  private readonly yigindiUchun: Record<
+    string,
+    ReturnType<typeof guruhlarYigindisi> | undefined
+  > = {};
+
+  private yigindi(companyId: number, hafta: string) {
+    const kalit = `${companyId}:${hafta}`;
+    let p = this.yigindiUchun[kalit];
+    if (!p) {
+      p = guruhlarYigindisi(this.prisma, companyId, hafta).finally(
+        () => delete this.yigindiUchun[kalit],
+      );
+      this.yigindiUchun[kalit] = p;
+    }
+    return p;
+  }
+
   /** Jonli: markaz bo'yicha hamma faol guruh (31 ms) — o'rin S3 jadvali bilan bir manbadan. */
   private async joriyKarta(
     groupId: string,
     companyId: number,
     hafta: string,
   ): Promise<MusobaqaGuruh> {
-    const rows = await guruhlarYigindisi(this.prisma, companyId, hafta);
+    const rows = await this.yigindi(companyId, hafta);
     const oz = rows.find((r) => r.groupId === groupId);
     if (!oz) {
       return {

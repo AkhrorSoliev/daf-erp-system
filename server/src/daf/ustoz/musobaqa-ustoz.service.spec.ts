@@ -208,4 +208,22 @@ describe('MusobaqaUstozService.guruhKorinishi', () => {
       }),
     );
   });
+  it('bir vaqtdagi so‘rovlar bitta S3 so‘rovini bo‘lishadi, tugagach qayta o‘qiydi', async () => {
+    const { servis, prisma } = yasa({
+      guruhlar: [{ groupId: G, name: 'A1', azolar: 4, ball: 200 }],
+    });
+    const s3Soni = () =>
+      prisma.$queryRaw.mock.calls.filter(
+        (c: [{ strings: readonly string[] }]) =>
+          c[0].strings[0].includes('guruhlar-yigindisi'),
+      ).length;
+    await Promise.all(
+      Array.from({ length: 5 }, () =>
+        servis.guruhKorinishi(G, 1, undefined, JETZT),
+      ),
+    );
+    expect(s3Soni()).toBe(1);
+    await servis.guruhKorinishi(G, 1, undefined, JETZT);
+    expect(s3Soni()).toBe(2);
+  });
 });

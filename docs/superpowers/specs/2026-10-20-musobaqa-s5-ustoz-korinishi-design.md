@@ -202,4 +202,8 @@ qoidasi · o'quvchi tomonidagi o'zgarish.
 
 ## 11. Yuklama natijalari
 
-(Bajarilgach to'ldiriladi.)
+Lokal `daf_s1_yuklama`: 12 000 o'quvchi, 520 faol guruh, 1 461 500 urinish, 381 651 kunlik qator (S1–S3 yuklama ma'lumotlari). Skript: `server/scripts/load/daf-yuklama-s5-ustoz.ts`.
+
+- **Parity:** 200 tasodifiy faol guruh × 2 hafta (joriy va o'tgan) = 400 guruh-hafta, **farq 0** (a'zo qatori, guruh bali, jami ball, faol kunlar, seriya; joriy haftada S3 `guruhlarYigindisi` va karta bali). `azolarKunlari` `tage` massiv ekani haqiqiy Postgres'da tekshirildi (~1 700 qator, hammasi `string[]`).
+- **Yuklama (50 parallel × 10 davra, tasodifiy guruhlar):** tinch (loadavg 6–7) p50 70 ms, p95 78–82 ms; band (4 ta CPU yuklovchi jarayon, loadavg 8,0) p50 91 ms, p95 116 ms. Chegara 200 ms.
+- **Topilma:** birinchi o'lchovda p95 210–271 ms (chegaradan oshdi): 50 parallel so'rovning har biri markaz bo'yicha S3 jadvalini alohida o'qib, 10 ulanishli pulda navbat hosil qilgan. `MusobaqaUstozService.yigindi` bir vaqtdagi so'rovlarni (markaz+hafta bo'yicha) bitta S3 so'roviga birlashtiradi; so'rov tugagach o'chadi, eskirgan javob qolmaydi. Shundan keyingi natijalar yuqoridagilar.
