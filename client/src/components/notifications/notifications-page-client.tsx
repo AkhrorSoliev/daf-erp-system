@@ -12,6 +12,7 @@ import {
   useNotifications,
 } from "@/hooks/use-notifications";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { useNotificationActions } from "./notification-actions";
 import { NotificationPageList } from "./notification-page-list";
@@ -30,6 +31,7 @@ const schema = {
  * list. Paging follows the server's `nextCursor`.
  */
 export function NotificationsPageClient() {
+  const t = useT();
   const { filters, setFilter } = useUrlFilters(schema);
   const { hrefOf, onOpen } = useNotificationActions();
   const markAllRead = useNotifications((s) => s.markAllRead);
@@ -77,15 +79,15 @@ export function NotificationsPageClient() {
 
   const items = list.data?.pages.flatMap((p) => p.data);
   const emptyText = q
-    ? "Hech narsa topilmadi"
+    ? t("Hech narsa topilmadi")
     : view === "pending"
-      ? "Sizdan hech narsa kutilmayapti"
-      : "Bildirishnomalar yo'q";
+      ? t("Sizdan hech narsa kutilmayapti")
+      : t("Bildirishnomalar yo'q");
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="text-xl font-semibold">Bildirishnomalar</h1>
+        <h1 className="text-xl font-semibold">{t("Bildirishnomalar")}</h1>
         <div className="relative ml-auto w-full sm:w-72">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -94,20 +96,21 @@ export function NotificationsPageClient() {
               setTyped(e.target.value);
               writeQuery(e.target.value);
             }}
-            placeholder="Xabarlardan qidirish"
-            aria-label="Xabarlardan qidirish"
+            placeholder={t("Xabarlardan qidirish")}
+            aria-label={t("Xabarlardan qidirish")}
             className="pl-8"
           />
         </div>
         <Button variant="outline" size="sm" onClick={() => void markAllRead()}>
-          {"Hammasini o'qilgan qilish"}
+          {t("Hammasini o'qilgan qilish")}
         </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-[200px_1fr]">
-        <nav aria-label="Bildirishnoma turlari" className="flex gap-1 overflow-x-auto md:flex-col">
+        <nav aria-label={t("Bildirishnoma turlari")} className="flex gap-1 overflow-x-auto md:flex-col">
           {PAGE_VIEWS.map((v) => {
             const count = viewCount(v, counts.data);
+            const label = VIEW_LABEL[v];
             return (
               <button
                 key={v}
@@ -119,7 +122,7 @@ export function NotificationsPageClient() {
                   view === v ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/50",
                 )}
               >
-                {VIEW_LABEL[v]}
+                {t(label)}
                 {count !== null && <span className="text-xs tabular-nums text-muted-foreground">{count}</span>}
               </button>
             );
@@ -140,7 +143,7 @@ export function NotificationsPageClient() {
             <div className="space-y-2 border-t p-3 text-center">
               {list.isFetchNextPageError && (
                 <p role="alert" className="text-sm text-muted-foreground">
-                  {"Ma'lumotni yuklab bo'lmadi"}
+                  {t("Ma'lumotni yuklab bo'lmadi")}
                 </p>
               )}
               <Button
@@ -150,10 +153,10 @@ export function NotificationsPageClient() {
                 onClick={() => void list.fetchNextPage()}
               >
                 {list.isFetchingNextPage
-                  ? "Yuklanmoqda..."
+                  ? t("Yuklanmoqda...")
                   : list.isFetchNextPageError
-                    ? "Qayta urinish"
-                    : "Yana ko'rsatish"}
+                    ? t("Qayta urinish")
+                    : t("Yana ko'rsatish")}
               </Button>
             </div>
           )}

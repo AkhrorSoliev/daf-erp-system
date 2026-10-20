@@ -21,6 +21,9 @@ import { useAuth, type AuthUser } from "@/hooks/use-auth";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { describeSaveFailure, isPhoneChanged, planProfileSave } from "./profile-save-plan";
+import { ruleMessage } from "@/components/settings/settings-form-parts";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 
 interface EditProfileDrawerProps {
   open: boolean;
@@ -51,6 +54,7 @@ function getInitials(name: string) {
 }
 
 export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
+  const t = useT();
   const { user, setAuth } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -91,7 +95,7 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
       const { data } = await api.post<{ url: string }>("/upload", formData);
       setPreviewPhoto(data.url);
     } catch {
-      toast.error("Rasm yuklashda xatolik yuz berdi");
+      toast.error(t("Rasm yuklashda xatolik yuz berdi"));
       setPreviewPhoto(null);
     } finally {
       setUploading(false);
@@ -132,15 +136,18 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
         const { data } = await api.patch("/users/profile", plan.profile);
         saved = { ...saved, ...data };
       }
-      toast.success("Profil muvaffaqiyatli yangilandi");
+      toast.success(t("Profil muvaffaqiyatli yangilandi"));
       setPreviewPhoto(null);
       onClose();
     } catch (error) {
       toast.error(
-        describeSaveFailure({
-          phoneSaved: saved.phone !== undefined,
-          reason: getErrorMessage(error, "Profilni yangilashda xatolik yuz berdi"),
-        }),
+        describeSaveFailure(
+          {
+            phoneSaved: saved.phone !== undefined,
+            reason: getErrorMessage(error, t("Profilni yangilashda xatolik yuz berdi")),
+          },
+          t,
+        ),
       );
     } finally {
       // Whatever the server accepted is real, even if a later step failed.
@@ -164,9 +171,9 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <SheetHeader className="border-b px-6 py-4">
-          <SheetTitle className="text-lg">Profilni tahrirlash</SheetTitle>
+          <SheetTitle className="text-lg">{t("Profilni tahrirlash")}</SheetTitle>
           <SheetDescription>
-            Shaxsiy ma&apos;lumotlaringizni o&apos;zgartiring
+            {t("Shaxsiy ma'lumotlaringizni o'zgartiring")}
           </SheetDescription>
         </SheetHeader>
 
@@ -179,7 +186,7 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
             {/* Rasm yuklash */}
             <section className="space-y-5 px-6 py-5">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Profil rasmi
+                {t("Profil rasmi")}
               </h3>
               <div className="flex items-center gap-4">
                 <div className="relative">
@@ -206,10 +213,10 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
                   />
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  <p>JPG, PNG yoki WebP formatda</p>
-                  <p>Maksimal 5 MB</p>
+                  <p>{t("JPG, PNG yoki WebP formatda")}</p>
+                  <p>{t("Maksimal 5 MB")}</p>
                   {uploading && (
-                    <p className="text-primary">Yuklanmoqda...</p>
+                    <p className="text-primary">{t("Yuklanmoqda...")}</p>
                   )}
                   {displayPhoto && !uploading && (
                     <button
@@ -218,7 +225,7 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
                       className="mt-1 flex items-center gap-1 text-xs text-destructive hover:underline"
                     >
                       <Trash2 className="size-3" />
-                      Rasmni o&apos;chirish
+                      {t("Rasmni o'chirish")}
                     </button>
                   )}
                 </div>
@@ -228,44 +235,44 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
             {/* Shaxsiy ma'lumotlar */}
             <section className="space-y-5 px-6 py-5 border-t">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Shaxsiy ma&apos;lumotlar
+                {t("Shaxsiy ma'lumotlar")}
               </h3>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="firstName">Ism</Label>
+                  <Label htmlFor="firstName">{t("Ism")}</Label>
                   <Input
                     id="firstName"
-                    placeholder="Ism"
+                    placeholder={t("Ism")}
                     {...form.register("firstName", {
-                      required: "Ism kiritilishi shart",
+                      required: msg("Ism kiritilishi shart"),
                     })}
                   />
                   {form.formState.errors.firstName && (
                     <p className="text-sm text-destructive">
-                      {form.formState.errors.firstName.message}
+                      {ruleMessage(t, form.formState.errors.firstName.message)}
                     </p>
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="lastName">Familiya</Label>
+                  <Label htmlFor="lastName">{t("Familiya")}</Label>
                   <Input
                     id="lastName"
-                    placeholder="Familiya"
+                    placeholder={t("Familiya")}
                     {...form.register("lastName", {
-                      required: "Familiya kiritilishi shart",
+                      required: msg("Familiya kiritilishi shart"),
                     })}
                   />
                   {form.formState.errors.lastName && (
                     <p className="text-sm text-destructive">
-                      {form.formState.errors.lastName.message}
+                      {ruleMessage(t, form.formState.errors.lastName.message)}
                     </p>
                   )}
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="phone">Telefon raqam</Label>
+                <Label htmlFor="phone">{t("Telefon raqam")}</Label>
                 <Controller
                   name="phone"
                   control={form.control}
@@ -273,7 +280,7 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
                     validate: (value) =>
                       !isPhoneChanged(user.phone, value) ||
                       /^\d{9}$/.test(value) ||
-                      "Telefon raqam 9 ta raqamdan iborat bo'lishi kerak",
+                      msg("Telefon raqam 9 ta raqamdan iborat bo'lishi kerak"),
                   }}
                   render={({ field }) => (
                     <PhoneInput
@@ -285,33 +292,33 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
                 />
                 {form.formState.errors.phone && (
                   <p className="text-sm text-destructive">
-                    {form.formState.errors.phone.message}
+                    {ruleMessage(t, form.formState.errors.phone.message)}
                   </p>
                 )}
               </div>
 
               {phoneChanged && (
                 <div className="space-y-1.5">
-                  <Label htmlFor="currentPassword">Joriy parol</Label>
+                  <Label htmlFor="currentPassword">{t("Joriy parol")}</Label>
                   <Input
                     id="currentPassword"
                     type="password"
                     autoComplete="current-password"
-                    placeholder="Joriy parolingiz"
+                    placeholder={t("Joriy parolingiz")}
                     {...form.register("currentPassword", {
                       validate: (value) =>
                         !isPhoneChanged(user.phone, form.getValues("phone")) ||
                         value.length > 0 ||
-                        "Joriy parolni kiriting",
+                        msg("Joriy parolni kiriting"),
                     })}
                   />
                   {form.formState.errors.currentPassword ? (
                     <p className="text-sm text-destructive">
-                      {form.formState.errors.currentPassword.message}
+                      {ruleMessage(t, form.formState.errors.currentPassword.message)}
                     </p>
                   ) : (
                     <p className="text-xs text-muted-foreground">
-                      Raqamni o&apos;zgartirish uchun joriy parolingizni kiriting.
+                      {t("Raqamni o'zgartirish uchun joriy parolingizni kiriting.")}
                     </p>
                   )}
                 </div>
@@ -323,14 +330,14 @@ export function EditProfileDrawer({ open, onClose }: EditProfileDrawerProps) {
         <SheetFooter className="border-t px-6 py-4">
           <div className="flex w-full justify-end gap-3">
             <Button type="button" variant="outline" onClick={handleClose}>
-              Bekor qilish
+              {t("Bekor qilish")}
             </Button>
             <Button
               type="submit"
               form="edit-profile-form"
               disabled={saving || uploading}
             >
-              {saving ? "Saqlanmoqda..." : "Saqlash"}
+              {saving ? t("Saqlanmoqda...") : t("Saqlash")}
             </Button>
           </div>
         </SheetFooter>

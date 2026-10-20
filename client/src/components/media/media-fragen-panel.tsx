@@ -4,7 +4,8 @@ import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, RotateCcw } from "lucide-react";
 import api from "@/lib/api";
-import { FORMAT_NOMLARI } from "@/lib/daf-format-nomlari";
+import { formatNomi } from "@/lib/daf-format-nomlari";
+import { useT } from "@/i18n/context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -90,10 +91,11 @@ function ToGriJavob({ children }: { children: string }) {
  * ko'rsatma.
  */
 function ToGriJavobQatori({ richtig }: { richtig: string }) {
+  const t = useT();
   return (
     <div className="flex flex-wrap items-baseline gap-1.5">
       <span className="text-xs font-medium text-muted-foreground">
-        To&apos;g&apos;ri javob:
+        {t("To'g'ri javob:")}
       </span>
       <ToGriJavob>{richtig}</ToGriJavob>
     </div>
@@ -118,10 +120,11 @@ function VariantlarRoyxati({
   options: string[];
   richtig: string;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <span className="text-xs font-medium text-muted-foreground">
-        Variantlar:
+        {t("Variantlar:")}
       </span>
       {options.length === 0 ? (
         <span className="text-xs text-muted-foreground">—</span>
@@ -156,6 +159,7 @@ function VariantlarRoyxati({
  * o'qiladi, variantlar bilan solishtirib emas).
  */
 function SavolQatori({ f }: { f: VorschauFrage }) {
+  const t = useT();
   const shakl = vorschauShakli(f.format);
 
   return (
@@ -247,7 +251,7 @@ function SavolQatori({ f }: { f: VorschauFrage }) {
       )}
 
       {f.hilfe && (
-        <div className="text-xs text-muted-foreground">Yordam: {f.hilfe}</div>
+        <div className="text-xs text-muted-foreground">{t("Yordam: {text}", { text: f.hilfe })}</div>
       )}
     </div>
   );
@@ -261,15 +265,16 @@ function FormatGuruhi({
   format: FrageFormat;
   fragen: VorschauFrage[];
 }) {
+  const t = useT();
   return (
     <div className="space-y-2">
       <h3 className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-        {FORMAT_NOMLARI[format]}
+        {formatNomi(format, t)}
         <Badge variant="secondary" className="font-mono text-[11px] font-normal">
           {format}
         </Badge>
         <span className="text-xs font-normal text-muted-foreground">
-          {fragen.length} ta savol
+          {t("{n} ta savol", { n: fragen.length })}
         </span>
       </h3>
       <div className="space-y-2">
@@ -306,6 +311,7 @@ function FormatTugmasi({
   tanlangan: boolean;
   onSelect: (format: FrageFormat) => void;
 }) {
+  const t = useT();
   return (
     <button
       type="button"
@@ -318,7 +324,7 @@ function FormatTugmasi({
           : "text-foreground hover:bg-muted",
       )}
     >
-      <span className="truncate">{FORMAT_NOMLARI[format]}</span>
+      <span className="truncate">{formatNomi(format, t)}</span>
       <Badge
         variant={tanlangan ? "secondary" : "outline"}
         className={cn(
@@ -347,8 +353,9 @@ function FormatYonRoyxati({
   tanlangan: FrageFormat | null;
   onSelect: (format: FrageFormat) => void;
 }) {
+  const t = useT();
   return (
-    <nav aria-label="Savol formatlari" className="flex flex-col gap-1">
+    <nav aria-label={t("Savol formatlari")} className="flex flex-col gap-1">
       {formatlar.map(({ format, soni }) => (
         <FormatTugmasi
           key={format}
@@ -409,6 +416,7 @@ export function MediaFragenPanel({
   // so'raydi va qayta skeleton ko'rsatardi (ko'rik: Minor topilma). Global
   // `staleTime` (`QueryProvider`, 5 daqiqa) shu `sectionId` bilan qayta
   // mount bo'lganda keshdan darhol o'qiydi.
+  const t = useT();
   const {
     data,
     isLoading,
@@ -457,12 +465,8 @@ export function MediaFragenPanel({
           ko'rsatadi-yu, uchtasi "Material" yorlig'ida yo'q bo'lishi
           mumkin, chunki ular oldingi bo'limdan kelgan. */}
       <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">Ko&apos;lam:</span> shu
-        bo&apos;lim + shu unitdagi undan oldingi BARCHA bo&apos;limlar
-        materiali birlashtirilgan (dvigatel chalg&apos;ituvchilarni ham shu
-        puldan oladi). Shuning uchun boshqa yorliqdagi &quot;Material&quot;
-        ro&apos;yxatida (faqat shu bo&apos;lim) yo&apos;q so&apos;z, gap
-        yoki ibora bu yerda ko&apos;rinishi mumkin — bu xato emas.
+        <span className="font-medium text-foreground">{t("Ko'lam:")}</span>{" "}
+        {t("shu bo'lim + shu unitdagi undan oldingi barcha bo'limlar materiali birlashtirilgan (dvigatel chalg'ituvchilarni ham shu puldan oladi). Shuning uchun boshqa yorliqdagi «Material» ro'yxatida (faqat shu bo'lim) yo'q so'z, gap yoki ibora bu yerda ko'rinishi mumkin — bu xato emas.")}
       </div>
 
       {isLoading && (
@@ -476,10 +480,10 @@ export function MediaFragenPanel({
       {!isLoading && isError && (
         <Card>
           <CardContent className="flex items-center justify-between gap-3 p-4 text-sm text-muted-foreground">
-            <span>Savollar olinmadi</span>
+            <span>{t("Savollar olinmadi")}</span>
             <Button variant="outline" size="sm" onClick={() => refetch()}>
               <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-              Qayta urinib ko&apos;rish
+              {t("Qayta urinish")}
             </Button>
           </CardContent>
         </Card>
@@ -488,15 +492,8 @@ export function MediaFragenPanel({
       {!isLoading && !isError && data && data.length === 0 && (
         <Card>
           <CardContent className="p-4 text-sm text-muted-foreground">
-            Bu bo&apos;limdan hali bironta savol qurib bo&apos;lmaydi — shu
-            bo&apos;lim VA undan oldingi bo&apos;limlar materiali
-            (so&apos;z, gap, ibora yoki dialog) birgalikda yetarli emas.
-            Diqqat: boshqa yorliqdagi &quot;Material&quot; ro&apos;yxati
-            FAQAT shu bo&apos;limni ko&apos;rsatadi (yuqoridagi &quot;Ko&apos;lam&quot;
-            yorlig&apos;iga qarang) — kamchilik shu unitning OLDINGI
-            bo&apos;limida bo&apos;lishi ham mumkin, uni ko&apos;rish uchun
-            &quot;Media&quot; ro&apos;yxatidan o&apos;sha bo&apos;lim
-            sahifasiga o&apos;ting.
+            {t("Bu bo'limdan hali bironta savol qurib bo'lmaydi — shu bo'lim va undan oldingi bo'limlar materiali (so'z, gap, ibora yoki dialog) birgalikda yetarli emas.")}{" "}
+            {t("Diqqat: boshqa yorliqdagi «Material» ro'yxati faqat shu bo'limni ko'rsatadi (yuqoridagi «Ko'lam» yorlig'iga qarang) — kamchilik shu unitning oldingi bo'limida bo'lishi ham mumkin, uni ko'rish uchun «Media» ro'yxatidan o'sha bo'lim sahifasiga o'ting.")}
           </CardContent>
         </Card>
       )}

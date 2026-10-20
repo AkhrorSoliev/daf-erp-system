@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
+import { useT } from "@/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
@@ -23,6 +24,7 @@ export function DafOquvchilarFilterBar({
   variantlar: MarkazFiltrVariantlari | undefined;
   onChange: (next: OquvchilarFiltri) => void;
 }) {
+  const t = useT();
   // Qidiruv: har tugmada URL yozilmasin — 300 ms kutib, keyin bitta marta.
   const [q, setQ] = useState(filtr.q);
   // `filtr.q` o'zgarishi ikki sababdan bo'ladi: tashqaridan (Tozalash, brauzer
@@ -38,11 +40,11 @@ export function DafOquvchilarFilterBar({
   }, [filtr.q]);
   useEffect(() => {
     if (q === filtr.q) return;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       oxirgiYuborilgan.current = q;
       onChange({ ...filtr, q, page: 1 });
     }, 300);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [q, filtr, onChange]);
 
   const oz = (qism: Partial<OquvchilarFiltri>) => onChange({ ...filtr, ...qism, page: 1 });
@@ -55,20 +57,22 @@ export function DafOquvchilarFilterBar({
       <PeriodToggle value={filtr.davr} onChange={(davr) => oz({ davr })} />
 
       <MultiSelectCombobox
-        options={HOLATLAR.map((h) => ({ value: h, label: HOLAT_MATNI[h] }))}
+        options={HOLATLAR.map((h) => {
+          const label = HOLAT_MATNI[h];
+          return { value: h, label: t(label) };
+        })}
         selected={filtr.status}
         onChange={(next) => oz({ status: next as Holat[] })}
-        placeholder="Barcha holatlar"
-        countSuffix="holat"
+        placeholder={t("Barcha holatlar")}
         className="w-48"
       />
 
       <Select value={filtr.kirgan ?? HAMMASI} onValueChange={(v) => oz({ kirgan: v === HAMMASI ? null : (v as "ha" | "yoq") })}>
         <SelectTrigger className="h-9 w-44"><SelectValue /></SelectTrigger>
         <SelectContent>
-          <SelectItem value={HAMMASI}>Kirish: hammasi</SelectItem>
-          <SelectItem value="ha">Davrda kirgan</SelectItem>
-          <SelectItem value="yoq">Davrda kirmagan</SelectItem>
+          <SelectItem value={HAMMASI}>{t("Kirish: hammasi")}</SelectItem>
+          <SelectItem value="ha">{t("Davrda kirgan")}</SelectItem>
+          <SelectItem value="yoq">{t("Davrda kirmagan")}</SelectItem>
         </SelectContent>
       </Select>
 
@@ -76,7 +80,7 @@ export function DafOquvchilarFilterBar({
         value={filtr.groupId}
         onChange={(v) => oz({ groupId: v })}
         variantlar={(variantlar?.guruhlar ?? []).map((g) => ({ value: g.id, label: g.nomi }))}
-        hammasiMatni="Barcha guruhlar"
+        hammasiMatni={t("Barcha guruhlar")}
         className="w-44"
       />
 
@@ -84,14 +88,14 @@ export function DafOquvchilarFilterBar({
         value={filtr.teacherId === null ? null : String(filtr.teacherId)}
         onChange={(v) => oz({ teacherId: v === null ? null : Number(v) })}
         variantlar={(variantlar?.oqituvchilar ?? []).map((o) => ({ value: String(o.id), label: o.ism }))}
-        hammasiMatni="Barcha o'qituvchilar"
+        hammasiMatni={t("Barcha o'qituvchilar")}
         className="w-48"
       />
 
       <Select value={filtr.level ?? HAMMASI} onValueChange={(v) => oz({ level: v === HAMMASI ? null : (v as Daraja) })}>
-        <SelectTrigger className="h-9 w-36"><SelectValue placeholder="Daraja" /></SelectTrigger>
+        <SelectTrigger className="h-9 w-36"><SelectValue placeholder={t("Daraja")} /></SelectTrigger>
         <SelectContent>
-          <SelectItem value={HAMMASI}>Barcha darajalar</SelectItem>
+          <SelectItem value={HAMMASI}>{t("Barcha darajalar")}</SelectItem>
           {(variantlar?.darajalar ?? []).map((d) => (
             <SelectItem key={d} value={d}>{d}</SelectItem>
           ))}
@@ -104,7 +108,7 @@ export function DafOquvchilarFilterBar({
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Ism yoki telefon"
+          placeholder={t("Ism yoki telefon")}
           maxLength={100}
           className="h-9 w-52 pl-8"
         />
@@ -112,7 +116,7 @@ export function DafOquvchilarFilterBar({
 
       {filtrBor && (
         <Button variant="ghost" size="sm" onClick={() => onChange({ ...STANDART_FILTR, davr: filtr.davr, sort: filtr.sort, dir: filtr.dir })}>
-          <X className="mr-1 size-4" /> Tozalash
+          <X className="mr-1 size-4" /> {t("Tozalash")}
         </Button>
       )}
     </div>

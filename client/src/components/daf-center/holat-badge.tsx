@@ -1,12 +1,17 @@
+"use client";
+
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { cn } from "@/lib/utils";
 import type { Holat } from "./types";
 
+// Draw with `t(…)`.
 export const HOLAT_MATNI: Record<Holat, string> = {
-  AKKAUNT_YOQ: "Akkaunt yo'q",
-  HECH_KIRMAGAN: "Hech kirmagan",
-  QIZIL: "Norma bajarilmayapti",
-  SARIQ: "Qisman",
-  YASHIL: "Normada",
+  AKKAUNT_YOQ: msg("Akkaunt yo'q"),
+  HECH_KIRMAGAN: msg("Hech kirmagan"),
+  QIZIL: msg("Norma bajarilmayapti"),
+  SARIQ: msg("Qisman"),
+  YASHIL: msg("Normada"),
 };
 
 const NUQTA: Record<Holat, string> = {
@@ -33,20 +38,23 @@ const MATN: Record<Holat, string> = {
  * me'yor asosidagi uch holat uchun — `title` orqali beriladi.
  */
 const HOLAT_RANGI: Partial<Record<Holat, string>> = {
-  QIZIL: "qizil",
-  SARIQ: "sariq",
-  YASHIL: "yashil",
+  QIZIL: msg("qizil"),
+  SARIQ: msg("sariq"),
+  YASHIL: msg("yashil"),
 };
 
 export function HolatBadge({ holat, className }: { holat: Holat; className?: string }) {
+  const t = useT();
   const rang = HOLAT_RANGI[holat];
+  const label = HOLAT_MATNI[holat];
+  const matn = t(label);
   return (
     <span
-      title={rang ? `${HOLAT_MATNI[holat]} (${rang})` : undefined}
+      title={rang ? `${matn} (${t(rang)})` : undefined}
       className={cn("inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium", MATN[holat], className)}
     >
       <span aria-hidden className={cn("size-2 shrink-0 rounded-full", NUQTA[holat])} />
-      {HOLAT_MATNI[holat]}
+      {matn}
     </span>
   );
 }

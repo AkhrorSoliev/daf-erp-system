@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { AuthUser } from "@/hooks/use-auth";
 import { SalaryDueCard } from "@/components/shared/salary-due-card";
+import { useT } from "@/i18n/context";
 
 function getInitials(name: string) {
   return name
@@ -25,7 +26,7 @@ function getInitials(name: string) {
 
 interface ProfileCardProps {
   user: AuthUser;
-  /** Roles with their names already in Uzbek. */
+  /** Roles with their names already in the page language. */
   roles: Array<{ id: number; name: string }>;
   /** false → no «To'lanishi kerak» block (the person has no salary). */
   showSalary: boolean;
@@ -33,6 +34,7 @@ interface ProfileCardProps {
 }
 
 export function ProfileCard({ user, roles, showSalary, onEdit }: ProfileCardProps) {
+  const t = useT();
   const fullName = `${user.firstName} ${user.lastName}`;
 
   return (
@@ -79,10 +81,10 @@ export function ProfileCard({ user, roles, showSalary, onEdit }: ProfileCardProp
           <TooltipTrigger asChild>
             <Button variant="outline" size="sm" onClick={onEdit}>
               <Pencil className="mr-1.5 size-4" />
-              Tahrirlash
+              {t("Tahrirlash")}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Profil ma&apos;lumotlarini tahrirlash</TooltipContent>
+          <TooltipContent>{t("Profil ma'lumotlarini tahrirlash")}</TooltipContent>
         </Tooltip>
       </div>
     </div>

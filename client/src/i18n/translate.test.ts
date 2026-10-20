@@ -64,6 +64,16 @@ describe("translate", () => {
     );
   });
 
+  it("writes «тс» across a suffix boundary in the mock exams texts, not «ц»", () => {
+    expect(translate("uz-Cyrl", {}, "Narx kiritilmadi. Agar shunday davom etsangiz, imtihon bepul bo'lib yaratiladi va bot ro'yxatdan o'tganlardan to'lov so'ramaydi.")).toContain("эцангиз");
+    expect(translate("uz-Cyrl", uzCyrl, "Narx kiritilmadi. Agar shunday davom etsangiz, imtihon bepul bo'lib yaratiladi va bot ro'yxatdan o'tganlardan to'lov so'ramaydi.")).toBe(
+      "Нарх киритилмади. Агар шундай давом этсангиз, имтиҳон бепул бўлиб яратилади ва бот рўйхатдан ўтганлардан тўлов сўрамайди.",
+    );
+    expect(translate("uz-Cyrl", uzCyrl, "Bu ishtirokchi {amount} so'm to'lagan. O'chirilsa, bu to'lov mock daromadidan chiqadi, qayta ro'yxatdan o'tsa undan yana to'lov so'raladi. Avval pulni odamga qaytaring.", { amount: "50 000" })).toBe(
+      "Бу иштирокчи 50 000 сўм тўлаган. Ўчирилса, бу тўлов mock даромадидан чиқади, қайта рўйхатдан ўтса ундан яна тўлов сўралади. Аввал пулни одамга қайтаринг.",
+    );
+  });
+
   it("keeps key names and file-size units Latin in the tasks texts", () => {
     expect(translate("uz-Cyrl", {}, "Ctrl+Enter — yuborish")).not.toBe("Ctrl+Enter — юбориш");
     expect(translate("uz-Cyrl", {}, "{n} B", { n: "5" })).not.toBe("5 B");

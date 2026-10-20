@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/hover-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import { useT } from "@/i18n/context";
 import { formatBalance } from "@/lib/format-utils";
 import api from "@/lib/api";
 
@@ -37,6 +38,7 @@ export function GroupStudentsHoverCard({
   groupId,
   children,
 }: GroupStudentsHoverCardProps) {
+  const t = useT();
   const [students, setStudents] = useState<GroupStudent[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -86,7 +88,7 @@ export function GroupStudentsHoverCard({
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="O'quvchini qidirish..."
+              placeholder={t("O'quvchini qidirish...")}
               className="h-8 pl-7 text-sm"
             />
           </div>
@@ -100,7 +102,7 @@ export function GroupStudentsHoverCard({
             </div>
           ) : filtered.length === 0 ? (
             <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-              {search ? "O'quvchi topilmadi" : "O'quvchilar yo'q"}
+              {search ? t("O'quvchi topilmadi") : t("O'quvchilar yo'q")}
             </p>
           ) : (
             filtered.map((s) => {
@@ -124,7 +126,7 @@ export function GroupStudentsHoverCard({
                     <p
                       className={`text-xs tabular-nums ${s.balance >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
                     >
-                      {formatBalance(s.balance)}
+                      {formatBalance(s.balance, t("so'm"))}
                     </p>
                   </div>
                 </Link>

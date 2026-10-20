@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
@@ -36,10 +36,12 @@ import {
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
 import {
   MOCK_EXAM_TRANSITIONS,
   MOCK_EXAM_TRANSITION_INFO,
   useMockExamsBoard,
+  useMockExamsBoardTranslator,
   type MockExamStatus,
   type MockExamTransitionInfo,
 } from "@/hooks/use-mock-exams-board";
@@ -59,6 +61,13 @@ const DEFAULT_TAB = "ishtirokchilar";
 const VALID_TABS = new Set(["overview", "ishtirokchilar", "natijalar"]);
 
 export function ExamDetailClient({ examId }: ExamDetailClientProps) {
+  const t = useT();
+  useMockExamsBoardTranslator();
+  // The load effect reads t from here: a language switch must not refetch.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -109,9 +118,8 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
       })
       .catch((error) => {
         if (!cancelled) {
-          toast.error(
-            getErrorMessage(error, "Imtihonni yuklashda xatolik"),
-          );
+          const t = tRef.current;
+          toast.error(getErrorMessage(error, t("Imtihonni yuklashda xatolik")));
         }
       })
       .finally(() => {
@@ -137,10 +145,10 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
         prev ? { ...data, subjects: prev.subjects } : data,
       );
       updateExam(data);
-      toast.success("Holat o'zgartirildi");
+      toast.success(t("Holat o'zgartirildi"));
     } catch (error) {
       toast.error(
-        getErrorMessage(error, "Holatni o'zgartirishda xatolik"),
+        getErrorMessage(error, t("Holatni o'zgartirishda xatolik")),
       );
     } finally {
       setStatusBusy(false);
@@ -161,9 +169,9 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
       );
       setExam((prev) => (prev ? { ...prev, resultsPdfUrl: data.url } : prev));
       await api.post(`/mock-exams/${exam.id}/rebroadcast-results`);
-      toast.success("PDF yaratildi, natijalar ishtirokchilarga yuborilmoqda");
+      toast.success(t("PDF yaratildi, natijalar ishtirokchilarga yuborilmoqda"));
     } catch (error) {
-      toast.error(getErrorMessage(error, "PDF yaratishda xatolik"));
+      toast.error(getErrorMessage(error, t("PDF yaratishda xatolik")));
     } finally {
       setRetryBusy(false);
     }
@@ -175,10 +183,10 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
     try {
       await api.delete(`/mock-exams/${exam.id}`);
       removeExam(exam.id);
-      toast.success("Imtihon o'chirildi");
+      toast.success(t("Imtihon o'chirildi"));
       router.push("/mock-exams");
     } catch (error) {
-      toast.error(getErrorMessage(error, "O'chirishda xatolik"));
+      toast.error(getErrorMessage(error, t("O'chirishda xatolik")));
       setDeleteBusy(false);
     }
   }
@@ -204,11 +212,11 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
   if (!exam) {
     return (
       <div className="rounded-lg border border-dashed py-16 text-center">
-        <p className="text-sm text-muted-foreground">Imtihon topilmadi</p>
+        <p className="text-sm text-muted-foreground">{t("Imtihon topilmadi")}</p>
         <Button asChild variant="outline" size="sm" className="mt-4">
           <Link href="/mock-exams">
             <ArrowLeft className="size-4" />
-            Orqaga
+            {t("Orqaga")}
           </Link>
         </Button>
       </div>
@@ -252,7 +260,7 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
             onClick={() => setShareOpen(true)}
           >
             <Share2 className="size-4" />
-            Ulashish
+            {t("Ulashish")}
           </Button>
 
           {exam.status === "ANNOUNCED" && !exam.resultsPdfUrl && (
@@ -261,14 +269,16 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
               variant="outline"
               onClick={handleRetryResults}
               disabled={retryBusy}
-              title="E'lon qilingan, lekin natijalar PDF'i yaratilmagan — yaratib, ishtirokchilarga yuborish"
+              title={t(
+                "E'lon qilingan, lekin natijalar PDF'i yaratilmagan — yaratib, ishtirokchilarga yuborish",
+              )}
             >
               {retryBusy ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
                 <FileDown className="size-4" />
               )}
-              PDF yaratib yuborish
+              {t("PDF yaratib yuborish")}
             </Button>
           )}
 
@@ -277,7 +287,7 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
               size="sm"
               variant="outline"
               asChild
-              title="Natijalar PDFini yangi yorliqda ochish"
+              title={t("Natijalar PDFini yangi yorliqda ochish")}
             >
               <a
                 href={exam.resultsPdfUrl}
@@ -296,7 +306,7 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
             onClick={() => setEditOpen(true)}
           >
             <Pencil className="size-4" />
-            Tahrirlash
+            {t("Tahrirlash")}
           </Button>
 
           <Button
@@ -306,7 +316,7 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
             onClick={() => setDeleteOpen(true)}
           >
             <Trash2 className="size-4" />
-            O&apos;chirish
+            {t("O'chirish")}
           </Button>
         </div>
       </div>
@@ -322,15 +332,15 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
         <TabsList>
           <TabsTrigger value="overview">
             <Info className="mr-1.5 size-4" />
-            Umumiy
+            {t("Umumiy")}
           </TabsTrigger>
           <TabsTrigger value="ishtirokchilar">
             <Users className="mr-1.5 size-4" />
-            Ishtirokchilar ({exam.participantCount})
+            {t("Ishtirokchilar ({n})", { n: exam.participantCount })}
           </TabsTrigger>
           <TabsTrigger value="natijalar">
             <ClipboardList className="mr-1.5 size-4" />
-            Natijalar
+            {t("Natijalar")}
           </TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="mt-6">
@@ -373,18 +383,17 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Imtihonni o&apos;chirish</AlertDialogTitle>
+            <AlertDialogTitle>{t("Imtihonni o'chirish")}</AlertDialogTitle>
             <AlertDialogDescription>
-              &quot;{exam.title}&quot; imtihoni o&apos;chiriladi. Ishtirokchilar
-              va natijalar ham arxivlanadi (yo&apos;qotilmaydi), ularning
-              to&apos;lov havolalari ishlamay qoladi. To&apos;lagan ishtirokchi
-              bo&apos;lsa, avval ularni «Ishtirokchilar» bo&apos;limidan pul
-              qaytarilganini tasdiqlab o&apos;chiring.
+              {t(
+                "\"{title}\" imtihoni o'chiriladi. Ishtirokchilar va natijalar ham arxivlanadi (yo'qotilmaydi), ularning to'lov havolalari ishlamay qoladi. To'lagan ishtirokchi bo'lsa, avval ularni «Ishtirokchilar» bo'limidan pul qaytarilganini tasdiqlab o'chiring.",
+                { title: exam.title },
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteBusy}>
-              Bekor qilish
+              {t("Bekor qilish")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
@@ -392,7 +401,7 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
               variant="destructive"
             >
               {deleteBusy && <Loader2 className="mr-2 size-4 animate-spin" />}
-              O&apos;chirish
+              {t("O'chirish")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -407,15 +416,15 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {pendingTransition?.info.label}
+              {pendingTransition && t(pendingTransition.info.label)}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingTransition?.info.description}
+              {pendingTransition && t(pendingTransition.info.description)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={statusBusy}>
-              Bekor qilish
+              {t("Bekor qilish")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={async () => {
@@ -427,7 +436,7 @@ export function ExamDetailClient({ examId }: ExamDetailClientProps) {
               variant={pendingTransition?.info.destructive ? "destructive" : "default"}
             >
               {statusBusy && <Loader2 className="mr-2 size-4 animate-spin" />}
-              Tasdiqlash
+              {t("Tasdiqlash")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
@@ -21,12 +21,14 @@ import {
 } from "@/components/ui/tooltip";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
 import {
   FIELD_TYPES,
   FIELD_TYPE_LABELS,
   TYPES_WITH_OPTIONS,
   defaultMockExamFormFields,
   makeFieldId,
+  mockExamFormError,
   mockExamFormSchema,
   type FormFieldType,
   type MockExamFormFieldShape,
@@ -51,6 +53,12 @@ interface ExamForBuilder {
 }
 
 export function ExamFormBuilderClient({ examId }: Props) {
+  const t = useT();
+  // The load effect reads t from here: a language switch must not refetch.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
   const router = useRouter();
   const [exam, setExam] = useState<ExamForBuilder | null>(null);
   const [loading, setLoading] = useState(true);
@@ -88,7 +96,8 @@ export function ExamFormBuilderClient({ examId }: Props) {
       })
       .catch((error) => {
         if (cancelled) return;
-        toast.error(getErrorMessage(error, "Formani yuklashda xatolik"));
+        const t = tRef.current;
+        toast.error(getErrorMessage(error, t("Formani yuklashda xatolik")));
         router.push("/mock-exams");
       })
       .finally(() => {
@@ -135,10 +144,10 @@ export function ExamFormBuilderClient({ examId }: Props) {
       await api.patch(`/mock-exams/${exam.id}`, {
         formFields: values.fields,
       });
-      toast.success("Forma saqlandi");
+      toast.success(t("Forma saqlandi"));
       reset(values); // clears the dirty flag
     } catch (error) {
-      toast.error(getErrorMessage(error, "Saqlashda xatolik"));
+      toast.error(getErrorMessage(error, t("Saqlashda xatolik")));
     } finally {
       setSaving(false);
     }
@@ -160,7 +169,7 @@ export function ExamFormBuilderClient({ examId }: Props) {
         <Button asChild type="button" variant="ghost" size="sm">
           <Link href={`/mock-exams/${exam.id}`}>
             <ArrowLeft className="size-4" />
-            Orqaga
+            {t("Orqaga")}
           </Link>
         </Button>
       </div>
@@ -169,21 +178,22 @@ export function ExamFormBuilderClient({ examId }: Props) {
         <div className="space-y-6">
           <section className="space-y-4 rounded-lg border bg-background p-5">
             <div className="flex items-center gap-1.5">
-              <h2 className="text-base font-semibold">Forma maydonlari</h2>
+              <h2 className="text-base font-semibold">{t("Forma maydonlari")}</h2>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <HelpCircle className="size-3.5 cursor-help text-muted-foreground" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
-                  Ism, familiya va telefon — ro&apos;yxatga olish uchun
-                  majburiy. Ostida qo&apos;shimcha savollar qo&apos;shing.
+                  {t(
+                    "Ism, familiya va telefon — ro'yxatga olish uchun majburiy. Ostida qo'shimcha savollar qo'shing.",
+                  )}
                 </TooltipContent>
               </Tooltip>
             </div>
 
             {typeof errors.fields?.message === "string" && (
               <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                {errors.fields.message}
+                {mockExamFormError(t, errors.fields.message)}
               </p>
             )}
 
@@ -221,7 +231,7 @@ export function ExamFormBuilderClient({ examId }: Props) {
       <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 px-6 py-3 backdrop-blur lg:left-[var(--sidebar-width,16rem)]">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
           <span className="text-xs text-muted-foreground">
-            {isDirty && !saving ? "Saqlanmagan o'zgarishlar" : ""}
+            {isDirty && !saving ? t("Saqlanmagan o'zgarishlar") : ""}
           </span>
           <div className="flex items-center gap-2">
             <Button
@@ -230,11 +240,11 @@ export function ExamFormBuilderClient({ examId }: Props) {
               onClick={() => router.push(`/mock-exams/${exam.id}`)}
               disabled={saving}
             >
-              Orqaga
+              {t("Orqaga")}
             </Button>
             <Button type="submit" disabled={saving || !isDirty}>
               {saving && <Loader2 className="size-4 animate-spin" />}
-              Saqlash
+              {t("Saqlash")}
             </Button>
           </div>
         </div>
@@ -244,21 +254,23 @@ export function ExamFormBuilderClient({ examId }: Props) {
 }
 
 function AddFieldMenu({ onPick }: { onPick: (type: FormFieldType) => void }) {
+  const t = useT();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button type="button" variant="outline" className="w-full">
           <Plus className="size-4" />
-          Maydon qo&apos;shish
+          {t("Maydon qo'shish")}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
-        {FIELD_TYPES.map((t) => {
-          const Icon = ADD_FIELD_TYPE_ICONS[t];
+        {FIELD_TYPES.map((type) => {
+          const Icon = ADD_FIELD_TYPE_ICONS[type];
+          const typeLabel = FIELD_TYPE_LABELS[type];
           return (
-            <DropdownMenuItem key={t} onClick={() => onPick(t)}>
+            <DropdownMenuItem key={type} onClick={() => onPick(type)}>
               <Icon className="mr-2 size-4" />
-              {FIELD_TYPE_LABELS[t]}
+              {t(typeLabel)}
             </DropdownMenuItem>
           );
         })}

@@ -15,30 +15,13 @@ import {
 } from "@/components/ui/table";
 import { TablePagination } from "@/components/outreach/table-pagination";
 import api from "@/lib/api";
-import { msg } from "@/i18n/msg";
 import { useT } from "@/i18n/context";
-import type {
-  CallLogItem,
-  CallLogsResponse,
-  CallOutcome,
-  CallReason,
+import {
+  CALL_OUTCOME_INFO,
+  CALL_REASON_INFO,
+  type CallLogItem,
+  type CallLogsResponse,
 } from "@/components/outreach/outreach-types";
-
-const REASON_INFO: Record<CallReason, { label: string; className: string }> = {
-  ABSENCE: { label: msg("Kelmagan"), className: "bg-amber-100 text-amber-800" },
-  DEBT: { label: msg("Qarz"), className: "bg-red-100 text-red-700" },
-  REMOVAL: { label: msg("Guruhdan chiqarish"), className: "bg-orange-100 text-orange-800" },
-  OTHER: { label: msg("Boshqa"), className: "bg-slate-100 text-slate-700" },
-};
-
-const OUTCOME_INFO: Record<CallOutcome, { label: string; className: string }> = {
-  ANSWERED: { label: msg("Gaplashildi"), className: "bg-emerald-100 text-emerald-700" },
-  NO_ANSWER: { label: msg("Javob bermadi"), className: "bg-slate-100 text-slate-700" },
-  WILL_COME: { label: msg("Keladi"), className: "bg-indigo-100 text-indigo-700" },
-  WILL_PAY: { label: msg("To'laydi"), className: "bg-blue-100 text-blue-700" },
-  PROMISED: { label: msg("Keladi / to'laydi"), className: "bg-violet-100 text-violet-700" },
-  LEFT: { label: msg("O'qishni tashladi"), className: "bg-red-100 text-red-700" },
-};
 
 export function StudentCallHistoryTab({ studentId }: { studentId: number }) {
   const t = useT();
@@ -113,8 +96,8 @@ export function StudentCallHistoryTab({ studentId }: { studentId: number }) {
 
 function Row({ row, index }: { row: CallLogItem; index: number }) {
   const t = useT();
-  const reason = REASON_INFO[row.reason];
-  const outcome = OUTCOME_INFO[row.outcome];
+  const reason = CALL_REASON_INFO[row.reason];
+  const outcome = CALL_OUTCOME_INFO[row.outcome];
   return (
     <TableRow>
       <TableCell className="border-r text-muted-foreground">{index + 1}</TableCell>

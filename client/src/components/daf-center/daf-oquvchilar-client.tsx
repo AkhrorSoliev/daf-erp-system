@@ -8,6 +8,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useT } from "@/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatNumber } from "@/lib/format-utils";
@@ -22,6 +23,7 @@ import type { Saralash } from "./types";
 import { useMarkazOquvchilar } from "./use-daf-center";
 
 export function DafOquvchilarClient() {
+  const t = useT();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -49,9 +51,9 @@ export function DafOquvchilarClient() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="font-heading text-xl font-bold tracking-tight">DaF ilovasi — o&apos;quvchilar</h1>
+        <h1 className="font-heading text-xl font-bold tracking-tight">{t("DaF ilovasi — o'quvchilar")}</h1>
         <p className="text-sm text-muted-foreground">
-          Kim ishlamayapti — eng muammolisi yuqorida. Qatorga bosing: o&apos;quvchining to&apos;liq surati
+          {t("Kim ishlamayapti — eng muammolisi yuqorida. Qatorga bosing: o'quvchining to'liq surati")}
         </p>
       </div>
 
@@ -69,15 +71,15 @@ export function DafOquvchilarClient() {
         <>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">{formatNumber(data.jami)}</span> ta o&apos;quvchi topildi
-              {isFetching && " · yangilanmoqda…"}
+              {t("{n} ta o'quvchi topildi", { n: formatNumber(data.jami) })}
+              {isFetching && ` · ${t("yangilanmoqda…")}`}
             </p>
             <DafRoyxatNusxalash filtr={filtr} jami={data.jami} />
           </div>
 
           {data.qatorlar.length === 0 ? (
             <div className="flex h-24 items-center justify-center rounded-md border">
-              <p className="text-sm text-muted-foreground">Bu filtrga mos o&apos;quvchi yo&apos;q</p>
+              <p className="text-sm text-muted-foreground">{t("Bu filtrga mos o'quvchi yo'q")}</p>
             </div>
           ) : (
             <DafOquvchilarTable
@@ -96,11 +98,11 @@ export function DafOquvchilarClient() {
           {oxirgiSahifa > 1 && (
             <div className="flex items-center justify-end gap-2">
               <Button variant="outline" size="sm" disabled={data.sahifa <= 1} onClick={() => setFiltr({ ...filtr, page: data.sahifa - 1 })}>
-                <ChevronLeft className="mr-1 size-4" /> Oldingi
+                <ChevronLeft className="mr-1 size-4" /> {t("Oldingi")}
               </Button>
               <span className="text-sm tabular-nums">{data.sahifa} / {oxirgiSahifa}</span>
               <Button variant="outline" size="sm" disabled={data.sahifa >= oxirgiSahifa} onClick={() => setFiltr({ ...filtr, page: data.sahifa + 1 })}>
-                Keyingi <ChevronRight className="ml-1 size-4" />
+                {t("Keyingi")} <ChevronRight className="ml-1 size-4" />
               </Button>
             </div>
           )}

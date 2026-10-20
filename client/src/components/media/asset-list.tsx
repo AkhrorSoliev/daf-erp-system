@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { AudioLines, FileText, ImageIcon, Pause, Play, Video } from "lucide-react";
+import { useT } from "@/i18n/context";
 import { Badge } from "@/components/ui/badge";
 import { hajm, KIND_LABEL, type MediaAsset } from "./media-types";
 
@@ -18,10 +19,11 @@ const ICON = {
  * ro'yxatdan chiqmasdan tekshirish uchun.
  */
 export function AssetList({ assets }: { assets: MediaAsset[] }) {
+  const t = useT();
   if (assets.length === 0) {
     return (
       <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-        Bu filtrga mos aktiv yo&apos;q.
+        {t("Bu filtrga mos aktiv yo'q.")}
       </div>
     );
   }
@@ -35,6 +37,8 @@ export function AssetList({ assets }: { assets: MediaAsset[] }) {
 }
 
 function AssetRow({ a }: { a: MediaAsset }) {
+  const t = useT();
+  const kind = KIND_LABEL[a.kind];
   const Icon = ICON[a.kind] ?? FileText;
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -62,7 +66,7 @@ function AssetRow({ a }: { a: MediaAsset }) {
           <button
             type="button"
             onClick={toggle}
-            aria-label={`${a.titel} — tinglash`}
+            aria-label={t("{title} — tinglash", { title: a.titel })}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition hover:opacity-90"
           >
             {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
@@ -71,7 +75,7 @@ function AssetRow({ a }: { a: MediaAsset }) {
           <button
             type="button"
             onClick={() => a.kind === "IMAGE" && setOpen((v) => !v)}
-            aria-label={a.kind === "IMAGE" ? `${a.titel} — ko'rish` : a.titel}
+            aria-label={a.kind === "IMAGE" ? t("{title} — ko'rish", { title: a.titel }) : a.titel}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground transition hover:bg-accent"
           >
             <Icon className="h-3.5 w-3.5" />
@@ -92,7 +96,7 @@ function AssetRow({ a }: { a: MediaAsset }) {
             </Badge>
           )}
           <Badge variant="outline" className="text-[10px]">
-            {KIND_LABEL[a.kind] ?? a.kind}
+            {kind ? t(kind) : a.kind}
           </Badge>
           <span className="w-14 text-right text-[11px] tabular-nums text-muted-foreground">
             {hajm(a.bytes)}

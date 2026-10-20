@@ -21,6 +21,9 @@ import { TimePicker } from "@/components/ui/time-picker";
 import { PriceInput } from "@/components/ui/price-input";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
+import { ruleMessage } from "@/components/settings/settings-form-parts";
+import { TITLE_REQUIRED, TITLE_TOO_LONG } from "./create-exam-drawer";
 import type { MockExamSummary } from "@/hooks/use-mock-exams-board";
 import { LevelMultiSelect } from "./level-multiselect";
 import { ExamTimesEditor } from "./exam-times-editor";
@@ -79,6 +82,7 @@ export function EditExamDrawer({
   onClose,
   onSaved,
 }: EditExamDrawerProps) {
+  const t = useT();
   const {
     register,
     handleSubmit,
@@ -132,7 +136,7 @@ export function EditExamDrawer({
 
     const price = values.price.trim() ? Number(values.price) : 0;
     if (!Number.isFinite(price) || price < 0) {
-      toast.error("Narx noto'g'ri kiritildi");
+      toast.error(t("Narx noto'g'ri kiritildi"));
       return;
     }
 
@@ -141,7 +145,7 @@ export function EditExamDrawer({
     if (values.studentPrice.trim()) {
       const sp = Number(values.studentPrice);
       if (!Number.isFinite(sp) || sp < 0) {
-        toast.error("DaF o'quvchi narxi noto'g'ri kiritildi");
+        toast.error(t("DaF o'quvchi narxi noto'g'ri kiritildi"));
         return;
       }
       studentPrice = sp;
@@ -149,7 +153,7 @@ export function EditExamDrawer({
 
     const examTimes = [...new Set(values.examTimes.filter(Boolean))].sort();
     if (examTimes.length === 0) {
-      toast.error("Kamida 1 ta imtihon vaqtini qo'shing");
+      toast.error(t("Kamida 1 ta imtihon vaqtini qo'shing"));
       return;
     }
 
@@ -174,9 +178,9 @@ export function EditExamDrawer({
         payload,
       );
       onSaved(data);
-      toast.success("Imtihon yangilandi");
+      toast.success(t("Imtihon yangilandi"));
     } catch (error) {
-      toast.error(getErrorMessage(error, "Saqlashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Saqlashda xatolik yuz berdi")));
     } finally {
       setSubmitting(false);
     }
@@ -190,10 +194,11 @@ export function EditExamDrawer({
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <SheetHeader className="border-b px-6 py-4">
-          <SheetTitle className="text-lg">Imtihonni tahrirlash</SheetTitle>
+          <SheetTitle className="text-lg">{t("Imtihonni tahrirlash")}</SheetTitle>
           <SheetDescription>
-            Barcha maydonlarni o&apos;zgartirish mumkin. Ishtirokchi bo&apos;lsa,
-            forma o&apos;zgarishi ularning javoblariga ta&apos;sir qilmaydi.
+            {t(
+              "Barcha maydonlarni o'zgartirish mumkin. Ishtirokchi bo'lsa, forma o'zgarishi ularning javoblariga ta'sir qilmaydi.",
+            )}
           </SheetDescription>
         </SheetHeader>
 
@@ -204,23 +209,23 @@ export function EditExamDrawer({
             className="space-y-5 px-6 py-5"
           >
             <div className="space-y-1.5">
-              <Label htmlFor="edit-title">Imtihon nomi</Label>
+              <Label htmlFor="edit-title">{t("Imtihon nomi")}</Label>
               <Input
                 id="edit-title"
                 {...register("title", {
-                  required: "Nom kiritilishi shart",
-                  maxLength: { value: 200, message: "200 belgi chegarasi" },
+                  required: TITLE_REQUIRED,
+                  maxLength: { value: 200, message: TITLE_TOO_LONG },
                 })}
               />
               {errors.title && (
                 <p className="text-sm text-destructive">
-                  {errors.title.message}
+                  {ruleMessage(t, errors.title.message)}
                 </p>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="edit-description">Tavsif</Label>
+              <Label htmlFor="edit-description">{t("Tavsif")}</Label>
               <Textarea
                 id="edit-description"
                 rows={3}
@@ -230,7 +235,7 @@ export function EditExamDrawer({
             </div>
 
             <div className="space-y-1.5">
-              <Label>Imtihon sanasi</Label>
+              <Label>{t("Imtihon sanasi")}</Label>
               <Controller
                 name="examDate"
                 control={control}
@@ -244,7 +249,7 @@ export function EditExamDrawer({
             </div>
 
             <div className="space-y-1.5">
-              <Label>Imtihon vaqtlari</Label>
+              <Label>{t("Imtihon vaqtlari")}</Label>
               <Controller
                 name="examTimes"
                 control={control}
@@ -258,12 +263,12 @@ export function EditExamDrawer({
                 )}
               />
               <p className="text-xs text-muted-foreground">
-                Bir nechta vaqt = botda tanlov. Birinchisi asosiy sana-vaqt.
+                {t("Bir nechta vaqt = botda tanlov. Birinchisi asosiy sana-vaqt.")}
               </p>
             </div>
 
             <div className="space-y-1.5">
-              <Label>Ro&apos;yxatga olish muddati</Label>
+              <Label>{t("Ro'yxatga olish muddati")}</Label>
               <div className="grid grid-cols-2 gap-3">
                 <Controller
                   name="registrationDate"
@@ -291,7 +296,7 @@ export function EditExamDrawer({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="edit-price">Narxi</Label>
+              <Label htmlFor="edit-price">{t("Narxi")}</Label>
               <Controller
                 name="price"
                 control={control}
@@ -300,7 +305,7 @@ export function EditExamDrawer({
                     id="edit-price"
                     value={field.value}
                     onChange={(e) => field.onChange(e.target.value)}
-                    placeholder="0 = bepul"
+                    placeholder={t("0 = bepul")}
                   />
                 )}
               />
@@ -308,7 +313,7 @@ export function EditExamDrawer({
 
             <div className="space-y-1.5">
               <Label htmlFor="edit-student-price">
-                DaF o&apos;quvchi narxi (ixtiyoriy)
+                {t("DaF o'quvchi narxi (ixtiyoriy)")}
               </Label>
               <Controller
                 name="studentPrice"
@@ -318,17 +323,17 @@ export function EditExamDrawer({
                     id="edit-student-price"
                     value={field.value}
                     onChange={(e) => field.onChange(e.target.value)}
-                    placeholder="Bo'sh = to'liq narx"
+                    placeholder={t("Bo'sh = to'liq narx")}
                   />
                 )}
               />
               <p className="text-xs text-muted-foreground">
-                Markaz o&apos;quvchilariga chegirmali narx.
+                {t("Markaz o'quvchilariga chegirmali narx.")}
               </p>
             </div>
 
             <div className="space-y-1.5">
-              <Label>Taklif etiladigan darajalar</Label>
+              <Label>{t("Taklif etiladigan darajalar")}</Label>
               <Controller
                 name="offeredLevels"
                 control={control}
@@ -340,7 +345,7 @@ export function EditExamDrawer({
                 )}
               />
               <p className="text-xs text-muted-foreground">
-                Botda tugma sifatida chiqadi; foydalanuvchi bittasini tanlaydi.
+                {t("Botda tugma sifatida chiqadi; foydalanuvchi bittasini tanlaydi.")}
               </p>
             </div>
           </form>
@@ -353,11 +358,11 @@ export function EditExamDrawer({
             onClick={onClose}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button type="submit" form="edit-exam-form" disabled={submitting}>
             {submitting && <Loader2 className="size-4 animate-spin" />}
-            Saqlash
+            {t("Saqlash")}
           </Button>
         </SheetFooter>
       </SheetContent>

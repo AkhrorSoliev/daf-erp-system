@@ -1,3 +1,5 @@
+import { msg } from "@/i18n/msg";
+
 export interface OutreachStudent {
   id: number;
   firstName: string;
@@ -62,10 +64,10 @@ export const CALL_REASON_INFO: Record<
   CallReason,
   { label: string; className: string }
 > = {
-  ABSENCE: { label: "Kelmagan", className: "bg-amber-100 text-amber-800" },
-  DEBT: { label: "Qarz", className: "bg-red-100 text-red-700" },
-  REMOVAL: { label: "Chiqarish", className: "bg-orange-100 text-orange-800" },
-  OTHER: { label: "Boshqa", className: "bg-slate-100 text-slate-700" },
+  ABSENCE: { label: msg("Kelmagan"), className: "bg-amber-100 text-amber-800" },
+  DEBT: { label: msg("Qarz"), className: "bg-red-100 text-red-700" },
+  REMOVAL: { label: msg("Ko'p dars qoldirgan"), className: "bg-orange-100 text-orange-800" },
+  OTHER: { label: msg("Boshqa"), className: "bg-slate-100 text-slate-700" },
 };
 
 export const CALL_OUTCOME_INFO: Record<
@@ -73,20 +75,20 @@ export const CALL_OUTCOME_INFO: Record<
   { label: string; className: string }
 > = {
   ANSWERED: {
-    label: "Gaplashildi",
+    label: msg("Gaplashildi"),
     className: "bg-emerald-100 text-emerald-700",
   },
   NO_ANSWER: {
-    label: "Javob bermadi",
+    label: msg("Javob bermadi"),
     className: "bg-slate-100 text-slate-700",
   },
-  WILL_COME: { label: "Keladi", className: "bg-indigo-100 text-indigo-700" },
-  WILL_PAY: { label: "To'laydi", className: "bg-blue-100 text-blue-700" },
+  WILL_COME: { label: msg("Keladi"), className: "bg-indigo-100 text-indigo-700" },
+  WILL_PAY: { label: msg("To'laydi"), className: "bg-blue-100 text-blue-700" },
   PROMISED: {
-    label: "Keladi / to'laydi",
+    label: msg("Keladi / to'laydi"),
     className: "bg-violet-100 text-violet-700",
   },
-  LEFT: { label: "O'qishni tashladi", className: "bg-red-100 text-red-700" },
+  LEFT: { label: msg("O'qishni tashladi"), className: "bg-red-100 text-red-700" },
 };
 
 export interface CallLogItem {

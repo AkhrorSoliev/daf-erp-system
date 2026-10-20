@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useT } from "@/i18n/context";
 
 interface ExamBranchFieldProps {
   value: string;
@@ -26,15 +27,16 @@ export function ExamBranchField({
   onChange,
   disabled,
 }: ExamBranchFieldProps) {
+  const t = useT();
   const branches = useBranchSwitcher((s) => s.branches);
   return (
     <div className="space-y-1.5">
       <Label>
-        Filial <span className="text-destructive">*</span>
+        {t("Filial")} <span className="text-destructive">*</span>
       </Label>
       <Select value={value} onValueChange={onChange} disabled={disabled}>
         <SelectTrigger>
-          <SelectValue placeholder="Filialni tanlang" />
+          <SelectValue placeholder={t("Filialni tanlang")} />
         </SelectTrigger>
         <SelectContent>
           {branches.map((branch) => (
