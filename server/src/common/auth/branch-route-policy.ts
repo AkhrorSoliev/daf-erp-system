@@ -732,7 +732,12 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'Branch Director changing it would move the other branch without seeing ' +
       'it. The cron it configures runs company-wide and resolves each ' +
       "student's branch from the student, never from the caller.",
-    routes: ['GET /absence-pause/settings', 'PATCH /absence-pause/settings'],
+    routes: [
+      'GET /absence-pause/history',
+      'GET /absence-pause/preview',
+      'GET /absence-pause/settings',
+      'PATCH /absence-pause/settings',
+    ],
   },
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',

@@ -3,6 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatNumber } from "@/lib/format-utils";
 import { capitalize, formatPer100, formatStudyMonths, rangeLabel } from "./departed-format";
 import type { DepartedOverview } from "./departed-types";
+import { useT } from "@/i18n/context";
 
 function Figure({ label, value, sub }: { label: string; value: string; sub: string | null }) {
   return (
@@ -18,6 +19,7 @@ function Figure({ label, value, sub }: { label: string; value: string; sub: stri
 
 /** The three cards of the page (spec B7a §4.1). `previousLabel` names the period before, e.g. «avgustda». */
 export function DepartedCards({ data, previousLabel, isLoading }: { data: DepartedOverview | undefined; previousLabel: string; isLoading: boolean }) {
+  const t = useT();
   if (isLoading || !data) {
     return (
       <div className="grid gap-4 sm:grid-cols-3">
@@ -29,16 +31,16 @@ export function DepartedCards({ data, previousLabel, isLoading }: { data: Depart
   return (
     <div className="grid gap-4 sm:grid-cols-3">
       <Figure
-        label={`${capitalize(rangeLabel(data.range))} ketdi`}
-        value={`${formatNumber(cards.departed)} o'quvchi`}
-        sub={cards.previousDeparted === null ? null : `${previousLabel} ${formatNumber(cards.previousDeparted)} edi`}
+        label={capitalize(t("{period} ketdi", { period: rangeLabel(data.range, t) }))}
+        value={t("{n} o'quvchi", { n: formatNumber(cards.departed) })}
+        sub={cards.previousDeparted === null ? null : t("{period} {n} edi", { period: previousLabel, n: formatNumber(cards.previousDeparted) })}
       />
       <Figure
-        label="Har 100 o'quvchidan"
-        value={cards.atStart === 0 ? "—" : `${formatPer100(cards.per100)} tasi ketdi`}
-        sub={cards.atStart === 0 ? "davr boshida o'qiyotgan o'quvchi yo'q edi" : `davr boshida ${formatNumber(cards.atStart)} o'quvchi o'qiyotgan edi`}
+        label={t("Har 100 o'quvchidan")}
+        value={cards.atStart === 0 ? "—" : t("{n} tasi ketdi", { n: formatPer100(cards.per100) })}
+        sub={cards.atStart === 0 ? t("davr boshida o'qiyotgan o'quvchi yo'q edi") : t("davr boshida {n} o'quvchi o'qiyotgan edi", { n: formatNumber(cards.atStart) })}
       />
-      <Figure label="Ketguncha o'qidi" value={formatStudyMonths(cards.avgStudyMonths)} sub="o'rtacha" />
+      <Figure label={t("Ketguncha o'qidi")} value={formatStudyMonths(cards.avgStudyMonths, t)} sub={t("o'rtacha")} />
     </div>
   );
 }

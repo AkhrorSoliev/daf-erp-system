@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DialogPaginationFooter } from "./dialog-pagination-footer";
+import { useT } from "@/i18n/context";
 import type {
   DepartedAfterChangeRow,
   RetentionQueryParams,
@@ -38,6 +39,7 @@ export function DepartedAfterChangeDialog({
   onOpenChange,
   queryParams,
 }: DepartedAfterChangeDialogProps) {
+  const t = useT();
   const { data, isLoading } = useQuery<DepartedAfterChangeRow[]>({
     queryKey: ["departed-after-change", queryParams],
     queryFn: () =>
@@ -70,12 +72,9 @@ export function DepartedAfterChangeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="!max-w-[min(1200px,95vw)] w-[min(1200px,95vw)] max-h-[85vh] overflow-hidden flex flex-col gap-4 p-6">
         <DialogHeader>
-          <DialogTitle>
-            O&apos;zgarishdan keyin ketgan o&apos;quvchilar
-          </DialogTitle>
+          <DialogTitle>{t("O'zgarishdan keyin ketgan o'quvchilar")}</DialogTitle>
           <DialogDescription>
-            Ustoz almashgandan so&apos;ng 5 dars ichida guruhdan chiqib ketgan
-            o&apos;quvchilar
+            {t("Ustoz almashgandan so'ng 5 dars ichida guruhdan chiqib ketgan o'quvchilar")}
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-auto rounded-md border">
@@ -83,14 +82,14 @@ export function DepartedAfterChangeDialog({
             <TableHeader className="sticky top-0 z-10 bg-muted/40">
               <TableRow>
                 <TableHead className="w-12 border-r">#</TableHead>
-                <TableHead>O&apos;quvchi</TableHead>
-                <TableHead>Guruh</TableHead>
-                <TableHead>Filial</TableHead>
-                <TableHead>Ustoz almashgan sana</TableHead>
-                <TableHead>Oldingi → Yangi ustoz</TableHead>
-                <TableHead>Ketgan sana</TableHead>
-                <TableHead>N-dars</TableHead>
-                <TableHead>Ketish sababi</TableHead>
+                <TableHead>{t("O'quvchi")}</TableHead>
+                <TableHead>{t("Guruh")}</TableHead>
+                <TableHead>{t("Filial")}</TableHead>
+                <TableHead>{t("Ustoz almashgan sana")}</TableHead>
+                <TableHead>{t("Oldingi → Yangi ustoz")}</TableHead>
+                <TableHead>{t("Ketgan sana")}</TableHead>
+                <TableHead>{t("N-dars")}</TableHead>
+                <TableHead>{t("Ketish sababi")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -110,7 +109,7 @@ export function DepartedAfterChangeDialog({
                     colSpan={9}
                     className="text-center py-16 text-muted-foreground"
                   >
-                    Ma&apos;lumot yo&apos;q
+                    {t("Ma'lumot yo'q")}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -136,7 +135,7 @@ export function DepartedAfterChangeDialog({
                       {format(new Date(row.departedAt), "dd.MM.yyyy")}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{row.lessonNumber}-dars</Badge>
+                      <Badge variant="outline">{t("{n}-dars", { n: row.lessonNumber })}</Badge>
                     </TableCell>
                     <TableCell>{row.departureReason ?? "—"}</TableCell>
                   </TableRow>

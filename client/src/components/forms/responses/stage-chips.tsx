@@ -5,6 +5,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import {
   STAGE_HINTS,
@@ -24,15 +25,18 @@ interface Props {
  * javobga teng, shuning uchun bittasi tanlanadi; qayta bosilsa — hammasi.
  */
 export function StageChips({ counts, value, onChange }: Props) {
+  const t = useT();
   return (
     <div
       role="group"
-      aria-label="Bosqich"
+      aria-label={t("Lid bosqichi")}
       className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
     >
       {SUBMISSION_STAGES.map((stage) => {
         const active = value === stage;
         const count = counts[stage];
+        const label = STAGE_LABELS[stage];
+        const hint = STAGE_HINTS[stage];
         return (
           <Tooltip key={stage}>
             <TooltipTrigger asChild>
@@ -48,7 +52,7 @@ export function StageChips({ counts, value, onChange }: Props) {
                   !active && count === 0 && "text-muted-foreground",
                 )}
               >
-                {STAGE_LABELS[stage]}
+                {t(label)}
                 <span
                   className={cn(
                     "font-semibold tabular-nums",
@@ -62,7 +66,7 @@ export function StageChips({ counts, value, onChange }: Props) {
                 </span>
               </button>
             </TooltipTrigger>
-            <TooltipContent>{STAGE_HINTS[stage]}</TooltipContent>
+            <TooltipContent>{t(hint)}</TooltipContent>
           </Tooltip>
         );
       })}

@@ -1,6 +1,8 @@
 "use client";
 
 import { HelpCircle, Search } from "lucide-react";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -12,9 +14,9 @@ import {
 } from "@/components/ui/multi-select-combobox";
 
 const OUTCOME_OPTIONS: MultiSelectOption[] = [
-  { value: "success", label: "Muvaffaqiyatli" },
-  { value: "pending", label: "Kutilmoqda" },
-  { value: "rejected", label: "Xavfsizlik xatosi" },
+  { value: "success", label: msg("Muvaffaqiyatli") },
+  { value: "pending", label: msg("So'rov kutilmoqda") },
+  { value: "rejected", label: msg("Xavfsizlik xatosi") },
 ];
 
 const PROVIDER_OPTIONS: MultiSelectOption[] = [
@@ -60,6 +62,7 @@ export function GatewayEventsFilterBar({
   onShowChecksChange,
   onReset,
 }: GatewayEventsFilterBarProps) {
+  const t = useT();
   return (
     <div className="rounded-lg border bg-card p-4 space-y-3">
       {/* Qator 1: qidiruv + asosiy filtrlar */}
@@ -68,7 +71,7 @@ export function GatewayEventsFilterBar({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="O'quvchi bo'yicha qidirish (ID, ism, familiya)..."
+              placeholder={t("O'quvchi bo'yicha qidirish (ID, ism, familiya)...")}
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               className="pl-9"
@@ -80,17 +83,17 @@ export function GatewayEventsFilterBar({
           options={PROVIDER_OPTIONS}
           selected={provider}
           onChange={onProviderChange}
-          placeholder="Barcha to'lov tizimlari"
-          searchPlaceholder="To'lov tizimi qidirish..."
+          placeholder={t("Barcha to'lov tizimlari")}
+          searchPlaceholder={t("To'lov tizimi qidirish...")}
           className="w-[200px]"
         />
 
         <MultiSelectCombobox
-          options={OUTCOME_OPTIONS}
+          options={OUTCOME_OPTIONS.map((o) => ({ ...o, label: t(o.label) }))}
           selected={outcomeFilter}
           onChange={onOutcomeFilterChange}
-          placeholder="Barcha natijalar"
-          searchPlaceholder="Natija qidirish..."
+          placeholder={t("Barcha natijalar")}
+          searchPlaceholder={t("Natija qidirish...")}
           className="w-[200px]"
         />
       </div>
@@ -101,7 +104,7 @@ export function GatewayEventsFilterBar({
           <DatePicker
             value={startDate}
             onChange={onStartDateChange}
-            placeholder="Boshlanish sanasi"
+            placeholder={t("Boshlanish sanasi")}
             maxDate={endDate ?? undefined}
             defaultMonth={endDate ?? undefined}
           />
@@ -109,7 +112,7 @@ export function GatewayEventsFilterBar({
           <DatePicker
             value={endDate}
             onChange={onEndDateChange}
-            placeholder="Tugash sanasi"
+            placeholder={t("Tugash sanasi")}
             minDate={startDate ?? undefined}
             defaultMonth={startDate ?? undefined}
           />
@@ -128,29 +131,29 @@ export function GatewayEventsFilterBar({
               htmlFor="show-checks"
               className="text-sm cursor-pointer whitespace-nowrap"
             >
-              Texnik so&apos;rovlarni ko&apos;rsatish
+              {t("Texnik so'rovlarni ko'rsatish")}
             </Label>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   type="button"
                   className="text-muted-foreground hover:text-foreground"
-                  aria-label="Texnik so'rovlar haqida ma'lumot"
+                  aria-label={t("Texnik so'rovlar haqida ma'lumot")}
                 >
                   <HelpCircle className="size-4" />
                 </button>
               </TooltipTrigger>
               <TooltipContent className="max-w-xs text-xs">
-                Payme va Click tizimlari avtomatik yuborgan tekshiruv
-                so&apos;rovlari — pul harakatiga aloqasi yo&apos;q. Jadvalda
-                shovqinni kamaytirish uchun standart holatda yashirin.
+                {t(
+                  "Payme va Click tizimlari avtomatik yuborgan tekshiruv so'rovlari — pul harakatiga aloqasi yo'q. Jadvalda shovqinni kamaytirish uchun standart holatda yashirin.",
+                )}
               </TooltipContent>
             </Tooltip>
           </div>
         </TooltipProvider>
 
         <Button variant="outline" size="sm" onClick={onReset}>
-          Tozalash
+          {t("Tozalash")}
         </Button>
       </div>
     </div>

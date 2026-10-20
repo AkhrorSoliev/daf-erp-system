@@ -24,6 +24,20 @@ export const yangiliklar: Yangilik[] = [
     rollar: [1, 2, 3, 4],
   },
   {
+    sana: "2026-10-19",
+    sarlavha: "Chiqarishda oy puli qaytmasligi haqida ogohlantirish",
+    matn: "Guruhdan chiqarish oynasida, oyning 40% idan ko'pi o'tgan bo'lsa, tepada ogohlantirish chiqadi: oy to'lovi qaytarilmaydi va qancha pul ushlab qolinadi. O'quvchi boshqa guruhga o'tayotgan bo'lsa, oynani yopib, profildagi «Guruhni o'zgartirish» dan foydalaning: u o'tmagan darslarning pulini balansga qaytaradi. Sabab «ko'chdi» kabi tanlansa, ogohlantirish qizil bo'ladi. U chiqarishni to'smaydi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "guruhdan-chiqarish" },
+  },
+  {
+    sana: "2026-10-18",
+    sarlavha: "Avtomatik pauza sozlamasi aniqroq bo'ldi",
+    matn: "O'quv qoidalari sahifasidagi «Avtomatik pauza» bloki yangilandi. Qoida yoqilgan yoki o'chiqligi belgi bilan ko'rinadi, switchni bosish esa «Saqlash» bosilmaguncha hech narsani o'zgartirmaydi: saqlanmagan o'zgarish haqida panel chiqadi. Qoidani yoqishdan oldin sahifa hozir nechta o'quvchi pauzaga tushishini aytadi. Raqam maydonlari strelkasiz, birligi yonida, xatosi tagida. Kartada oxirgi o'zgarish (kim va qachon), «Tarix» tugmasi esa yoqish, o'chirish va chegara o'zgarishlarining to'liq ro'yxatini yon panelda ochadi.",
+    rollar: [1, 2],
+    sahifa: { bolim: "davomat", sahifa: "avtomatik-pauza" },
+  },
+  {
     sana: "2026-10-18",
     sarlavha: "Profilda faol seanslar ro'yxati",
     matn: "Profil sahifasida «Faol seanslar» bo'limi paydo bo'ldi: hisobingizga kirilgan qurilmalar (brauzer va tizim nomi, IP manzil, oxirgi faollik). Siz turgan qurilma «Joriy qurilma» deb belgilanadi. Tanimagan qurilma yonidagi «Chiqarish» tugmasi faqat shu qurilmadagi kirishni darhol tugatadi, qolganlariga tegmaydi. «Boshqa qurilmalardan chiqish» tugmasi avvalgidek ishlaydi. Shahar hozircha ko'rsatilmaydi. Yangilanishdan oldin kirgan qurilmalar ro'yxatda taxminan bir soatdan keyin paydo bo'ladi.",

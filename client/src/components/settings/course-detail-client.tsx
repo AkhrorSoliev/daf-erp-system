@@ -27,12 +27,14 @@ import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import { EditCourseDrawer } from "./edit-course-drawer";
 import api from "@/lib/api";
 import { PAYMENT_MODEL_LABELS } from "@/lib/payment-model";
+import { useT } from "@/i18n/context";
 
 interface CourseDetailClientProps {
   courseId: string;
 }
 
 export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
+  const t = useT();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -101,14 +103,16 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
     return (
       <div className="space-y-6">
         <h1 className="font-heading text-2xl font-bold tracking-tight">
-          Kurs topilmadi
+          {t("Kurs topilmadi")}
         </h1>
         <p className="text-muted-foreground">
-          ID: {courseId} bo&apos;yicha kurs mavjud emas
+          {t("ID: {id} bo'yicha kurs mavjud emas", { id: courseId })}
         </p>
       </div>
     );
   }
+
+  const modelLabel = PAYMENT_MODEL_LABELS[course.paymentModel];
 
   return (
     <div className="space-y-6">
@@ -124,7 +128,7 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Orqaga</TooltipContent>
+          <TooltipContent>{t("Orqaga")}</TooltipContent>
         </Tooltip>
         <div className="flex-1">
           <div className="flex items-center gap-2">
@@ -132,11 +136,11 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
               {course.name}
             </h2>
             <Badge variant={course.isActive ? "default" : "secondary"}>
-              {course.isActive ? "Faol" : "Nofaol"}
+              {course.isActive ? t("Faol") : t("Nofaol")}
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
-            Kurs ma&apos;lumotlari va boshqaruv
+            {t("Kurs ma'lumotlari va boshqaruv")}
           </p>
         </div>
         <Tooltip>
@@ -147,10 +151,10 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
               onClick={() => openDrawer(course)}
             >
               <Pencil className="mr-1.5 h-4 w-4" />
-              Tahrirlash
+              {t("Tahrirlash")}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Kursni tahrirlash</TooltipContent>
+          <TooltipContent>{t("Kursni tahrirlash")}</TooltipContent>
         </Tooltip>
       </div>
 
@@ -160,20 +164,20 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
           <div className="space-y-0 divide-y">
             <InfoRow
               icon={<FileText className="h-4 w-4 text-muted-foreground" />}
-              label="Tavsif"
+              label={t("Tavsif")}
               value={course.description ?? "—"}
             />
             <InfoRow
               icon={<Wallet className="h-4 w-4 text-muted-foreground" />}
-              label="To'lov modeli"
-              value={PAYMENT_MODEL_LABELS[course.paymentModel]}
+              label={t("To'lov modeli")}
+              value={t(modelLabel)}
             />
             <InfoRow
               icon={<Users className="h-4 w-4 text-muted-foreground" />}
-              label="Guruhlar"
-              value={`${groupCount} ta`}
+              label={t("Guruhlar")}
+              value={t("{n} ta", { n: groupCount })}
             />
-            {courseTermRows(course, schedule).map((row) => (
+            {courseTermRows(course, schedule, t).map((row) => (
               <InfoRow
                 key={row.label}
                 icon={<Banknote className="h-4 w-4 text-muted-foreground" />}
@@ -187,22 +191,22 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
         {/* Right: Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList>
-            <TabsTrigger value="groups">Guruhlar</TabsTrigger>
-            <TabsTrigger value="materials">Materiallar</TabsTrigger>
-            <TabsTrigger value="plan">Reja</TabsTrigger>
+            <TabsTrigger value="groups">{t("Guruhlar")}</TabsTrigger>
+            <TabsTrigger value="materials">{t("Materiallar")}</TabsTrigger>
+            <TabsTrigger value="plan">{t("Reja")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="groups">
             <EmptyTabContent
               icon={<Users className="h-8 w-8 text-muted-foreground/50" />}
-              message="Ushbu kursdan foydalanadigan guruhlar yo'q"
+              message={t("Ushbu kursdan foydalanadigan guruhlar yo'q")}
             />
           </TabsContent>
 
           <TabsContent value="materials">
             <EmptyTabContent
               icon={<FileText className="h-8 w-8 text-muted-foreground/50" />}
-              message="Materiallar hali qo'shilmagan"
+              message={t("Materiallar hali qo'shilmagan")}
             />
           </TabsContent>
 
@@ -211,7 +215,7 @@ export function CourseDetailClient({ courseId }: CourseDetailClientProps) {
               icon={
                 <ClipboardList className="h-8 w-8 text-muted-foreground/50" />
               }
-              message="Reja hali tuzilmagan"
+              message={t("Reja hali tuzilmagan")}
             />
           </TabsContent>
         </Tabs>

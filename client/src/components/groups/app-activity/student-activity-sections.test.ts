@@ -153,6 +153,6 @@ describe("TranslatedStatusBadge", () => {
   });
 
   it("keeps other entities' Uzbek labels", () => {
-    expect(inRu(createElement(TranslatedStatusBadge, { entityType: "branches", status: "CLOSED" }))).toContain("Yopilgan");
+    expect(inRu(createElement(TranslatedStatusBadge, { entityType: "courses", status: "DEPRECATED" }))).toContain("Eskirgan");
   });
 });

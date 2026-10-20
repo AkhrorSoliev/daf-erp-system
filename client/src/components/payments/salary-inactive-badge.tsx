@@ -7,6 +7,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useT } from "@/i18n/context";
 
 /**
  * "Nofaol" — bo'shatilgan/to'xtatilgan xodim yoki ustoz qatorining belgisi.
@@ -22,6 +23,7 @@ import {
  * ("Nofaol"), chunki u ham xuddi shu holatni bildiradi.
  */
 export function SalaryInactiveBadge() {
+  const t = useT();
   return (
     <TooltipProvider>
       <Tooltip>
@@ -30,12 +32,13 @@ export function SalaryInactiveBadge() {
             variant="outline"
             className="h-4 px-1 text-[10px] font-normal text-muted-foreground"
           >
-            Nofaol
+            {t("Nofaol")}
           </Badge>
         </TooltipTrigger>
         <TooltipContent className="max-w-60">
-          Ishdan bo&apos;shagan. Ro&apos;yxatda turibdi, chunki bu oyning puli
-          hali yopilmagan — yopilgach o&apos;zi tushib qoladi.
+          {t(
+            "Ishdan bo'shagan. Ro'yxatda turibdi, chunki bu oyning puli hali yopilmagan — yopilgach o'zi tushib qoladi.",
+          )}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

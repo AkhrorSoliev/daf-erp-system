@@ -7,6 +7,8 @@ import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { SettingsPageHeader } from "../settings-page-header";
 import {
@@ -21,25 +23,26 @@ import { SummaryCards } from "./summary-cards";
 
 const KEY = ["telegram-report-recipients"];
 const CANDIDATES = ["telegram-report-candidates"];
-const TITLE = "Telegram hisobot";
-const DESCRIPTION = "Kunlik hisobot kimning shaxsiy chatiga, qaysi filiallar va bo'limlar bilan borishi";
+const TITLE = msg("Telegram hisobot");
+const DESCRIPTION = msg("Kunlik hisobot kimning shaxsiy chatiga, qaysi filiallar va bo'limlar bilan borishi");
 
 const FILTERS: { value: RecipientFilter; label: string }[] = [
-  { value: "all", label: "Hammasi" },
-  { value: "problem", label: "Yetmaydi" },
-  { value: "off", label: "O'chirilgan" },
+  { value: "all", label: msg("Hammasi") },
+  { value: "problem", label: msg("Yetib bormaydi") },
+  { value: "off", label: msg("O'chirilgan") },
 ];
 
 const PROBE_TOAST: Record<ProbeReach, string> = {
-  DELIVERED: "Xabar yetadi",
-  BLOCKED: "Xodim botni bloklagan",
-  UNLINKED: "Telegram ulanmagan",
-  NO_BOT: "Bot ishlamayapti",
-  FAILED: "Tekshirib bo'lmadi, keyinroq urinib ko'ring",
+  DELIVERED: msg("Xabar yetadi"),
+  BLOCKED: msg("Xodim botni bloklagan"),
+  UNLINKED: msg("Telegram ulanmagan"),
+  NO_BOT: msg("Bot ishlamayapti"),
+  FAILED: msg("Tekshirib bo'lmadi, keyinroq urinib ko'ring"),
 };
 
 /** CEO-only (ADR-0095): recipients of the personal daily report. */
 export function TelegramReportSettingsClient() {
+  const t = useT();
   const qc = useQueryClient();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<RecipientFilter>("all");
@@ -61,45 +64,47 @@ export function TelegramReportSettingsClient() {
 
   const add = useMutation({
     mutationFn: (userId: number) => addRecipient(userId),
-    onSuccess: (created) => { setAddOpen(false); setSelectedId(created.id); toast.success("Qo'shildi"); return refresh(); },
-    onError: (e) => toast.error(getErrorMessage(e, "Qo'shib bo'lmadi")),
+    onSuccess: (created) => { setAddOpen(false); setSelectedId(created.id); toast.success(t("Oluvchi qo'shildi")); return refresh(); },
+    onError: (e) => toast.error(getErrorMessage(e, t("Qo'shib bo'lmadi"))),
   });
   const patch = useMutation({
     mutationFn: ({ id, p }: { id: number; p: RecipientPatch }) => patchRecipient(id, p),
     onSuccess: refresh,
-    onError: (e) => toast.error(getErrorMessage(e, "Saqlashda xatolik")),
+    onError: (e) => toast.error(getErrorMessage(e, t("Saqlashda xatolik"))),
   });
   const remove = useMutation({
     mutationFn: removeRecipient,
-    onSuccess: () => { toast.success("Olib tashlandi"); return refresh(); },
-    onError: (e) => toast.error(getErrorMessage(e, "Olib tashlab bo'lmadi")),
+    onSuccess: () => { toast.success(t("Olib tashlandi")); return refresh(); },
+    onError: (e) => toast.error(getErrorMessage(e, t("Olib tashlab bo'lmadi"))),
   });
   const test = useMutation({
     mutationFn: testRecipient,
     onMutate: (id) => setTestingId(id),
     onSettled: () => setTestingId(null),
     // The server stores every attempt (success or not): re-read either way.
-    onSuccess: () => { toast.success("Hisobot yuborildi"); return refresh(); },
-    onError: (e) => { toast.error(getErrorMessage(e, "Yuborib bo'lmadi")); return refresh(); },
+    onSuccess: () => { toast.success(t("Hisobot yuborildi")); return refresh(); },
+    onError: (e) => { toast.error(getErrorMessage(e, t("Yuborib bo'lmadi"))); return refresh(); },
   });
   const check = useMutation({
     mutationFn: checkRecipient,
     onMutate: (id) => setCheckingId(id),
     onSettled: () => setCheckingId(null),
     onSuccess: (probe) => {
-      const text = probe.reach === "BLOCKED" ? (probe.note ?? PROBE_TOAST.BLOCKED) : PROBE_TOAST[probe.reach];
+      // A BLOCKED probe may carry the server's own reason: it is shown as sent.
+      const fallback = PROBE_TOAST[probe.reach];
+      const text = probe.reach === "BLOCKED" && probe.note ? probe.note : t(fallback);
       (probe.reach === "DELIVERED" ? toast.success : toast.error)(text);
       return refresh();
     },
-    onError: (e) => toast.error(getErrorMessage(e, "Tekshirib bo'lmadi, keyinroq urinib ko'ring")),
+    onError: (e) => toast.error(getErrorMessage(e, t("Tekshirib bo'lmadi, keyinroq urinib ko'ring"))),
   });
 
   if (isError && !data) {
     return (
       <div className="space-y-3">
-        <SettingsPageHeader title={TITLE} description={DESCRIPTION} />
-        <p className="text-sm text-muted-foreground">Ma&apos;lumotni yuklab bo&apos;lmadi.</p>
-        <Button variant="outline" onClick={() => void refetch()}>Qayta urinish</Button>
+        <SettingsPageHeader title={t(TITLE)} description={t(DESCRIPTION)} />
+        <p className="text-sm text-muted-foreground">{t("Ma'lumotni yuklab bo'lmadi")}.</p>
+        <Button variant="outline" onClick={() => void refetch()}>{t("Qayta urinish")}</Button>
       </div>
     );
   }
@@ -122,7 +127,7 @@ export function TelegramReportSettingsClient() {
 
   return (
     <div>
-      <SettingsPageHeader title={TITLE} description={DESCRIPTION} />
+      <SettingsPageHeader title={t(TITLE)} description={t(DESCRIPTION)} />
       <div className="space-y-4">
         <SummaryCards total={stats.total} reaching={stats.reaching} problem={stats.problem} botActive={data.bot.active} />
         <div className="flex flex-wrap items-center gap-2">
@@ -131,7 +136,7 @@ export function TelegramReportSettingsClient() {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Ism yoki lavozim bo'yicha qidirish"
+              placeholder={t("Ism yoki lavozim bo'yicha qidirish")}
               className="pl-8"
             />
           </div>
@@ -146,12 +151,12 @@ export function TelegramReportSettingsClient() {
                 onClick={() => setFilter(f.value)}
                 className="rounded-full"
               >
-                {f.label}
+                {t(f.label)}
               </Button>
             ))}
           </div>
           <Button className="sm:ml-auto" onClick={() => setAddOpen(true)}>
-            <Plus className="size-4" /> Oluvchi qo&apos;shish
+            <Plus className="size-4" /> {t("Oluvchi qo'shish")}
           </Button>
         </div>
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -164,11 +169,12 @@ export function TelegramReportSettingsClient() {
               onSelect={setSelectedId}
               onToggle={(id, isActive) => patch.mutate({ id, p: { isActive } })}
               busy={patch.isPending || remove.isPending}
-              empty={filtered ? "Hech narsa topilmadi" : "Hali oluvchi yo'q"}
+              empty={filtered ? t("Hech narsa topilmadi") : t("Hali oluvchi yo'q")}
             />
             <p className="text-xs text-muted-foreground">
-              Hisobot dushanba–shanba belgilangan vaqtda keladi; yakshanba va butun markaz bayramida avtomatik bormaydi.
-              Oluvchi botdagi «📊 Hisobot» tugmasi bilan istalgan payt so&apos;ray oladi.
+              {t(
+                "Hisobot dushanba–shanba belgilangan vaqtda keladi; yakshanba va butun markaz bayramida avtomatik bormaydi. Oluvchi botdagi «📊 Hisobot» tugmasi bilan istalgan payt so'ray oladi.",
+              )}
             </p>
           </div>
           {selected && (

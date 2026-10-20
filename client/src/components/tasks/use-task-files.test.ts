@@ -5,7 +5,7 @@ const { get, post, del, toastError, appendEvent } = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/api", () => ({ default: { get, post, delete: del } }));
 vi.mock("react-hot-toast", () => ({ default: { error: toastError } }));
-vi.mock("@/hooks/use-tasks", () => ({ useTasks: { getState: () => ({ appendEvent }) } }));
+vi.mock("@/hooks/use-tasks", () => ({ useTasks: { getState: () => ({ appendEvent }) }, tasksText: (source: string) => source }));
 
 import { FILE_URL_REFRESH_MS, MAX_FILE_BYTES, MAX_VOICE_BYTES } from "./task-file-rules";
 import { useTaskFiles } from "./use-task-files";

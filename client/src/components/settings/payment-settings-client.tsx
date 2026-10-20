@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2, Lock } from "lucide-react";
 import toast from "react-hot-toast";
 import { Switch } from "@/components/ui/switch";
@@ -23,6 +23,8 @@ import { useCan, usePermissionsReady } from "@/hooks/use-permissions";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { PAYMENT_MODEL_LABELS, type PaymentModel } from "@/lib/payment-model";
 
 interface PaymentSettingsValues {
@@ -47,11 +49,16 @@ type BranchOverrides = Record<keyof PaymentSettingsValues, number[]>;
 /** 1–28: every month has these days, February included. */
 const CHARGE_DAYS = Array.from({ length: 28 }, (_, i) => String(i + 1));
 
-const TITLE = "To'lov";
-const DESCRIPTION =
-  "To'lov va darsga qo'yish qoidalari. O'zgarish darhol kuchga kiradi.";
+const TITLE = msg("To'lov");
+const DESCRIPTION = msg("To'lov va darsga qo'yish qoidalari. O'zgarish darhol kuchga kiradi.");
 
 export function PaymentSettingsClient() {
+  const t = useT();
+  // The settings load once; a language switch must not refetch (ref copy, not a dep).
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  });
   const authUser = useAuth((s) => s.user);
   const canEdit = useCan("settings.payment");
   // The "read only" note below waits for the list, so it never flashes at an editor.
@@ -82,7 +89,7 @@ export function PaymentSettingsClient() {
         setBranchOverrides(data.branchOverrides ?? null);
       } catch (error) {
         toast.error(
-          getErrorMessage(error, "Sozlamalarni yuklashda xatolik yuz berdi"),
+          getErrorMessage(error, tRef.current(msg("Sozlamalarni yuklashda xatolik yuz berdi"))),
         );
       } finally {
         setLoading(false);
@@ -97,9 +104,9 @@ export function PaymentSettingsClient() {
     try {
       const { data } = await api.patch("/settings/payment", patch);
       setSettings(data.settings);
-      toast.success("Sozlama saqlandi");
+      toast.success(t("Sozlama saqlandi"));
     } catch (error) {
-      toast.error(getErrorMessage(error, "Saqlashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Saqlashda xatolik yuz berdi")));
     } finally {
       setSaving(false);
     }
@@ -121,7 +128,7 @@ export function PaymentSettingsClient() {
     );
     return (
       <p className="text-xs text-amber-600 dark:text-amber-400">
-        Bu filiallarda boshqa qiymat turibdi: {names.join(", ")}.
+        {t("Bu filiallarda boshqa qiymat turibdi: {names}.", { names: names.join(", ") })}
       </p>
     );
   }
@@ -129,7 +136,7 @@ export function PaymentSettingsClient() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <SettingsPageHeader title={TITLE} description={DESCRIPTION} />
+        <SettingsPageHeader title={t(TITLE)} description={t(DESCRIPTION)} />
         {[3, 2, 4].map((rows, i) => (
           <Skeleton key={i} className="w-full rounded-xl" style={{ height: rows * 72 }} />
         ))}
@@ -140,9 +147,9 @@ export function PaymentSettingsClient() {
   if (!settings) {
     return (
       <div className="space-y-6">
-        <SettingsPageHeader title={TITLE} description={DESCRIPTION} />
+        <SettingsPageHeader title={t(TITLE)} description={t(DESCRIPTION)} />
         <p className="text-sm text-muted-foreground">
-          Sozlamalarni yuklab bo&apos;lmadi. Sahifani qayta yuklab ko&apos;ring.
+          {t("Sozlamalarni yuklab bo'lmadi. Sahifani qayta yuklab ko'ring.")}
         </p>
       </div>
     );
@@ -154,13 +161,13 @@ export function PaymentSettingsClient() {
   return (
     <div className="max-w-3xl space-y-4">
       <SettingsPageHeader
-        title={TITLE}
-        description={DESCRIPTION}
+        title={t(TITLE)}
+        description={t(DESCRIPTION)}
         action={
           saving && (
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Loader2 className="size-3.5 animate-spin" />
-              Saqlanmoqda...
+              {t("Saqlanmoqda...")}
             </span>
           )
         }
@@ -168,26 +175,25 @@ export function PaymentSettingsClient() {
 
       {permissionsReady && !canEdit && (
         <p className="rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground">
-          Bu bo&apos;limni faqat markaz rahbari va filial direktori tahrirlashi
-          mumkin.
+          {t("Bu bo'limni faqat markaz rahbari va filial direktori tahrirlashi mumkin.")}
         </p>
       )}
       {!isCeo && canEdit && (
         <p className="flex items-start gap-2 rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground">
           <Lock className="mt-0.5 size-4 shrink-0" />
           <span>
-            Qulf belgili sozlamalar filial bo&apos;yicha emas, butun kompaniya
-            uchun bitta, shuning uchun faqat markaz rahbari o&apos;zgartira
-            oladi.
+            {t(
+              "Qulf belgili sozlamalar filial bo'yicha emas, butun kompaniya uchun bitta, shuning uchun faqat markaz rahbari o'zgartira oladi.",
+            )}
           </span>
         </p>
       )}
 
-      <SettingsSection title="Hisob-kitob">
+      <SettingsSection title={t("Hisob-kitob")}>
         <SettingRow
-          label="Standart to'lov modeli"
+          label={t("Standart to'lov modeli")}
           htmlFor="defaultModel"
-          hint="Yangi kursda model tanlanmasa, shu ishlatiladi. Mavjud kurslarga ta'sir qilmaydi."
+          hint={t("Yangi kursda model tanlanmasa, shu ishlatiladi. Mavjud kurslarga ta'sir qilmaydi.")}
           note={renderOverrideNote("payment.defaultModel")}
           control={
             <Select
@@ -200,11 +206,14 @@ export function PaymentSettingsClient() {
               </SelectTrigger>
               <SelectContent>
                 {(Object.keys(PAYMENT_MODEL_LABELS) as PaymentModel[]).map(
-                  (model) => (
-                    <SelectItem key={model} value={model}>
-                      {PAYMENT_MODEL_LABELS[model]}
-                    </SelectItem>
-                  ),
+                  (model) => {
+                    const label = PAYMENT_MODEL_LABELS[model];
+                    return (
+                      <SelectItem key={model} value={model}>
+                        {t(label)}
+                      </SelectItem>
+                    );
+                  },
                 )}
               </SelectContent>
             </Select>
@@ -214,10 +223,10 @@ export function PaymentSettingsClient() {
             qachon filial bo'yicha o'qimaydi, backend filial yozuvini rad
             etadi; shuning uchun override eslatmasi yo'q. */}
         <SettingRow
-          label="Oylik hisob kuni"
+          label={t("Oylik hisob kuni")}
           htmlFor="chargeDayOfMonth"
-          hint="«Oylik» kurslarda har oy shu kuni yangi to'lov hisobi yoziladi."
-          details="1 dan 28 gacha tanlanadi, chunki fevralda 28 kun bor."
+          hint={t("«Oylik» kurslarda har oy shu kuni yangi to'lov hisobi yoziladi.")}
+          details={t("1 dan 28 gacha tanlanadi, chunki fevralda 28 kun bor.")}
           locked={!isCeo}
           control={
             <Select
@@ -231,7 +240,7 @@ export function PaymentSettingsClient() {
               <SelectContent className="max-h-60">
                 {CHARGE_DAYS.map((day) => (
                   <SelectItem key={day} value={day}>
-                    {day}-kun
+                    {t("{n}-kun", { n: day })}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -240,16 +249,16 @@ export function PaymentSettingsClient() {
         />
       </SettingsSection>
 
-      <SettingsSection title="Sababli darslar">
+      <SettingsSection title={t("Sababli darslar")}>
         <SettingRow
-          label="Sababli dars puli keyingi oyga o'tsin"
-          hint="Sababli qoldirilgan darsning puli keyingi oy to'lovidan ayiriladi."
-          details="O'chirilsa, sababli dars ham oddiy dars kabi hisoblanadi."
+          label={t("Sababli dars puli keyingi oyga o'tsin")}
+          hint={t("Sababli qoldirilgan darsning puli keyingi oy to'lovidan ayiriladi.")}
+          details={t("O'chirilsa, sababli dars ham oddiy dars kabi hisoblanadi.")}
           note={renderOverrideNote("payment.excusedCreditEnabled")}
           control={
             <Switch
               checked={creditOn}
-              aria-label="Sababli dars puli keyingi oyga o'tsin"
+              aria-label={t("Sababli dars puli keyingi oyga o'tsin")}
               disabled={!canEdit || saving}
               onCheckedChange={(checked) =>
                 saveField({ excusedCreditEnabled: checked })
@@ -258,18 +267,18 @@ export function PaymentSettingsClient() {
           }
         >
           <SettingRow
-            label="Oyiga eng ko'pi bilan"
+            label={t("Oyiga eng ko'pi bilan")}
             htmlFor="excusedCreditMonthlyCap"
-            hint="Bo'sh qoldirilsa, cheklov yo'q."
+            hint={t("Bo'sh qoldirilsa, cheklov yo'q.")}
             note={renderOverrideNote("payment.excusedCreditMonthlyCap")}
             control={
               <NumberSetting
                 id="excusedCreditMonthlyCap"
                 saved={settings["payment.excusedCreditMonthlyCap"]}
-                unit="dars"
+                unit={t("dars")}
                 allowEmpty
-                placeholder="Cheklovsiz"
-                rangeError="Limit manfiy bo'lmagan butun son yoki bo'sh bo'lishi kerak"
+                placeholder={t("Cheklovsiz")}
+                rangeError={t("Limit manfiy bo'lmagan butun son yoki bo'sh bo'lishi kerak")}
                 disabled={!canEdit || saving || !creditOn}
                 onSave={(v) => saveField({ excusedCreditMonthlyCap: v })}
               />
@@ -280,16 +289,16 @@ export function PaymentSettingsClient() {
 
       {/* Shartnoma 3.2 va 3.7 (ADR-0047, ADR-0064) hamda oylik xabar
           (ADR-0042) — hammasi companyLevelOnly, faqat CEO. */}
-      <SettingsSection title="To'lamagan o'quvchilar">
+      <SettingsSection title={t("To'lamagan o'quvchilar")}>
         <SettingRow
-          label="To'lamagan o'quvchi 2-darsdan qo'yilmasin"
-          hint="1-darsga to'lovsiz kelish mumkin, keyin faqat puli yetgan darslarga qo'yiladi."
-          details="To'lamaganlar davomatda qulf bilan ko'rinadi va ularni belgilab bo'lmaydi. O'chirilsa, hamma o'quvchi darsga qo'yiladi va to'lov oynasida «qaysi darsgacha yetadi» ko'rinmaydi. Standart holat: yoqilgan. Shartnoma 3.2."
+          label={t("To'lamagan o'quvchi 2-darsdan qo'yilmasin")}
+          hint={t("1-darsga to'lovsiz kelish mumkin, keyin faqat puli yetgan darslarga qo'yiladi.")}
+          details={t("To'lamaganlar davomatda qulf bilan ko'rinadi va ularni belgilab bo'lmaydi. O'chirilsa, hamma o'quvchi darsga qo'yiladi va to'lov oynasida «qaysi darsgacha yetadi» ko'rinmaydi. Standart holat: yoqilgan. Shartnoma 3.2.")}
           locked={!isCeo}
           control={
             <Switch
               checked={admissionOn}
-              aria-label="To'lamagan o'quvchi 2-darsdan qo'yilmasin"
+              aria-label={t("To'lamagan o'quvchi 2-darsdan qo'yilmasin")}
               disabled={!isCeo || saving}
               onCheckedChange={(checked) =>
                 saveField({ admissionRuleEnabled: checked })
@@ -298,10 +307,10 @@ export function PaymentSettingsClient() {
           }
         >
           <SettingRow
-            label="Darsga kirish uchun eng kam to'lov"
+            label={t("Darsga kirish uchun eng kam to'lov")}
             htmlFor="admissionMinPaidPercent"
-            hint="2-darsdan boshlab darsga kirish uchun oy to'lovining kamida shu qismi to'langan bo'lishi kerak."
-            details="Har guruhda o'sha guruhning 2-darsidan hisoblanadi. 0 qo'yilsa, faqat o'tilgan darslar puli so'raladi. Standart: 50%. 01.11.2026 dan ishlaydi. Shartnoma 3.2."
+            hint={t("2-darsdan boshlab darsga kirish uchun oy to'lovining kamida shu qismi to'langan bo'lishi kerak.")}
+            details={t("Har guruhda o'sha guruhning 2-darsidan hisoblanadi. 0 qo'yilsa, faqat o'tilgan darslar puli so'raladi. Standart: 50%. 01.11.2026 dan ishlaydi. Shartnoma 3.2.")}
             locked={!isCeo}
             control={
               <NumberSetting
@@ -309,25 +318,25 @@ export function PaymentSettingsClient() {
                 saved={settings["payment.admissionMinPaidPercent"] ?? 50}
                 max={100}
                 unit="%"
-                rangeError="Foiz 0 dan 100 gacha bo'lgan butun son bo'lishi kerak"
+                rangeError={t("Foiz 0 dan 100 gacha bo'lgan butun son bo'lishi kerak")}
                 disabled={!isCeo || saving || !admissionOn}
                 onSave={(v) => saveField({ admissionMinPaidPercent: v })}
               />
             }
           />
           <SettingRow
-            label="To'lov tugashidan oldin eslatma"
+            label={t("To'lov tugashidan oldin eslatma")}
             htmlFor="paidThroughReminderDays"
-            hint="Puli yetmaydigan birinchi darsdan shuncha kun oldin har kuni 20:00 da Telegram'da eslatma boradi."
-            details="To'lov kelsa, eslatma to'xtaydi. 0 qo'yilsa, eslatma yuborilmaydi. Standart: 3 kun. Shartnoma 3.7."
+            hint={t("Puli yetmaydigan birinchi darsdan shuncha kun oldin har kuni 20:00 da Telegram'da eslatma boradi.")}
+            details={t("To'lov kelsa, eslatma to'xtaydi. 0 qo'yilsa, eslatma yuborilmaydi. Standart: 3 kun. Shartnoma 3.7.")}
             locked={!isCeo}
             control={
               <NumberSetting
                 id="paidThroughReminderDays"
                 saved={settings["payment.paidThroughReminderDays"] ?? 3}
                 max={10}
-                unit="kun"
-                rangeError="Kun 0 dan 10 gacha bo'lgan butun son bo'lishi kerak"
+                unit={t("kun")}
+                rangeError={t("Kun 0 dan 10 gacha bo'lgan butun son bo'lishi kerak")}
                 disabled={!isCeo || saving || !admissionOn}
                 onSave={(v) => saveField({ paidThroughReminderDays: v })}
               />
@@ -335,15 +344,15 @@ export function PaymentSettingsClient() {
           />
         </SettingRow>
         <SettingRow
-          label="O'quvchiga oylik to'lov xabari"
-          hint="Hisob kuni o'quvchiga Telegram'da shu oy uchun qancha to'lash kerakligi yuboriladi."
-          details="To'lamaganlarga oyning 2-darsidan bir kun oldin eslatma ham boradi. Ikkalasi soat 20:00 dagi kunlik xabar bilan keladi. O'chirilsa, bu ikki xabar yuborilmaydi. Standart holat: yoqilgan."
+          label={t("O'quvchiga oylik to'lov xabari")}
+          hint={t("Hisob kuni o'quvchiga Telegram'da shu oy uchun qancha to'lash kerakligi yuboriladi.")}
+          details={t("To'lamaganlarga oyning 2-darsidan bir kun oldin eslatma ham boradi. Ikkalasi soat 20:00 dagi kunlik xabar bilan keladi. O'chirilsa, bu ikki xabar yuborilmaydi. Standart holat: yoqilgan.")}
           locked={!isCeo}
           control={
             <Switch
               checked={settings["payment.monthlyNoticesEnabled"]}
               disabled={!isCeo || saving}
-              aria-label="O'quvchiga oylik to'lov xabari"
+              aria-label={t("O'quvchiga oylik to'lov xabari")}
               onCheckedChange={(checked) =>
                 saveField({ monthlyNoticesEnabled: checked })
               }
@@ -356,12 +365,12 @@ export function PaymentSettingsClient() {
           kechirish — hammasi companyLevelOnly, faqat CEO. Qulflangan tugma
           `isCeo` bilan (`canEdit` emas): direktorning yozuvini backend rad
           etadi, `canEdit` u bosadigan-u saqlanmaydigan tugma berardi. */}
-      <SettingsSection title="O'quvchi ketganda">
+      <SettingsSection title={t("O'quvchi ketganda")}>
         <SettingRow
-          label="Pul qaytarilmaydigan chegara"
+          label={t("Pul qaytarilmaydigan chegara")}
           htmlFor="noRefundAfterPercent"
-          hint="O'quvchi ketganda oy darslarining shu qismidan ko'pi o'tgan bo'lsa, oy puli qaytarilmaydi."
-          details="Kamroq o'tgan bo'lsa, o'tilmagan darslar puli qaytadi. Guruhdan chiqarish va chetlatishga tegishli. 01.10.2026 dan chiqqanlarga qo'llanadi. Shartnoma 6.2."
+          hint={t("O'quvchi ketganda oy darslarining shu qismidan ko'pi o'tgan bo'lsa, oy puli qaytarilmaydi.")}
+          details={t("Kamroq o'tgan bo'lsa, o'tilmagan darslar puli qaytadi. Guruhdan chiqarish va chetlatishga tegishli. 01.10.2026 dan chiqqanlarga qo'llanadi. Shartnoma 6.2.")}
           locked={!isCeo}
           control={
             <NumberSetting
@@ -369,21 +378,21 @@ export function PaymentSettingsClient() {
               saved={settings["payment.noRefundAfterPercent"]}
               max={100}
               unit="%"
-              rangeError="Foiz 0 dan 100 gacha bo'lgan butun son bo'lishi kerak"
+              rangeError={t("Foiz 0 dan 100 gacha bo'lgan butun son bo'lishi kerak")}
               disabled={!isCeo || saving}
               onSave={(v) => saveField({ noRefundAfterPercent: v })}
             />
           }
         />
         <SettingRow
-          label="Sinov darsi"
-          hint="1 tadan ko'p darsga kelmagan o'quvchi ketsa, oy puli to'liq qaytadi."
-          details="«Keldi» va «Kechikdi» belgilari sanaladi. Qarzi 0 bo'ladi, ustozga o'sha oy darslari uchun haq yozilmaydi. O'chirilsa, yuqoridagi foiz qoidasi ishlaydi. Standart holat: yoqilgan. Shartnoma 3.5."
+          label={t("Sinov darsi")}
+          hint={t("1 tadan ko'p darsga kelmagan o'quvchi ketsa, oy puli to'liq qaytadi.")}
+          details={t("«Keldi» va «Kechikdi» belgilari sanaladi. Qarzi 0 bo'ladi, ustozga o'sha oy darslari uchun haq yozilmaydi. O'chirilsa, yuqoridagi foiz qoidasi ishlaydi. Standart holat: yoqilgan. Shartnoma 3.5.")}
           locked={!isCeo}
           control={
             <Switch
               checked={settings["payment.trialLessonEnabled"]}
-              aria-label="Sinov darsi"
+              aria-label={t("Sinov darsi")}
               disabled={!isCeo || saving}
               onCheckedChange={(checked) =>
                 saveField({ trialLessonEnabled: checked })
@@ -392,15 +401,15 @@ export function PaymentSettingsClient() {
           }
         />
         <SettingRow
-          label="Qarz kechirishga ruxsat"
-          hint="O'chiq bo'lsa, qarzni hech kim kechira olmaydi. Yoqilsa, administrator sabab yozib kechiradi."
-          details="O'chiq (standart holat) bo'lsa, qarz hech qachon kechirilmaydi: guruhdan chiqarish oynasidagi va profildagi kechirish tugmasi ishlamaydi, qarz butun tarixi bilan joyida qoladi. Yoqilsa, administrator sabab yozib va summani qayta terib kechiradi."
+          label={t("Qarz kechirishga ruxsat")}
+          hint={t("O'chiq bo'lsa, qarzni hech kim kechira olmaydi. Yoqilsa, administrator sabab yozib kechiradi.")}
+          details={t("O'chiq (standart holat) bo'lsa, qarz hech qachon kechirilmaydi: guruhdan chiqarish oynasidagi va profildagi kechirish tugmasi ishlamaydi, qarz butun tarixi bilan joyida qoladi. Yoqilsa, administrator sabab yozib va summani qayta terib kechiradi.")}
           locked={!isCeo}
           control={
             <Switch
               checked={settings["payment.debtWriteOffEnabled"]}
               disabled={!isCeo || saving}
-              aria-label="Qarz kechirishga ruxsat"
+              aria-label={t("Qarz kechirishga ruxsat")}
               onCheckedChange={(checked) =>
                 saveField({ debtWriteOffEnabled: checked })
               }
@@ -410,20 +419,20 @@ export function PaymentSettingsClient() {
       </SettingsSection>
 
       {/* Davomat oynasi (ADR-0047) — companyLevelOnly. */}
-      <SettingsSection title="Davomat">
+      <SettingsSection title={t("Davomat")}>
         <SettingRow
-          label="Davomat ochilish vaqti"
+          label={t("Davomat ochilish vaqti")}
           htmlFor="attendanceOpensMinutesBefore"
-          hint="Yangi davomat dars boshlanishidan shuncha oldin ochiladi va dars tugashi bilan yopiladi."
-          details="Barcha rollar uchun bir xil. Olingan davomatni markaz rahbari, filial direktori va administrator dars tugagach ham tuzata oladi. Standart: 10 daqiqa."
+          hint={t("Yangi davomat dars boshlanishidan shuncha oldin ochiladi va dars tugashi bilan yopiladi.")}
+          details={t("Barcha rollar uchun bir xil. Olingan davomatni markaz rahbari, filial direktori va administrator dars tugagach ham tuzata oladi. Standart: 10 daqiqa.")}
           locked={!isCeo}
           control={
             <NumberSetting
               id="attendanceOpensMinutesBefore"
               saved={settings["payment.attendanceOpensMinutesBefore"]}
               max={60}
-              unit="daqiqa"
-              rangeError="Daqiqa 0 dan 60 gacha bo'lgan butun son bo'lishi kerak"
+              unit={t("daqiqa")}
+              rangeError={t("Daqiqa 0 dan 60 gacha bo'lgan butun son bo'lishi kerak")}
               disabled={!isCeo || saving}
               onSave={(v) => saveField({ attendanceOpensMinutesBefore: v })}
             />

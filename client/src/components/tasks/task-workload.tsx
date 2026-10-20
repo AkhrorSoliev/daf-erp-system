@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { tashkentNow } from "@/lib/tashkent-time";
@@ -32,6 +33,7 @@ function OnTime({ percent }: { percent: number | null }) {
 }
 
 function Person({ row, index }: { row: WorkloadRow; index: number }) {
+  const t = useT();
   const router = useRouter();
   const { user } = row;
   return (
@@ -45,7 +47,7 @@ function Person({ row, index }: { row: WorkloadRow; index: number }) {
           </Avatar>
           <div className="min-w-0">
             <p className="truncate font-medium">{user.firstName} {user.lastName}</p>
-            <p className="truncate text-xs text-muted-foreground">{personLine(user)}</p>
+            <p className="truncate text-xs text-muted-foreground">{personLine(user, t)}</p>
           </div>
         </div>
       </TableCell>
@@ -59,6 +61,7 @@ function Person({ row, index }: { row: WorkloadRow; index: number }) {
 
 /** «Yuklama»: who carries how much, per month and branch. A row opens that person's tasks in «Barchasi». */
 export function TaskWorkload() {
+  const t = useT();
   const branches = useBranchSwitcher((s) => s.branches);
   const selected = useBranchSwitcher((s) => s.selectedBranch);
   const [thisMonth] = useState(currentMonth);
@@ -89,19 +92,19 @@ export function TaskWorkload() {
         <Select value={branchId === null ? "all" : String(branchId)} onValueChange={(v) => setBranchId(v === "all" ? null : Number(v))}>
           <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Barcha filiallar</SelectItem>
+            <SelectItem value="all">{t("Barcha filiallar")}</SelectItem>
             {branches.map((b) => <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
       <p className="text-xs text-muted-foreground">
-        «Ochiq» va «Muddati o&apos;tgan» — bugungi holat; «Shu oy bajardi» va «O&apos;z vaqtida» — tanlangan oy.
+        {t("«Ochiq» va «Muddati o'tgan» — bugungi holat; «Shu oy bajardi» va «O'z vaqtida» — tanlangan oy.")}
       </p>
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <TaskTile label="Ochiq" value={data ? String(data.totals.open) : "…"} />
-        <TaskTile label="Muddati o'tgan" value={data ? String(data.totals.overdue) : "…"} tone={data && data.totals.overdue > 0 ? "text-red-700 dark:text-red-400" : undefined} />
-        <TaskTile label="Shu oy bajarildi" value={data ? String(data.totals.doneThisMonth) : "…"} />
-        <TaskTile label="O'z vaqtida" value={!data ? "…" : onTime === null ? "—" : `${onTime}%`} />
+        <TaskTile label={t("Ochiq")} value={data ? String(data.totals.open) : "…"} />
+        <TaskTile label={t("Muddati o'tgan")} value={data ? String(data.totals.overdue) : "…"} tone={data && data.totals.overdue > 0 ? "text-red-700 dark:text-red-400" : undefined} />
+        <TaskTile label={t("Shu oy bajarildi")} value={data ? String(data.totals.doneThisMonth) : "…"} />
+        <TaskTile label={t("O'z vaqtida")} value={!data ? "…" : onTime === null ? "—" : `${onTime}%`} />
       </div>
       <div className="rounded-lg border">
         {/* Not paginated: the server answers with everyone who holds a task, and a manager compares them at a glance. */}
@@ -109,11 +112,11 @@ export function TaskWorkload() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>Xodim</TableHead>
-              <TableHead>Ochiq</TableHead>
-              <TableHead>Muddati o&apos;tgan</TableHead>
-              <TableHead>Shu oy bajardi</TableHead>
-              <TableHead>O&apos;z vaqtida</TableHead>
+              <TableHead>{t("Xodim")}</TableHead>
+              <TableHead>{t("Ochiq")}</TableHead>
+              <TableHead>{t("Muddati o'tgan")}</TableHead>
+              <TableHead>{t("Shu oy bajardi")}</TableHead>
+              <TableHead>{t("O'z vaqtida")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -125,16 +128,16 @@ export function TaskWorkload() {
         </Table>
         {isError && (
           <div className="flex flex-col items-center gap-2 py-10 text-sm text-muted-foreground">
-            {getErrorMessage(error, "Yuklamani yuklab bo'lmadi")}
-            <Button variant="outline" size="sm" onClick={() => void refetch()}>Qayta urinish</Button>
+            {getErrorMessage(error, t("Yuklamani yuklab bo'lmadi"))}
+            <Button variant="outline" size="sm" onClick={() => void refetch()}>{t("Qayta urinish")}</Button>
           </div>
         )}
         {data && data.data.length === 0 && (
-          <p className="py-10 text-center text-sm text-muted-foreground">Tanlangan oyda topshiriq yo&apos;q — boshqa oyni yoki filialni tanlab ko&apos;ring</p>
+          <p className="py-10 text-center text-sm text-muted-foreground">{t("Tanlangan oyda topshiriq yo'q — boshqa oyni yoki filialni tanlab ko'ring")}</p>
         )}
       </div>
       <p className="text-xs text-muted-foreground">
-        «O&apos;z vaqtida» — shu oy yopilgan topshiriqlardan muddatigacha yopilganlarining ulushi.
+        {t("«O'z vaqtida» — shu oy yopilgan topshiriqlardan muddatigacha yopilganlarining ulushi.")}
       </p>
     </div>
   );

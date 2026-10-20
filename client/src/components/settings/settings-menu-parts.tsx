@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { ChevronRight, SearchX } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { splitByQuery } from "@/lib/settings-search";
 import type { SettingsNavItem, SettingsNavSection } from "@/lib/settings-nav";
+import { useT } from "@/i18n/context";
 
 /** Nomning so'rovga mos qismi ajratib ko'rsatiladi (qidiruv natijasi "tirik" sezilsin). */
 function Highlighted({ text, query }: { text: string; query: string }) {
@@ -22,6 +25,7 @@ function Highlighted({ text, query }: { text: string; query: string }) {
 }
 
 function SettingsRow({ item, query }: { item: SettingsNavItem; query: string }) {
+  const t = useT();
   return (
     <Link
       href={item.url}
@@ -32,10 +36,10 @@ function SettingsRow({ item, query }: { item: SettingsNavItem; query: string }) 
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-medium">
-          <Highlighted text={item.title} query={query} />
+          <Highlighted text={t(item.title)} query={query} />
         </span>
         <span className="mt-0.5 line-clamp-2 block text-[13px] leading-snug text-muted-foreground">
-          {item.description}
+          {t(item.description)}
         </span>
       </span>
       <ChevronRight
@@ -58,18 +62,19 @@ export function SettingsSection({
   section: SettingsNavSection;
   query: string;
 }) {
+  const t = useT();
   return (
-    <section aria-label={section.title}>
+    <section aria-label={t(section.title)}>
       <div className="mb-3 flex items-center gap-3 px-1">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
           <section.icon className="size-4" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-semibold leading-tight tracking-tight">{section.title}</h2>
-          <p className="text-xs text-muted-foreground">{section.summary}</p>
+          <h2 className="text-sm font-semibold leading-tight tracking-tight">{t(section.title)}</h2>
+          <p className="text-xs text-muted-foreground">{t(section.summary)}</p>
         </div>
         <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-          {section.items.length} ta
+          {t("{n} ta", { n: section.items.length })}
         </span>
       </div>
       <div className="overflow-hidden rounded-xl border bg-card">
@@ -110,19 +115,20 @@ export function SettingsMenuSkeleton() {
 }
 
 export function SettingsNoResults({ query, onClear }: { query: string; onClear: () => void }) {
+  const t = useT();
   return (
     <div className="flex flex-col items-center rounded-xl border border-dashed px-6 py-12 text-center">
       <SearchX className="mb-3 size-8 text-muted-foreground/60" aria-hidden />
-      <p className="text-sm font-medium">{`«${query}» bo'yicha sozlama topilmadi`}</p>
+      <p className="text-sm font-medium">{t("«{query}» bo'yicha sozlama topilmadi", { query })}</p>
       <p className="mt-1 max-w-sm text-[13px] text-muted-foreground">
-        {"Boshqa so'z bilan urinib ko'ring, masalan: bayram, telefon, filial, pauza."}
+        {t("Boshqa so'z bilan urinib ko'ring, masalan: bayram, telefon, filial, pauza.")}
       </p>
       <button
         type="button"
         onClick={onClear}
         className="mt-4 rounded-md border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
       >
-        Qidiruvni tozalash
+        {t("Qidiruvni tozalash")}
       </button>
     </div>
   );

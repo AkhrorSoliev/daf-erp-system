@@ -1,6 +1,7 @@
 "use client";
 
 import { MonthPicker } from "@/components/ui/month-picker";
+import { useT } from "@/i18n/context";
 import { currentMonthKey } from "../salary-utils";
 import { ALL_MONTHS, CenterTopUpContent } from "./center-topup-content";
 import { useUrlFilters } from "@/hooks/use-url-filters";
@@ -28,6 +29,7 @@ const CENTER_TOPUP_SCHEMA = { month: { type: "string", defaultValue: "" } } as c
  * clear option.
  */
 export function CenterTopUpView() {
+  const t = useT();
   const { filters, setFilters } = useUrlFilters(CENTER_TOPUP_SCHEMA);
   const month = filters.month;
 
@@ -35,17 +37,14 @@ export function CenterTopUpView() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Markaz o&apos;quvchilar to&apos;lamagan darslar uchun ustozlarga pul
-          to&apos;lab bergan. Bu yerda o&apos;sha pul kimdan undirilishi
-          kerakligi ko&apos;rinadi.{" "}
+          {t("Markaz o'quvchilar to'lamagan darslar uchun ustozlarga pul to'lab bergan. Bu yerda o'sha pul kimdan undirilishi kerakligi ko'rinadi.")}{" "}
           <span className="text-foreground">
-            Davr tanlovi qaysi oydagi darslar hisobga olinishini belgilaydi —
-            o&apos;quvchining qarz summasi o&apos;zgarmaydi.
+            {t("Davr tanlovi qaysi oydagi darslar hisobga olinishini belgilaydi — o'quvchining qarz summasi o'zgarmaydi.")}
           </span>
         </p>
         <MonthPicker
           value={month || null}
-          placeholder="Butun davr"
+          placeholder={t("Butun davr")}
           onChange={(v) => setFilters({ month: v })}
           onClear={() => setFilters({ month: "" })}
           minMonth={FLOOR_MONTH}

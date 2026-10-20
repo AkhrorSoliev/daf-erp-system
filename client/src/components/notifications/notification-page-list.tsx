@@ -4,6 +4,7 @@ import {
   NotificationRowView,
   NotificationSkeleton,
 } from "./notification-row";
+import { useT } from "@/i18n/context";
 import { groupByDay, groupNotifications, type AppNotification } from "./notification-view";
 
 interface Props {
@@ -23,11 +24,12 @@ interface Props {
  * only after an answer that really was empty.
  */
 export function NotificationPageList({ items, failed, emptyText, now, onOpen, hrefOf, onRetry }: Props) {
+  const t = useT();
   if (!items) return failed ? <NotificationFailed onRetry={onRetry} /> : <NotificationSkeleton />;
   if (items.length === 0) return <NotificationEmpty text={emptyText} />;
   return (
     <>
-      {groupByDay(items, now).map((day) => (
+      {groupByDay(items, now, t).map((day) => (
         <div key={day.label}>
           <p className="border-b bg-muted/30 px-4 py-1.5 text-xs font-semibold text-muted-foreground">{day.label}</p>
           <div className="divide-y">

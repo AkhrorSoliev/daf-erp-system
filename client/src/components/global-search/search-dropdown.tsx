@@ -207,7 +207,7 @@ export function SearchDropdown() {
                   return (
                     <PageResultItem
                       key={page.url}
-                      label={page.label}
+                      label={t(page.label)}
                       isActive={idx === activeIndex}
                       onClick={() => navigateTo(page.url)}
                     />

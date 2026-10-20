@@ -44,7 +44,7 @@ describe("RefundableDrawerBody (spec §3.5)", () => {
   });
 
   it("the first option follows the kind: «Qaytdi» for frozen, «Guruhga qo'shish» for ungrouped, none for departed", () => {
-    expect(norm(html())).toContain("Qaytdi — guruhga qaytarish Pul oyning qolgan darslari hisobiga o'tadi. Qaytarish");
+    expect(norm(html())).toContain("Qaytdi — guruhga qaytarish Pul oyning qolgan darslari hisobiga o'tadi. Guruhga qaytarish");
     const ungrouped = norm(html({ kind: "guruhsiz" }));
     expect(ungrouped).toContain("Guruhga qo'shish Pul shu oyning qolgan darslari hisobiga o'tadi. Guruh tanlash");
     expect(ungrouped).not.toContain("Qaytdi");

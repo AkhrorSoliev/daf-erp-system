@@ -20,6 +20,7 @@ import { useCan } from "@/hooks/use-permissions";
 import { EntityTasksPanel } from "@/components/tasks/entity-tasks-panel";
 import api from "@/lib/api";
 import { EmployeeKpiTab } from "@/components/reports/admin-kpi/employee-kpi-tab";
+import { useT } from "@/i18n/context";
 
 const TEACHER_ROLE_ID = 4;
 
@@ -47,6 +48,7 @@ export function EmployeeProfileTabs({
   onTabChange,
   showKpi = false,
 }: EmployeeProfileTabsProps) {
+  const t = useT();
   const canSeeSalary = useCan("salary.view");
   const canSeeTimeline = useCan("teachers.view");
   const isTeacher = employee.roles.some((r) => r.id === TEACHER_ROLE_ID);
@@ -160,16 +162,16 @@ export function EmployeeProfileTabs({
       onValueChange={handleTabChange}
     >
       <TabsList className="w-full justify-start overflow-x-auto sticky top-0 z-10 bg-background md:static">
-        {isTeacher && <TabsTrigger value="guruhlar">Guruhlar</TabsTrigger>}
-        <TabsTrigger value="izohlar">Izohlar</TabsTrigger>
-        <TabsTrigger value="tarix">Tarix</TabsTrigger>
+        {isTeacher && <TabsTrigger value="guruhlar">{t("Guruhlar")}</TabsTrigger>}
+        <TabsTrigger value="izohlar">{t("Izohlar")}</TabsTrigger>
+        <TabsTrigger value="tarix">{t("Tarix")}</TabsTrigger>
         {canSeeTimeline && (
-          <TabsTrigger value="taymlayn">Taymlayn</TabsTrigger>
+          <TabsTrigger value="taymlayn">{t("Taymlayn")}</TabsTrigger>
         )}
         {canSeeSalary && isTeacher && (
-          <TabsTrigger value="ish-haqi">Ish haqi</TabsTrigger>
+          <TabsTrigger value="ish-haqi">{t("Ish haqi")}</TabsTrigger>
         )}
-        {showKpi && <TabsTrigger value="kpi">KPI</TabsTrigger>}
+        {showKpi && <TabsTrigger value="kpi">{t("KPI")}</TabsTrigger>}
       </TabsList>
 
       {/* Guruhlar — faqat o'qituvchilar uchun */}
@@ -206,7 +208,7 @@ export function EmployeeProfileTabs({
             />
           </div>
         ) : (
-          <EmptyState message="Izohlar mavjud emas" />
+          <EmptyState message={t("Izohlar mavjud emas")} />
         )}
       </TabsContent>
 
@@ -215,7 +217,7 @@ export function EmployeeProfileTabs({
         {historyVisible ? (
           <EntityHistoryTable entityType="User" entityId={employee.id} />
         ) : (
-          <EmptyState message="Tarix mavjud emas" />
+          <EmptyState message={t("Tarix mavjud emas")} />
         )}
       </TabsContent>
 

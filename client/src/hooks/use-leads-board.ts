@@ -1,8 +1,11 @@
+import { useEffect } from "react";
 import { create } from "zustand";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { registerBranchScopedStore } from "@/lib/branch-scoped-stores";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/use-t";
 import type { LeadOwner } from "@/components/leads/ownership/ownership-format";
 
 // ---------------------------------------------------------------------------
@@ -72,13 +75,15 @@ export interface LeadBoardColumn {
 // Display labels
 // ---------------------------------------------------------------------------
 
+// msg() texts: a translated page draws them with t(). NEW reads «Yangi lid»
+// because the dictionary's «Yangi» means creating.
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
-  NEW: "Yangi",
-  CONTACTED: "Aloqaga chiqilgan",
-  TRIAL: "Sinov darsida",
-  CONVERTED: "O'quvchiga aylangan",
-  LOST: "Yo'qotilgan",
-  ARCHIVED: "Arxivlangan",
+  NEW: msg("Yangi lid"),
+  CONTACTED: msg("Aloqaga chiqilgan"),
+  TRIAL: msg("Sinov darsida"),
+  CONVERTED: msg("O'quvchiga aylangan"),
+  LOST: msg("Yo'qotilgan"),
+  ARCHIVED: msg("Arxivlangan"),
 };
 
 // Mirror of the backend LEAD_LINKED_REASON sentinel (Lead.statusChangeReason):
@@ -88,21 +93,52 @@ export const LEAD_LINKED_REASON = "LINKED_TO_EXISTING";
 
 /**
  * Display label for a CONVERTED lead, distinguishing "linked to an existing
- * student" from a fresh conversion. Falls back to the plain converted label for
- * any other status.
+ * student" from a fresh conversion. Any other status gets its own label.
  */
 export function leadConvertedLabel(
   statusEnum: LeadStatus,
   statusChangeReason: string | null | undefined,
   t: (source: string) => string = (source) => source,
 ): string {
-  // The other statuses stay Uzbek: `LEAD_STATUS_LABELS` is not translated yet
-  // (its «Yangi» would clash with the dictionary's «Yangi» = creating).
-  if (statusEnum !== "CONVERTED") return LEAD_STATUS_LABELS[statusEnum];
+  if (statusEnum !== "CONVERTED") {
+    const label = LEAD_STATUS_LABELS[statusEnum];
+    return t(label);
+  }
   return statusChangeReason === LEAD_LINKED_REASON
     ? t("Mavjud o'quvchiga biriktirilgan")
     : t("O'quvchiga aylangan");
 }
+
+// The system column every branch is born with (branches.service.ts); the server
+// refuses to rename it, so its stored name is this text.
+const NEW_LEADS_COLUMN = msg("Yangi Lidlar");
+
+/**
+ * A board column's name. The system «Yangi Lidlar» column is drawn through `t`;
+ * any other name is the staff's data and comes back as stored.
+ */
+export function leadColumnName(
+  column: { name: string; systemKey?: string | null },
+  t: (source: string) => string = (source) => source,
+): string {
+  return column.systemKey === "NEW" && column.name === NEW_LEADS_COLUMN
+    ? t(NEW_LEADS_COLUMN)
+    : column.name;
+}
+
+// The store's own toast fallbacks are msg() texts; every page root that drives
+// the store calls useLeadsBoardTranslator() to hand its `t` in (identity until
+// then, and on the server, which never runs effects).
+let translate: (source: string) => string = (source) => source;
+export function setLeadsBoardTranslator(fn: (source: string) => string): void {
+  translate = fn;
+}
+export function useLeadsBoardTranslator(): void {
+  const t = useT();
+  useEffect(() => setLeadsBoardTranslator(t), [t]);
+}
+const fail = (error: unknown, fallback: string) =>
+  toast.error(getErrorMessage(error, translate(fallback)));
 
 // ---------------------------------------------------------------------------
 // Store
@@ -235,7 +271,7 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       set({ board: data, loadingBoard: false });
     } catch (error) {
       set({ loadingBoard: false });
-      toast.error(getErrorMessage(error, "Lidlar boardini yuklashda xatolik"));
+      fail(error, msg("Lidlar doskasini yuklashda xatolik"));
     }
   },
 
@@ -269,7 +305,7 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
           failedSections: new Set(s.failedSections).add(sectionId),
         };
       });
-      toast.error(getErrorMessage(error, "Lidlarni yuklashda xatolik"));
+      fail(error, msg("Lidlarni yuklashda xatolik"));
     }
   },
 
@@ -396,9 +432,7 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       });
     } catch (error) {
       set({ board: prevBoard });
-      toast.error(
-        getErrorMessage(error, "Ustun tartibini o'zgartirishda xatolik"),
-      );
+      fail(error, msg("Ustun tartibini o'zgartirishda xatolik"));
     }
   },
 
@@ -427,9 +461,7 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       });
     } catch (error) {
       set({ board: prevBoard });
-      toast.error(
-        getErrorMessage(error, "Bo'lim tartibini o'zgartirishda xatolik"),
-      );
+      fail(error, msg("Bo'lim tartibini o'zgartirishda xatolik"));
     }
   },
 
@@ -462,7 +494,7 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       });
     } catch (error) {
       set({ board: prevBoard });
-      toast.error(getErrorMessage(error, "Bo'limni ko'chirishda xatolik"));
+      fail(error, msg("Bo'limni ko'chirishda xatolik"));
     }
   },
 
@@ -491,9 +523,7 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       });
     } catch (error) {
       set({ board: prevBoard });
-      toast.error(
-        getErrorMessage(error, "Bo'lim tartibini o'zgartirishda xatolik"),
-      );
+      fail(error, msg("Bo'lim tartibini o'zgartirishda xatolik"));
     }
   },
 
@@ -584,7 +614,7 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       });
     } catch (error) {
       set({ board: prevBoard, leadsBySection: prevLeads });
-      toast.error(getErrorMessage(error, "Lidni ko'chirishda xatolik"));
+      fail(error, msg("Lidni ko'chirishda xatolik"));
     }
   },
 
@@ -714,9 +744,7 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       get().clearDragSnapshot();
     } catch (error) {
       get().rollbackDrag();
-      toast.error(
-        getErrorMessage(error, "Lid tartibini o'zgartirishda xatolik"),
-      );
+      fail(error, msg("Lid tartibini o'zgartirishda xatolik"));
     }
   },
 
@@ -728,7 +756,7 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       }));
     } catch (error) {
       get().rollbackDrag();
-      toast.error(getErrorMessage(error, "Lidni ko'chirishda xatolik"));
+      fail(error, msg("Lidni ko'chirishda xatolik"));
       return;
     }
     // Replace the optimistic card with the server copy (status may sync).
@@ -757,9 +785,7 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
         // section it has left. Re-read the target for the server's order.
         get().clearDragSnapshot();
         void get().fetchSectionLeads(toSectionId, true);
-        toast.error(
-          getErrorMessage(error, "Lid tartibini o'zgartirishda xatolik"),
-        );
+        fail(error, msg("Lid tartibini o'zgartirishda xatolik"));
         return;
       }
     }
@@ -772,9 +798,7 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       get().clearDragSnapshot();
     } catch (error) {
       get().rollbackDrag();
-      toast.error(
-        getErrorMessage(error, "Bo'lim tartibini o'zgartirishda xatolik"),
-      );
+      fail(error, msg("Bo'lim tartibini o'zgartirishda xatolik"));
     }
   },
 
@@ -785,7 +809,7 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       });
     } catch (error) {
       get().rollbackDrag();
-      toast.error(getErrorMessage(error, "Bo'limni ko'chirishda xatolik"));
+      fail(error, msg("Bo'limni ko'chirishda xatolik"));
       return;
     }
     if (toSectionIds.length > 0) {
@@ -798,9 +822,7 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
         // The move is already saved; re-read the board instead of rolling back.
         get().clearDragSnapshot();
         void get().fetchBoard(true);
-        toast.error(
-          getErrorMessage(error, "Bo'lim tartibini o'zgartirishda xatolik"),
-        );
+        fail(error, msg("Bo'lim tartibini o'zgartirishda xatolik"));
         return;
       }
     }

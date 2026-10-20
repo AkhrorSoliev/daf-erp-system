@@ -1,3 +1,5 @@
+import { interpolate } from "@/i18n/translate";
+import type { Translate } from "@/components/notifications/notification-view";
 import { tashkentDayNumber, tashkentDdMm, tashkentHhmm } from "@/lib/tashkent-time";
 
 /** A lead's owner as the server sends it (ADR-0093). */
@@ -27,9 +29,9 @@ export function dueTone(dueAt: string, now: Date): DueTone {
 }
 
 /** «14:30 gacha» today, «22.10, 18:00 gacha» another day — on the Tashkent clock. */
-export function dueLabel(dueAt: string, now: Date): string {
+export function dueLabel(dueAt: string, now: Date, t: Translate = interpolate): string {
   const time = tashkentHhmm(dueAt);
   return tashkentDayNumber(dueAt) === tashkentDayNumber(now)
-    ? `${time} gacha`
-    : `${tashkentDdMm(dueAt)}, ${time} gacha`;
+    ? t("{time} gacha", { time })
+    : t("{date}, {time} gacha", { date: tashkentDdMm(dueAt), time });
 }

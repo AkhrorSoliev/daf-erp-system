@@ -3,14 +3,16 @@
 import { DatePicker } from "@/components/ui/date-picker";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cleanPreset, isoDay, parseDay } from "@/components/reports/departed-students/departed-url";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { ATT_FLOOR, attendanceRange, type AttendanceFilters } from "./attendance-url";
 
 const PRESET_OPTIONS = [
-  { value: "current_month", label: "Bu oy" },
-  { value: "last_month", label: "O'tgan oy" },
-  { value: "3m", label: "3 oy" },
-  { value: "6m", label: "6 oy" },
-  { value: "range", label: "Oraliq" },
+  { value: "current_month", label: msg("Bu oy") },
+  { value: "last_month", label: msg("O'tgan oy") },
+  { value: "3m", label: msg("3 oy") },
+  { value: "6m", label: msg("6 oy") },
+  { value: "range", label: msg("Oraliq") },
 ];
 const FLOOR = parseDay(ATT_FLOOR) ?? undefined;
 
@@ -20,6 +22,7 @@ export function AttendancePeriodBar({ filters, today, onChange }: {
   today: Date;
   onChange: (u: Partial<AttendanceFilters>) => void;
 }) {
+  const t = useT();
   const preset = cleanPreset(filters.preset);
   const range = attendanceRange(filters, today);
   const pick = (v: string) => {
@@ -29,10 +32,10 @@ export function AttendancePeriodBar({ filters, today, onChange }: {
   };
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <ToggleGroup type="single" variant="outline" value={preset} onValueChange={pick} aria-label="Davr">
+      <ToggleGroup type="single" variant="outline" value={preset} onValueChange={pick} aria-label={t("Davr")}>
         {PRESET_OPTIONS.map((o) => (
           <ToggleGroupItem key={o.value} value={o.value} className="px-3">
-            {o.label}
+            {t(o.label)}
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
@@ -41,7 +44,7 @@ export function AttendancePeriodBar({ filters, today, onChange }: {
           <DatePicker
             value={parseDay(range.startDate)}
             onChange={(d) => d && onChange({ startDate: isoDay(d) })}
-            placeholder="Boshi"
+            placeholder={t("Boshi")}
             className="w-36"
             minDate={FLOOR}
             maxDate={parseDay(range.endDate) ?? undefined}
@@ -50,7 +53,7 @@ export function AttendancePeriodBar({ filters, today, onChange }: {
           <DatePicker
             value={parseDay(range.endDate)}
             onChange={(d) => d && onChange({ endDate: isoDay(d) })}
-            placeholder="Oxiri"
+            placeholder={t("Oxiri")}
             className="w-36"
             minDate={parseDay(range.startDate) ?? FLOOR}
           />

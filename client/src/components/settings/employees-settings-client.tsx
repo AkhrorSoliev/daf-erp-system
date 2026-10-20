@@ -55,14 +55,17 @@ import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
 import { formatPhone } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { roleTitle } from "@/components/profile/profile-roles";
+import { useT } from "@/i18n/context";
 import toast from "react-hot-toast";
 
-const ROLE_LABELS: Record<string, string> = {
-  CEO: "CEO",
-  "Branch Director": "Direktor",
-  Administrator: "Administrator",
-  Teacher: "O'qituvchi",
-  Cashier: "Kassir",
+/** Role NAME (the `user_type` filter value) → id, for the role's title. */
+const ROLE_IDS: Record<string, number> = {
+  CEO: 1,
+  "Branch Director": 2,
+  Administrator: 3,
+  Teacher: 4,
+  Cashier: 5,
 };
 
 const ROLE_VARIANTS: Record<string, "default" | "secondary" | "outline"> = {
@@ -87,11 +90,6 @@ const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
  */
 const ROLELESS_TOKEN = "__roleless";
 
-const ROLE_FILTER_OPTIONS: MultiSelectOption[] = [
-  ...Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label })),
-  { value: ROLELESS_TOKEN, label: "Rolsiz" },
-];
-
 const filtersSchema = {
   search: { type: "string" as const, defaultValue: "" },
   // Bir nechta rol tanlanadi; bo'sh ro'yxat = «Barcha lavozimlar».
@@ -105,6 +103,7 @@ function getEmployeeProfileUrl(emp: EmployeeUser): string {
 }
 
 export function EmployeesSettingsClient() {
+  const t = useT();
   const [employees, setEmployees] = useState<EmployeeUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -157,7 +156,7 @@ export function EmployeesSettingsClient() {
       if (exists) return prev.map((e) => (e.id === saved.id ? saved : e));
       return [saved, ...prev];
     });
-    setTotal((t) => t + (employees.some((e) => e.id === saved.id) ? 0 : 1));
+    setTotal((n) => n + (employees.some((e) => e.id === saved.id) ? 0 : 1));
   };
 
   const performDelete = async () => {
@@ -166,15 +165,20 @@ export function EmployeesSettingsClient() {
     try {
       await api.delete(`/users/${confirmDelete.id}`);
       setEmployees((prev) => prev.filter((e) => e.id !== confirmDelete.id));
-      setTotal((t) => t - 1);
-      toast.success("Xodim arxivga o'tkazildi");
+      setTotal((n) => n - 1);
+      toast.success(t("Xodim arxivga o'tkazildi"));
       setConfirmDelete(null);
     } catch (err) {
-      toast.error(getErrorMessage(err, "O'chirishda xatolik"));
+      toast.error(getErrorMessage(err, t("O'chirishda xatolik")));
     } finally {
       setDeleting(false);
     }
   };
+
+  const roleFilterOptions: MultiSelectOption[] = [
+    ...Object.entries(ROLE_IDS).map(([value, id]) => ({ value, label: roleTitle({ id }, t) })),
+    { value: ROLELESS_TOKEN, label: t("Rolsiz") },
+  ];
 
   const totalPages = Math.max(1, Math.ceil(total / filters.pageSize));
 
@@ -185,8 +189,8 @@ export function EmployeesSettingsClient() {
   return (
     <div className="space-y-4">
       <SettingsPageHeader
-        title="Xodimlar"
-        description="Tizim xodimlarini boshqarish va rollarni belgilash"
+        title={t("Xodimlar")}
+        description={t("Tizim xodimlarini boshqarish va rollarni belgilash")}
         action={
           <div className="flex items-center gap-2">
             <Tooltip>
@@ -199,24 +203,24 @@ export function EmployeesSettingsClient() {
                     onClick={() => setTelegramDialogOpen(true)}
                   >
                     <Send className="mr-1.5 h-4 w-4" />
-                    Telegram havola
+                    {t("Telegram havola")}
                   </Button>
                 </span>
               </TooltipTrigger>
               <TooltipContent>
                 {selectedBranch
-                  ? "Telegram orqali ro'yxatdan o'tish havolasi"
-                  : "Avval filial tanlang"}
+                  ? t("Telegram orqali ro'yxatdan o'tish havolasi")
+                  : t("Avval filial tanlang")}
               </TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button size="sm" data-tour="employee-add" onClick={openAddDrawer}>
                   <Plus className="mr-1.5 h-4 w-4" />
-                  Yangi xodim
+                  {t("Yangi xodim")}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Yangi xodim qo&apos;shish</TooltipContent>
+              <TooltipContent>{t("Yangi xodim qo'shish")}</TooltipContent>
             </Tooltip>
           </div>
         }
@@ -227,7 +231,7 @@ export function EmployeesSettingsClient() {
         <div className="relative w-full sm:w-auto">
           <Search className="text-muted-foreground absolute left-2.5 top-1/2 size-4 -translate-y-1/2" />
           <Input
-            placeholder="Ism bo'yicha qidirish..."
+            placeholder={t("Ism bo'yicha qidirish...")}
             value={searchInput}
             onChange={(e) => { setSearchInput(e.target.value); debouncedSetSearch(e.target.value); }}
             className="w-full pl-9 sm:w-64"
@@ -235,11 +239,11 @@ export function EmployeesSettingsClient() {
         </div>
 
         <MultiSelectCombobox
-          options={ROLE_FILTER_OPTIONS}
+          options={roleFilterOptions}
           selected={filters.role}
           onChange={(next) => setUrlFilters({ role: next, page: 1 })}
-          placeholder="Barcha rollar"
-          searchPlaceholder="Rol qidirish..."
+          placeholder={t("Barcha rollar")}
+          searchPlaceholder={t("Rol qidirish...")}
           className="w-full sm:w-44"
         />
       </div>
@@ -262,7 +266,7 @@ export function EmployeesSettingsClient() {
           ) : employees.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
               <Users className="size-8 text-muted-foreground/50" />
-              Xodimlar topilmadi
+              {t("Xodimlar topilmadi")}
             </div>
           ) : (
             employees.map((emp) => {
@@ -288,12 +292,12 @@ export function EmployeesSettingsClient() {
                           variant={emp.status === "ACTIVE" ? "default" : "secondary"}
                           className="text-[10px] px-1.5 py-0 shrink-0"
                         >
-                          {emp.status === "ACTIVE" ? "Faol" : "Nofaol"}
+                          {emp.status === "ACTIVE" ? t("Faol") : t("Nofaol")}
                         </Badge>
                       </div>
                       <div className="flex flex-wrap gap-1 mt-0.5">
                         <span className="text-xs text-muted-foreground">
-                          {positionLabel(emp)}
+                          {positionLabel(emp, t)}
                         </span>
                       </div>
                       {emp.phone && (
@@ -316,11 +320,11 @@ export function EmployeesSettingsClient() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12 border-r">#</TableHead>
-                <TableHead>Ism familiya</TableHead>
-                <TableHead>Lavozimi</TableHead>
-                <TableHead>Telefon</TableHead>
-                <TableHead>Filial</TableHead>
-                <TableHead>Holati</TableHead>
+                <TableHead>{t("Ism familiya")}</TableHead>
+                <TableHead>{t("Lavozimi")}</TableHead>
+                <TableHead>{t("Telefon")}</TableHead>
+                <TableHead>{t("Filial")}</TableHead>
+                <TableHead>{t("Holati")}</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
@@ -342,7 +346,7 @@ export function EmployeesSettingsClient() {
                   <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                     <div className="flex flex-col items-center gap-2">
                       <Users className="h-8 w-8 text-muted-foreground/50" />
-                      Xodimlar topilmadi
+                      {t("Xodimlar topilmadi")}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -361,14 +365,14 @@ export function EmployeesSettingsClient() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap items-center gap-1">
-                        <span className="font-medium">{positionLabel(emp)}</span>
+                        <span className="font-medium">{positionLabel(emp, t)}</span>
                         {emp.roles.map((r) => (
                           <Badge
                             key={r.id}
                             variant={ROLE_VARIANTS[r.name] || "outline"}
                             className="text-[10px] font-normal"
                           >
-                            {ROLE_LABELS[r.name] || r.name}
+                            {roleTitle(r, t)}
                           </Badge>
                         ))}
                       </div>
@@ -381,7 +385,7 @@ export function EmployeesSettingsClient() {
                     </TableCell>
                     <TableCell>
                       <Badge variant={emp.status === "ACTIVE" ? "default" : "secondary"}>
-                        {emp.status === "ACTIVE" ? "Faol" : "Nofaol"}
+                        {emp.status === "ACTIVE" ? t("Faol") : t("Nofaol")}
                       </Badge>
                     </TableCell>
                     <TableCell className="relative z-10">
@@ -399,7 +403,7 @@ export function EmployeesSettingsClient() {
       {totalPages > 0 && !loading && (
         <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>Jami: {total}</span>
+            <span>{t("Jami: {n}", { n: total })}</span>
             <Select value={String(filters.pageSize)} onValueChange={handlePageSizeChange}>
               <SelectTrigger className="h-8 w-20">
                 <SelectValue />
@@ -435,15 +439,17 @@ export function EmployeesSettingsClient() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xodimni o&apos;chirishni tasdiqlaysizmi?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Xodimni o'chirishni tasdiqlaysizmi?")}</AlertDialogTitle>
             <AlertDialogDescription>
               {confirmDelete
-                ? `${confirmDelete.firstName} ${confirmDelete.lastName} arxivga o'tkaziladi. Uning hisobi nofaol bo'ladi, lekin tarixiy ma'lumotlar saqlanadi.`
+                ? t("{name} arxivga o'tkaziladi. Uning hisobi nofaol bo'ladi, lekin tarixiy ma'lumotlar saqlanadi.", {
+                    name: `${confirmDelete.firstName} ${confirmDelete.lastName}`,
+                  })
                 : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Bekor qilish</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{t("Bekor qilish")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
@@ -452,7 +458,7 @@ export function EmployeesSettingsClient() {
               disabled={deleting}
               variant="destructive"
             >
-              {deleting ? "O'chirilmoqda..." : "O'chirish"}
+              {deleting ? t("O'chirilmoqda...") : t("O'chirish")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

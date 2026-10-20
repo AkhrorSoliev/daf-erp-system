@@ -1,6 +1,10 @@
+"use client";
+
 import { TriangleAlert } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/i18n/context";
+import { markedText } from "../debt-history/marked-text";
 import type { MonthlyResponse } from "./salary-types";
 
 interface Props {
@@ -15,17 +19,23 @@ const fullName = (p: { firstName: string; lastName: string }) => `${p.firstName}
 
 /** «E'tibor talab qiladi» (spec §2.3): lessons without a rate, staff without a salary. */
 export function SalaryAttentionCard({ attention, canEditStaffRates, onOpenSettings }: Props) {
-  const rows = attention.lessonsWithoutRate.map((t) => ({
-    key: `t-${t.userId}`,
-    bold: `${t.units} ta darsga ustoz haqi yozilmagan`,
-    rest: ` — ${fullName(t)} uchun stavka qo'yilmagan.`,
+  const t = useT();
+  // One sentence per row; its «**…**» part is drawn bold (`markedText`).
+  const rows = attention.lessonsWithoutRate.map((teacher) => ({
+    key: `t-${teacher.userId}`,
+    text: t("**{n} ta darsga ustoz haqi yozilmagan** — {name} uchun stavka qo'yilmagan.", {
+      n: teacher.units,
+      name: fullName(teacher),
+    }),
   }));
   const staff = attention.staffWithoutRate;
   if (canEditStaffRates && staff.length > 0) {
     rows.push({
       key: "staff",
-      bold: `${staff.length} xodimning oyligi hisoblanmaydi`,
-      rest: ` — ${staff.map(fullName).join(", ")} uchun oylik summa kiritilmagan.`,
+      text: t("**{n} xodimning oyligi hisoblanmaydi** — {names} uchun oylik summa kiritilmagan.", {
+        n: staff.length,
+        names: staff.map(fullName).join(", "),
+      }),
     });
   }
   if (rows.length === 0) return null;
@@ -33,18 +43,15 @@ export function SalaryAttentionCard({ attention, canEditStaffRates, onOpenSettin
   return (
     <Alert className="border-amber-500/40 bg-amber-500/10">
       <TriangleAlert />
-      <AlertTitle>E&apos;tibor talab qiladi</AlertTitle>
+      <AlertTitle>{t("E'tibor talab qiladi")}</AlertTitle>
       <AlertDescription className="text-foreground">
         <ul className="flex flex-col gap-2 pt-1">
           {rows.map((r) => (
             <li key={r.key} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-              <span>
-                <b>{r.bold}</b>
-                {r.rest}
-              </span>
+              <span>{markedText(r.text)}</span>
               {onOpenSettings && (
                 <Button size="sm" variant="outline" className="shrink-0 self-start sm:self-auto" onClick={onOpenSettings}>
-                  Stavka qo&apos;yish
+                  {t("Stavka qo'yish")}
                 </Button>
               )}
             </li>

@@ -1,3 +1,5 @@
+import { interpolate, type Params } from "@/i18n/translate";
+
 /**
  * How the profile drawer's Save splits into requests (ADR-0031).
  *
@@ -48,13 +50,16 @@ export function planProfileSave({
  * land after the phone is already changed — say so, or the person retries a
  * change that already happened.
  */
-export function describeSaveFailure({
-  phoneSaved,
-  reason,
-}: {
-  phoneSaved: boolean;
-  reason: string;
-}): string {
+export function describeSaveFailure(
+  {
+    phoneSaved,
+    reason,
+  }: {
+    phoneSaved: boolean;
+    reason: string;
+  },
+  t: (source: string, params?: Params) => string = interpolate,
+): string {
   if (!phoneSaved) return reason;
-  return `Telefon raqam saqlandi, lekin qolgan o'zgarishlar saqlanmadi: ${reason}`;
+  return t("Telefon raqam saqlandi, lekin qolgan o'zgarishlar saqlanmadi: {reason}", { reason });
 }

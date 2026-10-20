@@ -13,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -38,6 +39,7 @@ export function SalaryDeleteAdvanceDialog({
   onOpenChange: (open: boolean) => void;
   onDeleted: () => void;
 }) {
+  const t = useT();
   const [deleting, setDeleting] = useState(false);
 
   const handleDelete = async () => {
@@ -45,11 +47,11 @@ export function SalaryDeleteAdvanceDialog({
     setDeleting(true);
     try {
       await api.delete(`/expenses/${advance.id}`);
-      toast.success("Avans o'chirildi");
+      toast.success(t("Avans o'chirildi"));
       onOpenChange(false);
       onDeleted();
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err, "O'chirishda xatolik"));
+      toast.error(getErrorMessage(err, t("O'chirishda xatolik")));
     } finally {
       setDeleting(false);
     }
@@ -64,16 +66,19 @@ export function SalaryDeleteAdvanceDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Avansni o&apos;chirasizmi?</AlertDialogTitle>
+          <AlertDialogTitle>{t("Avansni o'chirasizmi?")}</AlertDialogTitle>
           <AlertDialogDescription>
             {advance
-              ? `${advance.employeeName} — ${formatPrice(advance.amount)} so'm, ${day(advance.date)}. Pul kassaga qaytariladi va bu avans keyingi oylik hisobiga tushmaydi. Bu amalni qaytarib bo'lmaydi.`
+              ? t(
+                  "{name} — {amount} so'm, {date}. Pul kassaga qaytariladi va bu avans keyingi oylik hisobiga tushmaydi. Bu amalni qaytarib bo'lmaydi.",
+                  { name: advance.employeeName, amount: formatPrice(advance.amount), date: day(advance.date) },
+                )
               : ""}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={deleting}>
-            Bekor qilish
+            {t("Bekor qilish")}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={(ev) => {
@@ -84,7 +89,7 @@ export function SalaryDeleteAdvanceDialog({
             variant="destructive"
           >
             {deleting && <Loader2 className="size-4 animate-spin mr-2" />}
-            O&apos;chirish
+            {t("O'chirish")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

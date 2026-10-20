@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,11 @@ export function LeadSourcePicker({
 }: LeadSourcePickerProps) {
   const t = useT();
   const loadErrorMessage = loadErrorProp ?? t("Manbalar ro'yxati yuklanmadi");
+  // Read by the fetch through a ref: a language switch must not refetch.
+  const loadErrorRef = useRef(loadErrorMessage);
+  useEffect(() => {
+    loadErrorRef.current = loadErrorMessage;
+  }, [loadErrorMessage]);
   const [sources, setSources] = useState<LeadSourceOption[]>([]);
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
@@ -73,12 +78,12 @@ export function LeadSourcePicker({
       .catch(() => {
         if (cancelled) return;
         setSources([]);
-        toast.error(loadErrorMessage);
+        toast.error(loadErrorRef.current);
       });
     return () => {
       cancelled = true;
     };
-  }, [open, loadErrorMessage]);
+  }, [open]);
 
   async function handleCreate() {
     const name = normalizeSourceName(newName);

@@ -11,12 +11,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { useEditRoom, type Room } from "@/hooks/use-edit-room";
 import { EditRoomForm } from "./edit-room-form";
+import { useT } from "@/i18n/context";
 
 interface EditRoomDrawerProps {
   onSaved?: (room: Room) => void;
 }
 
 export function EditRoomDrawer({ onSaved }: EditRoomDrawerProps) {
+  const t = useT();
   const { open, room, isAdd, addBranchId, submitting, closeDrawer } =
     useEditRoom();
 
@@ -31,12 +33,12 @@ export function EditRoomDrawer({ onSaved }: EditRoomDrawerProps) {
       >
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle className="text-lg">
-            {isAdd ? "Yangi xona qo'shish" : "Xonani tahrirlash"}
+            {isAdd ? t("Yangi xona qo'shish") : t("Xonani tahrirlash")}
           </SheetTitle>
           <SheetDescription>
             {isAdd
-              ? "Yangi xona ma'lumotlarini kiriting"
-              : "Xona ma\u2018lumotlarini o\u2018zgartirish"}
+              ? t("Yangi xona ma'lumotlarini kiriting")
+              : t("Xona ma'lumotlarini o'zgartirish")}
           </SheetDescription>
         </SheetHeader>
 
@@ -54,10 +56,10 @@ export function EditRoomDrawer({ onSaved }: EditRoomDrawerProps) {
         <SheetFooter className="border-t px-6 py-4">
           <div className="flex w-full justify-end gap-3">
             <Button type="button" variant="outline" onClick={closeDrawer}>
-              Bekor qilish
+              {t("Bekor qilish")}
             </Button>
             <Button type="submit" form="edit-room-form" disabled={submitting}>
-              {submitting ? "Saqlanmoqda..." : "Saqlash"}
+              {submitting ? t("Saqlanmoqda...") : t("Saqlash")}
             </Button>
           </div>
         </SheetFooter>

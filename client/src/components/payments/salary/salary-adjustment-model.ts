@@ -1,9 +1,15 @@
+import { interpolate, type Params } from "@/i18n/translate";
 import { formatPrice } from "@/lib/format-utils";
 import { instantDate } from "../debt/debt-format";
 import type { StaffAdjustment, StaffRow } from "./salary-types";
 
 // The words and rules of the staff pay correction (ADR-0112). The figures are
 // the server's; this file only picks the wording and the form's checks.
+// The helpers take the page's `t` as an optional last argument; without it they
+// read the Uzbek source (placeholders filled).
+
+type Translate = (source: string, params?: Params) => string;
+const uzbek: Translate = interpolate;
 
 export const REASON_MIN = 3;
 export const REASON_MAX = 300;
@@ -21,18 +27,23 @@ export function adjustmentFacts(row: Pick<StaffRow, "monthly" | "calculated" | "
 }
 
 /** The dialog's live line under the amount. */
-export function diffText(amount: number, formula: number): string {
+export function diffText(amount: number, formula: number, t: Translate = uzbek): string {
   const d = amount - formula;
-  if (d === 0) return "Hisobdan farq yo'q";
-  return `Hisobdan farq: ${d > 0 ? "+" : "−"}${formatPrice(Math.abs(d))} so'm`;
+  if (d === 0) return t("Hisobdan farq yo'q");
+  const diff = `${d > 0 ? "+" : "−"}${formatPrice(Math.abs(d))} ${t("so'm")}`;
+  return t("Hisobdan farq: {diff}", { diff });
 }
 
-export function adjustmentMeta(a: StaffAdjustment): string {
-  const who = a.by ? `${a.by.firstName} ${a.by.lastName}`.trim() : "Tizim";
+export function adjustmentMeta(a: StaffAdjustment, t: Translate = uzbek): string {
+  // «Tizim» alone is the colour mode key; the system as an author reads «Tizim (avtomatik)».
+  const who = a.by ? `${a.by.firstName} ${a.by.lastName}`.trim() : t("Tizim (avtomatik)");
   return `${who} · ${instantDate(a.at)}`;
 }
 
-/** The first thing wrong with the form, or null. */
+/**
+ * The first thing wrong with the form, or null. The dialog only uses it to keep
+ * «Saqlash» shut; the text is never drawn, so it stays Uzbek.
+ */
 export function adjustmentError(amount: number | null, reason: string): string | null {
   if (amount == null || !Number.isFinite(amount) || amount < 0) return "Summani kiriting";
   const r = reason.trim();
@@ -42,7 +53,7 @@ export function adjustmentError(amount: number | null, reason: string): string |
 }
 
 /** Why the button stays shut for this payment, or null when it may open. */
-export function adjustLockReason(payment: { status: string } | null): string | null {
+export function adjustLockReason(payment: { status: string } | null, t: Translate = uzbek): string | null {
   if (!payment || payment.status === "CALCULATED" || payment.status === "CANCELLED") return null;
-  return "Oylik tasdiqlangan — avval to'lovni bekor qilish kerak.";
+  return t("Oylik tasdiqlangan — avval to'lovni bekor qilish kerak.");
 }

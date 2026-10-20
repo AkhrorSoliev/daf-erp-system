@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/i18n/context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,6 +22,7 @@ export function DafOquvchiSheet({
   onDavrChange: (d: Davr) => void;
   onClose: () => void;
 }) {
+  const t = useT();
   return (
     <Sheet open={studentId !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
@@ -42,14 +44,14 @@ export function DafOquvchiSheet({
                         </Avatar>
                         <div className="min-w-0">
                           <SheetTitle className="truncate">{data.ism}</SheetTitle>
-                          <SheetDescription>Oxirgi faollik: {oxirgiFaollikMatni(data)}</SheetDescription>
+                          <SheetDescription>{t("Oxirgi faollik: {when}", { when: oxirgiFaollikMatni(data, t) })}</SheetDescription>
                         </div>
                       </div>
                       {data.akkaunt && meta}
                     </>
                   ) : (
                     <>
-                      <SheetTitle className="sr-only">O&apos;quvchi faolligi</SheetTitle>
+                      <SheetTitle className="sr-only">{t("O'quvchi faolligi")}</SheetTitle>
                       <Skeleton className="h-11 w-56" />
                     </>
                   )}
@@ -59,9 +61,7 @@ export function DafOquvchiSheet({
                   // yoki 5 daqiqa radio), jadvaldagi "Faol kun" esa markaz normasidan
                   // (LERNEN daqiqa yoki savol, radio sanalmaydi) — ikkovi bir xil emas.
                   <p className="border-b px-6 py-2 text-xs text-muted-foreground">
-                    Bu oynadagi «shug&apos;ullangan kun» guruh tabidagi qoida bo&apos;yicha
-                    (mashq yoki 5 daqiqa radio). Jadvaldagi «Faol kun» esa markaz
-                    normasi bo&apos;yicha — shuning uchun sonlar farq qilishi mumkin.
+                    {t("Bu oynadagi «shug'ullangan kun» guruh tabidagi qoida bo'yicha (mashq yoki 5 daqiqa radio). Jadvaldagi «Faol kun» esa markaz normasi bo'yicha — shuning uchun sonlar farq qilishi mumkin.")}
                   </p>
                 )}
               </>

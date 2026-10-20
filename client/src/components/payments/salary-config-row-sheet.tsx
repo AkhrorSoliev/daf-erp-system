@@ -30,6 +30,8 @@ import { PriceInput } from "@/components/ui/price-input";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPrice } from "@/lib/format-utils";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { positionLabel } from "./salary-utils";
 import {
   currentVersionFor,
@@ -71,9 +73,9 @@ interface GroupOption {
 const TEACHER_ROLE_ID = 4;
 
 const SALARY_TYPE_LABEL: Record<string, string> = {
-  PERCENTAGE: "Foiz (%)",
-  FIXED_PER_STUDENT: "O'quvchi boshiga (so'm)",
-  FIXED_MONTHLY: "Oylik (qattiq summa)",
+  PERCENTAGE: msg("Foiz (%)"),
+  FIXED_PER_STUDENT: msg("O'quvchi boshiga (so'm)"),
+  FIXED_MONTHLY: msg("Oylik (qattiq summa)"),
 };
 
 interface Props {
@@ -104,6 +106,7 @@ export function SalaryConfigRowSheet({
   allowMonthly = true,
   minEffectiveFrom,
 }: Props) {
+  const t = useT();
   const open = !!userId && !!employee;
   const isTeacher =
     employee?.roles.some((r) => r?.id === TEACHER_ROLE_ID) ?? false;
@@ -179,8 +182,8 @@ export function SalaryConfigRowSheet({
 
   const versions = useMemo(() => historyQuery.data ?? [], [historyQuery.data]);
   const historyGroups = useMemo(
-    () => groupVersionsByConfig(versions),
-    [versions],
+    () => groupVersionsByConfig(versions, t),
+    [versions, t],
   );
   const activeConfigIds = useMemo(
     () => new Set(sortedConfigs.map((c) => c.id)),
@@ -239,7 +242,7 @@ export function SalaryConfigRowSheet({
         return;
       }
     } catch (err) {
-      toast.error(getErrorMessage(err, "Saqlashda xatolik"));
+      toast.error(getErrorMessage(err, t("Saqlashda xatolik")));
       setSubmitting(false);
       return;
     }
@@ -254,7 +257,7 @@ export function SalaryConfigRowSheet({
         "/salary/config",
         configBody(),
       );
-      toast.success(savedToastText("Oylik qoidasi saqlandi", data.reapplied));
+      toast.success(savedToastText(t("Oylik qoidasi saqlandi"), data.reapplied, t));
       setValue("");
       setPercentValue("");
       setEffectiveFrom(undefined);
@@ -262,7 +265,7 @@ export function SalaryConfigRowSheet({
       await Promise.all([configsQuery.refetch(), historyQuery.refetch()]);
       onSaved();
     } catch (err) {
-      toast.error(getErrorMessage(err, "Saqlashda xatolik"));
+      toast.error(getErrorMessage(err, t("Saqlashda xatolik")));
     } finally {
       setSubmitting(false);
     }
@@ -271,7 +274,9 @@ export function SalaryConfigRowSheet({
   const handleDeactivate = async (configId: string) => {
     if (
       !confirm(
-        "Bu oylik qoidasini o'chirmoqchimisiz? Eski yig'ilgan oyliklar saqlanadi, lekin keyingi darslarga ta'sir qilmaydi.",
+        t(
+          "Bu oylik qoidasini o'chirmoqchimisiz? Eski yig'ilgan oyliklar saqlanadi, lekin keyingi darslarga ta'sir qilmaydi.",
+        ),
       )
     ) {
       return;
@@ -282,11 +287,11 @@ export function SalaryConfigRowSheet({
         `/salary/config/${configId}`,
         { isActive: false },
       );
-      toast.success(savedToastText("Oylik qoidasi o'chirildi", data.reapplied));
+      toast.success(savedToastText(t("Oylik qoidasi o'chirildi"), data.reapplied, t));
       await Promise.all([configsQuery.refetch(), historyQuery.refetch()]);
       onSaved();
     } catch (err) {
-      toast.error(getErrorMessage(err, "O'chirishda xatolik"));
+      toast.error(getErrorMessage(err, t("O'chirishda xatolik")));
     } finally {
       setDeletingId(null);
     }
@@ -295,7 +300,7 @@ export function SalaryConfigRowSheet({
   // Job title first: this sheet now opens for role-less staff too, and
   // `roles[0]` gives them nothing but a dash. `positionLabel` keeps the role
   // as the fallback for employees created before the column existed.
-  const role = employee ? positionLabel(employee) : "";
+  const role = employee ? positionLabel(employee, t) : "";
   const branch = employee?.branches[0]?.name ?? "—";
 
   return (
@@ -311,7 +316,7 @@ export function SalaryConfigRowSheet({
       >
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle className="text-lg">
-            {employee ? `${employee.firstName} ${employee.lastName}` : "Oylik"}
+            {employee ? `${employee.firstName} ${employee.lastName}` : t("Oylik")}
           </SheetTitle>
           <SheetDescription>
             #{employee?.id} · {role} · {branch}
@@ -323,11 +328,11 @@ export function SalaryConfigRowSheet({
           <section className="space-y-3 px-6 py-5">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Mavjud oylik qoidalari
+                {t("Mavjud oylik qoidalari")}
               </h3>
               {sortedConfigs.length > 0 && (
                 <Badge variant="outline" className="text-xs font-normal">
-                  {sortedConfigs.length} ta
+                  {t("{n} ta", { n: sortedConfigs.length })}
                 </Badge>
               )}
             </div>
@@ -338,12 +343,13 @@ export function SalaryConfigRowSheet({
               </div>
             ) : sortedConfigs.length === 0 ? (
               <div className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
-                Bu xodimga hali oylik belgilanmagan
+                {t("Bu xodimga hali oylik belgilanmagan")}
               </div>
             ) : (
               <ul className="space-y-2">
                 {sortedConfigs.map((c) => {
                   const inForce = currentVersionFor(c.id, versions);
+                  const typeLabel = SALARY_TYPE_LABEL[c.salaryType];
                   return (
                     <li
                       key={c.id}
@@ -356,23 +362,23 @@ export function SalaryConfigRowSheet({
                             className="text-xs"
                           >
                             {c.groupId
-                              ? `${c.group?.name ?? "?"} guruh`
-                              : "Umumiy"}
+                              ? t("{name} guruh", { name: c.group?.name ?? "?" })
+                              : t("Umumiy")}
                           </Badge>
                           <Badge variant="outline" className="text-xs">
-                            {SALARY_TYPE_LABEL[c.salaryType] ?? c.salaryType}
+                            {typeLabel ? t(typeLabel) : c.salaryType}
                           </Badge>
                         </div>
                         <p className="text-base font-semibold">
                           {c.salaryType === "PERCENTAGE"
                             ? `${c.value}%`
-                            : `${formatPrice(c.value)} so'm`}
+                            : t("{amount} so'm", { amount: formatPrice(c.value) })}
                         </p>
                         {/* Since when. The rule is otherwise indistinguishable
                           from one that starts next month. */}
                         {inForce && (
                           <p className="text-xs text-muted-foreground">
-                            {effectivePeriodLabel(inForce)}
+                            {effectivePeriodLabel(inForce, t)}
                           </p>
                         )}
                       </div>
@@ -404,14 +410,14 @@ export function SalaryConfigRowSheet({
               beradi va o'chirilgan qoidalarni ham saqlab qoladi. */}
           <section className="space-y-3 border-t px-6 py-5">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              Tarix
+              {t("Tarix")}
             </h3>
 
             {historyQuery.isLoading ? (
               <Skeleton className="h-14 w-full" />
             ) : historyGroups.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                O&apos;zgarishlar tarixi yo&apos;q.
+                {t("O'zgarishlar tarixi yo'q.")}
               </p>
             ) : (
               <div className="space-y-4">
@@ -424,7 +430,7 @@ export function SalaryConfigRowSheet({
                           variant="outline"
                           className="text-[11px] font-normal text-muted-foreground"
                         >
-                          o&apos;chirilgan
+                          {t("o'chirilgan")}
                         </Badge>
                       )}
                     </div>
@@ -434,11 +440,11 @@ export function SalaryConfigRowSheet({
                           <span className="font-medium">
                             {v.salaryType === "PERCENTAGE"
                               ? `${v.value}%`
-                              : `${formatPrice(v.value)} so'm`}
+                              : t("{amount} so'm", { amount: formatPrice(v.value) })}
                           </span>
                           <span className="text-muted-foreground">
                             {" · "}
-                            {effectivePeriodLabel(v)}
+                            {effectivePeriodLabel(v, t)}
                           </span>
                           {v.changedBy && (
                             <span className="text-muted-foreground">
@@ -460,14 +466,14 @@ export function SalaryConfigRowSheet({
             <div className="flex items-center gap-2">
               <Plus className="size-4 text-muted-foreground" />
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Yangi qoida qo&apos;shish
+                {t("Yangi qoida qo'shish")}
               </h3>
             </div>
 
             {isTeacher && (
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">
-                  Qo&apos;llaniladigan guruh
+                  {t("Qo'llaniladigan guruh")}
                 </Label>
                 <Select value={groupId} onValueChange={handleGroupChange}>
                   <SelectTrigger>
@@ -475,19 +481,20 @@ export function SalaryConfigRowSheet({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__global__">
-                      Umumiy (barcha guruhlar uchun)
+                      {t("Umumiy (barcha guruhlar uchun)")}
                     </SelectItem>
                     {(groupsQuery.data ?? []).map((g) => (
                       <SelectItem key={g.id} value={g.id}>
-                        {g.name} guruhi uchun maxsus
+                        {t("{name} guruhi uchun maxsus", { name: g.name })}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 {groupId !== "__global__" && (
                   <p className="text-xs text-muted-foreground">
-                    Maxsus qoida shu guruhdagi darslarga qo&apos;llanadi va
-                    umumiy qoidani bekor qiladi (faqat shu guruh uchun).
+                    {t(
+                      "Maxsus qoida shu guruhdagi darslarga qo'llanadi va umumiy qoidani bekor qiladi (faqat shu guruh uchun).",
+                    )}
                   </p>
                 )}
               </div>
@@ -495,7 +502,7 @@ export function SalaryConfigRowSheet({
 
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">
-                Hisoblash turi
+                {t("Hisoblash turi")}
               </Label>
               <Select value={salaryType} onValueChange={setSalaryType}>
                 <SelectTrigger>
@@ -504,14 +511,14 @@ export function SalaryConfigRowSheet({
                 <SelectContent>
                   {allowMonthly && !isGroupRule && (
                     <SelectItem value="FIXED_MONTHLY">
-                      Oylik (qattiq summa)
+                      {t("Oylik (qattiq summa)")}
                     </SelectItem>
                   )}
                   {isTeacher && (
                     <>
-                      <SelectItem value="PERCENTAGE">Foiz (%)</SelectItem>
+                      <SelectItem value="PERCENTAGE">{t("Foiz (%)")}</SelectItem>
                       <SelectItem value="FIXED_PER_STUDENT">
-                        O&apos;quvchi boshiga (so&apos;m)
+                        {t("O'quvchi boshiga (so'm)")}
                       </SelectItem>
                     </>
                   )}
@@ -519,16 +526,16 @@ export function SalaryConfigRowSheet({
               </Select>
               <p className="text-xs text-muted-foreground">
                 {salaryType === "PERCENTAGE"
-                  ? "Har dars uchun dars narxidan foiz hisoblanadi."
+                  ? t("Har dars uchun dars narxidan foiz hisoblanadi.")
                   : salaryType === "FIXED_PER_STUDENT"
-                    ? "Bir o'quvchi uchun bir oylik (sikl) summa, shu davrdagi darslarga bo'lib hisoblanadi."
-                    : "Oyiga qattiq summa, darslar soniga bog'liq emas."}
+                    ? t("Bir o'quvchi uchun bir oylik (sikl) summa, shu davrdagi darslarga bo'lib hisoblanadi.")
+                    : t("Oyiga qattiq summa, darslar soniga bog'liq emas.")}
               </p>
             </div>
 
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">
-                {salaryType === "PERCENTAGE" ? "Foiz qiymati" : "Summa"}
+                {salaryType === "PERCENTAGE" ? t("Foiz qiymati") : t("Summa")}
               </Label>
               {salaryType === "PERCENTAGE" ? (
                 <div className="relative">
@@ -550,20 +557,20 @@ export function SalaryConfigRowSheet({
                 <PriceInput
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
-                  placeholder="Masalan 4 000 000"
+                  placeholder={t("Masalan 4 000 000")}
                 />
               )}
             </div>
 
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">
-                Kuchga kirish sanasi (ixtiyoriy)
+                {t("Kuchga kirish sanasi (ixtiyoriy)")}
               </Label>
               <DatePicker
                 value={effectiveFrom}
                 onChange={setEffectiveFrom}
                 disabled={submitting}
-                placeholder="Bugundan boshlab"
+                placeholder={t("Bugundan boshlab")}
                 minDate={minEffectiveFrom}
               />
             </div>
@@ -578,11 +585,11 @@ export function SalaryConfigRowSheet({
               onClick={onClose}
               disabled={submitting}
             >
-              Yopish
+              {t("Yopish")}
             </Button>
             <Button onClick={handleSubmit} disabled={!canSubmit || submitting}>
               {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
-              Qoidani qo&apos;shish
+              {t("Qoidani qo'shish")}
             </Button>
           </div>
         </SheetFooter>

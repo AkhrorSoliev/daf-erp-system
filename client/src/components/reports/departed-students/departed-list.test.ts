@@ -54,7 +54,7 @@ describe("DepartedList", () => {
     expect(html).toContain("bg-emerald-500/20");
     const text = norm(html);
     expect(text).toContain("Ketgan");
-    expect(text).toContain("Kutilmoqda");
+    expect(text).toContain("Hali qaytishi mumkin");
     expect(text).toContain("Qaytgan");
   });
   it("debt: so'm and a link to the debt page for a debtor, a dash otherwise", () => {

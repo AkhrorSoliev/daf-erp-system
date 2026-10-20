@@ -15,12 +15,14 @@ import { ActiveSessions } from "./sessions/active-sessions";
 import { MobileProfileHeader } from "@/components/shared/mobile-profile-header";
 import { TeacherStatsCharts } from "@/components/teachers/teacher-stats-charts";
 import { isTeacherOnly } from "@/lib/teacher-only";
-import { hasOwnSalary, uzbekRoles } from "./profile-roles";
+import { hasOwnSalary, roleTitle } from "./profile-roles";
+import { useT } from "@/i18n/context";
 import { TeacherProfileLinks } from "./teacher-profile-links";
 
 const TEACHER_ROLE_ID = 4;
 
 export function ProfileClient() {
+  const t = useT();
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [editOpen, setEditOpen] = useState(false);
@@ -41,7 +43,7 @@ export function ProfileClient() {
   if (!user) return null;
 
   const fullName = `${user.firstName} ${user.lastName}`;
-  const uzRoles = uzbekRoles(user.roles);
+  const roles = user.roles.map((r) => ({ id: r.id, name: roleTitle(r, t) }));
   const showSalary = hasOwnSalary(user.roles);
   // A teacher on a phone: the side menu is gone, so this page also holds the
   // guide and the support link, and the salary block opens «Oylik».
@@ -54,7 +56,7 @@ export function ProfileClient() {
     <>
       <div className="space-y-6">
         <h1 className="font-heading text-xl sm:text-2xl font-bold tracking-tight">
-          Profil
+          {t("Profil")}
         </h1>
 
         {isMobile ? (
@@ -63,23 +65,23 @@ export function ProfileClient() {
               photo={user.photo}
               fullName={fullName}
               id={user.id}
-              roles={uzRoles}
+              roles={roles}
               salaryDueUserId={showSalary ? user.id : undefined}
               salaryDueScope="me"
               salaryDueHref={phoneTeacher ? "/profile/salary" : undefined}
               phone={user.phone}
               branches={displayBranches}
-              infoItems={[{ label: "Kompaniya", value: user.company.name }]}
+              infoItems={[{ label: t("Kompaniya"), value: user.company.name }]}
               showActionsInline
               actions={[
                 {
                   icon: <Pencil className="size-4" />,
-                  label: "Tahrirlash",
+                  label: t("Tahrirlash"),
                   onClick: () => setEditOpen(true),
                 },
                 {
                   icon: <KeyRound className="size-4" />,
-                  label: "Parolni o'zgartirish",
+                  label: t("Parolni o'zgartirish"),
                   onClick: () => setPasswordOpen(true),
                 },
               ]}
@@ -94,7 +96,7 @@ export function ProfileClient() {
               onClick={() => setLogoutOthersOpen(true)}
             >
               <LogOut className="mr-1.5 size-4" />
-              Boshqa qurilmalardan chiqish
+              {t("Boshqa qurilmalardan chiqish")}
             </Button>
             <ActiveSessions />
             {phoneTeacher && <TeacherProfileLinks />}
@@ -104,7 +106,7 @@ export function ProfileClient() {
             <div className="w-full lg:w-85 lg:shrink-0">
               <ProfileCard
                 user={user}
-                roles={uzRoles}
+                roles={roles}
                 showSalary={showSalary}
                 onEdit={() => setEditOpen(true)}
               />
@@ -124,7 +126,7 @@ export function ProfileClient() {
 
         {isTeacher && (
           <section className="space-y-3">
-            <h2 className="font-heading text-lg font-semibold">Ko&apos;rsatkichlarim</h2>
+            <h2 className="font-heading text-lg font-semibold">{t("Ko'rsatkichlarim")}</h2>
             <TeacherStatsCharts endpoint="/teachers/me/stats" />
           </section>
         )}

@@ -5,6 +5,7 @@ import { GraduationCap, Hourglass, Users, Wallet } from "lucide-react";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useT } from "@/i18n/context";
 import { MockKpiCard } from "./mock-kpi-card";
 import type { MockExamStats } from "./exam-detail-types";
 import {
@@ -26,6 +27,7 @@ import {
  * It loads on its own, so a failure leaves the exam details below usable.
  */
 export function ExamStatsPanel({ examId }: { examId: string }) {
+  const t = useT();
   const [stats, setStats] = useState<MockExamStats | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -47,7 +49,7 @@ export function ExamStatsPanel({ examId }: { examId: string }) {
   if (failed) {
     return (
       <p className="text-sm text-muted-foreground">
-        Statistikani yuklab bo&apos;lmadi.
+        {t("Statistikani yuklab bo'lmadi.")}
       </p>
     );
   }
@@ -64,45 +66,45 @@ export function ExamStatsPanel({ examId }: { examId: string }) {
   const maxLevel = Math.max(0, ...stats.levels.map((l) => l.registered));
 
   return (
-    <section aria-label="Imtihon statistikasi" className="flex flex-col gap-3">
+    <section aria-label={t("Imtihon statistikasi")} className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MockKpiCard
           icon={<Wallet className="size-4" />}
-          label="Tushgan pul"
+          label={t("Tushgan pul")}
           value={<Som value={stats.money.paidSum} />}
-          hint={paidHint(stats.money)}
+          hint={paidHint(stats.money, t)}
         />
         <MockKpiCard
           icon={<Hourglass className="size-4" />}
-          label="To'lanmagan"
+          label={t("To'lanmagan")}
           value={<Som value={stats.money.unpaidSum} />}
-          hint={unpaidHint(stats.money)}
+          hint={unpaidHint(stats.money, t)}
         />
         <MockKpiCard
           icon={<Users className="size-4" />}
-          label="Ro'yxatdan o'tgan"
+          label={t("Ro'yxatdan o'tgan")}
           value={stats.registered}
-          hint={channelHint(stats.channel)}
+          hint={channelHint(stats.channel, t)}
         />
         <MockKpiCard
           icon={<GraduationCap className="size-4" />}
-          label="DaF o'quvchisi"
+          label={t("DaF o'quvchisi")}
           value={stats.daf.student}
-          hint={dafHint(stats.daf)}
+          hint={dafHint(stats.daf, t)}
         />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatsCard title="To'lov usuli">
+        <StatsCard title={t("To'lov usuli")}>
           {stats.methods.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Hali to&apos;lov yo&apos;q
+              {t("Hali to'lov yo'q")}
             </p>
           ) : (
             stats.methods.map((m) => (
               <Line
                 key={m.method}
-                label={statsMethodLabel(m.method)}
+                label={statsMethodLabel(m.method, t)}
                 value={`${m.count} · ${formatPrice(m.sum)}`}
               />
             ))
@@ -110,11 +112,11 @@ export function ExamStatsPanel({ examId }: { examId: string }) {
         </StatsCard>
 
         {hasLevels(stats) && (
-          <StatsCard title="Darajalar" note="yozilgan / to'lagan">
+          <StatsCard title={t("Darajalar")} note={t("yozilgan / to'lagan")}>
             {stats.levels.map((l) => (
               <div key={l.level ?? "none"} className="flex flex-col gap-1">
                 <Line
-                  label={levelLabel(l.level)}
+                  label={levelLabel(l.level, t)}
                   value={`${l.registered} / ${l.paid}`}
                 />
                 {l.level !== null && (
@@ -131,21 +133,25 @@ export function ExamStatsPanel({ examId }: { examId: string }) {
         )}
 
         {hasTimeChoice(stats) && (
-          <StatsCard title="Imtihon vaqti">
-            {stats.times.map((t) => (
+          <StatsCard title={t("Imtihon vaqti")}>
+            {stats.times.map((slot) => (
               <Line
-                key={t.time ?? "none"}
-                label={timeLabel(t.time)}
-                value={`${t.registered} kishi`}
+                key={slot.time ?? "none"}
+                label={timeLabel(slot.time, t)}
+                value={t("{n} kishi", { n: slot.registered })}
               />
             ))}
           </StatsCard>
         )}
 
         {stats.results && (
-          <StatsCard title="Natija yetib borishi">
+          <StatsCard title={t("Natija yetib borishi")}>
             {resultRows(stats.results).map((r) => (
-              <Line key={r.label} label={r.label} value={`${r.value} kishi`} />
+              <Line
+                key={r.label}
+                label={t(r.label)}
+                value={t("{n} kishi", { n: r.value })}
+              />
             ))}
           </StatsCard>
         )}
@@ -155,10 +161,11 @@ export function ExamStatsPanel({ examId }: { examId: string }) {
 }
 
 function Som({ value }: { value: number }) {
+  const t = useT();
   return (
     <span>
       {formatPrice(value)}{" "}
-      <span className="text-xs text-muted-foreground">so&apos;m</span>
+      <span className="text-xs text-muted-foreground">{t("so'm")}</span>
     </span>
   );
 }

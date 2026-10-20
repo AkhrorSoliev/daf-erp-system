@@ -22,6 +22,12 @@ export const KEEP_LATIN: ReadonlySet<string> = new Set([
   "goethe",
   "deutsch",
   "ios",
+  "webhook",
+  "externalid",
+  // The content seed script is named in Latin in the media empty states.
+  "seed",
+  // Image format named in the profile photo hint.
+  "webp",
 ]);
 
 const LETTERS: Record<string, string> = {

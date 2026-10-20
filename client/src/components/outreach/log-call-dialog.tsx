@@ -24,6 +24,8 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { invalidateDebt } from "@/components/payments/debt/debt-queries";
 import { callPromiseAsk, capToRange, dateFromDay, PROMISE_MOVE_NOTE, usePromiseMonth } from "@/components/payments/promise-month";
 import { tashkentInstantOn } from "@/lib/tashkent-time";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import {
   CALL_OUTCOME_INFO,
   type CallLogsResponse,
@@ -44,30 +46,27 @@ interface LogCallDialogProps {
   prefill: LogCallPrefill | null;
 }
 
-const OUTCOME_OPTIONS: { value: CallOutcome; label: string }[] = [
-  { value: "ANSWERED", label: "Gaplashildi" },
-  { value: "NO_ANSWER", label: "Javob bermadi" },
-  { value: "WILL_COME", label: "Keladi" },
-  { value: "WILL_PAY", label: "To'laydi" },
-  { value: "LEFT", label: "O'qishni tashladi" },
-];
+// The outcomes offered, in this order; their names come from CALL_OUTCOME_INFO.
+const OUTCOME_OPTIONS = (["ANSWERED", "NO_ANSWER", "WILL_COME", "WILL_PAY", "LEFT"] as const).map(
+  (value) => ({ value, label: CALL_OUTCOME_INFO[value].label }),
+);
 
 // Which outcomes reveal the optional date field, and how it's framed. "To'laydi"
 // sets a payment promise (promiseDate → the debt page's «Va'da» column); the
 // others set a "call again later" date (followUpAt).
 // "O'qishni tashladi" (LEFT) has no date.
-const FOLLOW_UP_HELP =
-  "Sana kiritilsa, shu kuni qayta bog'lanish kerakligi belgilanadi.";
+const FOLLOW_UP_HELP = msg("Sana kiritilsa, shu kuni qayta bog'lanish kerakligi belgilanadi.");
+const FOLLOW_UP_LABEL = msg("Keyingi bog'lanish sanasi (ixtiyoriy)");
 const DATE_FIELD: Partial<
   Record<CallOutcome, { label: string; help: string }>
 > = {
   WILL_PAY: {
-    label: "To'lov sanasi (ixtiyoriy)",
-    help: "Sana kiritilsa, «Qarzdorlik» sahifasidagi «Va'da» ustunida ko'rinadi. Ko'pi bilan 7 kunga, oyiga 1 marta.",
+    label: msg("To'lov sanasi (ixtiyoriy)"),
+    help: msg("Sana kiritilsa, «Qarzdorlik» sahifasidagi «Va'da» ustunida ko'rinadi. Ko'pi bilan 7 kunga, oyiga 1 marta."),
   },
-  NO_ANSWER: { label: "Keyingi bog'lanish sanasi (ixtiyoriy)", help: FOLLOW_UP_HELP },
-  ANSWERED: { label: "Keyingi bog'lanish sanasi (ixtiyoriy)", help: FOLLOW_UP_HELP },
-  WILL_COME: { label: "Keyingi bog'lanish sanasi (ixtiyoriy)", help: FOLLOW_UP_HELP },
+  NO_ANSWER: { label: FOLLOW_UP_LABEL, help: FOLLOW_UP_HELP },
+  ANSWERED: { label: FOLLOW_UP_LABEL, help: FOLLOW_UP_HELP },
+  WILL_COME: { label: FOLLOW_UP_LABEL, help: FOLLOW_UP_HELP },
 };
 
 export function LogCallDialog({
@@ -95,6 +94,7 @@ function CallForm({
   prefill: LogCallPrefill;
   onSuccess: () => void;
 }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const [outcome, setOutcome] = useState<CallOutcome | null>(null);
   const [note, setNote] = useState("");
@@ -105,7 +105,7 @@ function CallForm({
   // writes the month's first; a closed promise or a failed lookup takes no date.
   const isPay = outcome === "WILL_PAY";
   const promiseMonth = usePromiseMonth(isPay ? prefill.studentId : null);
-  const ask = callPromiseAsk(promiseMonth);
+  const ask = callPromiseAsk(promiseMonth, t);
   const payRange = isPay ? ask.range : null;
   const noPayDate = isPay && !ask.asksDate;
   // A day picked before the range arrived is clamped into it, as the payment dialog does.
@@ -146,10 +146,10 @@ function CallForm({
       const withDate = sendsDate;
       toast.success(
         withDate && isPay
-          ? "Qo'ng'iroq qayd qilindi, to'lov sanasi belgilandi"
+          ? t("Qo'ng'iroq qayd qilindi, to'lov sanasi belgilandi")
           : withDate
-            ? "Qo'ng'iroq qayd qilindi, keyingi bog'lanish sanasi belgilandi"
-            : "Qo'ng'iroq qayd qilindi",
+            ? t("Qo'ng'iroq qayd qilindi, keyingi bog'lanish sanasi belgilandi")
+            : t("Qo'ng'iroq qayd qilindi"),
       );
       // Prefix-invalidate every outreach list + stats, the history tab and every
       // debt figure: the debt page's last call and promise may have changed.
@@ -159,18 +159,18 @@ function CallForm({
       onSuccess();
     },
     onError: (error) =>
-      toast.error(getErrorMessage(error, "Saqlashda xatolik yuz berdi")),
+      toast.error(getErrorMessage(error, t("Saqlashda xatolik yuz berdi"))),
   });
 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Natijani kiritish</DialogTitle>
+        <DialogTitle>{t("Natijani kiritish")}</DialogTitle>
       </DialogHeader>
 
       <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
         <div className="text-xs uppercase tracking-wide text-muted-foreground">
-          O&apos;quvchi
+          {t("O'quvchi")}
         </div>
         <div className="font-medium">{prefill.studentLabel}</div>
         {prefill.studentPhone && (
@@ -182,7 +182,7 @@ function CallForm({
 
       {(historyLoading || previousCalls.length > 0) && (
         <div className="space-y-1.5">
-          <Label className="text-xs">Oldingi izohlar</Label>
+          <Label className="text-xs">{t("Oldingi izohlar")}</Label>
           {historyLoading ? (
             <div className="space-y-1">
               <Skeleton className="h-9 w-full" />
@@ -199,7 +199,7 @@ function CallForm({
                         variant="outline"
                         className={`${oc.className} hover:${oc.className}`}
                       >
-                        {oc.label}
+                        {t(oc.label)}
                       </Badge>
                       <span className="text-[11px] text-muted-foreground">
                         {format(new Date(item.createdAt), "dd.MM.yyyy, HH:mm")}
@@ -221,7 +221,7 @@ function CallForm({
 
       <div className="grid gap-3">
         <div className="space-y-1.5">
-          <Label className="text-xs">Natija</Label>
+          <Label className="text-xs">{t("Natija")}</Label>
           <div className="grid grid-cols-2 gap-2">
             {OUTCOME_OPTIONS.map((o) => (
               <Button
@@ -237,7 +237,7 @@ function CallForm({
                   if (!DATE_FIELD[o.value] || (o.value === "WILL_PAY") !== isPay) setSelectedDate(null);
                 }}
               >
-                {o.label}
+                {t(o.label)}
               </Button>
             ))}
           </div>
@@ -245,7 +245,7 @@ function CallForm({
 
         {dateField && !noPayDate && (
           <div className="space-y-1">
-            <Label className="text-xs">{dateField.label}</Label>
+            <Label className="text-xs">{t(dateField.label)}</Label>
             <DatePicker
               value={date}
               onChange={(d) => setSelectedDate(d ?? null)}
@@ -253,16 +253,16 @@ function CallForm({
               maxDate={isPay && payRange ? dateFromDay(payRange.to) : undefined}
             />
             <p className="text-[11px] text-muted-foreground">
-              {isPay && ask.moves ? PROMISE_MOVE_NOTE : dateField.help}
+              {isPay && ask.moves ? t(PROMISE_MOVE_NOTE) : t(dateField.help)}
             </p>
           </div>
         )}
         {noPayDate && <p className="text-[11px] text-muted-foreground">{ask.hint}</p>}
 
         <div className="space-y-1">
-          <Label className="text-xs">Izoh (ixtiyoriy)</Label>
+          <Label className="text-xs">{t("Izoh (ixtiyoriy)")}</Label>
           <Textarea
-            placeholder="Masalan: ertaga keladi dedi, sababi bor edi"
+            placeholder={t("Masalan: ertaga keladi dedi, sababi bor edi")}
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={3}
@@ -277,7 +277,7 @@ function CallForm({
           onClick={onSuccess}
           disabled={submit.isPending}
         >
-          Bekor qilish
+          {t("Bekor qilish")}
         </Button>
         <Button
           onClick={() => submit.mutate()}
@@ -285,7 +285,7 @@ function CallForm({
           disabled={!outcome || submit.isPending || (isPay && sendsDate && (promiseMonth.isPending || promiseMonth.isFetching))}
         >
           {submit.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
-          Saqlash
+          {t("Saqlash")}
         </Button>
       </DialogFooter>
     </>

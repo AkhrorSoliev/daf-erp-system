@@ -3,6 +3,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TimePicker } from "@/components/ui/time-picker";
+import { useT } from "@/i18n/context";
 
 interface ExamTimesEditorProps {
   value: string[];
@@ -23,11 +24,12 @@ export function ExamTimesEditor({
   minTime,
   maxTime,
 }: ExamTimesEditorProps) {
+  const t = useT();
   const times = value ?? [];
 
-  const setAt = (i: number, t: string) => {
+  const setAt = (i: number, time: string) => {
     const next = [...times];
-    next[i] = t;
+    next[i] = time;
     onChange(next);
   };
   const removeAt = (i: number) =>
@@ -38,14 +40,14 @@ export function ExamTimesEditor({
     <div className="space-y-2">
       {times.length === 0 && (
         <p className="text-xs text-muted-foreground">
-          Vaqt qo&apos;shilmagan.
+          {t("Vaqt qo'shilmagan.")}
         </p>
       )}
-      {times.map((t, i) => (
+      {times.map((time, i) => (
         <div key={i} className="flex items-center gap-2">
           <div className="flex-1">
             <TimePicker
-              value={t}
+              value={time}
               onChange={(v) => setAt(i, v)}
               minTime={minTime}
               maxTime={maxTime}
@@ -59,8 +61,8 @@ export function ExamTimesEditor({
             disabled={times.length === 1}
             title={
               times.length === 1
-                ? "Kamida 1 ta vaqt qoldiring"
-                : "O'chirish"
+                ? t("Kamida 1 ta vaqt qoldiring")
+                : t("O'chirish")
             }
           >
             <Trash2 className="size-4" />
@@ -69,7 +71,7 @@ export function ExamTimesEditor({
       ))}
       <Button type="button" variant="outline" size="sm" onClick={add}>
         <Plus className="size-4" />
-        Vaqt qo&apos;shish
+        {t("Vaqt qo'shish")}
       </Button>
     </div>
   );

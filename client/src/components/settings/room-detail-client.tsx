@@ -28,6 +28,9 @@ import { EditRoomDrawer } from "./edit-room-drawer";
 import { RoomWeeklySchedule } from "./room-weekly-schedule";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
 import api from "@/lib/api";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/context";
+import { TranslatedStatusBadge } from "@/components/shared/translated-status-badge";
 
 interface Teacher {
   id: number;
@@ -60,16 +63,17 @@ interface RoomDetail {
 }
 
 const DAY_LABELS: Record<string, string> = {
-  monday: "Du",
-  tuesday: "Se",
-  wednesday: "Cho",
-  thursday: "Pay",
-  friday: "Ju",
-  saturday: "Sha",
-  sunday: "Ya",
+  monday: msg("Du"),
+  tuesday: msg("Se"),
+  wednesday: msg("Cho"),
+  thursday: msg("Pay"),
+  friday: msg("Ju"),
+  saturday: msg("Sha"),
+  sunday: msg("Ya"),
 };
 
 export function RoomDetailClient({ roomId }: { roomId: string }) {
+  const t = useT();
   const router = useRouter();
   const openDrawer = useEditRoom((s) => s.openDrawer);
   const setName = useBreadcrumbName((s) => s.setName);
@@ -104,10 +108,10 @@ export function RoomDetailClient({ roomId }: { roomId: string }) {
     return (
       <div className="space-y-6">
         <h1 className="font-heading text-2xl font-bold tracking-tight">
-          Xona topilmadi
+          {t("Xona topilmadi")}
         </h1>
         <p className="text-muted-foreground">
-          ID: {roomId} bo&apos;yicha xona mavjud emas
+          {t("ID: {id} bo'yicha xona mavjud emas", { id: roomId })}
         </p>
       </div>
     );
@@ -141,7 +145,7 @@ export function RoomDetailClient({ roomId }: { roomId: string }) {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Orqaga</TooltipContent>
+          <TooltipContent>{t("Orqaga")}</TooltipContent>
         </Tooltip>
         <div className="flex-1">
           <div className="flex items-center gap-2">
@@ -151,7 +155,7 @@ export function RoomDetailClient({ roomId }: { roomId: string }) {
           </div>
           <p className="text-sm text-muted-foreground">
             {room.branch.name}
-            {room.capacity && ` • ${room.capacity} o'rin`}
+            {room.capacity && ` • ${t("{n} o'rin", { n: room.capacity })}`}
           </p>
         </div>
         <Tooltip>
@@ -170,10 +174,10 @@ export function RoomDetailClient({ roomId }: { roomId: string }) {
               }
             >
               <Pencil className="mr-1.5 h-4 w-4" />
-              Tahrirlash
+              {t("Tahrirlash")}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Xonani tahrirlash</TooltipContent>
+          <TooltipContent>{t("Xonani tahrirlash")}</TooltipContent>
         </Tooltip>
       </div>
 
@@ -190,16 +194,16 @@ export function RoomDetailClient({ roomId }: { roomId: string }) {
       <div className="rounded-lg border bg-card p-6">
         <div className="flex items-center gap-2 mb-4">
           <Users className="size-5 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">Biriktirilgan guruhlar</h3>
+          <h3 className="text-lg font-semibold">{t("Biriktirilgan guruhlar")}</h3>
           <Badge variant="outline" className="ml-auto">
-            {room.groups.length} ta guruh
+            {t("{n} ta guruh", { n: room.groups.length })}
           </Badge>
         </div>
 
         {room.groups.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
             <Users className="h-8 w-8 text-muted-foreground/50" />
-            <p className="text-sm">Bu xonaga hali guruh biriktirilmagan</p>
+            <p className="text-sm">{t("Bu xonaga hali guruh biriktirilmagan")}</p>
           </div>
         ) : (
           <div className="rounded-md border">
@@ -207,12 +211,12 @@ export function RoomDetailClient({ roomId }: { roomId: string }) {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12 border-r">#</TableHead>
-                  <TableHead>Guruh nomi</TableHead>
-                  <TableHead>Kurs</TableHead>
-                  <TableHead>O&apos;qituvchi</TableHead>
-                  <TableHead>Kunlar</TableHead>
-                  <TableHead>Vaqt</TableHead>
-                  <TableHead>Holati</TableHead>
+                  <TableHead>{t("Guruh nomi")}</TableHead>
+                  <TableHead>{t("Kurs")}</TableHead>
+                  <TableHead>{t("O'qituvchi")}</TableHead>
+                  <TableHead>{t("Kunlar")}</TableHead>
+                  <TableHead>{t("Vaqt")}</TableHead>
+                  <TableHead>{t("Holati")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -236,7 +240,10 @@ export function RoomDetailClient({ roomId }: { roomId: string }) {
                     <TableCell className="text-xs">
                       {group.exactDays.length > 0
                         ? group.exactDays
-                            .map((d) => DAY_LABELS[d] ?? d)
+                            .map((d) => {
+                              const day = DAY_LABELS[d];
+                              return day ? t(day) : d;
+                            })
                             .join(", ")
                         : "—"}
                     </TableCell>
@@ -246,17 +253,7 @@ export function RoomDetailClient({ roomId }: { roomId: string }) {
                         : "—"}
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={
-                          group.statusEnum === "ACTIVE" ? "default" : "secondary"
-                        }
-                      >
-                        {group.statusEnum === "ACTIVE"
-                          ? "Faol"
-                          : group.statusEnum === "FORMING"
-                            ? "Shakllanmoqda"
-                            : group.statusEnum}
-                      </Badge>
+                      <TranslatedStatusBadge entityType="groups" status={group.statusEnum} />
                     </TableCell>
                   </TableRow>
                 ))}

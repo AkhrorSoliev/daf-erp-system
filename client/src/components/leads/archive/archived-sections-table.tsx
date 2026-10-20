@@ -19,6 +19,7 @@ import {
 } from "./archive-table-parts";
 import type { ArchivedSection, Paged } from "./archive-types";
 import { ARCHIVE_PAGE_SIZES } from "./archive-url";
+import { useT } from "@/i18n/context";
 
 export function ArchivedSectionsTable({
   query,
@@ -41,6 +42,7 @@ export function ArchivedSectionsTable({
   onPageSize: (size: number) => void;
   onClear: () => void;
 }) {
+  const t = useT();
   const rows = query.data?.data ?? [];
   const span = canRestore ? 6 : 5;
   return (
@@ -55,10 +57,10 @@ export function ArchivedSectionsTable({
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>Bo&apos;lim</TableHead>
-              <TableHead>Lidlar</TableHead>
-              <TableHead>Sana</TableHead>
-              <TableHead>Kim tomonidan</TableHead>
+              <TableHead>{t("Bo'lim")}</TableHead>
+              <TableHead>{t("Lidlar")}</TableHead>
+              <TableHead>{t("Sana")}</TableHead>
+              <TableHead>{t("Kim tomonidan")}</TableHead>
               {canRestore && <TableHead className="w-10" />}
             </TableRow>
           </TableHeader>
@@ -113,7 +115,7 @@ export function ArchivedSectionsTable({
           onPage={onPage}
           onPageSize={onPageSize}
           sizes={ARCHIVE_PAGE_SIZES}
-          sizeLabel="Sahifadagi qatorlar soni"
+          sizeLabel={t("Sahifadagi qatorlar soni")}
         />
       )}
     </div>

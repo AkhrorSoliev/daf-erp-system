@@ -17,6 +17,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useT } from "@/i18n/context";
 import { formatPhone } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import {
@@ -37,6 +38,7 @@ export function stopRowClick(event: SyntheticEvent) {
 }
 
 export function SubmissionName({ row }: { row: SubmissionRow }) {
+  const t = useT();
   return (
     <div className="min-w-0">
       <div className="flex items-center gap-1.5">
@@ -52,10 +54,10 @@ export function SubmissionName({ row }: { row: SubmissionRow }) {
           <Tooltip>
             <TooltipTrigger asChild>
               <Badge variant="outline" className="h-5 shrink-0 px-1.5 text-[10px]">
-                Takroriy
+                {t("Takroriy")}
               </Badge>
             </TooltipTrigger>
-            <TooltipContent>Bu telefon avval ham lid bo&apos;lgan</TooltipContent>
+            <TooltipContent>{t("Bu telefon avval ham lid bo'lgan")}</TooltipContent>
           </Tooltip>
         )}
       </div>
@@ -65,6 +67,7 @@ export function SubmissionName({ row }: { row: SubmissionRow }) {
 }
 
 function SubmissionOutcome({ row }: { row: SubmissionRow }) {
+  const t = useT();
   const studentId = row.lead?.convertedStudentId ?? null;
   if (row.stage === "converted" && studentId !== null) {
     return (
@@ -73,16 +76,16 @@ function SubmissionOutcome({ row }: { row: SubmissionRow }) {
         onClick={stopRowClick}
         className="text-xs text-primary hover:underline"
       >
-        O&apos;quvchi bo&apos;ldi → #{studentId}
+        {t("O'quvchi bo'ldi → #{id}", { id: studentId })}
       </Link>
     );
   }
   if (row.stage !== "lost") return null;
   const text = !row.lead
-    ? "Lid o'chirilgan"
+    ? t("Lid o'chirilgan")
     : row.lead.lostReason
-      ? `Yo'qotildi: «${row.lead.lostReason}»`
-      : "Yo'qotildi";
+      ? t("Yo'qotilgan: «{reason}»", { reason: row.lead.lostReason })
+      : t("Yo'qotilgan");
   return <p className="truncate text-xs text-muted-foreground">{text}</p>;
 }
 
@@ -101,11 +104,12 @@ export function SubmissionPhone({ row }: { row: SubmissionRow }) {
 }
 
 export function SubmittedAt({ iso }: { iso: string }) {
+  const t = useT();
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <span className="whitespace-nowrap tabular-nums">
-          {formatSubmittedAt(iso)}
+          {formatSubmittedAt(iso, undefined, t)}
         </span>
       </TooltipTrigger>
       <TooltipContent>{format(new Date(iso), "dd.MM.yyyy, HH:mm:ss")}</TooltipContent>
@@ -122,6 +126,7 @@ export function SubmissionActions({
   onOpenLead: (leadId: string) => void;
   onRestore: (row: SubmissionRow) => void;
 }) {
+  const t = useT();
   const lead = row.lead;
   if (!lead) return null;
   const canOpen = !lead.archived;
@@ -135,27 +140,27 @@ export function SubmissionActions({
         <DropdownMenuTrigger asChild>
           <Button size="icon" variant="ghost" className="size-8">
             <MoreHorizontal className="size-4" />
-            <span className="sr-only">Amallar</span>
+            <span className="sr-only">{t("Amallar")}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           {canOpen && (
             <DropdownMenuItem onClick={() => onOpenLead(lead.id)}>
               <Eye className="mr-2 size-4" />
-              Lidni ochish
+              {t("Lidni ochish")}
             </DropdownMenuItem>
           )}
           {canRestore && (
             <DropdownMenuItem onClick={() => onRestore(row)}>
               <RotateCcw className="mr-2 size-4" />
-              Tiklash
+              {t("Tiklash")}
             </DropdownMenuItem>
           )}
           {studentId !== null && (
             <DropdownMenuItem asChild>
               <Link href={`/students/profile/${studentId}`}>
                 <GraduationCap className="mr-2 size-4" />
-                O&apos;quvchi profili
+                {t("O'quvchi profili")}
               </Link>
             </DropdownMenuItem>
           )}

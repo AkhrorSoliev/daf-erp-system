@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronRight, RotateCcw } from "lucide-react";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -49,10 +51,10 @@ const STATUS_DOT: Record<CoverageStatus, string> = {
 };
 
 const STATUS_LEGEND: { status: CoverageStatus; label: string }[] = [
-  { status: "complete", label: "To'liq" },
-  { status: "partial", label: "Qisman" },
-  { status: "none", label: "Hali yo'q" },
-  { status: "na", label: "Kerak emas" },
+  { status: "complete", label: msg("To'liq") },
+  { status: "partial", label: msg("Qisman") },
+  { status: "none", label: msg("Hali yo'q") },
+  { status: "na", label: msg("Kerak emas") },
 ];
 
 function CoverageCell({
@@ -161,6 +163,7 @@ function UnitBlock({
   unit: MediaUnitCoverage;
   defaultOpen: boolean;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(defaultOpen);
   // `empty` ("hech qanday material yo'q") va `noSections` ("hatto bo'lim
   // ro'yxati ham yo'q") ATAYLAB ikki xil holat: bo'limlari seedlangan-u,
@@ -202,7 +205,7 @@ function UnitBlock({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">
-              {unit.order}-unit — {unit.titleUz}
+              {t("{n}-unit — {title}", { n: unit.order, title: unit.titleUz })}
             </span>
             {unit.code && (
               <span className="font-mono text-[11px] text-muted-foreground">
@@ -212,19 +215,21 @@ function UnitBlock({
           </div>
           {noSections ? (
             <div className="text-xs text-muted-foreground">
-              Hali bo&apos;lim yaratilmagan
+              {t("Hali bo'lim yaratilmagan")}
             </div>
           ) : empty ? (
             <div className="text-xs text-muted-foreground">
-              {unit.sections.length} ta bo&apos;lim — hali hech qanday
-              material yo&apos;q
+              {t("{n} ta bo'lim — hali hech qanday material yo'q", { n: unit.sections.length })}
             </div>
           ) : (
             <div className="text-xs text-muted-foreground">
-              {unit.sections.length} ta bo&apos;lim · {totals.words.total}{" "}
-              so&apos;z · {totals.sentences.total} gap ·{" "}
-              {totals.phrases.total} ibora · {totals.dialogLines.total} dialog
-              qatori
+              {t("{sections} ta bo'lim · {words} so'z · {sentences} gap · {phrases} ibora · {lines} dialog qatori", {
+                sections: unit.sections.length,
+                words: totals.words.total,
+                sentences: totals.sentences.total,
+                phrases: totals.phrases.total,
+                lines: totals.dialogLines.total,
+              })}
             </div>
           )}
         </div>
@@ -234,7 +239,7 @@ function UnitBlock({
               "h-2 w-2 shrink-0 rounded-full",
               STATUS_DOT[worst],
             )}
-            title="Ushbu unitdagi eng zaif ko'rsatkich"
+            title={t("Ushbu unitdagi eng zaif ko'rsatkich")}
           />
         )}
       </CollapsibleTrigger>
@@ -254,22 +259,21 @@ function UnitBlock({
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12 border-r">#</TableHead>
-                  <TableHead>Bo&apos;lim</TableHead>
-                  <TableHead>So&apos;z — ovoz</TableHead>
+                  <TableHead>{t("Bo'lim")}</TableHead>
+                  <TableHead>{t("So'z — ovoz")}</TableHead>
                   <TableHead>
                     <Tooltip>
                       <TooltipTrigger className="cursor-default">
-                        So&apos;z — rasm
+                        {t("So'z — rasm")}
                       </TooltipTrigger>
                       <TooltipContent>
-                        Faqat rasm chizib bo&apos;ladigan (picturable) so&apos;zlar
-                        hisoblanadi — mavhum so&apos;zlarga rasm kerak emas.
+                        {t("Faqat rasm chizib bo'ladigan so'zlar hisoblanadi — mavhum so'zlarga rasm kerak emas.")}
                       </TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead>Gap — ovoz</TableHead>
-                  <TableHead>Ibora — ovoz</TableHead>
-                  <TableHead>Dialog qatori — ovoz</TableHead>
+                  <TableHead>{t("Gap — ovoz")}</TableHead>
+                  <TableHead>{t("Ibora — ovoz")}</TableHead>
+                  <TableHead>{t("Dialog qatori — ovoz")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -295,9 +299,10 @@ function UnitBlock({
  * audio/rasm kaliti yozilishi bilanoq shu yerda ko'rinadi.
  */
 export function MediaCoverageSection() {
+  const t = useT();
   const [data, setData] = useState<MediaCoverageOverview | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  // "Qayta urinib ko'rish" bosilganda effektni qayta yugurtirish uchun —
+  const [error, setError] = useState(false);
+  // "Qayta urinish" bosilganda effektni qayta yugurtirish uchun —
   // client/CLAUDE.md talab qiladigan "xato holati qayta urinish imkonini
   // berishi kerak" qoidasi shu orqali bajariladi. `loading` alohida state
   // emas — `data`/`error` ikkalasi ham hali kelmagan payt shuning o'zi.
@@ -312,7 +317,7 @@ export function MediaCoverageSection() {
         if (!cancelled) setData(data);
       })
       .catch(() => {
-        if (!cancelled) setError("Qamrov ma'lumoti olinmadi");
+        if (!cancelled) setError(true);
       });
     return () => {
       cancelled = true;
@@ -321,7 +326,7 @@ export function MediaCoverageSection() {
 
   const handleRetry = useCallback(() => {
     setData(null);
-    setError(null);
+    setError(false);
     setRetryKey((k) => k + 1);
   }, []);
 
@@ -329,11 +334,9 @@ export function MediaCoverageSection() {
     <div>
       <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h2 className="text-lg font-semibold">Kurs qamrovi</h2>
+          <h2 className="text-lg font-semibold">{t("Kurs qamrovi")}</h2>
           <p className="text-sm text-muted-foreground">
-            Har bir unit va bo&apos;lim bo&apos;yicha nechta so&apos;z, gap,
-            ibora va dialog qatori bor — va ulardan qanchasida ovoz yoki rasm
-            tayyor. Bazadan avtomatik.
+            {t("Har bir unit va bo'lim bo'yicha nechta so'z, gap, ibora va dialog qatori bor — va ulardan qanchasida ovoz yoki rasm tayyor. Bazadan avtomatik.")}
           </p>
         </div>
         {!loading && !error && (
@@ -346,7 +349,7 @@ export function MediaCoverageSection() {
                     STATUS_DOT[status],
                   )}
                 />
-                {label}
+                {t(label)}
               </span>
             ))}
           </div>
@@ -364,10 +367,10 @@ export function MediaCoverageSection() {
       {!loading && error && (
         <Card>
           <CardContent className="flex items-center justify-between gap-3 p-4 text-sm text-muted-foreground">
-            <span>{error}</span>
+            <span>{t("Qamrov ma'lumoti olinmadi")}</span>
             <Button variant="outline" size="sm" onClick={handleRetry}>
               <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-              Qayta urinib ko&apos;rish
+              {t("Qayta urinish")}
             </Button>
           </CardContent>
         </Card>
@@ -378,9 +381,7 @@ export function MediaCoverageSection() {
           {data.levels.length === 0 && (
             <Card>
               <CardContent className="p-4 text-sm text-muted-foreground">
-                Hali hech qanday unit yaratilmagan — kontentni bazaga
-                yozadigan seed skriptini (`daf:seed`/`daf:inhalt-seed`) ishga
-                tushiring.
+                {t("Hali hech qanday unit yaratilmagan — kontentni bazaga yozadigan seed skriptini ({scripts}) ishga tushiring.", { scripts: "`daf:seed`/`daf:inhalt-seed`" })}
               </CardContent>
             </Card>
           )}

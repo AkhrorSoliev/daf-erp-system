@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { QollanmaSahifa } from "@/qollanma/turlar";
+import { useT } from "@/i18n/context";
 import { sahifaYoli } from "@/qollanma/sahifalar";
 
 interface Yuklangan {
@@ -24,6 +25,7 @@ export function QollanmaSheet({
   sahifa: QollanmaSahifa;
   boshqalar: QollanmaSahifa[];
 }) {
+  const t = useT();
   const kalit = `${sahifa.bolim}/${sahifa.sahifa}`;
   const [yuklangan, setYuklangan] = useState<Yuklangan | null>(null);
   const ochuvchi = useRef<HTMLElement | null>(null);
@@ -74,14 +76,14 @@ export function QollanmaSheet({
           ) : joriy.Komponent ? (
             <joriy.Komponent />
           ) : (
-            <p className="text-muted-foreground">Qo&apos;llanmani yuklab bo&apos;lmadi. Sahifani yangilab ko&apos;ring.</p>
+            <p className="text-muted-foreground">{t("Qo'llanmani yuklab bo'lmadi. Sahifani yangilab ko'ring.")}</p>
           )}
         </div>
 
         <SheetFooter className="border-t px-6 py-4">
           {boshqalar.length > 0 ? (
             <div className="text-sm">
-              <p className="text-muted-foreground">Shu sahifa bo&apos;yicha yana:</p>
+              <p className="text-muted-foreground">{t("Shu sahifa bo'yicha yana:")}</p>
               <ul className="mt-1 space-y-1">
                 {boshqalar.map((s) => (
                   <li key={sahifaYoli(s)}>
@@ -95,7 +97,7 @@ export function QollanmaSheet({
           ) : null}
           <Button asChild>
             <Link href={sahifaYoli(sahifa)} onClick={() => onOchiqChange(false)}>
-              To&apos;liq sahifada ochish
+              {t("To'liq sahifada ochish")}
             </Link>
           </Button>
         </SheetFooter>

@@ -8,6 +8,7 @@ import { filterSettingsSections } from "@/lib/settings-search";
 import { isCeoUser, useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useUrlFilters, type FilterSchema } from "@/hooks/use-url-filters";
+import { useT } from "@/i18n/context";
 import {
   SettingsMenuSkeleton,
   SettingsNoResults,
@@ -19,7 +20,21 @@ const SCHEMA = { q: { type: "string", defaultValue: "" } } satisfies FilterSchem
 /** Qisqa ro'yxatga qidiruv shart emas: 6 tagacha punktli rol uni ko'rmaydi. */
 const SEARCH_FROM = 7;
 
+/** The /settings heading (the page itself is a server component). */
+export function SettingsIndexHeader() {
+  const t = useT();
+  return (
+    <div>
+      <h1 className="font-heading text-xl font-bold tracking-tight sm:text-2xl">{t("Sozlamalar")}</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        {t("Markaz qanday ishlashini shu yerda sozlaysiz.")}
+      </p>
+    </div>
+  );
+}
+
 export function SettingsMenu() {
+  const t = useT();
   const user = useAuth((s) => s.user);
   const can = usePermissions((s) => s.can);
   const { filters, setFilter } = useUrlFilters(SCHEMA);
@@ -35,8 +50,8 @@ export function SettingsMenu() {
   const total = visible.reduce((sum, section) => sum + section.items.length, 0);
   const searchable = total >= SEARCH_FROM;
   const shown = useMemo(
-    () => filterSettingsSections(visible, searchable ? query : ""),
-    [visible, query, searchable],
+    () => filterSettingsSections(visible, searchable ? query : "", t),
+    [visible, query, searchable, t],
   );
   const found = shown.reduce((sum, section) => sum + section.items.length, 0);
 
@@ -79,8 +94,8 @@ export function SettingsMenu() {
               onKeyDown={(e) => {
                 if (e.key === "Escape" && query) change("");
               }}
-              placeholder="Sozlamadan qidirish…"
-              aria-label="Sozlamadan qidirish"
+              placeholder={t("Sozlamadan qidirish…")}
+              aria-label={t("Sozlamadan qidirish")}
               className="h-10 bg-card pl-9 pr-9 [&::-webkit-search-cancel-button]:hidden"
             />
             {query ? (
@@ -90,7 +105,7 @@ export function SettingsMenu() {
                   change("");
                   inputRef.current?.focus();
                 }}
-                aria-label="Qidiruvni tozalash"
+                aria-label={t("Qidiruvni tozalash")}
                 className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 <X className="size-4" aria-hidden />
@@ -102,7 +117,7 @@ export function SettingsMenu() {
             )}
           </div>
           <p className="sr-only" aria-live="polite">
-            {query ? `${found} ta sozlama topildi` : ""}
+            {query ? t("{n} ta sozlama topildi", { n: found }) : ""}
           </p>
         </div>
       )}

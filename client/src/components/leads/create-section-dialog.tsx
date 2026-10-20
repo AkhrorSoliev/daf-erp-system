@@ -18,8 +18,10 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useLeadsBoard } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
+import { useT } from "@/i18n/context";
 
 export function CreateSectionDialog() {
+  const t = useT();
   const createSection = useLeadsUi((s) => s.createSection);
   const closeCreateSection = useLeadsUi((s) => s.closeCreateSection);
   const addSection = useLeadsBoard((s) => s.addSection);
@@ -41,7 +43,7 @@ export function CreateSectionDialog() {
     if (!createSection) return;
     const trimmed = name.trim();
     if (!trimmed) {
-      toast.error("Bo'lim nomini kiriting");
+      toast.error(t("Bo'lim nomini kiriting"));
       return;
     }
     setSubmitting(true);
@@ -57,10 +59,10 @@ export function CreateSectionDialog() {
         leadCount: data.leadCount ?? 0,
         columnId: data.columnId,
       });
-      toast.success("Bo'lim yaratildi");
+      toast.success(t("Bo'lim yaratildi"));
       closeCreateSection();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Bo'lim yaratishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Bo'lim yaratishda xatolik yuz berdi")));
     } finally {
       setSubmitting(false);
     }
@@ -73,10 +75,11 @@ export function CreateSectionDialog() {
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Yangi bo&apos;lim</DialogTitle>
+          <DialogTitle>{t("Yangi bo'lim")}</DialogTitle>
           <DialogDescription>
-            &quot;{createSection?.columnName}&quot; ustuniga yangi bo&apos;lim
-            qo&apos;shing
+            {t("\"{column}\" ustuniga yangi bo'lim qo'shing", {
+              column: createSection?.columnName ?? "",
+            })}
           </DialogDescription>
         </DialogHeader>
 
@@ -85,13 +88,13 @@ export function CreateSectionDialog() {
           onSubmit={handleSubmit}
           className="space-y-1.5"
         >
-          <Label htmlFor="section-name">Bo&apos;lim nomi</Label>
+          <Label htmlFor="section-name">{t("Bo'lim nomi")}</Label>
           <Input
             id="section-name"
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Masalan: Instagram reklama"
+            placeholder={t("Masalan: Instagram reklama")}
             maxLength={100}
           />
         </form>
@@ -103,11 +106,11 @@ export function CreateSectionDialog() {
             onClick={closeCreateSection}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button type="submit" form="create-section-form" disabled={submitting}>
             {submitting && <Loader2 className="size-4 animate-spin" />}
-            Yaratish
+            {t("Yaratish")}
           </Button>
         </DialogFooter>
       </DialogContent>

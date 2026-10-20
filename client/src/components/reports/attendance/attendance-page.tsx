@@ -5,6 +5,7 @@ import { Download, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useT } from "@/i18n/context";
 import { downloadAuthedFile } from "@/lib/download-file";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { tashkentDayAsLocalDate } from "@/lib/tashkent-time";
@@ -23,6 +24,7 @@ import {
 
 /** «Davomat» (spec B7c §4). Every figure is the server's; the page only arranges and formats. No branch picker: it follows the header. */
 export function AttendancePage() {
+  const t = useT();
   const { filters: raw, setFilters, resetFilters } = useUrlFilters(ATTENDANCE_SCHEMA);
   const filters = raw as unknown as AttendanceFilters;
   // Read on every render, not memoised: when the Tashkent month rolls over «Bu oy» resolves to new days, so the query key changes.
@@ -48,7 +50,7 @@ export function AttendancePage() {
       const qs = new URLSearchParams({ startDate: range.startDate, endDate: range.endDate }).toString();
       await downloadAuthedFile(`/reports/attendance-stats/excel?${qs}`, excelFileName(range));
     } catch (e) {
-      toast.error(getErrorMessage(e, "Excel yuklab olishda xatolik"));
+      toast.error(getErrorMessage(e, t("Excel yuklab olishda xatolik")));
     } finally {
       setExporting(false);
     }
@@ -57,10 +59,10 @@ export function AttendancePage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="font-heading text-lg font-semibold tracking-tight">Davomat</h2>
+        <h2 className="font-heading text-lg font-semibold tracking-tight">{t("Davomat")}</h2>
         <Button type="button" variant="outline" onClick={exportExcel} disabled={exporting}>
           {exporting ? <Loader2 className="animate-spin" /> : <Download />}
-          Excel
+          {t("Excel")}
         </Button>
       </div>
 
@@ -68,10 +70,10 @@ export function AttendancePage() {
 
       {isError ? (
         <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-          <p>Ma&apos;lumotni yuklab bo&apos;lmadi</p>
+          <p>{t("Ma'lumotni yuklab bo'lmadi")}</p>
           {/* A stale link can keep failing; retrying with it would repeat the error, so a non-default URL goes back to the defaults, stale `att_*` keys included (the plain path). */}
           <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => (isDefault ? refetch() : resetFilters())}>
-            Qayta urinish
+            {t("Qayta urinish")}
           </Button>
         </div>
       ) : !data ? (

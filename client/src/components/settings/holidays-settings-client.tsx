@@ -34,6 +34,7 @@ import { useEditHoliday, type Holiday } from "@/hooks/use-edit-holiday";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 import {
   holidayScopeLabel,
   toHoliday,
@@ -56,6 +57,7 @@ function formatHolidayRange(holiday: Holiday): string {
 }
 
 export function HolidaysSettingsClient() {
+  const t = useT();
   const {
     filters,
     setFilter,
@@ -126,24 +128,24 @@ export function HolidaysSettingsClient() {
   return (
     <div className="space-y-4">
       <SettingsPageHeader
-        title="Dam olish kunlari"
-        description="Rasmiy bayramlar va dam olish kunlarini boshqarish"
+        title={t("Dam olish kunlari")}
+        description={t("Rasmiy bayramlar va dam olish kunlarini boshqarish")}
         action={
           <Tooltip>
             <TooltipTrigger asChild>
               <Button size="sm" onClick={() => openAddDrawer()}>
                 <Plus className="mr-1.5 h-4 w-4" />
-                Yangi bayram
+                {t("Yangi bayram")}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Yangi dam olish kuni qo&apos;shish</TooltipContent>
+            <TooltipContent>{t("Yangi dam olish kuni qo'shish")}</TooltipContent>
           </Tooltip>
         }
       />
 
       <div className="flex items-center gap-3">
         <Input
-          placeholder="Bayram nomi bo'yicha qidirish..."
+          placeholder={t("Bayram nomi bo'yicha qidirish...")}
           value={searchInput}
           onChange={(e) => handleSearchChange(e.target.value)}
           className="w-full sm:max-w-sm"
@@ -155,9 +157,9 @@ export function HolidaysSettingsClient() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>Bayram nomi</TableHead>
-              <TableHead>Sana</TableHead>
-              <TableHead>Filial</TableHead>
+              <TableHead>{t("Bayram nomi")}</TableHead>
+              <TableHead>{t("Sana")}</TableHead>
+              <TableHead>{t("Filial")}</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -191,8 +193,8 @@ export function HolidaysSettingsClient() {
                   <div className="flex flex-col items-center gap-2">
                     <CalendarOff className="h-8 w-8 text-muted-foreground/50" />
                     {filters.search
-                      ? "Qidiruv bo'yicha bayram topilmadi"
-                      : "Hali bayram qo'shilmagan — \"Yangi bayram\" tugmasini bosing"}
+                      ? t("Qidiruv bo'yicha bayram topilmadi")
+                      : t("Hali bayram qo'shilmagan — «Yangi bayram» tugmasini bosing")}
                   </div>
                 </TableCell>
               </TableRow>
@@ -210,7 +212,7 @@ export function HolidaysSettingsClient() {
                         holiday.branchId == null ? "secondary" : "outline"
                       }
                     >
-                      {holidayScopeLabel(holiday)}
+                      {holidayScopeLabel(holiday, t)}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -229,7 +231,7 @@ export function HolidaysSettingsClient() {
       {total > 0 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Jami: {total} ta bayram
+            {t("Jami: {n} ta bayram", { n: total })}
           </p>
           <div className="flex items-center gap-3">
             <Select
@@ -256,7 +258,7 @@ export function HolidaysSettingsClient() {
                 disabled={filters.page <= 1 || loading}
                 onClick={() => setFilter("page", filters.page - 1)}
               >
-                Oldingi
+                {t("Oldingi")}
               </Button>
               <span className="px-2 text-sm text-muted-foreground">
                 {filters.page} / {totalPages}
@@ -267,7 +269,7 @@ export function HolidaysSettingsClient() {
                 disabled={filters.page >= totalPages || loading}
                 onClick={() => setFilter("page", filters.page + 1)}
               >
-                Keyingi
+                {t("Keyingi")}
               </Button>
             </div>
           </div>

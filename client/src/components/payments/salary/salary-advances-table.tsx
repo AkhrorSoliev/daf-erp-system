@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { TablePagination } from "@/components/outreach/table-pagination";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useLocale, useT } from "@/i18n/context";
 import { formatPrice } from "@/lib/format-utils";
+import { methodLabel } from "../expenses/expenses-labels";
 import type { AdvanceRow } from "../salary-advances-tab";
-import { monthShort } from "../salary-utils";
+import { keepsMonthCapital, monthShort } from "../salary-utils";
 import { SalaryToneBadge } from "./salary-tone-badge";
-
-const METHOD_LABELS = { CASH: "Naqd", CARD: "Karta" } as const;
 
 const fullName = (u: { firstName: string; lastName: string }) => `${u.firstName} ${u.lastName}`;
 
@@ -21,18 +21,25 @@ const newestFirst = (a: AdvanceRow, b: AdvanceRow) =>
 
 /** The rows of one page. Pagination state lives in the wrapper below (client/CLAUDE.md). */
 function AdvancesRows({ rows, firstNumber }: { rows: AdvanceRow[]; firstNumber: number }) {
+  const t = useT();
+  const { locale } = useLocale();
+  // The month inside «oktabr oyligidan …» is lower-cased in Uzbek and Russian, not in de/en.
+  const deductMonth = (key: string) => {
+    const name = monthShort(key, t);
+    return keepsMonthCapital(locale) ? name : name.toLowerCase();
+  };
   return (
     <div className="overflow-hidden rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="w-12 border-r">#</TableHead>
-            <TableHead>Sana</TableHead>
-            <TableHead>Kimga</TableHead>
-            <TableHead className="text-right">Summa</TableHead>
-            <TableHead>Naqd / karta</TableHead>
-            <TableHead>Kim berdi</TableHead>
-            <TableHead>Holat</TableHead>
+            <TableHead>{t("Sana")}</TableHead>
+            <TableHead>{t("Kimga")}</TableHead>
+            <TableHead className="text-right">{t("Summa")}</TableHead>
+            <TableHead>{t("Naqd / karta")}</TableHead>
+            <TableHead>{t("Kim berdi")}</TableHead>
+            <TableHead>{t("Holat")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -42,14 +49,16 @@ function AdvancesRows({ rows, firstNumber }: { rows: AdvanceRow[]; firstNumber: 
               <TableCell className="tabular-nums">{longDay(a.date)}</TableCell>
               <TableCell className="font-medium">{fullName(a.user)}</TableCell>
               <TableCell className="text-right tabular-nums">{formatPrice(a.amount)}</TableCell>
-              <TableCell>{METHOD_LABELS[a.paymentMethod]}</TableCell>
+              <TableCell>{methodLabel(a.paymentMethod, t)}</TableCell>
               <TableCell className={a.createdBy ? undefined : "text-muted-foreground"}>
                 {a.createdBy ? fullName(a.createdBy) : "—"}
               </TableCell>
               <TableCell>
                 {/* Settled: the month of the payment that took it. Waiting: the advance's own month (spec §2.6). */}
                 <SalaryToneBadge tone={a.settled ? "green" : "amber"}>
-                  {`${monthShort(a.deductMonth).toLowerCase()} oyligidan ${a.settled ? "ushlangan" : "ushlanadi"}`}
+                  {a.settled
+                    ? t("{month} oyligidan ushlangan", { month: deductMonth(a.deductMonth) })
+                    : t("{month} oyligidan ushlanadi", { month: deductMonth(a.deductMonth) })}
                 </SalaryToneBadge>
               </TableCell>
             </TableRow>
@@ -66,6 +75,7 @@ function AdvancesRows({ rows, firstNumber }: { rows: AdvanceRow[]; firstNumber: 
  * starts on page one.
  */
 export function SalaryAdvancesTable({ advances }: { advances: AdvanceRow[] }) {
+  const t = useT();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -87,7 +97,7 @@ export function SalaryAdvancesTable({ advances }: { advances: AdvanceRow[] }) {
           setPage(1);
         }}
       />
-      <p className="text-xs text-muted-foreground">Avans berilgan oyining oyligidan ushlanadi.</p>
+      <p className="text-xs text-muted-foreground">{t("Avans berilgan oyining oyligidan ushlanadi.")}</p>
     </div>
   );
 }

@@ -1,4 +1,6 @@
 import { tashkentNow } from "@/lib/tashkent-time";
+import { interpolate } from "@/i18n/translate";
+import type { Translate } from "./record-payment-admission";
 
 /**
  * Reading `GET /salary/config-history/:userId` — the SCD2 trail behind one
@@ -40,7 +42,7 @@ export interface SalaryConfigVersion {
 
 export interface SalaryConfigHistoryGroup {
   configId: string;
-  /** "Umumiy" for the company-wide rate, otherwise the group's name. */
+  /** "Umumiy" (translated) for the company-wide rate, otherwise the group's name (data). */
   label: string;
   groupId: string | null;
   versions: SalaryConfigVersion[];
@@ -73,14 +75,17 @@ export function currentVersionFor(
 }
 
 /** Human-readable span of one version, in Tashkent days. */
-export function effectivePeriodLabel(version: SalaryConfigVersion): string {
+export function effectivePeriodLabel(
+  version: SalaryConfigVersion,
+  t: Translate = interpolate,
+): string {
   const from = tashkentDayLabel(version.effectiveFrom);
-  if (version.effectiveTo === null) return `${from} dan hozirgacha`;
+  if (version.effectiveTo === null) return t("{from} dan hozirgacha", { from });
 
   const lastDayMs = new Date(version.effectiveTo).getTime() - DAY_MS;
   if (lastDayMs < new Date(version.effectiveFrom).getTime()) {
     // Replaced with the same start date — it never covered a single day.
-    return `${from} — amal qilmagan`;
+    return t("{from} — amal qilmagan", { from });
   }
   return `${from} – ${tashkentDayLabel(new Date(lastDayMs).toISOString())}`;
 }
@@ -92,6 +97,7 @@ export function effectivePeriodLabel(version: SalaryConfigVersion): string {
  */
 export function groupVersionsByConfig(
   versions: SalaryConfigVersion[],
+  t: Translate = interpolate,
 ): SalaryConfigHistoryGroup[] {
   const byConfig = new Map<string, SalaryConfigHistoryGroup>();
 
@@ -101,7 +107,7 @@ export function groupVersionsByConfig(
       group = {
         configId: v.configId,
         groupId: v.config.groupId,
-        label: v.config.groupId ? (v.config.group?.name ?? "Guruh") : "Umumiy",
+        label: v.config.groupId ? (v.config.group?.name ?? t("Guruh")) : t("Umumiy"),
         versions: [],
       };
       byConfig.set(v.configId, group);

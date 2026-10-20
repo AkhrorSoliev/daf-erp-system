@@ -9,6 +9,7 @@ import { settingsSearchPages } from "@/lib/settings-search";
 import { isCeoUser, useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useBranchChange } from "@/hooks/use-branch-change";
+import { useT } from "@/i18n/context";
 
 const RECENT_SEARCHES_KEY = "daf-recent-searches";
 const MAX_RECENT = 5;
@@ -71,6 +72,7 @@ export function useGlobalSearch() {
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const can = usePermissions((s) => s.can);
   const user = useAuth((s) => s.user);
+  const t = useT();
 
   useEffect(() => {
     setRecentSearches(loadRecentSearches());
@@ -172,7 +174,7 @@ export function useGlobalSearch() {
       ? filterPages(query.trim(), [
           ...searchablePages,
           ...settingsSearchPages(can, isCeoUser(user)),
-        ]).slice(0, 5)
+        ], t).slice(0, 5)
       : [];
 
   // "users" are staff without the teacher role. Their only page is employee

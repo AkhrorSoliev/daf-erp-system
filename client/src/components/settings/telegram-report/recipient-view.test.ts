@@ -64,7 +64,7 @@ describe("reachMeta", () => {
   });
   it("BLOCKED shows the last failure note or the default reason, with the date", () => {
     expect(reachMeta(rec({ reach: "BLOCKED", blockedAt: "2026-10-16T10:00:00Z" }), NOW)).toEqual({
-      label: "Yetmaydi", tone: "bad", note: "botni bloklagan · 16.10 dan",
+      label: "Yetib bormaydi", tone: "bad", note: "botni bloklagan · 16.10 dan",
     });
     expect(reachMeta(rec({ reach: "BLOCKED" }), NOW).note).toBe("xabar qabul qilinmayapti");
     expect(reachMeta(rec({ reach: "BLOCKED", blockedAt: "2026-10-16T10:00:00Z", lastAttempt: { at: "2026-10-16T16:00:00Z", ok: false, note: "Telegram hisobini o'chirgan" } }), NOW).note)

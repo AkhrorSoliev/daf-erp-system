@@ -32,14 +32,8 @@ import { useCan } from "@/hooks/use-permissions";
 import { formatPhone } from "@/lib/format-utils";
 import api from "@/lib/api";
 import { SalaryDueCard } from "@/components/shared/salary-due-card";
-
-const ROLE_LABELS: Record<string, string> = {
-  CEO: "CEO",
-  "Branch Director": "Direktor",
-  Administrator: "Administrator",
-  Teacher: "O'qituvchi",
-  Cashier: "Kassir",
-};
+import { roleTitle } from "@/components/profile/profile-roles";
+import { useT } from "@/i18n/context";
 
 interface EmployeeProfileCardProps {
   employee: EmployeeUser;
@@ -47,6 +41,7 @@ interface EmployeeProfileCardProps {
 }
 
 export function EmployeeProfileCard({ employee, commentKey }: EmployeeProfileCardProps) {
+  const t = useT();
   const { openDrawer } = useEditEmployee();
   const router = useRouter();
   const authUser = useAuth((s) => s.user);
@@ -57,9 +52,9 @@ export function EmployeeProfileCard({ employee, commentKey }: EmployeeProfileCar
 
   const handleDelete = () => {
     router.push("/settings/employees");
-    toast.success("Xodim arxivga o'tkazildi");
+    toast.success(t("Xodim arxivga o'tkazildi"));
     api.delete(`/users/${employee.id}`).catch(() => {
-      toast.error("O'chirishda xatolik yuz berdi");
+      toast.error(t("O'chirishda xatolik yuz berdi"));
     });
   };
   const [latestComment, setLatestComment] = useState<{
@@ -94,7 +89,7 @@ export function EmployeeProfileCard({ employee, commentKey }: EmployeeProfileCar
 
         <div>
           <h2 className="text-xl font-bold">{fullName}</h2>
-          <p className="text-sm text-muted-foreground">(id: {employee.id})</p>
+          <p className="text-sm text-muted-foreground">{t("(ID: {id})", { id: employee.id })}</p>
         </div>
 
         <div className="flex flex-wrap justify-center gap-1.5">
@@ -103,11 +98,11 @@ export function EmployeeProfileCard({ employee, commentKey }: EmployeeProfileCar
               key={role.id}
               variant="secondary"
             >
-              {ROLE_LABELS[role.name] || role.name}
+              {roleTitle(role, t)}
             </Badge>
           ))}
           {employee.status !== "ACTIVE" && (
-            <Badge variant="destructive">Nofaol</Badge>
+            <Badge variant="destructive">{t("Nofaol")}</Badge>
           )}
         </div>
       </div>
@@ -117,7 +112,7 @@ export function EmployeeProfileCard({ employee, commentKey }: EmployeeProfileCar
         {employee.phone && (
           <div className="flex items-center gap-2">
             <Phone className="size-3.5 text-muted-foreground" />
-            <span className="text-muted-foreground">Telefon:</span>
+            <span className="text-muted-foreground">{t("Telefon")}:</span>
             <a
               href={`tel:+998${employee.phone}`}
               className="text-blue-600 hover:underline dark:text-blue-400"
@@ -129,21 +124,21 @@ export function EmployeeProfileCard({ employee, commentKey }: EmployeeProfileCar
 
         {employee.gender && (
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Jinsi:</span>
-            <span>{employee.gender === "MALE" ? "Erkak" : "Ayol"}</span>
+            <span className="text-muted-foreground">{t("Jinsi")}:</span>
+            <span>{employee.gender === "MALE" ? t("Erkak") : t("Ayol")}</span>
           </div>
         )}
 
         {employee.login && (
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Login:</span>
+            <span className="text-muted-foreground">{t("Login")}:</span>
             <span className="font-medium">{employee.login}</span>
           </div>
         )}
 
         {employee.branches.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-muted-foreground">Filiallar:</span>
+            <span className="text-muted-foreground">{t("Filiallar")}:</span>
             {employee.branches.map((b) => (
               <Badge key={b.id} variant="outline" className="text-xs">
                 {b.name}
@@ -153,7 +148,7 @@ export function EmployeeProfileCard({ employee, commentKey }: EmployeeProfileCar
         )}
 
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">Qo&apos;shilgan:</span>
+          <span className="text-muted-foreground">{t("Qo'shilgan sana")}:</span>
           <span>{format(new Date(employee.createdAt), "dd.MM.yyyy")}</span>
         </div>
       </div>
@@ -182,7 +177,7 @@ export function EmployeeProfileCard({ employee, commentKey }: EmployeeProfileCar
               <Pencil className="size-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Tahrirlash</TooltipContent>
+          <TooltipContent>{t("Tahrirlash")}</TooltipContent>
         </Tooltip>
 
         {canDelete && (
@@ -199,23 +194,22 @@ export function EmployeeProfileCard({ employee, commentKey }: EmployeeProfileCar
                   </Button>
                 </AlertDialogTrigger>
               </TooltipTrigger>
-              <TooltipContent>O&apos;chirish</TooltipContent>
+              <TooltipContent>{t("O'chirish")}</TooltipContent>
             </Tooltip>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Xodimni o&apos;chirish</AlertDialogTitle>
+                <AlertDialogTitle>{t("Xodimni o'chirish")}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  &quot;{fullName}&quot; arxivga o&apos;tkaziladi. Keyinchalik
-                  arxivdan tiklash mumkin.
+                  {t("\"{name}\" arxivga o'tkaziladi. Keyinchalik arxivdan tiklash mumkin.", { name: fullName })}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                <AlertDialogCancel>{t("Bekor qilish")}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleDelete}
                   variant="destructive"
                 >
-                  O&apos;chirish
+                  {t("O'chirish")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -229,19 +223,19 @@ export function EmployeeProfileCard({ employee, commentKey }: EmployeeProfileCar
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Flag className="size-4 text-muted-foreground" />
-          <span className="text-sm font-medium">So&apos;nggi izoh</span>
+          <span className="text-sm font-medium">{t("So'nggi izoh")}</span>
         </div>
         {latestComment ? (
           <div className="rounded-lg bg-muted/40 px-3 py-2.5 space-y-1.5">
             <p className="text-sm leading-relaxed line-clamp-3">{latestComment.content}</p>
             <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <span className="font-medium">{latestComment.author ? `${latestComment.author.firstName} ${latestComment.author.lastName}` : "Tizim"}</span>
+              <span className="font-medium">{latestComment.author ? `${latestComment.author.firstName} ${latestComment.author.lastName}` : t("Tizim (avtomatik)")}</span>
               <span>&middot;</span>
               <span>{format(new Date(latestComment.createdAt), "dd.MM.yyyy, HH:mm")}</span>
             </div>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground italic">Izoh mavjud emas</p>
+          <p className="text-sm text-muted-foreground italic">{t("Izoh mavjud emas")}</p>
         )}
       </div>
     </div>

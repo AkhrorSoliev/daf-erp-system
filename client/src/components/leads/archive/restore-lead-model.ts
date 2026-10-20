@@ -1,6 +1,8 @@
 export interface RestoreColumn {
   id: string;
   name: string;
+  /** The board answer carries it; the system «Yangi Lidlar» column is told apart by it. */
+  systemKey?: string | null;
   sections: { id: string; name: string }[];
 }
 

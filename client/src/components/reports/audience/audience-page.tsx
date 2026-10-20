@@ -2,6 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { formatNumber } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { AudienceBands } from "./audience-bands";
@@ -11,22 +13,25 @@ import { useAudienceOverview } from "./audience-queries";
 
 /** «Auditoriya»: who studies here. Every figure is the server's; the page only arranges and formats. No branch picker: it follows the header. */
 export function AudiencePage() {
+  const t = useT();
   const { data, isPlaceholderData, isError, refetch } = useAudienceOverview();
 
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="font-heading text-lg font-semibold tracking-tight">Auditoriya</h2>
+        <h2 className="font-heading text-lg font-semibold tracking-tight">{t("Auditoriya")}</h2>
         <p className="text-sm text-muted-foreground">
-          Hozir o&apos;qiyotgan o&apos;quvchilar{data ? ` · ${formatNumber(data.summary.total)} kishi` : ""}
+          {data
+            ? t("Hozir o'qiyotgan o'quvchilar · {n} kishi", { n: formatNumber(data.summary.total) })
+            : t("Hozir o'qiyotgan o'quvchilar")}
         </p>
       </div>
 
       {isError && !data ? (
         <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-          <p>Ma&apos;lumotni yuklab bo&apos;lmadi</p>
+          <p>{t("Ma'lumotni yuklab bo'lmadi")}</p>
           <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => refetch()}>
-            Qayta urinish
+            {t("Qayta urinish")}
           </Button>
         </div>
       ) : !data ? (
@@ -34,7 +39,7 @@ export function AudiencePage() {
       ) : data.summary.total === 0 ? (
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Bu filialda hozir o&apos;qiyotgan o&apos;quvchi yo&apos;q — boshqa filialni tanlab ko&apos;ring.
+            {t("Bu filialda hozir o'qiyotgan o'quvchi yo'q — boshqa filialni tanlab ko'ring.")}
           </CardContent>
         </Card>
       ) : (
@@ -43,8 +48,8 @@ export function AudiencePage() {
           <AudienceCoverage s={data.summary} />
           <AudienceHeadline s={data.summary} />
           <AudienceBands bands={data.bands} />
-          <AudienceCutTable title="Kurs bo'yicha" nameHead="Kurs" rows={data.courses} />
-          <AudienceCutTable title="Filial bo'yicha" nameHead="Filial" rows={data.branches} />
+          <AudienceCutTable title={msg("Kurs bo'yicha")} nameHead={msg("Kurs")} rows={data.courses} />
+          <AudienceCutTable title={msg("Filial bo'yicha")} nameHead={msg("Filial")} rows={data.branches} />
         </div>
       )}
     </div>

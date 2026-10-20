@@ -10,6 +10,9 @@ import { formatNumber } from "@/lib/format-utils";
 import { TeacherChangesDialog } from "./teacher-changes-dialog";
 import { DepartedAfterChangeDialog } from "./departed-after-change-dialog";
 import { capitalize } from "./departed-format";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
+import { markedText } from "@/components/payments/debt-history/marked-text";
 import type { RetentionMetrics, RetentionQueryParams } from "./teacher-change-types";
 
 interface Props {
@@ -21,11 +24,13 @@ interface Props {
   periodLabel?: string;
 }
 
-const WINDOW_EXPLANATION =
-  "Ustoz almashgandan keyin guruhning dastlabki 5 dars davomida ketgan o'quvchilar hisoblanadi.\n" +
-  "6-darsdan keyin ketsa — ustoz sabab emas deb hisoblanadi.";
+const WINDOW_EXPLANATION = msg(
+  "Ustoz almashgandan keyin guruhning dastlabki 5 dars davomida ketgan o'quvchilar hisoblanadi.\n6-darsdan keyin ketsa — ustoz sabab emas deb hisoblanadi.",
+);
 
-export function TeacherChangeRetentionCards({ data, isLoading, queryParams, periodLabel = "shu davrda" }: Props) {
+export function TeacherChangeRetentionCards({ data, isLoading, queryParams, periodLabel }: Props) {
+  const t = useT();
+  const period = periodLabel ?? t("shu davrda");
   const [changesOpen, setChangesOpen] = useState(false);
   const [departedOpen, setDepartedOpen] = useState(false);
 
@@ -46,33 +51,40 @@ export function TeacherChangeRetentionCards({ data, isLoading, queryParams, peri
         <CardContent className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <Repeat className="size-4" />
-            Ustoz almashgandan keyin
+            {t("Ustoz almashgandan keyin")}
             <Tooltip>
               <TooltipTrigger asChild>
-                <button type="button" aria-label="Tushuntirish" className="transition-colors hover:text-foreground">
+                <button type="button" aria-label={t("Tushuntirish")} className="transition-colors hover:text-foreground">
                   <Info className="size-4" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent className="max-w-xs whitespace-pre-line">{WINDOW_EXPLANATION}</TooltipContent>
+              <TooltipContent className="max-w-xs whitespace-pre-line">{t(WINDOW_EXPLANATION)}</TooltipContent>
             </Tooltip>
           </div>
           <p className="text-sm">
             {data.totalTeacherChanges === 0 ? (
-              <>{capitalize(periodLabel)} ustoz almashgan guruh yo&apos;q.</>
+              <>{capitalize(t("{period} ustoz almashgan guruh yo'q.", { period }))}</>
             ) : (
               <>
-                {capitalize(periodLabel)} {formatNumber(data.totalTeacherChanges)} marta ustoz almashdi. Keyingi 5 darsda shu guruhlardan{" "}
-                <b>{formatNumber(data.departedAfterTeacherChange)} o&apos;quvchi</b> ketdi.
+                {markedText(
+                  capitalize(
+                    t("{period} {n} marta ustoz almashdi. Keyingi 5 darsda shu guruhlardan **{m} o'quvchi** ketdi.", {
+                      period,
+                      n: formatNumber(data.totalTeacherChanges),
+                      m: formatNumber(data.departedAfterTeacherChange),
+                    }),
+                  ),
+                )}
               </>
             )}
           </p>
           <div className="flex flex-wrap gap-x-4">
             <Button type="button" variant="link" size="sm" className="px-0" disabled={data.totalTeacherChanges === 0} onClick={() => setChangesOpen(true)}>
-              Guruhlar
+              {t("Guruhlar")}
               <ArrowRight />
             </Button>
             <Button type="button" variant="link" size="sm" className="px-0" disabled={data.departedAfterTeacherChange === 0} onClick={() => setDepartedOpen(true)}>
-              Ketgan o&apos;quvchilar
+              {t("Ketgan o'quvchilar")}
               <ArrowRight />
             </Button>
           </div>

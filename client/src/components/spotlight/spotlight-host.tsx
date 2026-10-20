@@ -13,6 +13,7 @@ import {
   PopoverTitle,
 } from "@/components/ui/popover";
 import { useSpotlight, type SpotlightStep } from "@/hooks/use-spotlight";
+import { useT } from "@/i18n/context";
 import {
   routePath,
   spotlightBox,
@@ -51,6 +52,7 @@ export function SpotlightHost() {
 }
 
 function SpotlightRunner({ step }: { step: SpotlightStep }) {
+  const t = useT();
   const stop = useSpotlight((s) => s.stop);
   const pathname = usePathname();
   const [target, setTarget] = useState<HTMLElement | null>(null);
@@ -68,8 +70,8 @@ function SpotlightRunner({ step }: { step: SpotlightStep }) {
       stop();
       return;
     }
-    const t = window.setTimeout(stop, ARRIVE_TIMEOUT_MS);
-    return () => window.clearTimeout(t);
+    const timer = window.setTimeout(stop, ARRIVE_TIMEOUT_MS);
+    return () => window.clearTimeout(timer);
   }, [step.route, pathname, stop]);
 
   // Wait for the button — the wait/observe/timeout logic lives in
@@ -153,7 +155,7 @@ function SpotlightRunner({ step }: { step: SpotlightStep }) {
         </PopoverHeader>
         <div className="flex justify-end">
           <Button size="sm" onClick={stop}>
-            Tushundim
+            {t("Tushundim")}
           </Button>
         </div>
       </PopoverContent>

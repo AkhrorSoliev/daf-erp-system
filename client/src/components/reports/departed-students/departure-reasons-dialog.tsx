@@ -13,6 +13,7 @@ import {
   EXIT_TYPE_OPTIONS,
   ReasonListManager,
 } from "@/components/settings/reason-list-manager";
+import { useT } from "@/i18n/context";
 
 interface DepartureReasonsDialogProps {
   open: boolean;
@@ -29,14 +30,14 @@ export function DepartureReasonsDialog({
   open,
   onOpenChange,
 }: DepartureReasonsDialogProps) {
+  const t = useT();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Ketish va status sabablari</DialogTitle>
+          <DialogTitle>{t("Ketish va status sabablari")}</DialogTitle>
           <DialogDescription>
-            O&apos;quvchi guruhdan chiqarilganda, muzlatilganda yoki
-            chetlatilganda ko&apos;rsatiladigan sabablarni boshqaring
+            {t("O'quvchi guruhdan chiqarilganda, muzlatilganda yoki chetlatilganda ko'rsatiladigan sabablarni boshqaring")}
           </DialogDescription>
         </DialogHeader>
 
@@ -44,9 +45,9 @@ export function DepartureReasonsDialog({
           <ReasonListManager
             endpoint="/student-exit-reasons"
             queryKey="student-exit-reasons"
-            addPlaceholder="Yangi sabab nomi"
+            addPlaceholder={t("Yangi sabab nomi")}
             tags={{
-              label: "Qaysi holatlarga taalluqli:",
+              label: t("Qaysi holatlarga taalluqli:"),
               options: EXIT_TYPE_OPTIONS,
               defaultValue: ["GROUP_REMOVAL"],
             }}
@@ -57,7 +58,7 @@ export function DepartureReasonsDialog({
           href="/settings/reasons"
           className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:underline"
         >
-          Guruh almashtirish va ustoz o&apos;zgarishi sabablari
+          {t("Guruh almashtirish va ustoz o'zgarishi sabablari")}
           <ArrowUpRight className="size-3" />
         </Link>
       </DialogContent>

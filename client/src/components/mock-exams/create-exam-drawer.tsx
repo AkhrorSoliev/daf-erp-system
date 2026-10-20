@@ -31,6 +31,9 @@ import { TimePicker } from "@/components/ui/time-picker";
 import { PriceInput } from "@/components/ui/price-input";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
+import { ruleMessage } from "@/components/settings/settings-form-parts";
 import {
   useMockExamsBoard,
   type MockExamRow,
@@ -51,6 +54,10 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 const WORK_START = "07:00";
 const WORK_END = "22:00";
 
+// Rule messages keep the Uzbek source; the form translates them when drawn.
+export const TITLE_REQUIRED = msg("Nom kiritilishi shart");
+export const TITLE_TOO_LONG = msg("200 belgi chegarasi");
+
 export interface CreateExamPrefill {
   sectionId: string | null;
 }
@@ -66,6 +73,7 @@ export function CreateExamDrawer({
   prefill,
   onClose,
 }: CreateExamDrawerProps) {
+  const t = useT();
   const addExam = useMockExamsBoard((s) => s.addExam);
   const branches = useBranchSwitcher((s) => s.branches);
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
@@ -109,11 +117,11 @@ export function CreateExamDrawer({
 
   async function onSubmit(values: FormValues) {
     if (!branchId) {
-      toast.error("Filialni tanlang");
+      toast.error(t("Filialni tanlang"));
       return;
     }
     if (!values.examDate) {
-      toast.error("Imtihon sanasini tanlang");
+      toast.error(t("Imtihon sanasini tanlang"));
       return;
     }
 
@@ -121,7 +129,7 @@ export function CreateExamDrawer({
     // feeds examDate. At least one time is required.
     const examTimes = [...new Set(values.examTimes.filter(Boolean))].sort();
     if (examTimes.length === 0) {
-      toast.error("Kamida 1 ta imtihon vaqtini qo'shing");
+      toast.error(t("Kamida 1 ta imtihon vaqtini qo'shing"));
       return;
     }
 
@@ -129,14 +137,14 @@ export function CreateExamDrawer({
     const regDt = buildDateTime(values.registrationDate, values.registrationTime);
     if (examDt && regDt && new Date(regDt) > new Date(examDt)) {
       toast.error(
-        "Ro'yxatga olish muddati imtihon sanasi va vaqtidan oldin bo'lishi kerak",
+        t("Ro'yxatga olish muddati imtihon sanasi va vaqtidan oldin bo'lishi kerak"),
       );
       return;
     }
 
     const price = values.price.trim() ? Number(values.price) : 0;
     if (!Number.isFinite(price) || price < 0) {
-      toast.error("Narx noto'g'ri kiritildi");
+      toast.error(t("Narx noto'g'ri kiritildi"));
       return;
     }
 
@@ -150,7 +158,7 @@ export function CreateExamDrawer({
     if (values.studentPrice.trim()) {
       const sp = Number(values.studentPrice);
       if (!Number.isFinite(sp) || sp < 0) {
-        toast.error("DaF o'quvchi narxi noto'g'ri kiritildi");
+        toast.error(t("DaF o'quvchi narxi noto'g'ri kiritildi"));
         return;
       }
       studentPrice = sp;
@@ -166,11 +174,13 @@ export function CreateExamDrawer({
       const name = s.name.trim();
       const maxScore = Number(s.maxScore);
       if (!name) {
-        toast.error(`Bo'lim #${i + 1} nomini kiriting`);
+        toast.error(t("Bo'lim #{n} nomini kiriting", { n: i + 1 }));
         return;
       }
       if (!Number.isFinite(maxScore) || maxScore <= 0) {
-        toast.error(`"${name}" bo'limining balli 0 dan katta bo'lishi kerak`);
+        toast.error(
+          t("\"{name}\" bo'limining balli 0 dan katta bo'lishi kerak", { name }),
+        );
         return;
       }
       const rawPass = s.passingScore.trim();
@@ -179,13 +189,18 @@ export function CreateExamDrawer({
         const n = Number(rawPass);
         if (!Number.isFinite(n) || n < 0) {
           toast.error(
-            `"${name}" bo'limining o'tish balli 0 dan kichik bo'la olmaydi`,
+            t("\"{name}\" bo'limining o'tish balli 0 dan kichik bo'la olmaydi", {
+              name,
+            }),
           );
           return;
         }
         if (n > maxScore) {
           toast.error(
-            `"${name}" bo'limi: o'tish balli (${n}) maksimaldan (${maxScore}) katta bo'la olmaydi`,
+            t(
+              "\"{name}\" bo'limi: o'tish balli ({pass}) maksimaldan ({max}) katta bo'la olmaydi",
+              { name, pass: n, max: maxScore },
+            ),
           );
           return;
         }
@@ -198,7 +213,7 @@ export function CreateExamDrawer({
       });
     }
     if (subjects.length === 0) {
-      toast.error("Kamida 1 ta bo'lim qo'shing");
+      toast.error(t("Kamida 1 ta bo'lim qo'shing"));
       return;
     }
 
@@ -219,11 +234,11 @@ export function CreateExamDrawer({
         subjects,
       });
       addExam(data);
-      toast.success("Imtihon yaratildi");
+      toast.success(t("Imtihon yaratildi"));
       onClose();
     } catch (error) {
       toast.error(
-        getErrorMessage(error, "Imtihon yaratishda xatolik yuz berdi"),
+        getErrorMessage(error, t("Imtihon yaratishda xatolik yuz berdi")),
       );
     } finally {
       setSubmitting(false);
@@ -238,10 +253,9 @@ export function CreateExamDrawer({
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <SheetHeader className="border-b px-6 py-4">
-          <SheetTitle className="text-lg">Yangi mock imtihon</SheetTitle>
+          <SheetTitle className="text-lg">{t("Yangi mock imtihon")}</SheetTitle>
           <SheetDescription>
-            Sana va soat, narxni belgilang. Boshqa parametrlarni keyin
-            sozlash mumkin.
+            {t("Sana va soat, narxni belgilang. Boshqa parametrlarni keyin sozlash mumkin.")}
           </SheetDescription>
         </SheetHeader>
 
@@ -252,18 +266,18 @@ export function CreateExamDrawer({
             className="space-y-5 px-6 py-5"
           >
             <div className="space-y-1.5">
-              <Label htmlFor="title">Imtihon nomi</Label>
+              <Label htmlFor="title">{t("Imtihon nomi")}</Label>
               <Input
                 id="title"
-                placeholder="Masalan: IELTS Mock — Yanvar 2026"
+                placeholder={t("Masalan: IELTS Mock — Yanvar 2026")}
                 {...register("title", {
-                  required: "Nom kiritilishi shart",
-                  maxLength: { value: 200, message: "200 belgi chegarasi" },
+                  required: TITLE_REQUIRED,
+                  maxLength: { value: 200, message: TITLE_TOO_LONG },
                 })}
               />
               {errors.title && (
                 <p className="text-sm text-destructive">
-                  {errors.title.message}
+                  {ruleMessage(t, errors.title.message)}
                 </p>
               )}
             </div>
@@ -275,10 +289,10 @@ export function CreateExamDrawer({
             />
 
             <div className="space-y-1.5">
-              <Label htmlFor="description">Tavsif (ixtiyoriy)</Label>
+              <Label htmlFor="description">{t("Tavsif (ixtiyoriy)")}</Label>
               <Textarea
                 id="description"
-                placeholder="Imtihon haqida qo'shimcha ma'lumot"
+                placeholder={t("Imtihon haqida qo'shimcha ma'lumot")}
                 rows={3}
                 maxLength={2000}
                 {...register("description")}
@@ -286,7 +300,7 @@ export function CreateExamDrawer({
             </div>
 
             <div className="space-y-1.5">
-              <Label>Imtihon sanasi</Label>
+              <Label>{t("Imtihon sanasi")}</Label>
               <Controller
                 name="examDate"
                 control={control}
@@ -301,7 +315,7 @@ export function CreateExamDrawer({
             </div>
 
             <div className="space-y-1.5">
-              <Label>Imtihon vaqtlari</Label>
+              <Label>{t("Imtihon vaqtlari")}</Label>
               <Controller
                 name="examTimes"
                 control={control}
@@ -315,13 +329,14 @@ export function CreateExamDrawer({
                 )}
               />
               <p className="text-xs text-muted-foreground">
-                Bir nechta vaqt qo&apos;shsangiz, botda ro&apos;yxatdan
-                o&apos;tuvchi vaqtni tanlaydi. Birinchisi asosiy sana-vaqt.
+                {t(
+                  "Bir nechta vaqt qo'shsangiz, botda ro'yxatdan o'tuvchi vaqtni tanlaydi. Birinchisi asosiy sana-vaqt.",
+                )}
               </p>
             </div>
 
             <div className="space-y-1.5">
-              <Label>Ro&apos;yxatga olish muddati (ixtiyoriy)</Label>
+              <Label>{t("Ro'yxatga olish muddati (ixtiyoriy)")}</Label>
               <div className="grid grid-cols-2 gap-3">
                 <Controller
                   name="registrationDate"
@@ -347,12 +362,12 @@ export function CreateExamDrawer({
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Belgilangan vaqt kelganda ro&apos;yxat avtomatik yopiladi.
+                {t("Belgilangan vaqt kelganda ro'yxat avtomatik yopiladi.")}
               </p>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="price">Narxi</Label>
+              <Label htmlFor="price">{t("Narxi")}</Label>
               <Controller
                 name="price"
                 control={control}
@@ -361,18 +376,18 @@ export function CreateExamDrawer({
                     id="price"
                     value={field.value}
                     onChange={(e) => field.onChange(e.target.value)}
-                    placeholder="0 = bepul"
+                    placeholder={t("0 = bepul")}
                   />
                 )}
               />
               <p className="text-xs text-muted-foreground">
-                Click/Payme orqali ID&apos;ga to&apos;lanadi
+                {t("Click/Payme orqali ID'ga to'lanadi")}
               </p>
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="studentPrice">
-                DaF o&apos;quvchi narxi (ixtiyoriy)
+                {t("DaF o'quvchi narxi (ixtiyoriy)")}
               </Label>
               <Controller
                 name="studentPrice"
@@ -382,19 +397,19 @@ export function CreateExamDrawer({
                     id="studentPrice"
                     value={field.value}
                     onChange={(e) => field.onChange(e.target.value)}
-                    placeholder="Bo'sh = to'liq narx"
+                    placeholder={t("Bo'sh = to'liq narx")}
                   />
                 )}
               />
               <p className="text-xs text-muted-foreground">
-                Markazimiz o&apos;quvchilariga chegirmali narx. Chetlatilgan va
-                arxivdagi o&apos;quvchilar to&apos;liq narx to&apos;laydi.
-                Bo&apos;sh qoldirilsa, hamma to&apos;liq narx to&apos;laydi.
+                {t(
+                  "Markazimiz o'quvchilariga chegirmali narx. Chetlatilgan va arxivdagi o'quvchilar to'liq narx to'laydi. Bo'sh qoldirilsa, hamma to'liq narx to'laydi.",
+                )}
               </p>
             </div>
 
             <div className="space-y-1.5">
-              <Label>Taklif etiladigan darajalar (ixtiyoriy)</Label>
+              <Label>{t("Taklif etiladigan darajalar (ixtiyoriy)")}</Label>
               <Controller
                 name="offeredLevels"
                 control={control}
@@ -406,22 +421,23 @@ export function CreateExamDrawer({
                 )}
               />
               <p className="text-xs text-muted-foreground">
-                Tanlangan darajalar botda tugma sifatida chiqadi;
-                ro&apos;yxatdan o&apos;tuvchi bittasini tanlaydi.
+                {t(
+                  "Tanlangan darajalar botda tugma sifatida chiqadi; ro'yxatdan o'tuvchi bittasini tanlaydi.",
+                )}
               </p>
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Bo&apos;limlar va ballar</Label>
+                <Label>{t("Bo'limlar va ballar")}</Label>
                 <span className="text-xs text-muted-foreground">
-                  Kamida 1 ta
+                  {t("Kamida 1 ta")}
                 </span>
               </div>
               <div className="grid grid-cols-[1fr_5rem_5rem_2.25rem] gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-                <span>Nom</span>
-                <span className="text-center">Maks</span>
-                <span className="text-center">O&apos;tish</span>
+                <span>{t("Nom")}</span>
+                <span className="text-center">{t("Maks")}</span>
+                <span className="text-center">{t("O'tish")}</span>
                 <span></span>
               </div>
               <div className="space-y-2">
@@ -431,7 +447,7 @@ export function CreateExamDrawer({
                     className="grid grid-cols-[1fr_5rem_5rem_2.25rem] items-start gap-2"
                   >
                     <Input
-                      placeholder="Masalan: Hören"
+                      placeholder={t("Masalan: Hören")}
                       maxLength={100}
                       {...register(`subjects.${idx}.name` as const, {
                         required: true,
@@ -463,8 +479,8 @@ export function CreateExamDrawer({
                       disabled={fields.length === 1}
                       title={
                         fields.length === 1
-                          ? "Kamida 1 ta bo'lim qoldirish kerak"
-                          : "O'chirish"
+                          ? t("Kamida 1 ta bo'lim qoldirish kerak")
+                          : t("O'chirish")
                       }
                     >
                       <Trash2 className="size-4" />
@@ -479,11 +495,12 @@ export function CreateExamDrawer({
                 onClick={() => append({ ...DEFAULT_SUBJECT_ROW })}
               >
                 <Plus className="size-4" />
-                Bo&apos;lim qo&apos;shish
+                {t("Bo'lim qo'shish")}
               </Button>
               <p className="text-xs text-muted-foreground">
-                Goethe B1+ modular formati: har bo&apos;lim 100 dan, o&apos;tish
-                60. O&apos;tish balli ixtiyoriy.
+                {t(
+                  "Goethe B1+ modular formati: har bo'lim 100 dan, o'tish 60. O'tish balli ixtiyoriy.",
+                )}
               </p>
             </div>
           </form>
@@ -496,11 +513,11 @@ export function CreateExamDrawer({
             onClick={onClose}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button type="submit" form="create-exam-form" disabled={submitting}>
             {submitting && <Loader2 className="size-4 animate-spin" />}
-            Yaratish
+            {t("Yaratish")}
           </Button>
         </SheetFooter>
       </SheetContent>
@@ -509,20 +526,21 @@ export function CreateExamDrawer({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Bu imtihon bepul bo&apos;ladimi?
+              {t("Bu imtihon bepul bo'ladimi?")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Narx kiritilmadi. Agar shunday davom etsangiz, imtihon{" "}
-              <b>bepul</b> bo&apos;lib yaratiladi va bot ro&apos;yxatdan
-              o&apos;tganlardan <b>to&apos;lov so&apos;ramaydi</b>.
+              {t(
+                "Narx kiritilmadi. Agar shunday davom etsangiz, imtihon bepul bo'lib yaratiladi va bot ro'yxatdan o'tganlardan to'lov so'ramaydi.",
+              )}
               <br />
               <br />
-              Imtihon pullik bo&apos;lishi kerak bo&apos;lsa — bekor qiling va
-              &quot;Narx&quot; maydonini to&apos;ldiring.
+              {t(
+                "Imtihon pullik bo'lishi kerak bo'lsa — bekor qiling va \"Narx\" maydonini to'ldiring.",
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+            <AlertDialogCancel>{t("Bekor qilish")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 freeConfirmedRef.current = true;
@@ -531,7 +549,7 @@ export function CreateExamDrawer({
                 void handleSubmit(onSubmit)();
               }}
             >
-              Ha, bepul bo&apos;lsin
+              {t("Ha, bepul bo'lsin")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

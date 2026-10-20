@@ -11,6 +11,7 @@ import { useLeadsBoard, type LeadCard } from "@/hooks/use-leads-board";
 import { claimLead } from "./ownership-api";
 import { dueLabel, dueTone, ownerInitials, ownerName } from "./ownership-format";
 import { useMinuteClock } from "./use-minute-clock";
+import { useT } from "@/i18n/context";
 
 const TONE = {
   normal: "text-muted-foreground",
@@ -32,6 +33,7 @@ export function LeadOwnerBadge({
   sectionId?: string;
   interactive?: boolean;
 }) {
+  const t = useT();
   const now = useMinuteClock();
   const canClaim = useCan("leads.claim");
   const applyLeadUpdate = useLeadsBoard((s) => s.applyLeadUpdate);
@@ -47,19 +49,20 @@ export function LeadOwnerBadge({
               {ownerInitials(lead.owner)}
             </span>
           </TooltipTrigger>
-          <TooltipContent>{`Mas'ul: ${ownerName(lead.owner)}`}</TooltipContent>
+          <TooltipContent>{t("Mas'ul: {name}", { name: ownerName(lead.owner) })}</TooltipContent>
         </Tooltip>
         {lead.ownerDueAt && (
           <Tooltip>
             <TooltipTrigger asChild>
               <span className={cn("flex items-center gap-0.5 tabular-nums", TONE[tone])}>
                 <Clock className="size-3" />
-                {tone === "overdue" ? "Muddat o'tdi" : dueLabel(lead.ownerDueAt, now)}
+                {tone === "overdue" ? t("Muddat o'tdi") : dueLabel(lead.ownerDueAt, now, t)}
               </span>
             </TooltipTrigger>
             <TooltipContent>
-              Shu vaqtgacha qo&apos;ng&apos;iroq, izoh yoki topshiriq bo&apos;lmasa, lid umumiy
-              ro&apos;yxatga qaytadi
+              {t(
+                "Shu vaqtgacha qo'ng'iroq, izoh yoki topshiriq bo'lmasa, lid umumiy ro'yxatga qaytadi",
+              )}
             </TooltipContent>
           </Tooltip>
         )}
@@ -73,9 +76,9 @@ export function LeadOwnerBadge({
     setBusy(true);
     try {
       applyLeadUpdate(sectionId, await claimLead(lead.id));
-      toast.success("Lid sizga biriktirildi");
+      toast.success(t("Lid sizga biriktirildi"));
     } catch (error) {
-      toast.error(getErrorMessage(error, "Lidni band qilib bo'lmadi"));
+      toast.error(getErrorMessage(error, t("Lidni band qilib bo'lmadi")));
     } finally {
       setBusy(false);
     }
@@ -89,7 +92,7 @@ export function LeadOwnerBadge({
       className="mt-1.5 flex items-center gap-1 rounded px-1 py-0.5 text-[11px] font-medium text-primary transition-colors hover:bg-primary/10 disabled:opacity-60"
     >
       {busy ? <Loader2 className="size-3 animate-spin" /> : <UserPlus className="size-3" />}
-      Band qilish
+      {t("Band qilish")}
     </button>
   );
 }

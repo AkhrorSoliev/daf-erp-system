@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { tashkentDayAsLocalDate, tashkentDdMm, tashkentHhmm } from "@/lib/tashkent-time";
+import { SYSTEM_LABEL, uzbek, type Translate } from "../task-labels";
 
 /** `GET /student-join-requests/by-task/:taskId` (server `join-request-view.ts`). */
 export type JoinRequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED" | "REPLACED";
@@ -35,24 +36,32 @@ export function canApprove(v: JoinRequestView, groupId: string | null): boolean 
   return v.status === "PENDING" && groupId !== null && v.groups.some((g) => g.id === groupId);
 }
 
-/** What the server found about this person (spec §5.3). */
-export function joinRequestNotes(v: JoinRequestView, groupId: string | null, leadStatusLabel: string | null): JoinNote[] {
+/**
+ * What the server found about this person (spec §5.3), worded by the client.
+ * `leadStatusLabel` comes already in the page's language; names and the source are data.
+ */
+export function joinRequestNotes(v: JoinRequestView, groupId: string | null, leadStatusLabel: string | null, t: Translate = uzbek): JoinNote[] {
   const notes: JoinNote[] = [];
   if (v.lead) {
-    const archived = v.lead.archived ? " (arxivda)" : "";
-    notes.push({ tone: "info", text: `Lid: ${day(v.lead.createdAt)} · ${v.lead.sourceName ?? "manbasiz"} · ${leadStatusLabel ?? v.lead.status}${archived}` });
+    const facts = { date: day(v.lead.createdAt), source: v.lead.sourceName ?? t("manbasiz"), status: leadStatusLabel ?? v.lead.status };
+    const text = v.lead.archived ? t("Lid: {date} · {source} · {status} (arxivda)", facts) : t("Lid: {date} · {source} · {status}", facts);
+    notes.push({ tone: "info", text });
   }
   if (v.archivedStudentId !== null) {
-    notes.push({ tone: "warning", text: `Bu raqam arxivdagi #${v.archivedStudentId} o'quvchiniki — uni tiklash to'g'riroq bo'lishi mumkin` });
+    notes.push({ tone: "warning", text: t("Bu raqam arxivdagi #{id} o'quvchiniki — uni tiklash to'g'riroq bo'lishi mumkin", { id: String(v.archivedStudentId) }) });
   }
   if (groupId !== null && v.sameNameGroupIds.includes(groupId)) {
-    notes.push({ tone: "warning", text: "Guruhda shu ismli o'quvchi bor" });
+    notes.push({ tone: "warning", text: t("Guruhda shu ismli o'quvchi bor") });
   }
   // The group in the picker, not the requested one: a valid other pick clears it.
   if (v.status === "PENDING" && !v.groups.some((g) => g.id === groupId)) {
     const requested = groupId === null || groupId === v.requestedGroup?.id;
-    const subject = !requested ? "Tanlangan guruhga" : v.requestedGroup ? `«${v.requestedGroup.name}» guruhiga` : "So'ralgan guruhga";
-    notes.push({ tone: "error", text: `${subject} yozilib bo'lmaydi — boshqa guruhni tanlang` });
+    const text = !requested
+      ? t("Tanlangan guruhga yozilib bo'lmaydi — boshqa guruhni tanlang")
+      : v.requestedGroup
+        ? t("«{group}» guruhiga yozilib bo'lmaydi — boshqa guruhni tanlang", { group: v.requestedGroup.name })
+        : t("So'ralgan guruhga yozilib bo'lmaydi — boshqa guruhni tanlang");
+    notes.push({ tone: "error", text });
   }
   return notes;
 }
@@ -63,21 +72,21 @@ export function joinRequestNotes(v: JoinRequestView, groupId: string | null, lea
  */
 export interface DecidedLine { text: string; studentId: number | null; tail: string }
 
-export function decidedLine(v: JoinRequestView): DecidedLine | null {
+export function decidedLine(v: JoinRequestView, t: Translate = uzbek): DecidedLine | null {
   const line = (text: string): DecidedLine => ({ text, studentId: null, tail: "" });
   switch (v.status) {
     case "PENDING":
       return null;
     case "APPROVED": {
-      const who = v.decidedBy ? `${v.decidedBy.firstName} ${v.decidedBy.lastName.slice(0, 1)}.` : "Tizim";
+      const who = v.decidedBy ? `${v.decidedBy.firstName} ${v.decidedBy.lastName.slice(0, 1)}.` : t(SYSTEM_LABEL);
       const when = v.decidedAt ? `${tashkentDdMm(v.decidedAt)} ${tashkentHhmm(v.decidedAt)}` : "—";
-      return { text: "Tasdiqlandi — ", studentId: v.studentId, tail: ` (${who}, ${when})` };
+      return { text: `${t("Tasdiqlandi")} — `, studentId: v.studentId, tail: ` (${who}, ${when})` };
     }
     case "REJECTED":
-      return line(`Rad etildi: ${v.rejectReason ?? ""}`.trim());
+      return line(v.rejectReason ? t("Rad etildi: {reason}", { reason: v.rejectReason }) : t("Rad etildi"));
     case "EXPIRED":
-      return line("Muddati o'tdi — 7 kun ichida javob berilmadi");
+      return line(t("Muddati o'tdi — 7 kun ichida javob berilmadi"));
     case "REPLACED":
-      return line("Yangi so'rov bilan almashtirildi");
+      return line(t("Yangi so'rov bilan almashtirildi"));
   }
 }

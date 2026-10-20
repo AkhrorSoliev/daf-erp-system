@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPrice } from "@/lib/format-utils";
@@ -29,7 +30,7 @@ import type { MockExamParticipant } from "./exam-detail-types";
 import { participantFee } from "./mock-fee";
 import {
   MOCK_PAYMENT_METHODS,
-  MOCK_PAYMENT_METHOD_LABELS,
+  mockPaymentMethodLabel,
   normalizePaymentNote,
   paymentEditChanged,
   type MockPaymentMethod,
@@ -56,6 +57,7 @@ export function EditPaymentDialog({
   onSaved,
   onRequestCancel,
 }: EditPaymentDialogProps) {
+  const t = useT();
   const [method, setMethod] = useState<MockPaymentMethod | null>(null);
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -81,10 +83,10 @@ export function EditPaymentDialog({
         { method, note: normalizePaymentNote(note) ?? "" },
       );
       onSaved(data);
-      toast.success("To'lov ma'lumotlari saqlandi");
+      toast.success(t("To'lov ma'lumotlari saqlandi"));
       onClose();
     } catch (error) {
-      toast.error(getErrorMessage(error, "To'lovni saqlashda xatolik"));
+      toast.error(getErrorMessage(error, t("To'lovni saqlashda xatolik")));
     } finally {
       setSubmitting(false);
     }
@@ -99,14 +101,17 @@ export function EditPaymentDialog({
     >
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
         <DialogHeader className="border-b px-6 py-4">
-          <DialogTitle>To&apos;lovni tahrirlash</DialogTitle>
+          <DialogTitle>{t("To'lovni tahrirlash")}</DialogTitle>
           <DialogDescription>
             {participant?.firstName} {participant?.lastName} —{" "}
             <span className="font-medium">
-              {formatPrice(
-                participant ? participantFee(participant, examPrice) : examPrice,
-              )}{" "}
-              so&apos;m
+              {t("{amount} so'm", {
+                amount: formatPrice(
+                  participant
+                    ? participantFee(participant, examPrice)
+                    : examPrice,
+                ),
+              })}
             </span>
           </DialogDescription>
         </DialogHeader>
@@ -115,7 +120,7 @@ export function EditPaymentDialog({
           <div className="space-y-1 rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
             {participant?.paidAt && (
               <p>
-                Qabul qilingan:{" "}
+                {t("Qabul qilingan:")}{" "}
                 <span className="font-medium text-foreground tabular-nums">
                   {format(new Date(participant.paidAt), "dd.MM.yyyy, HH:mm:ss")}
                 </span>
@@ -123,47 +128,47 @@ export function EditPaymentDialog({
             )}
             {paidBy && (
               <p>
-                Qabul qildi:{" "}
+                {t("Qabul qildi:")}{" "}
                 <span className="font-medium text-foreground">
                   {paidBy.firstName} {paidBy.lastName}
                 </span>
               </p>
             )}
-            <p>Summa o&apos;zgarmaydi — u ro&apos;yxatdan o&apos;tishdagi narx.</p>
+            <p>{t("Summa o'zgarmaydi — u ro'yxatdan o'tishdagi narx.")}</p>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="edit-payment-method">To&apos;lov turi</Label>
+            <Label htmlFor="edit-payment-method">{t("To'lov turi")}</Label>
             <Select
               value={method ?? undefined}
               onValueChange={(v) => setMethod(v as MockPaymentMethod)}
               disabled={submitting}
             >
               <SelectTrigger id="edit-payment-method">
-                <SelectValue placeholder="To'lov turini tanlang" />
+                <SelectValue placeholder={t("To'lov turini tanlang")} />
               </SelectTrigger>
               <SelectContent>
                 {MOCK_PAYMENT_METHODS.map((m) => (
                   <SelectItem key={m} value={m}>
-                    {MOCK_PAYMENT_METHOD_LABELS[m]}
+                    {mockPaymentMethodLabel(m, t)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {participant && !participant.paymentMethod && (
               <p className="text-xs text-muted-foreground">
-                Bu to&apos;lovning turi avval saqlanmagan edi — tanlab qo&apos;ying.
+                {t("Bu to'lovning turi avval saqlanmagan edi — tanlab qo'ying.")}
               </p>
             )}
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="edit-payment-note">Izoh (ixtiyoriy)</Label>
+            <Label htmlFor="edit-payment-note">{t("Izoh (ixtiyoriy)")}</Label>
             <Textarea
               id="edit-payment-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Masalan: kassaga naqd to'lov, chek raqami..."
+              placeholder={t("Masalan: kassaga naqd to'lov, chek raqami...")}
               rows={3}
               maxLength={500}
               disabled={submitting}
@@ -179,7 +184,7 @@ export function EditPaymentDialog({
             onClick={() => participant && onRequestCancel(participant)}
           >
             <Ban className="size-4" />
-            To&apos;lovni bekor qilish
+            {t("To'lovni bekor qilish")}
           </Button>
           <div className="flex flex-col-reverse gap-2 sm:flex-row">
             <Button
@@ -188,7 +193,7 @@ export function EditPaymentDialog({
               onClick={onClose}
               disabled={submitting}
             >
-              Yopish
+              {t("Yopish")}
             </Button>
             <Button
               type="button"
@@ -196,7 +201,7 @@ export function EditPaymentDialog({
               disabled={submitting || !changed}
             >
               {submitting && <Loader2 className="size-4 animate-spin" />}
-              Saqlash
+              {t("Saqlash")}
             </Button>
           </div>
         </DialogFooter>

@@ -10,6 +10,7 @@ import {
   offeredPolicies,
   policyHint,
   policyTitle,
+  withheldWarning,
   type DepartureMonth,
   type DeparturePreview,
 } from "./departure-money";
@@ -394,5 +395,55 @@ describe("departure wording in another language", () => {
       marked,
     )!;
     expect(c.head).toBe(text);
+  });
+});
+
+describe("withheldWarning (removal looks like a move)", () => {
+  it("warns with the amount that would have come back", () => {
+    const w = withheldWarning(preview(), {})!;
+    expect(w.tone).toBe("warning");
+    expect(plain(w.title)).toBe(
+      "Oy to'lovi qaytarilmaydi — 560 000 so'm ushlab qolinadi",
+    );
+    expect(w.body).toContain("Oyning 46% i o'tgan (shartnoma 6.2: 40% dan ko'p)");
+    expect(w.body).toContain("Guruhni o'zgartirish");
+  });
+
+  it("is null when nothing is withheld, or no monthly row", () => {
+    const free = month({
+      outcomes: {
+        ...month().outcomes,
+        STUDENT_CANCELLED: { lessons: 7, amount: 560000, withheld: false },
+      },
+    });
+    expect(withheldWarning(preview({}, free), {})).toBeNull();
+    expect(withheldWarning(preview({}, null), {})).toBeNull();
+    expect(withheldWarning(undefined, {})).toBeNull();
+  });
+
+  it("turns red with an extra first line when the reason reads like a move", () => {
+    const w = withheldWarning(preview(), { looksLikeMove: true })!;
+    expect(w.tone).toBe("danger");
+    expect(w.body.startsWith("Siz «ko'chdi» sababini tanladingiz")).toBe(true);
+    expect(w.body).toContain("Oyning 46% i o'tgan");
+  });
+
+  it("sums the withheld rows and leaves the amount out when it is zero", () => {
+    const second = {
+      ...preview().enrollments[0],
+      enrollmentId: "enr-2",
+      groupName: "B1",
+    };
+    const two = preview({ enrollments: [preview().enrollments[0], second] });
+    expect(plain(withheldWarning(two, {})!.title)).toContain("1 120 000 so'm");
+    const zero = month({
+      outcomes: {
+        ...month().outcomes,
+        CENTER_INITIATIVE: { lessons: 0, amount: 0, withheld: false },
+      },
+    });
+    expect(withheldWarning(preview({}, zero), {})!.title).toBe(
+      "Oy to'lovi qaytarilmaydi",
+    );
   });
 });

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { archiveReason, capRows, isDetailType, personName } from "./archive-detail-rules";
+import {
+  archiveReason,
+  capRows,
+  enrollmentStatusLabel,
+  isDetailType,
+  personName,
+} from "./archive-detail-rules";
 
 describe("isDetailType", () => {
   it("faqat o'quvchi va guruh", () => {
@@ -32,6 +38,13 @@ describe("personName", () => {
   it("bo'sh bo'lsa Noma'lum", () => {
     expect(personName(null)).toBe("Noma'lum");
     expect(personName({ firstName: "", lastName: null })).toBe("Noma'lum");
+  });
+});
+
+describe("enrollmentStatusLabel", () => {
+  it("names a known status and leaves an unknown code to the caller", () => {
+    expect(enrollmentStatusLabel("COMPLETED")).toBe("Tugatgan");
+    expect(enrollmentStatusLabel("NEW_CODE")).toBeNull();
   });
 });
 

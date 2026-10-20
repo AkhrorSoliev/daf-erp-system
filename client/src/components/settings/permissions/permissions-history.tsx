@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useRolePermissionsHistory } from "@/hooks/use-role-permissions";
+import { useT } from "@/i18n/context";
 import { tashkentDayAsLocalDate, tashkentHhmm } from "@/lib/tashkent-time";
 import { historyLine } from "./permissions-model";
 import type { PermissionsOverview } from "./permissions-types";
@@ -22,31 +23,33 @@ const when = (iso: string) =>
   `${format(tashkentDayAsLocalDate(iso), "dd.MM.yyyy")}, ${tashkentHhmm(iso)}`;
 
 function HeadRow() {
+  const t = useT();
   return (
     <TableRow>
       <TableHead className="w-12 border-r">#</TableHead>
-      <TableHead className="w-40">Sana</TableHead>
-      <TableHead className="w-44">Kim</TableHead>
-      <TableHead>O'zgarish</TableHead>
+      <TableHead className="w-40">{t("Sana")}</TableHead>
+      <TableHead className="w-44">{t("Kim")}</TableHead>
+      <TableHead>{t("O'zgarish")}</TableHead>
     </TableRow>
   );
 }
 
 /** «O'zgarishlar tarixi»: who changed which role, newest first, 20 per page (spec §7.8). */
 export function PermissionsHistory({ overview }: { overview: PermissionsOverview }) {
+  const t = useT();
   const [page, setPage] = useState(1);
   const { data, isError, isFetching, refetch } = useRolePermissionsHistory(page);
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
   return (
     <section className="space-y-3">
-      <h3 className="text-sm font-semibold">O'zgarishlar tarixi</h3>
+      <h3 className="text-sm font-semibold">{t("O'zgarishlar tarixi")}</h3>
 
       {isError && !data ? (
         <div className="rounded-md border p-6 text-center text-sm text-muted-foreground">
-          <p>Tarixni yuklab bo'lmadi.</p>
+          <p>{t("Tarixni yuklab bo'lmadi.")}</p>
           <Button variant="outline" size="sm" className="mt-3" onClick={() => void refetch()}>
-            Qayta urinish
+            {t("Qayta urinish")}
           </Button>
         </div>
       ) : !data ? (
@@ -77,7 +80,7 @@ export function PermissionsHistory({ overview }: { overview: PermissionsOverview
         </div>
       ) : data.data.length === 0 ? (
         <div className="flex h-20 items-center justify-center rounded-md border text-sm text-muted-foreground">
-          Hali o'zgarish yo'q
+          {t("Hali o'zgarish yo'q")}
         </div>
       ) : (
         <>
@@ -98,10 +101,10 @@ export function PermissionsHistory({ overview }: { overview: PermissionsOverview
                     <TableCell className="text-sm">
                       {item.changedBy
                         ? `${item.changedBy.firstName} ${item.changedBy.lastName}`
-                        : "Tizim"}
+                        : t("Tizim (avtomatik)")}
                     </TableCell>
                     <TableCell className="text-sm whitespace-normal">
-                      {historyLine(overview, item)}
+                      {historyLine(overview, item, t)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -111,7 +114,7 @@ export function PermissionsHistory({ overview }: { overview: PermissionsOverview
 
           {totalPages > 1 && (
             <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>Jami: {data.total} ta yozuv</span>
+              <span>{t("Jami: {n} ta yozuv", { n: data.total })}</span>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
@@ -119,7 +122,7 @@ export function PermissionsHistory({ overview }: { overview: PermissionsOverview
                   disabled={page <= 1 || isFetching}
                   onClick={() => setPage((p) => p - 1)}
                 >
-                  Oldingi
+                  {t("Oldingi")}
                 </Button>
                 <span>
                   {page} / {totalPages}
@@ -130,7 +133,7 @@ export function PermissionsHistory({ overview }: { overview: PermissionsOverview
                   disabled={page >= totalPages || isFetching}
                   onClick={() => setPage((p) => p + 1)}
                 >
-                  Keyingi
+                  {t("Keyingi")}
                 </Button>
               </div>
             </div>

@@ -21,9 +21,11 @@ import { EntityHistoryTable } from "@/components/shared/entity-history-table";
 import {
   archiveReason,
   capRows,
+  enrollmentStatusLabel,
   personName,
   type DetailType,
 } from "./archive-detail-rules";
+import { useT } from "@/i18n/context";
 
 type TabKey = "malumot" | "tarix";
 
@@ -78,6 +80,7 @@ export function ArchiveDetailSheet({
   onRestore,
   restoring = false,
 }: ArchiveDetailSheetProps) {
+  const t = useT();
   const [item, setItem] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -110,13 +113,13 @@ export function ArchiveDetailSheet({
 
   const isStudent = entityType === "students";
   const title = !item
-    ? "Arxivdagi yozuv"
+    ? t("Arxivdagi yozuv")
     : isStudent
-      ? personName(item)
-      : item.name || "Noma'lum";
+      ? personName(item, t)
+      : item.name || t("Noma'lum");
   const subtitle = isStudent
-    ? `O'quvchi · ID ${id} · Arxivda`
-    : "Guruh · Arxivda";
+    ? t("O'quvchi · ID {id} · Arxivda", { id })
+    : t("Guruh · Arxivda");
   const reason = item ? archiveReason(item) : null;
   const rows = item
     ? capRows(item.enrollments ?? [], item._count?.enrollments ?? 0)
@@ -139,23 +142,23 @@ export function ArchiveDetailSheet({
             </div>
           ) : failed || !item ? (
             <div className="space-y-3 text-sm">
-              <p className="text-muted-foreground">Ma&apos;lumotni yuklab bo&apos;lmadi</p>
+              <p className="text-muted-foreground">{t("Ma'lumotni yuklab bo'lmadi")}</p>
               <Button variant="outline" size="sm" onClick={load}>
-                Qayta urinish
+                {t("Qayta urinish")}
               </Button>
             </div>
           ) : (
             <>
               <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm dark:border-yellow-700 dark:bg-yellow-950/30">
-                <Row label="Arxivlangan" value={fmt(item.deletedAt)} />
-                <Row label="Kim tomonidan" value={deletedByName(item)} />
+                <Row label={t("Arxivlangan sana")} value={fmt(item.deletedAt)} />
+                <Row label={t("Kim tomonidan")} value={deletedByName(item)} />
                 <Row
-                  label="Sabab"
+                  label={t("Sabab")}
                   value={
                     reason ? (
                       <span className="font-medium">{reason}</span>
                     ) : (
-                      <span className="text-muted-foreground">Sabab yozilmagan</span>
+                      <span className="text-muted-foreground">{t("Sabab yozilmagan")}</span>
                     )
                   }
                 />
@@ -167,22 +170,22 @@ export function ArchiveDetailSheet({
                   onClick={() => onRestore(item)}
                 >
                   <RotateCcw className="mr-2 size-4" />
-                  Qayta tiklash
+                  {t("Qayta tiklash")}
                 </Button>
               </div>
 
               <Tabs value={tab} onValueChange={(v) => onTabChange(v as TabKey)}>
                 <TabsList>
-                  <TabsTrigger value="malumot">Ma&apos;lumot</TabsTrigger>
-                  <TabsTrigger value="tarix">Tarix</TabsTrigger>
+                  <TabsTrigger value="malumot">{t("Ma'lumot")}</TabsTrigger>
+                  <TabsTrigger value="tarix">{t("Tarix")}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="malumot" className="space-y-4 pt-2">
                   {isStudent ? (
                     <div className="divide-y">
-                      <Row label="Telefon" value={formatPhone(item.phone)} />
+                      <Row label={t("Telefon")} value={formatPhone(item.phone)} />
                       <Row
-                        label="Filial"
+                        label={t("Filial")}
                         value={
                           (item.branches ?? [])
                             .map((b: any) => b.branch?.name)
@@ -190,17 +193,17 @@ export function ArchiveDetailSheet({
                             .join(", ") || "—"
                         }
                       />
-                      <Row label="Balans" value={formatBalance(item.balance ?? 0)} />
+                      <Row label={t("Balans")} value={formatBalance(item.balance ?? 0, t("so'm"))} />
                     </div>
                   ) : (
                     <div className="divide-y">
-                      <Row label="Kurs" value={item.course?.name ?? "—"} />
-                      <Row label="Filial" value={item.branch?.name ?? "—"} />
+                      <Row label={t("Kurs")} value={item.course?.name ?? "—"} />
+                      <Row label={t("Filial")} value={item.branch?.name ?? "—"} />
                       <Row
-                        label="Ustoz"
+                        label={t("Ustoz")}
                         value={
                           (item.teachers ?? [])
-                            .map((t: any) => personName(t.teacher))
+                            .map((gt: any) => personName(gt.teacher, t))
                             .join(", ") || "—"
                         }
                       />
@@ -210,30 +213,37 @@ export function ArchiveDetailSheet({
                   <div>
                     <p className="mb-1 text-sm font-medium">
                       {isStudent
-                        ? "Guruhlari"
-                        : `O'quvchilari (${item._count?.enrollments ?? rows.shown.length})`}
+                        ? t("Guruhlari")
+                        : t("O'quvchilari ({n})", {
+                            n: item._count?.enrollments ?? rows.shown.length,
+                          })}
                     </p>
                     {rows.shown.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Yozilish yo&apos;q</p>
+                      <p className="text-sm text-muted-foreground">{t("Yozilish yo'q")}</p>
                     ) : (
                       <div className="divide-y text-sm">
                         {rows.shown.map((e: any) => {
                           const st = getStatusConfig("enrollments", e.status);
                           const range = enrollmentRange(e);
+                          const label = enrollmentStatusLabel(e.status);
                           return (
                             <div key={e.id} className="flex items-center justify-between gap-3 py-1.5">
                               <span>
-                                {isStudent ? e.group?.name ?? "—" : personName(e.student)}
+                                {isStudent ? e.group?.name ?? "—" : personName(e.student, t)}
                                 {range && (
                                   <span className="block text-xs text-muted-foreground">{range}</span>
                                 )}
                               </span>
-                              <Badge variant={st.variant}>{st.label}</Badge>
+                              <Badge variant={st.variant}>
+                                {label ? t(label) : e.status}
+                              </Badge>
                             </div>
                           );
                         })}
                         {rows.hidden > 0 && (
-                          <p className="py-1.5 text-muted-foreground">yana {rows.hidden} ta</p>
+                          <p className="py-1.5 text-muted-foreground">
+                            {t("yana {n} ta", { n: rows.hidden })}
+                          </p>
                         )}
                       </div>
                     )}
