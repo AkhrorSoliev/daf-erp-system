@@ -54,7 +54,7 @@ Qator bosilsa o'sha haftaga o'tadi (§4).
 ## 3. O'quvchilar jadvali
 
 Qatorlar — guruhning hozirgi faol a'zolari (`Enrollment.status =
-ACTIVE`, takrorsiz, `Student.deletedAt IS NULL`). Standart saralash:
+ACTIVE`, takrorsiz; S3 `guruhlarYigindisi` a'zolar to'plami bilan AYNAN bir xil, shuning uchun guruh bali bilan parity mumkin). Standart saralash:
 `jamiBall` kamayish, teng bo'lsa ism.
 
 | Ustun | Manba va qoida |
@@ -112,7 +112,8 @@ Javob:
 {
   haftaBoshi, joriy,
   haftalar: string[],                 // tanlagich uchun, yangidan eskiga
-  guruh: { faol, orin|null, guruhSoni, baho|null, azolar, ball, minAzolar },
+  guruh: { holat, orin|null, guruhSoni|null, baho|null, azolar, ball, minAzolar },
+  // holat: JADVALDA | KAM_AZO | FAOL_EMAS | YOZUV_YOQ (o'tgan hafta, DafGroupWeek qatori yo'q)
   tarix: [{ haftaBoshi, orin|null, baho|null }],   // 8 hafta
   oquvchilar: [{
     studentId, ism, akkaunt, guruhBali, jamiBall, faolKunlar,
