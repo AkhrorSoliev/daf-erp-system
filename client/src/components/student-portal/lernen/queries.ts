@@ -6,6 +6,7 @@ import {
   useQuery,
   useQueryClient,
   type QueryClient,
+  type UseMutationOptions,
 } from "@tanstack/react-query";
 import api from "@/lib/api";
 import type {
@@ -13,14 +14,20 @@ import type {
   AttemptResult,
   DrillQuestion,
   DrillResult,
+  EslatmalarJavob,
   Fortschritt,
   FrageFormat,
+  Guruhlar,
   JuftNatija,
   LernenGrammarItem,
   LernenLesson,
   LernenLevel,
   LernenUnit,
+  Liga,
+  Maqsad,
+  MaqsadDarajasi,
   MaterialTyp,
+  NishonQatori,
   PruefErgebnis,
   PublicFrage,
   ReytingZeile,
@@ -244,6 +251,11 @@ export function useAbschluss() {
       // tugagach ular eski qiymatni ko'rsatib qolardi.
       void qc.invalidateQueries({ queryKey: ["lernen", "fortschritt"] });
       void qc.invalidateQueries({ queryKey: ["lernen", "reyting"] });
+      // Seans oxirida yangi nishon berilgan bo'lishi mumkin.
+      void qc.invalidateQueries({ queryKey: ["lernen", "nishonlar"] });
+      // Liga xonasi (birinchi seansda qo'shiladi) va guruhlar jadvali.
+      void qc.invalidateQueries({ queryKey: ["lernen", "liga"] });
+      void qc.invalidateQueries({ queryKey: ["lernen", "guruhlar"] });
       // Takrorlash so'rovi `staleTime: Infinity` bilan abadiy keshda
       // turadi (Fix 3) — bu invalidatsiya bo'lmasa, oddiy DARS seansi
       // ham muddati kelgan so'zlarni "yeb qo'yadi" (Leitner holatini
@@ -269,6 +281,9 @@ export function useWiederholungAbschluss() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["lernen", "fortschritt"] });
       void qc.invalidateQueries({ queryKey: ["lernen", "reyting"] });
+      void qc.invalidateQueries({ queryKey: ["lernen", "nishonlar"] });
+      void qc.invalidateQueries({ queryKey: ["lernen", "liga"] });
+      void qc.invalidateQueries({ queryKey: ["lernen", "guruhlar"] });
     },
   });
 }
@@ -287,6 +302,112 @@ export function useReyting(scope: "gruppe" | "zentrum") {
     queryKey: ["lernen", "reyting", scope],
     queryFn: () => api.get(`${BASE}/reyting`, { params: { scope } }).then((r) => r.data),
   });
+}
+
+/**
+ * Kunlik maqsad darajasini saqlaydi. Javob — yangi maqsad bugungi ball bilan;
+ * u yo'l tepasidagi keshga darrov yoziladi (halqa qayta so'rovsiz o'zgaradi).
+ */
+export function useMaqsadOzgartir() {
+  const qc = useQueryClient();
+  return useMutation<Maqsad, unknown, MaqsadDarajasi>({
+    mutationFn: (daraja) =>
+      api.patch(`${BASE}/maqsad`, { daraja }).then((r) => r.data),
+    onSuccess: (maqsad) => {
+      qc.setQueryData<Fortschritt>(["lernen", "fortschritt"], (old) =>
+        old ? { ...old, maqsad } : old,
+      );
+    },
+  });
+}
+
+/**
+ * Telegram eslatmalari almashtirgichi (spec S4 §7): darrov ko'rinadi
+ * (`onMutate`), xato bo'lsa FAQAT `eslatmalar` maydoni qaytadi (boshqa
+ * maydonlar — `maqsad`, qayta yuklash — o'zgarmaydi). Bir nechta tez bosish
+ * bo'lsa oraliq yozuvlar o'tkazib yuboriladi, oxirgi so'rov tugagach holatni
+ * server beradi (`onSettled`). Alohida funksiya — test uni `MutationObserver`
+ * bilan hooksiz yurgizadi.
+ */
+export function eslatmalarMutation(
+  qc: QueryClient,
+): UseMutationOptions<EslatmalarJavob, unknown, boolean, { oldin?: boolean }> {
+  const KEY = ["lernen", "fortschritt"];
+  const MUTATION_KEY = ["lernen", "eslatmalar"];
+  const yoz = (eslatmalar: boolean | undefined) =>
+    qc.setQueryData<Fortschritt>(KEY, (old) => (old ? { ...old, eslatmalar } : old));
+  // Mutatsiya o'zi `onSuccess`/`onError`/`onSettled` paytida ham "pending" — shuning uchun `<= 1`.
+  const oxirgisi = () => qc.isMutating({ mutationKey: MUTATION_KEY }) <= 1;
+  return {
+    mutationKey: MUTATION_KEY,
+    mutationFn: (yoqilgan) =>
+      api.patch<EslatmalarJavob>(`${BASE}/eslatmalar`, { yoqilgan }).then((r) => r.data),
+    onMutate: async (yoqilgan) => {
+      await qc.cancelQueries({ queryKey: KEY });
+      const oldin = qc.getQueryData<Fortschritt>(KEY)?.eslatmalar;
+      yoz(yoqilgan);
+      return { oldin };
+    },
+    onError: (_err, _yoqilgan, ctx) => {
+      if (oxirgisi() && ctx?.oldin !== undefined) yoz(ctx.oldin);
+    },
+    onSuccess: (javob) => {
+      if (oxirgisi()) yoz(javob.eslatmalar);
+    },
+    // `void`: RQ `onSettled` qaytargan promise'ni kutadi — sekin `fortschritt` xato xabarini
+    // va `isPending` ni kechiktirardi.
+    onSettled: () => {
+      if (oxirgisi()) void qc.invalidateQueries({ queryKey: KEY });
+    },
+  };
+}
+
+export function useEslatmalarOzgartir() {
+  const qc = useQueryClient();
+  return useMutation(eslatmalarMutation(qc));
+}
+
+/** «Darajam» tabidagi nishonlar — faqat shu bo'lim ko'ringanda so'raladi. */
+export function useNishonlar() {
+  return useQuery<NishonQatori[]>({
+    queryKey: ["lernen", "nishonlar"],
+    queryFn: () => api.get(`${BASE}/nishonlar`).then((r) => r.data),
+  });
+}
+
+/**
+ * Jadval har seansda o'zgaradi, shuning uchun kesh qisqa: tablar orasida
+ * almashganda qayta so'ramaydi, seans oxirida esa baribir yangilanadi
+ * (`useAbschluss` / `useWiederholungAbschluss` bekor qiladi).
+ */
+const JADVAL_STALE_MS = 30_000;
+
+export function ligaQuery(enabled: boolean = true) {
+  return queryOptions({
+    queryKey: ["lernen", "liga"],
+    queryFn: () => api.get<Liga>(`${BASE}/liga`).then((r) => r.data),
+    enabled,
+    staleTime: JADVAL_STALE_MS,
+  });
+}
+
+export function guruhlarQuery(enabled: boolean = true) {
+  return queryOptions({
+    queryKey: ["lernen", "guruhlar"],
+    queryFn: () => api.get<Guruhlar>(`${BASE}/guruhlar`).then((r) => r.data),
+    enabled,
+    staleTime: JADVAL_STALE_MS,
+  });
+}
+
+/** «Liga» tabi — `enabled` tab ko'ringandagina `true`. Yozmaydi: xonaga qo'shilish seans oxirida. */
+export function useLiga({ enabled = true }: { enabled?: boolean } = {}) {
+  return useQuery(ligaQuery(enabled));
+}
+
+/** «Guruhlar» tabi — markazning haftalik guruhlar jadvali; `enabled` tab ko'ringandagina `true`. */
+export function useGuruhlar({ enabled = true }: { enabled?: boolean } = {}) {
+  return useQuery(guruhlarQuery(enabled));
 }
 
 /**

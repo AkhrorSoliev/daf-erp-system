@@ -1,13 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Trophy, UsersThree } from "@phosphor-icons/react";
-import { cn } from "@/lib/utils";
 import {
-  Avatar,
   Badge,
   Card,
-  EmptyState,
   LoadingCards,
   ProgressBar,
   Screen,
@@ -15,87 +11,29 @@ import {
   StackHeader,
   type SegmentOption,
 } from "../../lumio";
-import { useFortschritt, useReyting } from "../queries";
+import { useFortschritt } from "../queries";
 import { darajaFoizi, qisqaRaqam } from "../yol/yol-tuzilishi";
-import type { ReytingZeile } from "../types";
+import { Nishonlarim } from "./nishonlarim";
+import { EslatmalarQatori } from "./eslatmalar-qatori";
+import { ReytingJadvali } from "./reyting-jadvali";
+import { LigaTab } from "./liga-tab";
+import { GuruhlarTab } from "./guruhlar-tab";
 import { loadState } from "../../lib/load-state";
 import { LoadFailed } from "../../load-failed";
 
-type ReytingTab = "guruhim" | "markaz" | "darajam";
-
-const TABS: SegmentOption<ReytingTab>[] = [
-  { value: "guruhim", label: "Guruhim" },
-  { value: "markaz", label: "Markaz" },
-  { value: "darajam", label: "Darajam" },
-];
-
-function ReytingQatori({ qator }: { qator: ReytingZeile }) {
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-3 rounded-card border px-3 py-2.5",
-        qator.selbst
-          ? "border-coral-500 bg-coral-500/8"
-          : "border-line bg-surface",
-      )}
-    >
-      <span className="w-6 shrink-0 text-center font-display text-sm font-extrabold text-ink-500">
-        {qator.platz}
-      </span>
-      <Avatar name={qator.name} size={32} />
-      {/* Ism TO'LIQ va QISQARTIRILMAYDI — dizayn 6.1: markaz jadvali
-          ataylab barcha filiallarni aralashtiradi, bu leak emas, CEO
-          qarori. */}
-      <span className="min-w-0 flex-1 truncate font-semibold text-ink-900">
-        {qator.name}
-      </span>
-      <span className="shrink-0 font-display text-sm font-extrabold text-ink-900">
-        {qisqaRaqam(qator.punkte)} ball
-      </span>
-    </div>
-  );
-}
+type ReytingTab = "liga" | "guruhim" | "guruhlar" | "darajam";
 
 /**
- * Guruhim/Markaz jadvali — bitta komponent, `scope` orqali farqlanadi.
- *
- * Ikkala tomon ham bo'sh ro'yxat qaytarishi mumkin, lekin sabab har xil:
- * guruhda `[]` deyarli har doim "guruhi yo'q" degani (server rosterni
- * nol ball bilan to'ldiradi, ya'ni a'zo bo'lsa qator bo'ladi), markazda
- * esa haqiqiy "hali hech kim mashq qilmagan". Shu farq ikki xil xabar
- * beradi.
+ * To'rt tab (spec S3 §5): 390 px da besh tab sig'maydi, shuning uchun eski
+ * «Markaz» «Liga» ichiga «Butun markaz» bo'lib ko'chdi. Har tab o'z
+ * so'rovini faqat chizilganda yuboradi.
  */
-function ReytingJadvali({ scope }: { scope: "gruppe" | "zentrum" }) {
-  const query = useReyting(scope);
-  const { data } = query;
-
-  if (loadState(query) === "loading") return <LoadingCards count={4} />;
-  if (!data) return <LoadFailed query={query} />;
-
-  if (data.length === 0) {
-    return scope === "gruppe" ? (
-      <EmptyState
-        icon={<UsersThree size={28} weight="bold" />}
-        title="Siz hali guruhga qo'shilmagansiz"
-        description="Guruhga qo'shilgach, guruhdoshlaringiz bilan haftalik ballaringizni solishtira olasiz."
-      />
-    ) : (
-      <EmptyState
-        icon={<Trophy size={28} weight="bold" />}
-        title="Bu hafta hali hech kim ball to'plamagan"
-        description="Birinchi bo'lib mashq qiling — jadval boshida siz turasiz."
-      />
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      {data.map((qator) => (
-        <ReytingQatori key={qator.studentId} qator={qator} />
-      ))}
-    </div>
-  );
-}
+export const REYTING_TABLARI: SegmentOption<ReytingTab>[] = [
+  { value: "liga", label: "Liga" },
+  { value: "guruhim", label: "Guruhim" },
+  { value: "guruhlar", label: "Guruhlar" },
+  { value: "darajam", label: "Darajam" },
+];
 
 /**
  * Darajam — jadval emas, o'quvchining o'z o'sishi: umumiy ball, hozirgi
@@ -109,6 +47,8 @@ function ReytingJadvali({ scope }: { scope: "gruppe" | "zentrum" }) {
  * xato edi: u nolldan boshlaydi va Kenner'ga endi yetgan (1500/4000)
  * o'quvchini "keyingi darajagacha 37% qolgan" deb ko'rsatardi — aslida
  * u shu band boshida, hali hech narsa bosib o'tmagan.
+ *
+ * Ostida «Nishonlarim» (S2) — o'z so'rovi bilan, faqat shu tab ochilganda — va «Telegram eslatmalari» qatori (S4, `fortschritt` dan).
  */
 function DarajamTab() {
   const query = useFortschritt();
@@ -122,50 +62,58 @@ function DarajamTab() {
   const qoldi = naechsteStufe ? Math.max(0, naechsteStufe.ab - gesamt) : 0;
 
   return (
-    <Card className="space-y-6 text-center">
-      <div>
-        <p className="font-display text-4xl font-extrabold text-ink-900">
-          {qisqaRaqam(gesamt)}
-        </p>
-        <p className="text-sm font-semibold text-ink-500">umumiy ball</p>
-      </div>
-
-      <div>
-        <p className="font-display text-2xl font-extrabold text-ink-900">
-          {stufe.de}
-        </p>
-        <p className="text-sm font-semibold text-ink-500">{stufe.uz}</p>
-      </div>
-
-      {naechsteStufe ? (
-        <div className="space-y-1.5 text-left">
-          <ProgressBar value={foiz} />
-          <p className="text-xs font-semibold text-ink-500">
-            {naechsteStufe.de} ({naechsteStufe.uz}) darajagacha{" "}
-            {qisqaRaqam(qoldi)} ball qoldi
+    <div className="space-y-4">
+      <Card className="space-y-6 text-center">
+        <div>
+          <p className="font-display text-4xl font-extrabold text-ink-900">
+            {qisqaRaqam(gesamt)}
           </p>
+          <p className="text-sm font-semibold text-ink-500">umumiy ball</p>
         </div>
-      ) : (
-        <Badge tone="amber" size="md" className="mx-auto">
-          Eng yuqori daraja
-        </Badge>
-      )}
-    </Card>
+
+        <div>
+          <p className="font-display text-2xl font-extrabold text-ink-900">
+            {stufe.de}
+          </p>
+          <p className="text-sm font-semibold text-ink-500">{stufe.uz}</p>
+        </div>
+
+        {naechsteStufe ? (
+          <div className="space-y-1.5 text-left">
+            <ProgressBar value={foiz} />
+            <p className="text-xs font-semibold text-ink-500">
+              {naechsteStufe.de} ({naechsteStufe.uz}) darajagacha{" "}
+              {qisqaRaqam(qoldi)} ball qoldi
+            </p>
+          </div>
+        ) : (
+          <Badge tone="amber" size="md" className="mx-auto">
+            Eng yuqori daraja
+          </Badge>
+        )}
+      </Card>
+      <Nishonlarim />
+      <EslatmalarQatori />
+    </div>
   );
 }
 
 export function ReytingEkrani() {
-  const [tab, setTab] = React.useState<ReytingTab>("guruhim");
+  const [tab, setTab] = React.useState<ReytingTab>("liga");
 
   return (
     <Screen narrow>
       <StackHeader title="Reyting" backHref="/portal/lernen" />
-      <SegmentedControl<ReytingTab> options={TABS} value={tab} onChange={setTab} />
+      <div role="group" aria-label="Reyting bo'limlari">
+        <SegmentedControl<ReytingTab> options={REYTING_TABLARI} value={tab} onChange={setTab} />
+      </div>
 
-      {tab === "guruhim" ? (
+      {tab === "liga" ? (
+        <LigaTab />
+      ) : tab === "guruhim" ? (
         <ReytingJadvali scope="gruppe" />
-      ) : tab === "markaz" ? (
-        <ReytingJadvali scope="zentrum" />
+      ) : tab === "guruhlar" ? (
+        <GuruhlarTab />
       ) : (
         <DarajamTab />
       )}

@@ -74,7 +74,7 @@ export interface LevelPathItem {
  * A word the exercise engine can ask: a core word placed in a section. The
  * same rule decides whether a unit is ready (`bereit`).
  */
-const TAYYOR_SOZ = { core: true, sectionId: { not: null } } as const;
+export const TAYYOR_SOZ = { core: true, sectionId: { not: null } } as const;
 
 /** A word a lesson can ask: core, with a translation (`toWort` drops the rest). */
 const SORALADIGAN_SOZ = { core: true, uz: { not: null } } as const;

@@ -3,6 +3,7 @@ import {
   dayOfWeekForDateStr,
   tashkentDateStr,
 } from '../../attendance/shared/date-utils';
+import type { DafDailyGoal } from '@prisma/client';
 
 /**
  * Bitta muddati kelgan so'zning bahosi.
@@ -114,4 +115,62 @@ export function serieAus(tage: string[], heute: string): number {
     kursor = addDaysToDateStr(kursor, -1);
   }
   return serie;
+}
+
+/**
+ * Kunlik maqsad — o'quvchi o'zi tanlaydi (CEO, 2026-10-18). Bir seans ≈
+ * 70–90 ball: Yengil ≈ yarim seans, O'rta ≈ bir seans, Jiddiy ≈ ikki seans.
+ * Qiymatlar shu yerda, bazada faqat kalit — o'zgartirish deploy bilan.
+ * Mijoz oynachasi shu raqamlarni ko'rsatadi; `client/.../lernen/maqsad.test.ts`
+ * ularni shu fayldan o'qib solishtiradi.
+ */
+export const MAQSAD_BALL: Record<DafDailyGoal, number> = {
+  YENGIL: 40,
+  ORTA: 80,
+  JIDDIY: 160,
+};
+
+/** Bazadagi tanlov (yoki uning yo'qligi) — tanlov yo'q bo'lsa O'RTA. */
+export function maqsadDarajasi(raw: string | null | undefined): DafDailyGoal {
+  return raw != null && Object.hasOwn(MAQSAD_BALL, raw)
+    ? (raw as DafDailyGoal)
+    : 'ORTA';
+}
+
+export interface MaqsadHolati {
+  daraja: DafDailyGoal;
+  /** Maqsad (kunlik ball). */
+  ball: number;
+  /** Bugungi ball. */
+  hozir: number;
+  bajarildi: boolean;
+  /** Bugun qiladigan mashq qolmagan — ball topib bo'lmaydi (spec 1.1). */
+  bosh: boolean;
+}
+
+/**
+ * Jazo yo'q: `bosh` holatda maqsad «bajarildi» — ball topish mumkin
+ * bo'lmagan o'quvchi ayb bo'lmagan narsa uchun yutqazmaydi.
+ */
+export function maqsadHolati(
+  daraja: DafDailyGoal,
+  hozir: number,
+  bosh: boolean,
+): MaqsadHolati {
+  const ball = MAQSAD_BALL[daraja];
+  return { daraja, ball, hozir, bajarildi: bosh || hozir >= ball, bosh };
+}
+
+/**
+ * Shu seans maqsadni kesib o'tdimi: seansdan oldin bajarilmagan, endi
+ * bajarilgan. `seansBugun` — seans ballining BUGUNGI qismi (yarim tundan
+ * oldingisi kechaga tegishli). `bosh` da yutuq ko'rsatilmaydi.
+ */
+export function yangiBajarildi(
+  ball: number,
+  hozir: number,
+  seansBugun: number,
+  bosh: boolean,
+): boolean {
+  return !bosh && hozir - seansBugun < ball && ball <= hozir;
 }

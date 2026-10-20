@@ -10,7 +10,23 @@
  * `recordAttempt`) so `seansNatijasi`'s "oldin" differs from "hozir".
  * Compared: `reyting('zentrum')` rows (studentId, platz, punkte),
  * `uebersicht().wochePunkte / wochePlatzZentrum`, `seansNatijasi().orin.zentrum`.
- * Exits 1 on any mismatch. Writes ~400 attempts (throwaway DB only).
+ *
+ * S2: the same students also check the daily goal against a brute-force read.
+ * Today's points = the sum of `DafAttempt.points` created on today's Tashkent
+ * day over ALL groups (about a third of the students also answer in a second
+ * group today, so a per-group read would show). The goal = the student's
+ * `DafStudentSetting` row, `ORTA` when there is none; the sample takes
+ * students with a JIDDIY row, a YENGIL row and no row. `bosh` is recomputed
+ * with its own SQL. Compared: `uebersicht().maqsad` and `seansNatijasi().maqsad`.
+ *
+ * S3: the same students' league room (`liga()`) against a brute-force read —
+ * the room's members, each with the week's `DafStudentDay` sum over all group
+ * keys, sorted points DESC then studentId ASC — and the group table
+ * (`guruhlar()`) against a brute force from `Group` + `Enrollment` + the
+ * week's rows: current ACTIVE members of ACTIVE live groups, points with
+ * `groupKey` = the group, ≥ 3 members, average DESC then group id ASC, TOP 10
+ * + own group.
+ * Exits 1 on any mismatch. Writes ~500 attempts (throwaway DB only).
  */
 import { randomUUID } from 'crypto';
 import { run } from '../lib/check-cli';
@@ -21,7 +37,12 @@ import {
   tashkentDateStr,
   utcMidnightFromDateStr,
 } from '../../src/common/date/tashkent';
-import { serieAus, wochenStartTag } from '../../src/daf/uebung/punkte';
+import {
+  MAQSAD_BALL,
+  serieAus,
+  wochenStartTag,
+} from '../../src/daf/uebung/punkte';
+import { Prisma } from '@prisma/client';
 
 assertLocalDb();
 
@@ -86,7 +107,25 @@ run(async (prisma) => {
     .filter((id) => !withRows.has(id))
     .slice(0, 30);
 
-  const ids = [...shuffle(top).slice(0, 20), ...rest, ...noRows];
+  // S2: students of every goal state that already have week rows, so the goal
+  // CTE reads a JIDDIY row, a YENGIL row and no row at all.
+  const goalSample = async (cond: Prisma.Sql) =>
+    (
+      await prisma.$queryRaw<{ id: number }[]>(Prisma.sql`
+        SELECT s.id FROM "Student" s
+        LEFT JOIN "DafStudentSetting" g ON g."studentId" = s.id
+        WHERE s.id = ANY(${[...withRows]}::int[]) AND ${cond}
+        ORDER BY random() LIMIT 15`)
+    ).map((r) => r.id);
+  const goalIds = [
+    ...(await goalSample(Prisma.sql`g."dailyGoal" = 'JIDDIY'`)),
+    ...(await goalSample(Prisma.sql`g."dailyGoal" = 'YENGIL'`)),
+    ...(await goalSample(Prisma.sql`g."studentId" IS NULL`)),
+  ];
+
+  const ids = [
+    ...new Set([...shuffle(top).slice(0, 20), ...rest, ...goalIds, ...noRows]),
+  ];
   const groups = await prisma.$queryRaw<
     { id: number; groupId: string | null }[]
   >`
@@ -97,9 +136,14 @@ run(async (prisma) => {
   const groupOf = new Map(groups.map((g) => [g.id, g.groupId]));
 
   // Synthetic sessions for students that already have rows; the no-row ones
-  // stay absent (oldin = hozir, own row added with 0).
+  // stay absent (oldin = hozir, own row added with 0). Every third one also
+  // answers in a SECOND group today.
+  const otherGroups = (
+    await prisma.$queryRaw<{ id: string }[]>`SELECT id FROM "Group" LIMIT 100`
+  ).map((g) => g.id);
   const samples: Sample[] = [];
-  for (const id of ids) {
+  let twoGroups = 0;
+  for (const [index, id] of ids.entries()) {
     const s: Sample = {
       id,
       companyId,
@@ -109,13 +153,18 @@ run(async (prisma) => {
       attempts: 0,
     };
     if (withRows.has(id)) {
-      const n = 1 + Math.floor(Math.random() * 3);
+      const second =
+        index % 3 === 0
+          ? (otherGroups.find((g) => g !== s.groupId) ?? null)
+          : undefined;
+      if (second !== undefined) twoGroups += 1;
+      const n = (second !== undefined ? 2 : 1) + Math.floor(Math.random() * 3);
       for (let i = 0; i < n; i += 1) {
         const points = Math.floor(Math.random() * 300);
         await recordAttempt(prisma as any, {
           studentId: id,
           companyId,
-          groupId: s.groupId,
+          groupId: second !== undefined && i % 2 === 1 ? second : s.groupId,
           isCorrect: true,
           given: 'x',
           points,
@@ -127,6 +176,28 @@ run(async (prisma) => {
     }
     samples.push(s);
   }
+
+  // `bosh` recomputed with its own SQL (no `maqsad.ts`): no word due and no
+  // ready lesson left undone.
+  const boshOf = async (id: number) =>
+    (
+      await prisma.$queryRaw<{ bosh: boolean }[]>`
+        SELECT (NOT EXISTS (
+                  SELECT 1 FROM "DafLexemeState"
+                  WHERE "studentId" = ${id} AND "dueAt" <= (now() AT TIME ZONE 'UTC'))
+                AND NOT EXISTS (
+                  SELECT 1 FROM "DafLesson" l JOIN "DafUnit" u ON u.id = l."unitId"
+                  WHERE u."retiredAt" IS NULL
+                    AND EXISTS (SELECT 1 FROM "DafLexeme" x
+                                WHERE x."unitId" = u.id AND x.core AND x."sectionId" IS NOT NULL)
+                    AND (l."sectionId" IS NOT NULL OR l.kind = 'UNIT_TEST')
+                    AND NOT EXISTS (SELECT 1 FROM "DafLessonProgress" p
+                                    WHERE p."lessonId" = l.id AND p."studentId" = ${id}
+                                      AND p."completedAt" IS NOT NULL))
+               ) AS bosh`
+    )[0].bosh;
+  const stats = { groupOnlyDiffers: 0, bosh: 0, yangiBajarildi: 0 };
+  const goalCounts = { JIDDIY: 0, YENGIL: 0, ORTA: 0, qatorYoq: 0 };
 
   const totals = totalsOf(await weekRows());
   const mismatches: string[] = [];
@@ -186,9 +257,52 @@ run(async (prisma) => {
     check(s.id, 'gesamt', f.gesamt, jamiy._sum.points ?? 0);
     check(s.id, 'serie', f.serie, serie);
 
+    // S2: the daily goal against a brute-force read of DafAttempt (all groups).
+    const bugunUrinishlar = (
+      await prisma.dafAttempt.findMany({
+        where: {
+          studentId: s.id,
+          createdAt: { gte: new Date(Date.now() - 36 * 3_600_000) },
+        },
+        select: { points: true, createdAt: true, groupId: true },
+      })
+    ).filter((u) => tashkentDateStr(u.createdAt) === heute);
+    const bugunBall = bugunUrinishlar.reduce((sum, u) => sum + u.points, 0);
+    // Proof the sample can tell the two reads apart: a per-group read of this
+    // student would give another number.
+    if (
+      bugunBall !==
+      bugunUrinishlar
+        .filter((u) => u.groupId === s.groupId)
+        .reduce((sum, u) => sum + u.points, 0)
+    )
+      stats.groupOnlyDiffers += 1;
+    const sozlama = await prisma.dafStudentSetting.findUnique({
+      where: { studentId: s.id },
+    });
+    const daraja = sozlama?.dailyGoal ?? 'ORTA';
+    goalCounts[sozlama ? daraja : 'qatorYoq'] += 1;
+    const ball = MAQSAD_BALL[daraja];
+    const bosh = await boshOf(s.id);
+    check(s.id, 'maqsad', f.maqsad, {
+      daraja,
+      ball,
+      hozir: bugunBall,
+      bajarildi: bosh || bugunBall >= ball,
+      bosh,
+    });
+
     const n = await svc.seansNatijasi(s.sessionId, s.id, s.companyId);
     const oldin = place(sorted(totals, s.id, Math.max(0, own - s.minus)));
     check(s.id, 'seans.serie', n.serie, serie);
+    if (bosh) stats.bosh += 1;
+    if (n.maqsad.yangiBajarildi) stats.yangiBajarildi += 1;
+    check(s.id, 'seans.maqsad', n.maqsad, {
+      ball,
+      hozir: bugunBall,
+      bajarildi: bugunBall >= ball,
+      yangiBajarildi: bugunBall - s.minus < ball && ball <= bugunBall && !bosh,
+    });
     // Every session attempt was written today, so it is today's first
     // practice exactly when today's attempts are the session's.
     check(
@@ -235,12 +349,100 @@ run(async (prisma) => {
       if (!(e instanceof Rollback)) throw e;
     });
 
+  // S3: league room and group table against brute force.
+  const kunQatorlari = await prisma.dafStudentDay.findMany({
+    where: { companyId, day: { gte: montag } },
+    select: { studentId: true, points: true, groupKey: true },
+  });
+  const haftaBall = new Map<number, number>();
+  const guruhBall = new Map<string, number>();
+  for (const r of kunQatorlari) {
+    haftaBall.set(r.studentId, (haftaBall.get(r.studentId) ?? 0) + r.points);
+    const k = `${r.studentId}|${r.groupKey}`;
+    guruhBall.set(k, (guruhBall.get(k) ?? 0) + r.points);
+  }
+  let ligaTekshirildi = 0;
+  for (const s of samples.slice(0, 80)) {
+    const l = await svc.liga(s.id);
+    const kirish = await prisma.dafLeagueEntry.findFirst({
+      where: { studentId: s.id, weekStart: montag },
+    });
+    check(s.id, 'liga.azo', l.azo, !!kirish);
+    if (!kirish) continue;
+    ligaTekshirildi += 1;
+    const azolar = await prisma.dafLeagueEntry.findMany({
+      where: { roomId: kirish.roomId },
+      select: { studentId: true },
+    });
+    const want = azolar
+      .map((a) => ({ id: a.studentId, p: haftaBall.get(a.studentId) ?? 0 }))
+      .sort((a, b) => b.p - a.p || a.id - b.id)
+      .map((a, i) => [a.id, i + 1, a.p, a.id === s.id]);
+    check(
+      s.id,
+      'liga.qatorlar',
+      l.xona?.qatorlar.map((q) => [q.studentId, q.platz, q.punkte, q.selbst]),
+      want,
+    );
+  }
+  const faolGuruhlar = await prisma.group.findMany({
+    where: { companyId, statusEnum: 'ACTIVE', deletedAt: null },
+    select: {
+      id: true,
+      enrollments: { where: { status: 'ACTIVE' }, select: { studentId: true } },
+    },
+  });
+  const brute = faolGuruhlar
+    .map((g) => {
+      const ids = [...new Set(g.enrollments.map((e) => e.studentId))];
+      const ball = ids.reduce(
+        (sum, id) => sum + (guruhBall.get(`${id}|${g.id}`) ?? 0),
+        0,
+      );
+      return {
+        groupId: g.id,
+        azolar: ids.length,
+        baho: ball / Math.max(ids.length, 1),
+      };
+    })
+    .filter((g) => g.azolar >= 3)
+    .sort(
+      (a, b) =>
+        b.baho - a.baho ||
+        (a.groupId < b.groupId ? -1 : a.groupId > b.groupId ? 1 : 0),
+    );
+  for (const s of samples.slice(0, 40)) {
+    const j = await svc.guruhlar(s.id, s.companyId);
+    const own = groupOf.get(s.id) ?? null;
+    const i = brute.findIndex((g) => g.groupId === own);
+    const want = [...brute.slice(0, 10), ...(i >= 10 ? [brute[i]] : [])].map(
+      (g) => [
+        g.groupId,
+        brute.indexOf(g) + 1,
+        Math.round(g.baho * 10) / 10,
+        g.azolar,
+      ],
+    );
+    check(
+      s.id,
+      'guruhlar',
+      j.qatorlar.map((q) => [q.groupId, q.platz, q.baho, q.azolar]),
+      want,
+    );
+    check(s.id, 'guruhlar.oz', j.oz?.orin ?? null, i >= 0 ? i + 1 : null);
+  }
+
   const moved = samples.filter((s) => s.minus > 0).length;
   console.log({
     students: samples.length,
     withSession: moved,
     noWeekRow: noRows.length,
+    twoGroupsToday: twoGroups,
+    goal: goalCounts,
+    ...stats,
     weekStudents: totals.size,
+    ligaTekshirildi,
+    faolGuruhlar: brute.length,
     mismatches: mismatches.length,
   });
   for (const m of mismatches.slice(0, 20)) console.log(m);
