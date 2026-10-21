@@ -6,6 +6,13 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-21",
+    sarlavha: "Jadvalda ochilishi rejalashtirilgan guruhlar",
+    matn: "«Jadval»da endi hali ochilmagan («Boshlanmagan») guruhlar ham ko'rinadi: gridda o'z xonasi va vaqtida punktir chiziqli kartada «Ochiladi 03.11.2026» yozuvi bilan, ro'yxatda esa alohida «Rejadagi guruhlar» blokida. Xonasi yoki vaqti kiritilmagan guruh gridning tagidagi alohida qatorda turadi. Bunday guruh dars, o'quvchi va xona hisobiga qo'shilmaydi. «Rejadagi guruhlar» tugmasi ularni yashiradi.",
+    rollar: [1, 2, 3, 5],
+    sahifa: { bolim: "guruhlar", sahifa: "jadval" },
+  },
+  {
     sana: "2026-10-19",
     sarlavha: "Chiqarishda oy puli ushlansa, topshiriq tushadi",
     matn: "O'quvchi guruhdan chiqarilganda oyning 40% idan ko'pi o'tgan va oy puli ushlab qolingan bo'lsa, filial administratorlariga «Oy puli ushlab qolindi» topshirig'i tushadi. Unda o'quvchi, guruh va ushlangan summa bor. Sabab «Boshqa guruhga ko'chdi» tanlansa, tizim buni o'tkazish deb hisoblaydi va o'tmagan darslar pulini o'zi balansga qaytaradi. Boshqa sabab bilan chiqarilgan o'quvchi aslida o'tgan bo'lsa, rahbarga ayting. Haqiqatan ketgan bo'lsa, topshiriqni ko'rib chiqib «Bajarildi» bilan yoping. O'quvchi qayta yozilsa yoki pul qaytarilsa, topshiriq o'zi yopiladi.",

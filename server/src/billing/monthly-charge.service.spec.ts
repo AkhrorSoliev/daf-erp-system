@@ -1190,6 +1190,165 @@ describe('MonthlyChargeService', () => {
     });
   });
 
+  describe('chargeActivatedGroup', () => {
+    // #084: opened (FORMING → ACTIVE) at 13:31 Tashkent on 21.10.2026, after
+    // seven students had been enrolled into it. A FORMING group is refused a
+    // monthly charge, so they had none until the next 04:00 run.
+    const waiting = (id: string, over: Record<string, unknown> = {}) => {
+      const { status: _status, ...row } = enrollment({
+        id,
+        startDate: new Date('2026-10-21T00:00:00Z'),
+        createdAt: new Date('2026-10-21T08:29:56Z'),
+        group: {
+          id: 'grp-1',
+          branchId: 1,
+          companyId: 1,
+          // The group row is written AFTER the enrolments are charged.
+          statusEnum: 'FORMING',
+          startDate: new Date('2026-10-21T00:00:00Z'),
+          exactDays: ['saturday', 'thursday', 'tuesday'],
+          course: { price: 450_000, paymentModel: 'MONTHLY' },
+        },
+      }) as unknown as Record<string, unknown>;
+      return {
+        ...row,
+        statusChangedAt: null,
+        student: { discountPercent: 0 },
+        ...over,
+      };
+    };
+
+    beforeEach(() => {
+      // 13:31 Tashkent.
+      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+      jest.setSystemTime(new Date('2026-10-21T08:31:00Z'));
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it("asks for the group's live ACTIVE enrolments with no standing charge this Tashkent month", async () => {
+      prismaMock.enrollment.findMany.mockResolvedValueOnce([]);
+
+      await service.chargeActivatedGroup(tx, {
+        groupId: 'grp-1',
+        performedById: 7,
+      });
+
+      const call = prismaMock.enrollment.findMany.mock.calls[0][0];
+      expect(call.where).toEqual({
+        groupId: 'grp-1',
+        status: 'ACTIVE',
+        deletedAt: null,
+        student: { status: 'ACTIVE', deletedAt: null },
+        group: {
+          deletedAt: null,
+          course: { paymentModel: 'MONTHLY', deletedAt: null },
+        },
+        monthlyCharges: {
+          // A REVERSED charge does not count: its month is written again.
+          none: { periodYear: 2026, periodMonth: 10, status: 'CHARGED' },
+        },
+      });
+    });
+
+    it('charges each enrolment as if its group were already ACTIVE', async () => {
+      prismaMock.enrollment.findMany.mockResolvedValueOnce([
+        waiting('enr-1'),
+        waiting('enr-2', { statusChangedAt: new Date('2026-10-21T08:30:00Z') }),
+      ]);
+
+      const res = await service.chargeActivatedGroup(tx, {
+        groupId: 'grp-1',
+        performedById: 7,
+      });
+
+      expect(res).toEqual({ created: 2, skipped: 0 });
+      expect(txWriteMock.chargeMonthlyFee).toHaveBeenCalledTimes(2);
+      expect(txWriteMock.chargeMonthlyFee).toHaveBeenCalledWith(
+        expect.objectContaining({
+          enrollmentId: 'enr-1',
+          periodYear: 2026,
+          periodMonth: 10,
+        }),
+        tx,
+      );
+    });
+
+    it('reads a return from a freeze off statusChangedAt, as the daily run does', async () => {
+      const spy = jest.spyOn(service, 'createChargeForEnrollment');
+      const returned = new Date('2026-10-21T08:30:00Z');
+      prismaMock.enrollment.findMany.mockResolvedValueOnce([
+        waiting('enr-2', { statusChangedAt: returned }),
+      ]);
+
+      await service.chargeActivatedGroup(tx, {
+        groupId: 'grp-1',
+        performedById: 7,
+      });
+
+      expect(spy).toHaveBeenCalledWith(
+        tx,
+        expect.objectContaining({
+          enrollment: expect.objectContaining({
+            id: 'enr-2',
+            status: 'ACTIVE',
+            returnedAt: returned,
+            group: expect.objectContaining({ statusEnum: 'ACTIVE' }),
+          }),
+          companyId: 1,
+          performedById: 7,
+          discountPercent: 0,
+        }),
+      );
+      spy.mockRestore();
+    });
+
+    it('counts an enrolment with nothing to charge as skipped', async () => {
+      const spy = jest
+        .spyOn(service, 'createChargeForEnrollment')
+        .mockResolvedValueOnce({ id: 'chg-1' } as never)
+        .mockResolvedValueOnce(null);
+      prismaMock.enrollment.findMany.mockResolvedValueOnce([
+        waiting('enr-1'),
+        waiting('enr-2'),
+      ]);
+
+      const res = await service.chargeActivatedGroup(tx, {
+        groupId: 'grp-1',
+        performedById: 7,
+      });
+
+      expect(res).toEqual({ created: 1, skipped: 1 });
+      spy.mockRestore();
+    });
+
+    it('does nothing when every enrolment already has its charge', async () => {
+      prismaMock.enrollment.findMany.mockResolvedValueOnce([]);
+
+      await expect(
+        service.chargeActivatedGroup(tx, {
+          groupId: 'grp-1',
+          performedById: 7,
+        }),
+      ).resolves.toEqual({ created: 0, skipped: 0 });
+      expect(txWriteMock.chargeMonthlyFee).not.toHaveBeenCalled();
+    });
+
+    it('lets a failed charge propagate, so the status change rolls back', async () => {
+      const spy = jest
+        .spyOn(service, 'createChargeForEnrollment')
+        .mockRejectedValueOnce(new Error('ledger down'));
+      prismaMock.enrollment.findMany.mockResolvedValueOnce([waiting('enr-1')]);
+
+      await expect(
+        service.chargeActivatedGroup(tx, {
+          groupId: 'grp-1',
+          performedById: 7,
+        }),
+      ).rejects.toThrow('ledger down');
+      spy.mockRestore();
+    });
+  });
+
   describe('createChargeForEnrollment — chegirma', () => {
     const baseParams = {
       enrollment: enrollment(),

@@ -179,7 +179,10 @@ export const guruhlar: QollanmaSahifa[] = [
       "boshlanmagan guruhlarim",
       "oldingi kun",
       "keyingi kun",
+      "rejadagi guruhlar",
+      "ochilishi rejalashtirilgan",
+      "boshlanmagan guruh",
     ],
-    yangilangan: "2026-10-17",
+    yangilangan: "2026-10-21",
   },
 ];

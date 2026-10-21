@@ -19,6 +19,12 @@ import { useT } from "@/i18n/context";
 import { msg } from "@/i18n/msg";
 import { answerState } from "@/lib/unmarked-lesson";
 import type { AttendanceStatus, DashboardLesson } from "./dashboard-daily-schedule";
+import {
+  isPlacedPlanned,
+  PlannedGridCard,
+  plannedAsLesson,
+  type PlannedLesson,
+} from "./dashboard-planned-groups";
 
 const SLOT_HEIGHT_PX = 44;
 const SLOT_MIN = 30;
@@ -61,6 +67,8 @@ interface DashboardRoomOccupancyProps {
   isToday?: boolean;
   date: string;
   onAnswered?: () => void;
+  /** Ochilishi rejalashtirilgan guruhlar — punktirli kartada, dars hisobiga kirmaydi. */
+  planned?: PlannedLesson[];
 }
 
 function timeToMin(time: string): number {
@@ -172,6 +180,7 @@ export function DashboardRoomOccupancy({
   isToday = true,
   date,
   onAnswered,
+  planned,
 }: DashboardRoomOccupancyProps) {
   const t = useT();
   const dayStart = timeToMin(workingHours.start);
@@ -192,16 +201,26 @@ export function DashboardRoomOccupancy({
     return rooms.filter((r) => busyIds.has(r.id));
   }, [rooms, lessons, isTeacher]);
 
+  // Rejadagi guruh ham xonada o'z o'rnini oladi (qatorlarga bo'linishi uchun
+  // oddiy dars bilan birga hisoblanadi), lekin boshqacha chiziladi.
+  const plannedById = useMemo(() => {
+    const map = new Map<string, PlannedLesson>();
+    for (const p of planned ?? []) if (isPlacedPlanned(p)) map.set(p.groupId, p);
+    return map;
+  }, [planned]);
+
   const lessonsByRoom = useMemo(() => {
     const map = new Map<string, DashboardLesson[]>();
-    for (const lesson of lessons) {
-      if (!lesson.roomId) continue;
+    const add = (lesson: DashboardLesson) => {
+      if (!lesson.roomId) return;
       const arr = map.get(lesson.roomId) ?? [];
       arr.push(lesson);
       map.set(lesson.roomId, arr);
-    }
+    };
+    for (const lesson of lessons) add(lesson);
+    for (const p of plannedById.values()) add(plannedAsLesson(p));
     return map;
-  }, [lessons]);
+  }, [lessons, plannedById]);
 
   const [now, setNow] = useState(() => {
     const d = new Date();
@@ -316,18 +335,34 @@ export function DashboardRoomOccupancy({
                     ))}
 
                     {/* Lesson segments */}
-                    {segments.map((segment, idx) => (
-                      <LessonSegmentCard
-                        key={`${segment.lesson.groupId}-${segment.startMin}-${idx}`}
-                        segment={segment}
-                        dayStart={dayStart}
-                        dayEnd={dayEnd}
-                        isToday={isToday}
-                        nowMin={nowMin}
-                        date={date}
-                        onAnswered={onAnswered}
-                      />
-                    ))}
+                    {segments.map((segment, idx) => {
+                      const plannedLesson = plannedById.get(
+                        segment.lesson.groupId,
+                      );
+                      if (plannedLesson) {
+                        return (
+                          <PlannedSegment
+                            key={`planned-${plannedLesson.groupId}-${idx}`}
+                            segment={segment}
+                            dayStart={dayStart}
+                            dayEnd={dayEnd}
+                            planned={plannedLesson}
+                          />
+                        );
+                      }
+                      return (
+                        <LessonSegmentCard
+                          key={`${segment.lesson.groupId}-${segment.startMin}-${idx}`}
+                          segment={segment}
+                          dayStart={dayStart}
+                          dayEnd={dayEnd}
+                          isToday={isToday}
+                          nowMin={nowMin}
+                          date={date}
+                          onAnswered={onAnswered}
+                        />
+                      );
+                    })}
                   </div>
                 );
               })}
@@ -360,6 +395,37 @@ export function DashboardRoomOccupancy({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function PlannedSegment({
+  segment,
+  dayStart,
+  dayEnd,
+  planned,
+}: {
+  segment: LayoutSegment;
+  dayStart: number;
+  dayEnd: number;
+  planned: PlannedLesson;
+}) {
+  const visStart = Math.max(segment.startMin, dayStart);
+  const visEnd = Math.min(segment.endMin, dayEnd);
+  if (visStart >= visEnd) return null;
+  const height = (visEnd - visStart) * PX_PER_MIN;
+  const widthPct = 100 / segment.segmentLanes;
+  return (
+    <div
+      className="absolute z-10"
+      style={{
+        top: (visStart - dayStart) * PX_PER_MIN,
+        height,
+        left: `calc(${segment.lane * widthPct}% + 2px)`,
+        width: `calc(${widthPct}% - 4px)`,
+      }}
+    >
+      <PlannedGridCard p={planned} height={height} />
     </div>
   );
 }

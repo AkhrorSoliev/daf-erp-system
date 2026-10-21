@@ -214,10 +214,12 @@ export class StatusCascadeService {
    *
    * CANCELLED drops every ACTIVE and FROZEN enrolment. COMPLETED completes
    * the ACTIVE ones, drops the FROZEN ones (ADR-0036) and graduates the
-   * students it leaves without an ACTIVE enrolment. Any other status closes
-   * nothing. Money steps run on `tx`, so one failed refund rolls the whole
-   * change back. Status-change events land in `deferredEvents`, for the
-   * caller to emit after the commit.
+   * students it leaves without an ACTIVE enrolment. ACTIVE closes nothing but
+   * charges the month to the enrolments the group took while it was not open
+   * (`chargeActivatedGroup`); any other status does nothing. Money steps run
+   * on `tx`, so one failed refund or charge rolls the whole change back.
+   * Status-change events land in `deferredEvents`, for the caller to emit
+   * after the commit.
    */
   async cascadeGroupStatusChange(
     tx: Prisma.TransactionClient,
@@ -230,6 +232,13 @@ export class StatusCascadeService {
     },
   ): Promise<CascadeResult[]> {
     const { groupId, status, userId, at, deferredEvents } = params;
+    if (status === GroupStatus.ACTIVE) {
+      await this.monthlyChargeService.chargeActivatedGroup(tx, {
+        groupId,
+        performedById: userId,
+      });
+      return [];
+    }
     if (status !== GroupStatus.CANCELLED && status !== GroupStatus.COMPLETED) {
       return [];
     }

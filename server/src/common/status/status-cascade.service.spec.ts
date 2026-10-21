@@ -190,6 +190,9 @@ describe('StatusCascadeService', () => {
     monthlyChargeService = {
       reverseChargeForDeparture: jest.fn().mockResolvedValue(null),
       restoreChargeForReturn: jest.fn().mockResolvedValue(null),
+      chargeActivatedGroup: jest
+        .fn()
+        .mockResolvedValue({ created: 0, skipped: 0 }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -1517,8 +1520,8 @@ describe('StatusCascadeService', () => {
       expect(tx.student.update).not.toHaveBeenCalled();
     });
 
-    it.each([GroupStatus.ACTIVE, GroupStatus.PAUSED, GroupStatus.FORMING])(
-      'closes nothing for %s',
+    it.each([GroupStatus.PAUSED, GroupStatus.FORMING])(
+      'closes nothing for %s and charges nobody',
       async (status) => {
         const { tx, byId } = groupTx([row('enr-active', 101, 'ACTIVE')]);
 
@@ -1527,8 +1530,39 @@ describe('StatusCascadeService', () => {
         ).resolves.toEqual([]);
         expect(tx.enrollment.findMany).not.toHaveBeenCalled();
         expect(byId('enr-active').status).toBe('ACTIVE');
+        expect(
+          monthlyChargeService.chargeActivatedGroup,
+        ).not.toHaveBeenCalled();
       },
     );
+
+    it("ACTIVE closes nothing and charges the group's month on the caller's transaction", async () => {
+      // A group opened after its students were enrolled: their enrolments
+      // were refused a monthly charge while it was FORMING (24.10.2026, #084).
+      const { tx, byId } = groupTx([row('enr-active', 101, 'ACTIVE')]);
+
+      await expect(
+        service.cascadeGroupStatusChange(tx as any, params(GroupStatus.ACTIVE)),
+      ).resolves.toEqual([]);
+
+      expect(monthlyChargeService.chargeActivatedGroup).toHaveBeenCalledWith(
+        tx,
+        { groupId: 'group-1', performedById: 7 },
+      );
+      expect(tx.enrollment.findMany).not.toHaveBeenCalled();
+      expect(byId('enr-active').status).toBe('ACTIVE');
+    });
+
+    it('ACTIVE lets a failed charge roll the whole status change back', async () => {
+      const { tx } = groupTx([row('enr-active', 101, 'ACTIVE')]);
+      monthlyChargeService.chargeActivatedGroup.mockRejectedValueOnce(
+        new Error('charge failed'),
+      );
+
+      await expect(
+        service.cascadeGroupStatusChange(tx as any, params(GroupStatus.ACTIVE)),
+      ).rejects.toThrow('charge failed');
+    });
   });
 
   // ─── Result filtering ──────────────────────────────
