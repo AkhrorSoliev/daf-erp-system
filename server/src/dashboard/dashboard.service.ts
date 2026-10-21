@@ -66,6 +66,7 @@ export class DashboardService {
       ]);
       return {
         lessons: [],
+        plannedLessons: [],
         rooms,
         workingHours: {
           start: branch?.startOfWorkingDay ?? '08:00',
@@ -99,7 +100,15 @@ export class DashboardService {
           branchId,
           companyId,
           deletedAt: null,
-          statusEnum: { in: ['ACTIVE', 'FORMING'] },
+          // FORMING guruh sanasiz yoki hali boshlanmagan bo'lsa — «rejadagi»
+          // qatorga tushadi (plannedLessons), oddiy dars sifatida emas.
+          OR: [
+            {
+              statusEnum: 'ACTIVE',
+              OR: [{ startDate: null }, { startDate: { lte: dateOnly } }],
+            },
+            { statusEnum: 'FORMING', startDate: { lte: dateOnly } },
+          ],
           isActive: true,
           exactDays: { has: dayName },
           ...(teacherId !== undefined && {
@@ -108,9 +117,6 @@ export class DashboardService {
           lessonStartTime: { not: null },
           lessonEndTime: { not: null },
           AND: [
-            {
-              OR: [{ startDate: null }, { startDate: { lte: dateOnly } }],
-            },
             {
               OR: [{ endDate: null }, { endDate: { gte: dateOnly } }],
             },
@@ -139,6 +145,56 @@ export class DashboardService {
         orderBy: { lessonStartTime: 'asc' },
       }),
     ]);
+
+    // Ochilishi rejalashtirilgan (FORMING) guruhlar: boshlanish sanasi kelmagan
+    // yoki kiritilmagan. Jadvalga alohida qatorda chiqadi, dars hisobiga
+    // qo'shilmaydi. Jadvali yo'q guruh (kun/vaqt/xona) har kuni ro'yxatda turadi.
+    // O'qituvchi (teacherId) rejadagilarni ko'rmaydi.
+    const plannedGroups =
+      teacherId !== undefined
+        ? []
+        : await this.prisma.group.findMany({
+            where: {
+              branchId,
+              companyId,
+              deletedAt: null,
+              statusEnum: 'FORMING',
+              isActive: true,
+              AND: [
+                {
+                  OR: [{ startDate: null }, { startDate: { gt: dateOnly } }],
+                },
+                {
+                  OR: [
+                    { exactDays: { has: dayName } },
+                    { exactDays: { isEmpty: true } },
+                  ],
+                },
+              ],
+            },
+            select: {
+              id: true,
+              name: true,
+              lessonStartTime: true,
+              lessonEndTime: true,
+              roomId: true,
+              startDate: true,
+              room: { select: { name: true } },
+              course: { select: { name: true } },
+              teachers: {
+                select: {
+                  teacher: {
+                    select: { id: true, firstName: true, lastName: true },
+                  },
+                },
+              },
+              enrollments: {
+                where: { status: 'ACTIVE', deletedAt: null },
+                select: { id: true },
+              },
+            },
+            orderBy: [{ lessonStartTime: 'asc' }, { name: 'asc' }],
+          });
 
     // Fetch today's attendance counts per group (PRESENT only — for UI display)
     const groupIds = groups.map((g) => g.id);
@@ -246,8 +302,26 @@ export class DashboardService {
       };
     });
 
+    const plannedLessons = plannedGroups.map((g) => ({
+      groupId: g.id,
+      groupName: g.name,
+      courseName: g.course?.name ?? null,
+      startTime: g.lessonStartTime,
+      endTime: g.lessonEndTime,
+      roomId: g.roomId,
+      roomName: g.room?.name ?? null,
+      startDate: g.startDate ? tashkentDateStr(g.startDate) : null,
+      teachers: g.teachers.map((gt) => ({
+        id: gt.teacher.id,
+        firstName: gt.teacher.firstName,
+        lastName: gt.teacher.lastName,
+      })),
+      studentCount: g.enrollments.length,
+    }));
+
     return {
       lessons,
+      plannedLessons,
       rooms,
       workingHours: {
         start: branch?.startOfWorkingDay ?? '08:00',

@@ -6,6 +6,13 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-21",
+    sarlavha: "Jadvalda ochilishi rejalashtirilgan guruhlar",
+    matn: "«Jadval»da endi hali ochilmagan («Boshlanmagan») guruhlar ham ko'rinadi: gridda o'z xonasi va vaqtida punktir chiziqli kartada «Ochiladi 03.11.2026» yozuvi bilan, ro'yxatda esa alohida «Rejadagi guruhlar» blokida. Xonasi yoki vaqti kiritilmagan guruh gridning tagidagi alohida qatorda turadi. Bunday guruh dars, o'quvchi va xona hisobiga qo'shilmaydi. «Rejadagi guruhlar» tugmasi ularni yashiradi.",
+    rollar: [1, 2, 3, 5],
+    sahifa: { bolim: "guruhlar", sahifa: "jadval" },
+  },
+  {
     sana: "2026-10-19",
     sarlavha: "O'quvchilarga Telegram eslatmasi va dushanba xulosasi",
     matn: "CEO yoqqan kundan boshlab Ta'lim ilovasida mashq qiladigan o'quvchilar botdan ikki xil yumshoq xabar oladi. Kechki eslatma (19:30, dushanba–shanba) — oxirgi 14 kunda mashq qilgan, lekin bugun hali mashq qilmagan o'quvchiga: ketma-ket ikki kun va haftada 4 tadan ko'p yuborilmaydi, yakshanba va bayram kunida yo'q. Dushanba xulosasi (09:00) — o'tgan haftada ball topganlarga: ball, liga o'rni, guruh o'rni, yangi nishonlar. O'quvchi ikkalasini «Reyting → Darajam» dagi «Telegram eslatmalari» almashtirgichi yoki xabar tagidagi «Eslatmalarni to'xtatish» tugmasi bilan o'chiradi. Botni bloklagan o'quvchiga eslatma yuborilmaydi. Yuborilgan xabarlar o'quvchi kartasining «SMS» tabida ko'rinadi.",

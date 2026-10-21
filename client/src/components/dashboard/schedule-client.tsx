@@ -12,6 +12,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { addDays, format, isToday } from "date-fns";
 import {
+  CalendarClock,
   CalendarDays,
   CalendarX,
   ChevronLeft,
@@ -41,6 +42,11 @@ import { TeacherLessonCards } from "./teacher-lesson-cards";
 import { UpcomingGroups } from "./upcoming-groups";
 import type { DashboardLesson } from "./dashboard-daily-schedule";
 import { DashboardRoomOccupancy } from "./dashboard-room-occupancy";
+import {
+  isPlacedPlanned,
+  PlannedGroupsList,
+  type PlannedLesson,
+} from "./dashboard-planned-groups";
 import { DashboardScheduleSkeleton } from "./dashboard-schedule-skeleton";
 
 interface Room {
@@ -51,6 +57,8 @@ interface Room {
 
 interface TodayScheduleResponse {
   lessons: DashboardLesson[];
+  /** Ochilishi rejalashtirilgan guruhlar (dars hisobiga kirmaydi). */
+  plannedLessons?: PlannedLesson[];
   rooms: Room[];
   workingHours: { start: string; end: string };
   isHoliday: boolean;
@@ -85,6 +93,16 @@ export function ScheduleClient() {
     },
     [pathname, router, searchParams],
   );
+
+  // Rejadagi guruhlar standart holatda ko'rinadi; ?rejada=0 — yashirish.
+  const showPlannedParam = searchParams.get("rejada") !== "0";
+  const handlePlannedToggle = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (showPlannedParam) params.set("rejada", "0");
+    else params.delete("rejada");
+    const qs = params.toString();
+    router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+  }, [pathname, router, searchParams, showPlannedParam]);
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const isTodaySelected = isToday(selectedDate);
@@ -125,6 +143,20 @@ export function ScheduleClient() {
       l.teachers.some((teacher) => teacher.id === user.id)
     );
   }, [data, isTeacher, user]);
+
+  // O'qituvchi rejadagi guruhlarni ko'rmaydi (server ham bermaydi).
+  const allPlanned = useMemo(
+    () => (isTeacher ? [] : (data?.plannedLessons ?? [])),
+    [data, isTeacher],
+  );
+  const planned = useMemo(
+    () => (showPlannedParam ? allPlanned : []),
+    [showPlannedParam, allPlanned],
+  );
+  const unplacedPlanned = useMemo(
+    () => planned.filter((p) => !isPlacedPlanned(p)),
+    [planned],
+  );
 
   // Stats computed from teacher's own lessons or all lessons
   const stats = useMemo(() => {
@@ -335,6 +367,28 @@ export function ScheduleClient() {
                 </span>
               </h2>
               {!isTeacher && (
+                <div className="flex items-center gap-2">
+                  {allPlanned.length > 0 && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={showPlannedParam ? "secondary" : "outline"}
+                          aria-pressed={showPlannedParam}
+                          onClick={handlePlannedToggle}
+                        >
+                          <CalendarClock className="size-3.5" />
+                          {t("Rejadagi guruhlar")} ({allPlanned.length})
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {t(
+                          "Ochilishi rejalashtirilgan guruhlarni jadvalda ko'rsatish",
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 <TabsList>
                   <TabsTrigger value="grid">
                     <LayoutGrid className="size-3.5 mr-1" /> {t("Grid")}
@@ -343,6 +397,7 @@ export function ScheduleClient() {
                     <List className="size-3.5 mr-1" /> {t("Ro'yxat")}
                   </TabsTrigger>
                 </TabsList>
+                </div>
               )}
             </div>
             <TabsContent value="grid" className="p-3 mt-0">
@@ -353,7 +408,16 @@ export function ScheduleClient() {
                 isTeacher={isTeacher}
                 isToday={isTodaySelected}
                 date={dateParam}
+                planned={planned}
               />
+              {unplacedPlanned.length > 0 && (
+                <div className="mt-3">
+                  <PlannedGroupsList
+                    items={unplacedPlanned}
+                    title={t("Vaqti yoki xonasi belgilanmagan")}
+                  />
+                </div>
+              )}
             </TabsContent>
             <TabsContent value="list" className="mt-0">
               {isTeacher ? (
@@ -364,6 +428,14 @@ export function ScheduleClient() {
                   isToday={isTodaySelected}
                   date={dateParam}
                 />
+              )}
+              {planned.length > 0 && (
+                <div className="p-3">
+                  <PlannedGroupsList
+                    items={planned}
+                    title={t("Rejadagi guruhlar")}
+                  />
+                </div>
               )}
             </TabsContent>
           </Tabs>
