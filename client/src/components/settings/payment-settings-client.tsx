@@ -1,8 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Lock } from "lucide-react";
+import { Info, Lock } from "lucide-react";
 import toast from "react-hot-toast";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -14,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { SettingsPageHeader } from "./settings-page-header";
 import {
+  InfoDialog,
   NumberSetting,
   SettingRow,
   SettingsSection,
@@ -48,8 +60,31 @@ type BranchOverrides = Record<keyof PaymentSettingsValues, number[]>;
 const CHARGE_DAYS = Array.from({ length: 28 }, (_, i) => String(i + 1));
 
 const TITLE = "To'lov";
-const DESCRIPTION =
-  "To'lov va darsga qo'yish qoidalari. O'zgarish darhol kuchga kiradi.";
+const DESCRIPTION = "To'lov va darsga qo'yish qoidalari.";
+
+/** Shown in the «saved» toast, so it says WHICH setting was saved. */
+const SAVED_NAMES: Record<string, string> = {
+  defaultModel: "Standart to'lov modeli",
+  excusedCreditEnabled: "Sababli dars puli",
+  excusedCreditMonthlyCap: "Oylik limit",
+  chargeDayOfMonth: "Oylik hisob kuni",
+  debtWriteOffEnabled: "Qarz kechirishga ruxsat",
+  monthlyNoticesEnabled: "Oylik to'lov xabari",
+  noRefundAfterPercent: "Pul qaytarilmaydigan chegara",
+  admissionRuleEnabled: "2-darsdan qo'yish qoidasi",
+  trialLessonEnabled: "Sinov darsi",
+  attendanceOpensMinutesBefore: "Davomat ochilish vaqti",
+  admissionMinPaidPercent: "Eng kam to'lov",
+  paidThroughReminderDays: "To'lov eslatmasi",
+};
+
+/** A change that moves money or lets a student in: asked once more before it saves. */
+interface PendingConfirm {
+  title: string;
+  lines: string[];
+  action: string;
+  run: () => void;
+}
 
 export function PaymentSettingsClient() {
   const authUser = useAuth((s) => s.user);
@@ -72,7 +107,12 @@ export function PaymentSettingsClient() {
     useState<BranchOverrides | null>(null);
   const branches = useBranchSwitcher((s) => s.branches);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  // The key being saved. One save at a time: the server answers with the whole
+  // list, so two in flight could put an older answer over a newer one.
+  const [savingKey, setSavingKey] = useState<string | null>(null);
+  const saving = savingKey !== null;
+  const [confirm, setConfirm] = useState<PendingConfirm | null>(null);
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   useEffect(() => {
     async function fetchSettings() {
@@ -93,15 +133,16 @@ export function PaymentSettingsClient() {
 
   async function saveField(patch: Record<string, unknown>) {
     if (!settings) return;
-    setSaving(true);
+    const key = Object.keys(patch)[0];
+    setSavingKey(key);
     try {
       const { data } = await api.patch("/settings/payment", patch);
       setSettings(data.settings);
-      toast.success("Sozlama saqlandi");
+      toast.success(`${SAVED_NAMES[key] ?? "Sozlama"} saqlandi`);
     } catch (error) {
       toast.error(getErrorMessage(error, "Saqlashda xatolik yuz berdi"));
     } finally {
-      setSaving(false);
+      setSavingKey(null);
     }
   }
 
@@ -157,12 +198,15 @@ export function PaymentSettingsClient() {
         title={TITLE}
         description={DESCRIPTION}
         action={
-          saving && (
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Loader2 className="size-3.5 animate-spin" />
-              Saqlanmoqda...
-            </span>
-          )
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setAboutOpen(true)}
+          >
+            <Info className="size-4" />
+            Bu sahifa nima qiladi?
+          </Button>
         }
       />
 
@@ -186,6 +230,7 @@ export function PaymentSettingsClient() {
       <SettingsSection title="Hisob-kitob">
         <SettingRow
           label="Standart to'lov modeli"
+          saving={savingKey === "defaultModel"}
           htmlFor="defaultModel"
           hint="Yangi kursda model tanlanmasa, shu ishlatiladi. Mavjud kurslarga ta'sir qilmaydi."
           note={renderOverrideNote("payment.defaultModel")}
@@ -215,15 +260,26 @@ export function PaymentSettingsClient() {
             etadi; shuning uchun override eslatmasi yo'q. */}
         <SettingRow
           label="Oylik hisob kuni"
+          saving={savingKey === "chargeDayOfMonth"}
           htmlFor="chargeDayOfMonth"
           hint="«Oylik» kurslarda har oy shu kuni yangi to'lov hisobi yoziladi."
-          details="1 dan 28 gacha tanlanadi, chunki fevralda 28 kun bor."
+          details="1 dan 28 gacha tanlanadi, chunki fevralda 28 kun bor. O'zgarsa, keyingi oylik hisob yangi kunda yoziladi; yozilgan hisoblar o'zgarmaydi."
           locked={!isCeo}
           control={
             <Select
               value={String(settings["payment.chargeDayOfMonth"])}
               disabled={!isCeo || saving}
-              onValueChange={(v) => saveField({ chargeDayOfMonth: Number(v) })}
+              onValueChange={(v) =>
+                setConfirm({
+                  title: "Oylik hisob kunini o'zgartirasizmi?",
+                  lines: [
+                    `Yangi kun: ${v}-kun.`,
+                    "Keyingi oylik hisob shu kuni yoziladi. Yozilgan hisoblar o'zgarmaydi.",
+                  ],
+                  action: "O'zgartirish",
+                  run: () => saveField({ chargeDayOfMonth: Number(v) }),
+                })
+              }
             >
               <SelectTrigger id="chargeDayOfMonth" className="w-28">
                 <SelectValue />
@@ -243,6 +299,7 @@ export function PaymentSettingsClient() {
       <SettingsSection title="Sababli darslar">
         <SettingRow
           label="Sababli dars puli keyingi oyga o'tsin"
+          saving={savingKey === "excusedCreditEnabled"}
           hint="Sababli qoldirilgan darsning puli keyingi oy to'lovidan ayiriladi."
           details="O'chirilsa, sababli dars ham oddiy dars kabi hisoblanadi."
           note={renderOverrideNote("payment.excusedCreditEnabled")}
@@ -259,6 +316,7 @@ export function PaymentSettingsClient() {
         >
           <SettingRow
             label="Oyiga eng ko'pi bilan"
+            saving={savingKey === "excusedCreditMonthlyCap"}
             htmlFor="excusedCreditMonthlyCap"
             hint="Bo'sh qoldirilsa, cheklov yo'q."
             note={renderOverrideNote("payment.excusedCreditMonthlyCap")}
@@ -283,6 +341,7 @@ export function PaymentSettingsClient() {
       <SettingsSection title="To'lamagan o'quvchilar">
         <SettingRow
           label="To'lamagan o'quvchi 2-darsdan qo'yilmasin"
+          saving={savingKey === "admissionRuleEnabled"}
           hint="1-darsga to'lovsiz kelish mumkin, keyin faqat puli yetgan darslarga qo'yiladi."
           details="To'lamaganlar davomatda qulf bilan ko'rinadi va ularni belgilab bo'lmaydi. O'chirilsa, hamma o'quvchi darsga qo'yiladi va to'lov oynasida «qaysi darsgacha yetadi» ko'rinmaydi. Standart holat: yoqilgan. Shartnoma 3.2."
           locked={!isCeo}
@@ -292,13 +351,29 @@ export function PaymentSettingsClient() {
               aria-label="To'lamagan o'quvchi 2-darsdan qo'yilmasin"
               disabled={!isCeo || saving}
               onCheckedChange={(checked) =>
-                saveField({ admissionRuleEnabled: checked })
+                setConfirm({
+                  title: checked
+                    ? "2-darsdan qo'yish qoidasini yoqasizmi?"
+                    : "2-darsdan qo'yish qoidasini o'chirasizmi?",
+                  lines: checked
+                    ? [
+                        "To'lamagan o'quvchi 1-darsdan keyin faqat puli yetgan darslarga qo'yiladi.",
+                        "Davomatda to'lamaganlar qulf bilan ko'rinadi.",
+                      ]
+                    : [
+                        "Hamma o'quvchi darsga qo'yiladi, to'lagan-to'lamagani tekshirilmaydi.",
+                        "To'lov oynasida «qaysi darsgacha yetadi» ko'rinmaydi.",
+                      ],
+                  action: checked ? "Yoqish" : "O'chirish",
+                  run: () => saveField({ admissionRuleEnabled: checked }),
+                })
               }
             />
           }
         >
           <SettingRow
             label="Darsga kirish uchun eng kam to'lov"
+            saving={savingKey === "admissionMinPaidPercent"}
             htmlFor="admissionMinPaidPercent"
             hint="2-darsdan boshlab darsga kirish uchun oy to'lovining kamida shu qismi to'langan bo'lishi kerak."
             details="Har guruhda o'sha guruhning 2-darsidan hisoblanadi. 0 qo'yilsa, faqat o'tilgan darslar puli so'raladi. Standart: 50%. 01.11.2026 dan ishlaydi. Shartnoma 3.2."
@@ -317,6 +392,7 @@ export function PaymentSettingsClient() {
           />
           <SettingRow
             label="To'lov tugashidan oldin eslatma"
+            saving={savingKey === "paidThroughReminderDays"}
             htmlFor="paidThroughReminderDays"
             hint="Puli yetmaydigan birinchi darsdan shuncha kun oldin har kuni 20:00 da Telegram'da eslatma boradi."
             details="To'lov kelsa, eslatma to'xtaydi. 0 qo'yilsa, eslatma yuborilmaydi. Standart: 3 kun. Shartnoma 3.7."
@@ -336,6 +412,7 @@ export function PaymentSettingsClient() {
         </SettingRow>
         <SettingRow
           label="O'quvchiga oylik to'lov xabari"
+          saving={savingKey === "monthlyNoticesEnabled"}
           hint="Hisob kuni o'quvchiga Telegram'da shu oy uchun qancha to'lash kerakligi yuboriladi."
           details="To'lamaganlarga oyning 2-darsidan bir kun oldin eslatma ham boradi. Ikkalasi soat 20:00 dagi kunlik xabar bilan keladi. O'chirilsa, bu ikki xabar yuborilmaydi. Standart holat: yoqilgan."
           locked={!isCeo}
@@ -359,6 +436,7 @@ export function PaymentSettingsClient() {
       <SettingsSection title="O'quvchi ketganda">
         <SettingRow
           label="Pul qaytarilmaydigan chegara"
+          saving={savingKey === "noRefundAfterPercent"}
           htmlFor="noRefundAfterPercent"
           hint="O'quvchi ketganda oy darslarining shu qismidan ko'pi o'tgan bo'lsa, oy puli qaytarilmaydi."
           details="Kamroq o'tgan bo'lsa, o'tilmagan darslar puli qaytadi. Guruhdan chiqarish va chetlatishga tegishli. 01.10.2026 dan chiqqanlarga qo'llanadi. Shartnoma 6.2."
@@ -371,12 +449,23 @@ export function PaymentSettingsClient() {
               unit="%"
               rangeError="Foiz 0 dan 100 gacha bo'lgan butun son bo'lishi kerak"
               disabled={!isCeo || saving}
-              onSave={(v) => saveField({ noRefundAfterPercent: v })}
+              onSave={(v) =>
+                setConfirm({
+                  title: "Pul qaytarilmaydigan chegarani o'zgartirasizmi?",
+                  lines: [
+                    `Yangi chegara: ${v}%.`,
+                    "O'quvchi ketganda qancha pul qaytishi shunga qarab hisoblanadi. 01.10.2026 dan chiqqanlarga qo'llanadi.",
+                  ],
+                  action: "O'zgartirish",
+                  run: () => saveField({ noRefundAfterPercent: v }),
+                })
+              }
             />
           }
         />
         <SettingRow
           label="Sinov darsi"
+          saving={savingKey === "trialLessonEnabled"}
           hint="1 tadan ko'p darsga kelmagan o'quvchi ketsa, oy puli to'liq qaytadi."
           details="«Keldi» va «Kechikdi» belgilari sanaladi. Qarzi 0 bo'ladi, ustozga o'sha oy darslari uchun haq yozilmaydi. O'chirilsa, yuqoridagi foiz qoidasi ishlaydi. Standart holat: yoqilgan. Shartnoma 3.5."
           locked={!isCeo}
@@ -393,6 +482,7 @@ export function PaymentSettingsClient() {
         />
         <SettingRow
           label="Qarz kechirishga ruxsat"
+          saving={savingKey === "debtWriteOffEnabled"}
           hint="O'chiq bo'lsa, qarzni hech kim kechira olmaydi. Yoqilsa, administrator sabab yozib kechiradi."
           details="O'chiq (standart holat) bo'lsa, qarz hech qachon kechirilmaydi: guruhdan chiqarish oynasidagi va profildagi kechirish tugmasi ishlamaydi, qarz butun tarixi bilan joyida qoladi. Yoqilsa, administrator sabab yozib va summani qayta terib kechiradi."
           locked={!isCeo}
@@ -402,7 +492,21 @@ export function PaymentSettingsClient() {
               disabled={!isCeo || saving}
               aria-label="Qarz kechirishga ruxsat"
               onCheckedChange={(checked) =>
-                saveField({ debtWriteOffEnabled: checked })
+                setConfirm({
+                  title: checked
+                    ? "Qarz kechirishni yoqasizmi?"
+                    : "Qarz kechirishni o'chirasizmi?",
+                  lines: checked
+                    ? [
+                        "Administrator sabab yozib va summani qayta terib, o'quvchi qarzini kechira oladi.",
+                        "Kechirilgan qarz qaytarilmaydi.",
+                      ]
+                    : [
+                        "Qarzni hech kim kechira olmaydi. Kechirish tugmalari ishlamaydi.",
+                      ],
+                  action: checked ? "Yoqish" : "O'chirish",
+                  run: () => saveField({ debtWriteOffEnabled: checked }),
+                })
               }
             />
           }
@@ -413,6 +517,7 @@ export function PaymentSettingsClient() {
       <SettingsSection title="Davomat">
         <SettingRow
           label="Davomat ochilish vaqti"
+          saving={savingKey === "attendanceOpensMinutesBefore"}
           htmlFor="attendanceOpensMinutesBefore"
           hint="Yangi davomat dars boshlanishidan shuncha oldin ochiladi va dars tugashi bilan yopiladi."
           details="Barcha rollar uchun bir xil. Olingan davomatni markaz rahbari, filial direktori va administrator dars tugagach ham tuzata oladi. Standart: 10 daqiqa."
@@ -430,6 +535,55 @@ export function PaymentSettingsClient() {
           }
         />
       </SettingsSection>
+
+      <InfoDialog
+        open={aboutOpen}
+        onOpenChange={setAboutOpen}
+        title="Bu sahifa nima qiladi?"
+      >
+        <p>
+          Bu yerda to&apos;lov hisobi va darsga qo&apos;yish qoidalari
+          boshqariladi: oylik hisob kuni, sababli darslar, to&apos;lamagan
+          o&apos;quvchilar, o&apos;quvchi ketganda pulni qaytarish va davomat
+          vaqti.
+        </p>
+        <p>
+          Qulf belgili sozlamalar butun kompaniya uchun bitta, ularni faqat
+          markaz rahbari o&apos;zgartiradi.
+        </p>
+        <p>
+          Raqam yozilsa, «Saqlash» bosilmaguncha hech narsa o&apos;zgarmaydi.
+          Yoqish va o&apos;chirish tugmalari darhol saqlanadi. Pulga ta&apos;sir
+          qiladigan o&apos;zgarishlar oldin so&apos;raladi.
+        </p>
+        <p>Har qatordagi «i» tugmasi sozlama haqida batafsil aytadi.</p>
+      </InfoDialog>
+
+      <AlertDialog
+        open={confirm !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirm(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirm?.title}</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                {confirm?.lines.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+            <AlertDialogAction onClick={() => confirm?.run()}>
+              {confirm?.action}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
