@@ -180,6 +180,59 @@ describe('DashboardService', () => {
       expect(result.lessons[0].presentCount).toBe(0);
     });
 
+    it('returns FORMING groups that have not started as plannedLessons', async () => {
+      prisma.group.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([
+        {
+          id: 'group-9',
+          name: 'B1-09',
+          lessonStartTime: '09:00',
+          lessonEndTime: '10:30',
+          roomId: 'room-1',
+          startDate: new Date('2026-11-03T00:00:00.000Z'),
+          room: { name: 'Room 1' },
+          course: { name: 'Deutsch B1' },
+          teachers: [],
+          enrollments: [{ id: 'e1' }, { id: 'e2' }],
+        },
+      ]);
+
+      const result = await service.getTodaySchedule(1, 1001, '2026-04-13');
+
+      expect(result.lessons).toEqual([]);
+      expect(result.plannedLessons).toEqual([
+        {
+          groupId: 'group-9',
+          groupName: 'B1-09',
+          courseName: 'Deutsch B1',
+          startTime: '09:00',
+          endTime: '10:30',
+          roomId: 'room-1',
+          roomName: 'Room 1',
+          startDate: '2026-11-03',
+          teachers: [],
+          studentCount: 2,
+        },
+      ]);
+      // oddiy darslar so'rovi FORMING'ni faqat sanasi kelganda oladi,
+      // rejadagilar so'rovi faqat FORMING (sanasiz yoki kelajakdagi)ni
+      const [, planned] = prisma.group.findMany.mock.calls;
+      expect(planned[0].where).toEqual(
+        expect.objectContaining({ statusEnum: 'FORMING' }),
+      );
+    });
+
+    it('gives a teacher no plannedLessons and issues no second query', async () => {
+      const result = await service.getTodaySchedule(
+        1,
+        1001,
+        '2026-04-13',
+        10042,
+      );
+
+      expect(result.plannedLessons).toEqual([]);
+      expect(prisma.group.findMany).toHaveBeenCalledTimes(1);
+    });
+
     it('should filter by branchId', async () => {
       await service.getTodaySchedule(5, 1001, '2026-04-13');
 
