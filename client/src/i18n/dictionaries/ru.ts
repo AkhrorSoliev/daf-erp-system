@@ -4780,6 +4780,14 @@ const ru: Dictionary = {
   // Dashboard error screen
   "Sahifani ochib bo'lmadi": "Не удалось открыть страницу",
   "Nimadir noto'g'ri ketdi. Qayta urinib ko'ring yoki boshqa bo'limga o'ting.": "Что-то пошло не так. Повторите попытку или перейдите в другой раздел.",
+  "Darslar qachondan qayta boshlanadi?": "С какого дня занятия возобновятся?",
+  "Hozircha noma'lum": "Пока неизвестно",
+  "Pauza davomida o'tmagan darslar puli o'quvchilarga har kecha avtomatik qaytariladi. O'quvchilarga xabar yuboriladi.": "Деньги за непроведённые во время паузы занятия возвращаются ученикам автоматически каждую ночь. Ученикам отправляется сообщение.",
+  "Darslar qaysi kundan boshlanadi?": "С какого дня начнутся занятия?",
+  "Oldindan belgilangan sana: {day}. Shu kundanmi?": "Заранее назначенная дата: {day}. С этого дня?",
+  "Sana belgilanmagan — avval sanani tanlang.": "Дата не назначена — сначала выберите дату.",
+  "Keyingi kun tanlansa, guruh o'sha kuni o'zi ochiladi. Oylik to'lov shu kundan hisoblanadi.": "Если выбран более поздний день, группа откроется сама в это утро. Ежемесячная оплата считается с этого дня.",
+  "Guruh {day} kuni ochiladi": "Группа откроется {day}",
   // Telegram Mini App entry (staff /tg) and its notices
   "Kirib bo'lmadi. Internetni tekshirib, qayta urinib ko'ring.": "Не удалось войти. Проверьте интернет и попробуйте ещё раз.",
   "Kirish bu oynada saqlanmadi. Telegram'ning brauzer versiyasida shunday bo'lishi mumkin — kabinetni telefon yoki kompyuterdagi Telegram ilovasidan oching.": "Вход в этом окне не сохранился. Так бывает в браузерной версии Telegram — откройте кабинет в приложении Telegram на телефоне или компьютере.",

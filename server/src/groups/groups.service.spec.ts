@@ -12,6 +12,7 @@ import { GroupsService } from './groups.service';
 import { GroupsReadService } from './groups-read.service';
 import { GroupsWriteService } from './groups-write.service';
 import { GroupsStatusService } from './groups-status.service';
+import { GroupPausesService } from './group-pauses.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusHistoryService, StatusCascadeService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
@@ -24,6 +25,7 @@ describe('GroupsService — status methods', () => {
   let statusCascadeService: any;
   let entityHistoryService: any;
   let emitter: { emit: jest.Mock };
+  let pauses: any;
 
   const mockGroup = {
     id: 'group-1',
@@ -127,6 +129,13 @@ describe('GroupsService — status methods', () => {
       getHistory: jest.fn().mockResolvedValue([]),
     };
 
+    pauses = {
+      open: jest.fn().mockResolvedValue({}),
+      close: jest.fn().mockResolvedValue(undefined),
+      scheduleResume: jest.fn().mockResolvedValue(new Date()),
+      setPlanned: jest.fn().mockResolvedValue(null),
+    };
+
     statusCascadeService = {
       cascade: jest.fn().mockResolvedValue([]),
       cascadeGroupDeletion: jest.fn().mockResolvedValue({ count: 0 }),
@@ -147,6 +156,7 @@ describe('GroupsService — status methods', () => {
         GroupsReadService,
         GroupsWriteService,
         GroupsStatusService,
+        { provide: GroupPausesService, useValue: pauses },
         { provide: PrismaService, useValue: prisma },
         { provide: StatusHistoryService, useValue: statusHistoryService },
         { provide: StatusCascadeService, useValue: statusCascadeService },
@@ -352,7 +362,7 @@ describe('GroupsService — status methods', () => {
       });
       await service.changeStatus(
         'group-1',
-        { status: 'PAUSED' as any },
+        { status: 'PAUSED' as any, resumeUnknown: true },
         1,
         1001,
       );
@@ -494,13 +504,226 @@ describe('GroupsService — status methods', () => {
     it('pauses a group without asking about its questions: they stay open', async () => {
       await service.changeStatus(
         'group-1',
-        { status: 'PAUSED' as any },
+        { status: 'PAUSED' as any, resumeUnknown: true },
         1,
         1001,
       );
 
       expect(tx.unmarkedLesson.findMany).not.toHaveBeenCalled();
       expect(tx.group.update).toHaveBeenCalled();
+    });
+
+    describe('pause and resume (ADR-0119)', () => {
+      it('refuses a pause that names neither a restart day nor "unknown"', async () => {
+        await expect(
+          service.changeStatus('group-1', { status: 'PAUSED' as any }, 1, 1001),
+        ).rejects.toThrow('Darslar qachondan');
+        expect(pauses.open).not.toHaveBeenCalled();
+        expect(tx.group.update).not.toHaveBeenCalled();
+      });
+
+      it('opens a pause row with the planned day, before the cascade', async () => {
+        await service.changeStatus(
+          'group-1',
+          {
+            status: 'PAUSED' as any,
+            plannedResumeOn: '2999-01-05',
+            reason: "xona yo'q",
+          },
+          1,
+          1001,
+        );
+
+        expect(pauses.open).toHaveBeenCalledWith(
+          tx,
+          expect.objectContaining({
+            groupId: 'group-1',
+            plannedResumeOn: '2999-01-05',
+            reason: "xona yo'q",
+            userId: 1,
+          }),
+        );
+        expect(pauses.open.mock.invocationCallOrder[0]).toBeLessThan(
+          statusCascadeService.cascadeGroupStatusChange.mock
+            .invocationCallOrder[0],
+        );
+      });
+
+      it('tells the students after the commit: PAUSED with the planned day', async () => {
+        await service.changeStatus(
+          'group-1',
+          { status: 'PAUSED' as any, plannedResumeOn: '2999-01-05' },
+          1,
+          1001,
+        );
+
+        expect(emitter.emit).toHaveBeenCalledWith('group.pause.message', {
+          kind: 'PAUSED',
+          groupId: 'group-1',
+          companyId: 1001,
+          resumeDay: '2999-01-05',
+        });
+      });
+
+      it('sends no pause message when the change rolls back', async () => {
+        statusCascadeService.cascadeGroupStatusChange.mockRejectedValue(
+          new Error('boom'),
+        );
+        await expect(
+          service.changeStatus(
+            'group-1',
+            { status: 'PAUSED' as any, resumeUnknown: true },
+            1,
+            1001,
+          ),
+        ).rejects.toThrow();
+        expect(emitter.emit).not.toHaveBeenCalledWith(
+          'group.pause.message',
+          expect.anything(),
+        );
+      });
+
+      describe('updatePause', () => {
+        beforeEach(() => {
+          prisma.group.findFirst.mockResolvedValue({
+            ...mockGroup,
+            statusEnum: 'PAUSED',
+          });
+          tx.group.findUniqueOrThrow = jest.fn().mockResolvedValue({
+            ...mockGroup,
+            statusEnum: 'PAUSED',
+            course: { id: 'c1', name: 'Test' },
+            room: null,
+            branch: { id: 1, name: 'Branch' },
+            teachers: [],
+            _count: { enrollments: 0 },
+          });
+          pauses.setPlanned.mockResolvedValue({ before: null, after: null });
+        });
+
+        it('stores the new day and tells the students', async () => {
+          await service.updatePause(
+            'group-1',
+            { plannedResumeOn: '2999-02-01' },
+            1,
+            1001,
+          );
+          expect(pauses.setPlanned).toHaveBeenCalledWith(
+            tx,
+            expect.objectContaining({ plannedResumeOn: '2999-02-01' }),
+          );
+          expect(emitter.emit).toHaveBeenCalledWith(
+            'group.pause.message',
+            expect.objectContaining({
+              kind: 'RESUME_DAY',
+              resumeDay: '2999-02-01',
+            }),
+          );
+        });
+
+        it('refuses a group that is not paused', async () => {
+          prisma.group.findFirst.mockResolvedValue({
+            ...mockGroup,
+            statusEnum: 'ACTIVE',
+          });
+          await expect(
+            service.updatePause('group-1', { resumeUnknown: true }, 1, 1001),
+          ).rejects.toThrow('pauzada emas');
+        });
+
+        it('refuses a body with neither a day nor "unknown"', async () => {
+          await expect(
+            service.updatePause('group-1', {}, 1, 1001),
+          ).rejects.toThrow('Darslar qachondan');
+        });
+      });
+
+      describe('from PAUSED', () => {
+        beforeEach(() => {
+          tx.group.findFirst.mockResolvedValue({
+            ...mockGroup,
+            statusEnum: 'PAUSED',
+          });
+        });
+
+        it('refuses a resume without the restart day', async () => {
+          await expect(
+            service.changeStatus(
+              'group-1',
+              { status: 'ACTIVE' as any },
+              1,
+              1001,
+            ),
+          ).rejects.toThrow('qaysi kundan');
+          expect(pauses.close).not.toHaveBeenCalled();
+        });
+
+        it('resumes today: closes the pause with the day, then charges the group', async () => {
+          const today = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Tashkent',
+          }).format(new Date());
+
+          await service.changeStatus(
+            'group-1',
+            { status: 'ACTIVE' as any, resumeOn: today },
+            1,
+            1001,
+          );
+
+          expect(pauses.close).toHaveBeenCalledWith(
+            tx,
+            expect.objectContaining({ resumeOn: today }),
+          );
+          expect(pauses.close.mock.invocationCallOrder[0]).toBeLessThan(
+            statusCascadeService.cascadeGroupStatusChange.mock
+              .invocationCallOrder[0],
+          );
+          expect(tx.group.update).toHaveBeenCalled();
+        });
+
+        it('resumes on a later day: keeps the group PAUSED and stores the day', async () => {
+          tx.group.findUniqueOrThrow = jest.fn().mockResolvedValue({
+            ...mockGroup,
+            statusEnum: 'PAUSED',
+            course: { id: 'c1', name: 'Test' },
+            room: null,
+            branch: { id: 1, name: 'Branch' },
+            teachers: [],
+            _count: { enrollments: 0 },
+          });
+
+          await service.changeStatus(
+            'group-1',
+            { status: 'ACTIVE' as any, resumeOn: '2999-01-05' },
+            1,
+            1001,
+          );
+
+          expect(pauses.scheduleResume).toHaveBeenCalledWith(
+            tx,
+            expect.objectContaining({ resumeOn: '2999-01-05' }),
+          );
+          expect(tx.group.update).not.toHaveBeenCalled();
+          expect(
+            statusCascadeService.cascadeGroupStatusChange,
+          ).not.toHaveBeenCalled();
+          expect(statusHistoryService.changeStatus).not.toHaveBeenCalled();
+        });
+
+        it('closes the pause without a restart day when the group is cancelled', async () => {
+          await service.changeStatus(
+            'group-1',
+            { status: 'CANCELLED' as any },
+            1,
+            1001,
+          );
+
+          expect(pauses.close).toHaveBeenCalledWith(
+            tx,
+            expect.objectContaining({ resumeOn: null }),
+          );
+        });
+      });
     });
 
     it('throws NotFoundException for a missing group and opens no transaction', async () => {

@@ -350,6 +350,7 @@ export function GroupInfoCard({
             open={showStatus}
             onOpenChange={setShowStatus}
             entityType="groups"
+        groupPause={group.pause}
             entityId={group.id}
             entityName={group.name}
             currentStatus={statusKey}

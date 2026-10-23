@@ -41,14 +41,33 @@ export const groupInclude: Prisma.GroupInclude = {
       },
     },
   },
+  // The pause the group is in now (ADR-0119): the status dialog asks the
+  // restart day from it.
+  pauses: {
+    where: { endedAt: null },
+    select: { plannedResumeOn: true, resumeOn: true, source: true },
+    take: 1,
+  },
 };
 
 export function formatGroup(group: any) {
-  const { _count, teachers, ...rest } = group;
+  const { _count, teachers, pauses, ...rest } = group;
+  const open = pauses?.[0];
   return {
     ...rest,
     teachers: teachers.map((gt: any) => gt.teacher),
     studentCount: _count?.enrollments ?? 0,
+    pause: open
+      ? {
+          plannedResumeOn: open.plannedResumeOn
+            ? open.plannedResumeOn.toISOString().slice(0, 10)
+            : null,
+          resumeOn: open.resumeOn
+            ? open.resumeOn.toISOString().slice(0, 10)
+            : null,
+          source: open.source,
+        }
+      : null,
   };
 }
 

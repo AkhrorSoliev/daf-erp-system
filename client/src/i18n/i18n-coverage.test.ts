@@ -365,6 +365,7 @@ export const STRICT_FILES: string[] = [
   "components/groups/groups-stats.tsx",
   "components/groups/groups-heading.tsx",
   "components/groups/group-row-actions.tsx",
+  "components/groups/group-pause-fields.tsx",
   "components/groups/group-delete-dialog.tsx",
   "components/groups/group-delete-copy.ts",
   "components/groups/covering-badge.tsx",

@@ -440,6 +440,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /groups',
       'PATCH /groups/:id',
       'PATCH /groups/:id/status',
+      'PATCH /groups/:id/pause',
       'DELETE /groups/:id',
     ],
   },

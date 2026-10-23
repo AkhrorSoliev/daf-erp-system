@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -50,6 +51,16 @@ import {
   type DeparturePolicy,
 } from "@/components/students/departure-money";
 import { useDeparturePreview } from "@/components/students/use-departure-preview";
+import { GroupPauseFields } from "@/components/groups/group-pause-fields";
+import {
+  EMPTY_PAUSE_CHOICE,
+  pauseChoiceReady,
+  pauseMode,
+  pausePayload,
+  resumePrefill,
+  type GroupPauseInfo,
+  type PauseChoice,
+} from "@/components/groups/group-pause-rules";
 
 // Maps Student status enum -> StudentExitReason.appliesTo enum
 const STATUS_TO_EXIT_TYPE: Record<string, string> = {
@@ -74,6 +85,8 @@ interface ChangeStatusDialogProps {
    * Read on mount only: mount the dialog fresh for each use.
    */
   initialStatus?: string;
+  /** A paused group's pause (ADR-0119): the restart day offered when opening it. */
+  groupPause?: GroupPauseInfo | null;
 }
 
 export function ChangeStatusDialog({
@@ -85,6 +98,7 @@ export function ChangeStatusDialog({
   currentStatus,
   onStatusChanged,
   initialStatus,
+  groupPause,
 }: ChangeStatusDialogProps) {
   const t = useT();
   const [selectedStatus, setSelectedStatus] = useState(initialStatus ?? "");
@@ -100,6 +114,19 @@ export function ChangeStatusDialog({
   const [departurePolicy, setDeparturePolicy] = useState<DeparturePolicy>(
     DEFAULT_DEPARTURE_POLICY,
   );
+
+  // Group pause / resume: the restart day (ADR-0119).
+  const [pauseChoice, setPauseChoice] = useState<PauseChoice>(EMPTY_PAUSE_CHOICE);
+  const groupPauseMode =
+    entityType === "groups" ? pauseMode(currentStatus, selectedStatus) : null;
+  useEffect(() => {
+    // Opening a paused group offers the day said before; any other pick starts empty.
+    setPauseChoice(
+      groupPauseMode === "resume"
+        ? { day: resumePrefill(groupPause), unknown: false }
+        : EMPTY_PAUSE_CHOICE,
+    );
+  }, [groupPauseMode, groupPause]);
 
   const allowedStatuses = getAllowedTransitions(entityType, currentStatus);
   const apiPath = ENTITY_API_PATH[entityType];
@@ -184,6 +211,7 @@ export function ChangeStatusDialog({
 
   const canSubmit = (() => {
     if (!selectedStatus) return false;
+    if (!pauseChoiceReady(groupPauseMode, pauseChoice)) return false;
     if (!isReasonRequired) return true;
     if (reasonsLoading) return false; // wait for reasons to load
     if (useDropdown && hasConfiguredReasons)
@@ -196,6 +224,7 @@ export function ChangeStatusDialog({
 
     setSubmitting(true);
     try {
+      let resultStatus = selectedStatus;
       if (isArchiving) {
         await api.delete(`${apiPath}/${entityId}`, {
           data: {
@@ -205,7 +234,7 @@ export function ChangeStatusDialog({
         });
         toast.success(t("Muvaffaqiyatli arxivlandi"));
       } else {
-        await api.patch(`${apiPath}/${entityId}/status`, {
+        const res = await api.patch<{ statusEnum?: string }>(`${apiPath}/${entityId}/status`, {
           status: selectedStatus,
           reasonId: reasonId ?? undefined,
           reason: reason.trim() || undefined,
@@ -214,6 +243,7 @@ export function ChangeStatusDialog({
           ...(isFreezingStudent && Object.keys(frozenRefundOverrides).length > 0
             ? { frozenRefundOverrides }
             : {}),
+          ...pausePayload(groupPauseMode, pauseChoice),
           ...(isExpellingStudent
             ? departurePolicyPayload(
                 departurePolicy,
@@ -221,9 +251,19 @@ export function ChangeStatusDialog({
               )
             : {}),
         });
-        toast.success(t("Status muvaffaqiyatli o'zgartirildi"));
+        // A group opened for a later day stays PAUSED until that morning (ADR-0119).
+        resultStatus = res.data?.statusEnum ?? selectedStatus;
+        if (groupPauseMode === "resume" && resultStatus === "PAUSED" && pauseChoice.day) {
+          toast.success(
+            t("Guruh {day} kuni ochiladi", {
+              day: format(pauseChoice.day, "dd.MM.yyyy"),
+            }),
+          );
+        } else {
+          toast.success(t("Status muvaffaqiyatli o'zgartirildi"));
+        }
       }
-      onStatusChanged?.(selectedStatus);
+      onStatusChanged?.(resultStatus);
       handleClose(false);
     } catch (error) {
       const fallback = isArchiving
@@ -242,6 +282,7 @@ export function ChangeStatusDialog({
       setReasonId(null);
       setFrozenRefundOverrides({});
       setDeparturePolicy(DEFAULT_DEPARTURE_POLICY);
+      setPauseChoice(EMPTY_PAUSE_CHOICE);
     }
     onOpenChange(isOpen);
   };
@@ -485,6 +526,16 @@ export function ChangeStatusDialog({
                     />
                   )}
                 </div>
+              )}
+
+              {groupPauseMode && (
+                <GroupPauseFields
+                  mode={groupPauseMode}
+                  choice={pauseChoice}
+                  onChange={setPauseChoice}
+                  pause={groupPause}
+                  disabled={submitting}
+                />
               )}
 
               {isExpellingStudent && (

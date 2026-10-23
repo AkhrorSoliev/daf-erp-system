@@ -87,6 +87,7 @@ export function GroupRowActions({ group, onDeleted, onStatusChanged }: GroupRowA
         open={showStatus}
         onOpenChange={setShowStatus}
         entityType="groups"
+        groupPause={group.pause}
         entityId={group.id}
         entityName={group.name}
         currentStatus={group.statusEnum || "FORMING"}
