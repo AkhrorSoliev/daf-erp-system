@@ -63,6 +63,14 @@ const SERIALIZABLE_TX = {
 const asConflict = (err: unknown) =>
   rethrowAsConflict(err, { duplicate: true });
 
+/** How the nightly pause job (ADR-0119) calls `create`. */
+export interface PauseCancelOptions {
+  /** No caller to check: the system cancels a paused group's lesson. */
+  system?: boolean;
+  /** No Telegram/bell message about the cancellation. */
+  silent?: boolean;
+}
+
 @Injectable()
 export class LessonCancellationsService {
   private readonly logger = new Logger(LessonCancellationsService.name);
@@ -164,17 +172,20 @@ export class LessonCancellationsService {
     companyId: number,
     cancelledById: number,
     roles: string[] = [],
+    options: PauseCancelOptions = {},
   ) {
     // Cancelling a lesson REVERSES its billing: attendance flips to EXCUSED,
     // the `LESSON_CONSUMPTION` is reversed, prepaid lessons are restored and
     // the teacher's `SalaryAccrual` is undone. Doing that to another branch's
     // lesson is real money in books the caller cannot even read.
-    await assertCallerMayTouchGroup(
-      this.prisma,
-      cancelledById,
-      roles,
-      dto.groupId,
-    );
+    if (!options.system) {
+      await assertCallerMayTouchGroup(
+        this.prisma,
+        cancelledById,
+        roles,
+        dto.groupId,
+      );
+    }
 
     const date = this.parseDate(dto.date);
 
@@ -366,14 +377,18 @@ export class LessonCancellationsService {
 
     // Fire-and-forget event after the tx commits — listener handles
     // Telegram + 4-channel teacher notifications.
-    this.eventEmitter.emit('lesson-cancellation.created', {
-      groupId: dto.groupId,
-      cancellationId: cancellation.id,
-      date: dto.date,
-      reason: dto.reason,
-      cancelledById,
-      companyId,
-    } satisfies LessonCancellationPayload);
+    // A lesson of a paused group, cancelled the night it passed (ADR-0119),
+    // tells the students nothing new: the pause message already said so.
+    if (!options.silent) {
+      this.eventEmitter.emit('lesson-cancellation.created', {
+        groupId: dto.groupId,
+        cancellationId: cancellation.id,
+        date: dto.date,
+        reason: dto.reason,
+        cancelledById,
+        companyId,
+      } satisfies LessonCancellationPayload);
+    }
 
     if (decision) {
       this.eventEmitter.emit(UNMARKED_LESSON_NOT_HELD, {

@@ -16,6 +16,16 @@ import {
 } from '../common/entity-history';
 import { assertNoUnansweredLessons } from '../unmarked-lessons/unanswered-lessons';
 import { ChangeGroupStatusDto } from './dto/change-group-status.dto';
+import { decidePauseChange } from './group-pause-rules';
+import { GroupPausesService } from './group-pauses.service';
+import {
+  GROUP_PAUSE_MESSAGE_EVENT,
+  type GroupPauseMessagePayload,
+} from './group-pause-events';
+import { UpdateGroupPauseDto } from './dto/update-group-pause.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { BadRequestException } from '@nestjs/common';
+import { tashkentDateStr } from '../common/date/tashkent';
 import {
   groupInclude,
   formatGroup,
@@ -58,6 +68,8 @@ export class GroupsStatusService {
     private statusHistoryService: StatusHistoryService,
     private statusCascadeService: StatusCascadeService,
     private entityHistoryService: EntityHistoryService,
+    private groupPauses: GroupPausesService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -90,6 +102,7 @@ export class GroupsStatusService {
     // state log closes exactly at the group's `statusChangedAt`.
     const at = new Date();
     const deferredEvents: EntityStatusChangedEvent[] = [];
+    const messages: GroupPauseMessagePayload[] = [];
 
     const updated = await this.prisma
       .$transaction(
@@ -102,6 +115,32 @@ export class GroupsStatusService {
           });
           if (!group) {
             throw new NotFoundException(`Guruh #${id} topilmadi`);
+          }
+
+          // ADR-0119: a pause names the day lessons restart; a resume
+          // confirms it. A day still ahead keeps the group PAUSED.
+          const pause = decidePauseChange(
+            group.statusEnum,
+            dto,
+            tashkentDateStr(at),
+          );
+          if (pause.kind === 'resume-later') {
+            await this.groupPauses.scheduleResume(tx, {
+              groupId: id,
+              companyId: group.companyId,
+              resumeOn: pause.resumeOn,
+              userId,
+            });
+            messages.push({
+              kind: 'RESUME_DAY',
+              groupId: id,
+              companyId: group.companyId,
+              resumeDay: pause.resumeOn,
+            });
+            return tx.group.findUniqueOrThrow({
+              where: { id },
+              include: groupInclude,
+            });
           }
 
           const auditData = await this.statusHistoryService.changeStatus({
@@ -131,6 +170,34 @@ export class GroupsStatusService {
             tx,
             deferredEvents,
           });
+
+          if (pause.kind === 'pause' || pause.kind === 'resume-now') {
+            messages.push({
+              kind: pause.kind === 'pause' ? 'PAUSED' : 'RESUMED',
+              groupId: id,
+              companyId: group.companyId,
+              resumeDay:
+                pause.kind === 'pause' ? pause.plannedResumeOn : pause.resumeOn,
+            });
+          }
+          if (pause.kind === 'pause') {
+            await this.groupPauses.open(tx, {
+              groupId: id,
+              companyId: group.companyId,
+              at,
+              plannedResumeOn: pause.plannedResumeOn,
+              reason: dto.reason,
+              userId,
+            });
+          } else if (group.statusEnum === GroupStatus.PAUSED) {
+            await this.groupPauses.close(tx, {
+              groupId: id,
+              companyId: group.companyId,
+              at,
+              resumeOn: pause.kind === 'resume-now' ? pause.resumeOn : null,
+              userId,
+            });
+          }
 
           await this.statusCascadeService.cascadeGroupStatusChange(tx, {
             groupId: id,
@@ -167,6 +234,60 @@ export class GroupsStatusService {
       });
 
     this.entityHistoryService.emitStatusChanged(deferredEvents);
+    for (const m of messages)
+      this.eventEmitter.emit(GROUP_PAUSE_MESSAGE_EVENT, m);
+    return formatGroup(updated);
+  }
+
+  /**
+   * Changes the restart day of a group that is paused (ADR-0119, §1a): a day,
+   * or "not known yet". The students are told the new day.
+   */
+  async updatePause(
+    id: string,
+    dto: UpdateGroupPauseDto,
+    userId: number,
+    companyId: number,
+  ) {
+    const found = await this.prisma.group.findFirst({
+      where: { id, deletedAt: null, companyId },
+      select: { id: true, statusEnum: true },
+    });
+    await assertCallerMayTouchGroup(this.prisma, userId, NO_TEACHER_PATH, id);
+    if (!found) throw new NotFoundException(`Guruh #${id} topilmadi`);
+    if (found.statusEnum !== GroupStatus.PAUSED) {
+      throw new BadRequestException('Guruh pauzada emas');
+    }
+    const decision = decidePauseChange(
+      GroupStatus.ACTIVE,
+      { status: GroupStatus.PAUSED, ...dto },
+      tashkentDateStr(new Date()),
+    );
+    const plannedResumeOn =
+      decision.kind === 'pause' ? decision.plannedResumeOn : null;
+
+    const updated = await this.prisma.$transaction(
+      async (tx) => {
+        const r = await this.groupPauses.setPlanned(tx, {
+          groupId: id,
+          companyId,
+          plannedResumeOn,
+          userId,
+        });
+        if (!r) throw new BadRequestException('Guruh pauzada emas');
+        return tx.group.findUniqueOrThrow({
+          where: { id },
+          include: groupInclude,
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+    this.eventEmitter.emit(GROUP_PAUSE_MESSAGE_EVENT, {
+      kind: plannedResumeOn ? 'RESUME_DAY' : 'PAUSED',
+      groupId: id,
+      companyId,
+      resumeDay: plannedResumeOn,
+    } satisfies GroupPauseMessagePayload);
     return formatGroup(updated);
   }
 

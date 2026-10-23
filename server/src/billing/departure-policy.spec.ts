@@ -285,3 +285,25 @@ describe("a trial lesson waiting on «Dars bo'ldimi?» (CEO, 01.10.2026)", () =>
     );
   });
 });
+
+describe('policyForPausedGroup (ADR-0119)', () => {
+  const { policyForPausedGroup } = jest.requireActual('./departure-policy');
+
+  it("treats a student's own departure from a centre-paused group as the centre's", () => {
+    expect(policyForPausedGroup('STUDENT_CANCELLED', true)).toBe(
+      'CENTER_INITIATIVE',
+    );
+  });
+
+  it('leaves every policy alone while the group runs', () => {
+    expect(policyForPausedGroup('STUDENT_CANCELLED', false)).toBe(
+      'STUDENT_CANCELLED',
+    );
+  });
+
+  it('never makes a more generous policy stricter', () => {
+    for (const p of ['LEVEL_COMPLETED', 'CENTER_INITIATIVE', 'QUALITY_CLAIM']) {
+      expect(policyForPausedGroup(p, true)).toBe(p);
+    }
+  });
+});

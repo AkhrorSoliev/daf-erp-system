@@ -6,11 +6,23 @@ import { BillingModule } from '../billing/billing.module';
 import { SmsModule } from '../sms/sms.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { TelegramModule } from '../telegram/telegram.module';
+import { HolidaysModule } from '../holidays/holidays.module';
+import { GroupPauseLessonsService } from './group-pause-lessons.service';
 
 @Module({
-  imports: [BillingModule, SmsModule, NotificationsModule, TelegramModule],
+  imports: [
+    BillingModule,
+    SmsModule,
+    NotificationsModule,
+    TelegramModule,
+    HolidaysModule,
+  ],
   controllers: [LessonCancellationsController],
-  providers: [LessonCancellationsService, LessonCancellationEventsListener],
+  providers: [
+    LessonCancellationsService,
+    LessonCancellationEventsListener,
+    GroupPauseLessonsService,
+  ],
   exports: [LessonCancellationsService],
 })
 export class LessonCancellationsModule {}

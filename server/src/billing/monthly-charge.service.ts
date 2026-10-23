@@ -39,6 +39,7 @@ import {
   DEPARTURE_POLICIES,
   DeparturePolicy,
   HeldShare,
+  policyForPausedGroup,
   policyRelease,
   trialAwaitsAnswerText,
   TRIAL_LESSON_MAX_HELD,
@@ -67,6 +68,8 @@ export interface ChargeableEnrollment {
     statusEnum: GroupStatus;
     /** A charge never covers lessons before the group opened. */
     startDate: Date | null;
+    /** The day the group last came back from a pause (ADR-0119). */
+    lastResumedOn?: Date | null;
     exactDays: string[];
     course: { price: number; paymentModel: PaymentModel };
   };
@@ -145,6 +148,7 @@ const CHARGEABLE_ENROLLMENT_SELECT = {
       companyId: true,
       statusEnum: true,
       startDate: true,
+      lastResumedOn: true,
       exactDays: true,
       course: { select: { price: true, paymentModel: true } },
     },
@@ -849,9 +853,12 @@ export class MonthlyChargeService {
       );
     }
 
-    const policy = params.policy ?? 'CENTER_INITIATIVE';
     const loaded = await this.loadDepartureInput(tx, params.enrollmentId, day);
     if (!loaded) return null;
+    const policy = policyForPausedGroup(
+      params.policy ?? 'CENTER_INITIATIVE',
+      loaded.enr.group.statusEnum === GroupStatus.PAUSED,
+    );
     const threshold =
       policy === 'STUDENT_CANCELLED'
         ? await this.settingsService.get(
@@ -1033,10 +1040,14 @@ export class MonthlyChargeService {
     );
     const outcomes = {} as DepartureOutcomesPreview['outcomes'];
     let share: HeldShare | null = null;
+    const groupPaused = loaded.enr.group.statusEnum === GroupStatus.PAUSED;
     for (const policy of DEPARTURE_POLICIES) {
-      const r = policyRelease(loaded.input, policy, threshold, {
-        trialLesson: verdict.trial,
-      });
+      const r = policyRelease(
+        loaded.input,
+        policyForPausedGroup(policy, groupPaused),
+        threshold,
+        { trialLesson: verdict.trial },
+      );
       share = r.share;
       outcomes[policy] = {
         lessons: r.release?.lessons ?? 0,
@@ -1257,7 +1268,9 @@ export class MonthlyChargeService {
       select: {
         studentId: true,
         startDate: true,
-        group: { select: { branchId: true, exactDays: true } },
+        group: {
+          select: { branchId: true, exactDays: true, statusEnum: true },
+        },
       },
     });
     if (!enr) return null;
@@ -1766,6 +1779,7 @@ export class MonthlyChargeService {
             companyId: true,
             statusEnum: true,
             startDate: true,
+            lastResumedOn: true,
             exactDays: true,
             course: { select: { price: true, paymentModel: true } },
           },
