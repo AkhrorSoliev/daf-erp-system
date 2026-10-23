@@ -818,6 +818,21 @@ export const STRICT_FILES: string[] = [
   "components/student-portal/lernen/reyting/reyting-jadvali.tsx",
   "components/student-portal/lernen/reyting/nishonlarim.tsx",
   "components/student-portal/lernen/reyting/eslatmalar-qatori.tsx",
+  "components/student-portal/lernen/uebung/koersatma.ts",
+  "components/student-portal/lernen/uebung/natija-xabari.ts",
+  "components/student-portal/lernen/uebung/sinov-natijasi.ts",
+  "components/student-portal/lernen/uebung/javob-paneli.tsx",
+  "components/student-portal/lernen/uebung/ovoz-tugmasi.tsx",
+  "components/student-portal/lernen/uebung/suhbat-pleyer.tsx",
+  "components/student-portal/lernen/uebung/rasm-tanlash.tsx",
+  "components/student-portal/lernen/uebung/uhr-tanlash.tsx",
+  "components/student-portal/lernen/uebung/transkript-blok.tsx",
+  "components/student-portal/lernen/uebung/yozish.tsx",
+  "components/student-portal/lernen/uebung/yigish.tsx",
+  "components/student-portal/lernen/uebung/natija-ekrani.tsx",
+  "components/student-portal/lernen/uebung/seans-ekrani.tsx",
+  "components/student-portal/lernen/mc-exercise.tsx",
+  "components/student-portal/lernen/vocab-drill.tsx",
 ];
 
 function walk(dir: string): string[] {

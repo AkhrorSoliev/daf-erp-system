@@ -1,3 +1,6 @@
+"use client";
+
+import { useT } from "@/i18n/use-t";
 import { cn } from "@/lib/utils";
 import type { PruefErgebnis } from "../types";
 import { DeWort } from "./de-wort";
@@ -8,7 +11,8 @@ import { javobPaneliMatni } from "./natija-xabari";
  * ones. What it says comes from `javobPaneliMatni`.
  */
 export function JavobPaneli({ natija }: { natija: PruefErgebnis }) {
-  const { sarlavha, izoh, soz } = javobPaneliMatni(natija);
+  const t = useT();
+  const { sarlavha, izoh, soz } = javobPaneliMatni(natija, t);
   return (
     <div
       className={cn(
