@@ -4770,6 +4770,34 @@ const de: Dictionary = {
   // Dashboard error screen
   "Sahifani ochib bo'lmadi": "Die Seite konnte nicht geöffnet werden",
   "Nimadir noto'g'ri ketdi. Qayta urinib ko'ring yoki boshqa bo'limga o'ting.": "Etwas ist schiefgelaufen. Versuchen Sie es erneut oder wechseln Sie in einen anderen Bereich.",
+  // Telegram Mini App entry (staff /tg) and its notices
+  "Kirib bo'lmadi. Internetni tekshirib, qayta urinib ko'ring.": "Anmeldung fehlgeschlagen. Prüfen Sie die Internetverbindung und versuchen Sie es erneut.",
+  "Kirish bu oynada saqlanmadi. Telegram'ning brauzer versiyasida shunday bo'lishi mumkin — kabinetni telefon yoki kompyuterdagi Telegram ilovasidan oching.": "Die Anmeldung wurde in diesem Fenster nicht gespeichert. Das kann in der Browserversion von Telegram passieren — öffnen Sie Ihren Bereich in der Telegram-App auf dem Telefon oder Computer.",
+  "Bu sahifa Telegram ichida ochiladi": "Diese Seite wird in Telegram geöffnet",
+  "Kabinetni Telegram botidagi {button} tugmasi orqali oching yoki telefon raqam va parol bilan kiring.": "Öffnen Sie Ihren Bereich über die Schaltfläche {button} im Telegram-Bot oder melden Sie sich mit Telefonnummer und Passwort an.",
+  "Kirish sahifasi": "Anmeldeseite",
+  "Hisobdan chiqdingiz": "Sie haben sich abgemeldet",
+  "Kabinetga qayta kirish uchun tugmani bosing — parol kerak emas.": "Tippen Sie auf die Schaltfläche, um sich wieder anzumelden — kein Passwort nötig.",
+  "Qayta kirish": "Erneut anmelden",
+  "Kim kiradi?": "Wer meldet sich an?",
+  "Bu Telegram akkauntga bir nechta o'quvchi bog'langan. Kabinetini ochmoqchi bo'lgan o'quvchini tanlang.": "Mit diesem Telegram-Konto sind mehrere Teilnehmer verknüpft. Wählen Sie den Teilnehmer, dessen Bereich Sie öffnen möchten.",
+  "Kirib bo'lmadi": "Anmeldung fehlgeschlagen",
+  "Botga qaytish": "Zurück zum Bot",
+  "Telegram akkauntingiz xodim hisobiga bog'lanmagan": "Ihr Telegram-Konto ist mit keinem Mitarbeiterkonto verknüpft",
+  "Bu Telegram akkaunt hech bir DaF xodimining hisobiga bog'lanmagan.": "Dieses Telegram-Konto ist mit keinem Konto eines DaF-Mitarbeiters verknüpft.",
+  "Tizimdagi raqamingiz Telegram raqamingizdan boshqa bo'lsa, administrator bilan bog'laning.": "Wenn Ihre Nummer im System von Ihrer Telegram-Nummer abweicht, wenden Sie sich an die Verwaltung.",
+  "Botga qayting va {command} buyrug'ini yuboring, so'ng {button} orqali raqamingizni yuboring. Telegram'ingiz xodim hisobingizga bog'lanadi — kabinetni qayta oching.": "Kehren Sie zum Bot zurück und senden Sie den Befehl {command}, dann senden Sie Ihre Nummer über {button}. Ihr Telegram wird mit Ihrem Mitarbeiterkonto verknüpft — öffnen Sie Ihren Bereich erneut.",
+  "Telegram akkauntingiz ro'yxatdan o'tmagan": "Ihr Telegram-Konto ist nicht registriert",
+  "Bu Telegram akkaunt hech bir DaF o'quvchisiga bog'lanmagan.": "Dieses Telegram-Konto ist mit keinem DaF-Teilnehmer verknüpft.",
+  "Raqamingiz tizimda topilmasa, administrator bilan bog'laning.": "Wenn Ihre Nummer im System nicht gefunden wird, wenden Sie sich an die Verwaltung.",
+  "DaF o'quvchisi bo'lsangiz: botga qayting, {start} yuboring va {link} tugmasini bosing, so'ng {button} orqali raqamingizni yuboring. Akkauntingiz bog'lanadi — so'ng kabinetni qayta oching.": "Wenn Sie DaF-Teilnehmer sind: Kehren Sie zum Bot zurück, senden Sie {start} und tippen Sie auf {link}, dann senden Sie Ihre Nummer über {button}. Ihr Konto wird verknüpft — öffnen Sie danach Ihren Bereich erneut.",
+  "Siz xodim sifatida ro'yxatdan o'tgansiz": "Sie sind als Mitarbeiter registriert",
+  "Bu — o'quvchilar kabineti. Xodim kabinetingiz tugmasini chatga yubordik: botga qayting va {button} tugmasini bosing.": "Dies ist der Bereich für Teilnehmer. Die Schaltfläche zu Ihrem Mitarbeiterbereich haben wir in den Chat gesendet: Kehren Sie zum Bot zurück und tippen Sie auf {button}.",
+  // Telegram sign-in callback
+  "Kirish ma'lumoti topilmadi. Qaytadan urinib ko'ring.": "Anmeldedaten nicht gefunden. Versuchen Sie es erneut.",
+  "Kirishni tugatib bo'lmadi": "Anmeldung konnte nicht abgeschlossen werden",
+  "Kirish sahifasiga qaytish": "Zurück zur Anmeldeseite",
+  "Kirish tasdiqlanmoqda...": "Anmeldung wird bestätigt...",
 };
 
 export default de;
