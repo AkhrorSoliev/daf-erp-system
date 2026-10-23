@@ -6,6 +6,13 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-23",
+    sarlavha: "Guruh pauzasi: o'tmagan darslar puli qaytadi",
+    matn: "Guruhni «Pauza»ga qo'yishda endi darslar qachondan qayta boshlanishini tanlaysiz (yoki «Hozircha noma'lum»). Pauza markazning qarori, shuning uchun pauza davomida o'tmagan har dars kunining puli shu kuni kechasi o'quvchiga avtomatik qaytadi va guruhning tugash sanasi bitta dars kuniga suriladi. Guruhni «Pauza»dan ochishda darslar qaysi kundan boshlanishini tasdiqlaysiz: bugundan keyingi sana tanlansa guruh o'sha kuni o'zi ochiladi, oylik to'lov esa shu kundan hisoblanadi. Pauza paytida chiqqan o'quvchining puli 40% qoidasisiz qaytadi. O'quvchilarga pauza, qaytish sanasi va ochilish haqida Telegram xabari boradi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "guruhlar", sahifa: "guruh-holatlari" },
+  },
+  {
     sana: "2026-10-21",
     sarlavha: "Jadvalda ochilishi rejalashtirilgan guruhlar",
     matn: "«Jadval»da endi hali ochilmagan («Boshlanmagan») guruhlar ham ko'rinadi: gridda o'z xonasi va vaqtida punktir chiziqli kartada «Ochiladi 03.11.2026» yozuvi bilan, ro'yxatda esa alohida «Rejadagi guruhlar» blokida. Xonasi yoki vaqti kiritilmagan guruh gridning tagidagi alohida qatorda turadi. Bunday guruh dars, o'quvchi va xona hisobiga qo'shilmaydi. «Rejadagi guruhlar» tugmasi ularni yashiradi.",
