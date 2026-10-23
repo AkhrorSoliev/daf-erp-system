@@ -4780,6 +4780,34 @@ const ru: Dictionary = {
   // Dashboard error screen
   "Sahifani ochib bo'lmadi": "Не удалось открыть страницу",
   "Nimadir noto'g'ri ketdi. Qayta urinib ko'ring yoki boshqa bo'limga o'ting.": "Что-то пошло не так. Повторите попытку или перейдите в другой раздел.",
+  // Telegram Mini App entry (staff /tg) and its notices
+  "Kirib bo'lmadi. Internetni tekshirib, qayta urinib ko'ring.": "Не удалось войти. Проверьте интернет и попробуйте ещё раз.",
+  "Kirish bu oynada saqlanmadi. Telegram'ning brauzer versiyasida shunday bo'lishi mumkin — kabinetni telefon yoki kompyuterdagi Telegram ilovasidan oching.": "Вход в этом окне не сохранился. Так бывает в браузерной версии Telegram — откройте кабинет в приложении Telegram на телефоне или компьютере.",
+  "Bu sahifa Telegram ichida ochiladi": "Эта страница открывается внутри Telegram",
+  "Kabinetni Telegram botidagi {button} tugmasi orqali oching yoki telefon raqam va parol bilan kiring.": "Откройте кабинет кнопкой {button} в Telegram-боте или войдите по номеру телефона и паролю.",
+  "Kirish sahifasi": "Страница входа",
+  "Hisobdan chiqdingiz": "Вы вышли из аккаунта",
+  "Kabinetga qayta kirish uchun tugmani bosing — parol kerak emas.": "Чтобы снова войти в кабинет, нажмите кнопку — пароль не нужен.",
+  "Qayta kirish": "Войти снова",
+  "Kim kiradi?": "Кто входит?",
+  "Bu Telegram akkauntga bir nechta o'quvchi bog'langan. Kabinetini ochmoqchi bo'lgan o'quvchini tanlang.": "К этому аккаунту Telegram привязано несколько учеников. Выберите ученика, чей кабинет хотите открыть.",
+  "Kirib bo'lmadi": "Не удалось войти",
+  "Botga qaytish": "Вернуться в бот",
+  "Telegram akkauntingiz xodim hisobiga bog'lanmagan": "Ваш аккаунт Telegram не привязан к аккаунту сотрудника",
+  "Bu Telegram akkaunt hech bir DaF xodimining hisobiga bog'lanmagan.": "Этот аккаунт Telegram не привязан ни к одному сотруднику DaF.",
+  "Tizimdagi raqamingiz Telegram raqamingizdan boshqa bo'lsa, administrator bilan bog'laning.": "Если ваш номер в системе отличается от номера в Telegram, обратитесь к администратору.",
+  "Botga qayting va {command} buyrug'ini yuboring, so'ng {button} orqali raqamingizni yuboring. Telegram'ingiz xodim hisobingizga bog'lanadi — kabinetni qayta oching.": "Вернитесь в бот и отправьте команду {command}, затем отправьте свой номер кнопкой {button}. Ваш Telegram привяжется к аккаунту сотрудника — откройте кабинет снова.",
+  "Telegram akkauntingiz ro'yxatdan o'tmagan": "Ваш аккаунт Telegram не зарегистрирован",
+  "Bu Telegram akkaunt hech bir DaF o'quvchisiga bog'lanmagan.": "Этот аккаунт Telegram не привязан ни к одному ученику DaF.",
+  "Raqamingiz tizimda topilmasa, administrator bilan bog'laning.": "Если ваш номер не найден в системе, обратитесь к администратору.",
+  "DaF o'quvchisi bo'lsangiz: botga qayting, {start} yuboring va {link} tugmasini bosing, so'ng {button} orqali raqamingizni yuboring. Akkauntingiz bog'lanadi — so'ng kabinetni qayta oching.": "Если вы ученик DaF: вернитесь в бот, отправьте {start} и нажмите кнопку {link}, затем отправьте свой номер кнопкой {button}. Аккаунт привяжется — после этого откройте кабинет снова.",
+  "Siz xodim sifatida ro'yxatdan o'tgansiz": "Вы зарегистрированы как сотрудник",
+  "Bu — o'quvchilar kabineti. Xodim kabinetingiz tugmasini chatga yubordik: botga qayting va {button} tugmasini bosing.": "Это кабинет учеников. Кнопку вашего кабинета сотрудника мы отправили в чат: вернитесь в бот и нажмите кнопку {button}.",
+  // Telegram sign-in callback
+  "Kirish ma'lumoti topilmadi. Qaytadan urinib ko'ring.": "Данные для входа не найдены. Попробуйте ещё раз.",
+  "Kirishni tugatib bo'lmadi": "Не удалось завершить вход",
+  "Kirish sahifasiga qaytish": "Вернуться на страницу входа",
+  "Kirish tasdiqlanmoqda...": "Подтверждаем вход...",
 };
 
 export default ru;

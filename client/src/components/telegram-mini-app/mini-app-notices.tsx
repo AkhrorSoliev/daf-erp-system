@@ -15,6 +15,7 @@ import {
   X,
 } from "@/components/student-portal/lumio/icon";
 import { Button as SheetButton } from "@/components/ui/button";
+import { useT } from "@/i18n/context";
 import {
   closeMiniApp,
   type MiniAppAudience,
@@ -163,21 +164,23 @@ function Steps({
 }
 
 export function CloseButton() {
+  const t = useT();
   return (
     <Action
       variant="ghost"
       iconBefore={<X weight="bold" />}
       onClick={closeMiniApp}
     >
-      Yopish
+      {t("Yopish")}
     </Action>
   );
 }
 
 function BackToBotButton() {
+  const t = useT();
   return (
     <Action iconBefore={<TelegramLogo weight="fill" />} onClick={closeMiniApp}>
-      Botga qaytish
+      {t("Botga qaytish")}
     </Action>
   );
 }
@@ -191,19 +194,25 @@ export function NotRegisteredNotice({
 }: {
   audience: MiniAppAudience;
 }) {
+  const t = useT();
   if (audience === "staff") {
     return (
       <Notice
         icon={<WarningCircle weight="bold" />}
-        title="Telegram akkauntingiz xodim hisobiga bog'lanmagan"
-        description="Bu Telegram akkaunt hech bir DaF xodimining hisobiga bog'lanmagan."
+        title={t("Telegram akkauntingiz xodim hisobiga bog'lanmagan")}
+        description={t("Bu Telegram akkaunt hech bir DaF xodimining hisobiga bog'lanmagan.")}
       >
         {/* Bog'lash — botdagi /xodim (ADR-0045): o'z raqami hisobdagi
             telefonga teng bo'lsa, Telegram shu hisobga bog'lanadi. */}
-        <Steps otherwise="Tizimdagi raqamingiz Telegram raqamingizdan boshqa bo'lsa, administrator bilan bog'laning.">
-          Botga qayting va /xodim buyrug'ini yuboring, so'ng «📱 Telefon
-          raqamni yuborish» orqali raqamingizni yuboring. Telegram'ingiz
-          xodim hisobingizga bog'lanadi — kabinetni qayta oching.
+        <Steps
+          otherwise={t(
+            "Tizimdagi raqamingiz Telegram raqamingizdan boshqa bo'lsa, administrator bilan bog'laning.",
+          )}
+        >
+          {t(
+            "Botga qayting va {command} buyrug'ini yuboring, so'ng {button} orqali raqamingizni yuboring. Telegram'ingiz xodim hisobingizga bog'lanadi — kabinetni qayta oching.",
+            { command: "/xodim", button: "«📱 Telefon raqamni yuborish»" },
+          )}
         </Steps>
         <BackToBotButton />
       </Notice>
@@ -213,16 +222,22 @@ export function NotRegisteredNotice({
   return (
     <Notice
       icon={<WarningCircle weight="bold" />}
-      title="Telegram akkauntingiz ro'yxatdan o'tmagan"
-      description="Bu Telegram akkaunt hech bir DaF o'quvchisiga bog'lanmagan."
+      title={t("Telegram akkauntingiz ro'yxatdan o'tmagan")}
+      description={t("Bu Telegram akkaunt hech bir DaF o'quvchisiga bog'lanmagan.")}
     >
       {/* The /start button links without touching anything else (a password
           reset would replace the password too). */}
-      <Steps otherwise="Raqamingiz tizimda topilmasa, administrator bilan bog'laning.">
-        DaF o'quvchisi bo'lsangiz: botga qayting, /start yuboring va «📱
-        Hisobimni bog'lash» tugmasini bosing, so'ng «📱 Telefon raqamni
-        yuborish» orqali raqamingizni yuboring. Akkauntingiz bog'lanadi —
-        so'ng kabinetni qayta oching.
+      <Steps
+        otherwise={t("Raqamingiz tizimda topilmasa, administrator bilan bog'laning.")}
+      >
+        {t(
+          "DaF o'quvchisi bo'lsangiz: botga qayting, {start} yuboring va {link} tugmasini bosing, so'ng {button} orqali raqamingizni yuboring. Akkauntingiz bog'lanadi — so'ng kabinetni qayta oching.",
+          {
+            start: "/start",
+            link: "«📱 Hisobimni bog'lash»",
+            button: "«📱 Telefon raqamni yuborish»",
+          },
+        )}
       </Steps>
       <BackToBotButton />
     </Notice>
@@ -235,11 +250,15 @@ export function NotRegisteredNotice({
  * ko'prigi uziladi) — server shu paytda chatga «💼 Kabinet» tugmasini yubordi.
  */
 export function StaffAccountNotice() {
+  const t = useT();
   return (
     <Notice
       icon={<User weight="bold" />}
-      title="Siz xodim sifatida ro'yxatdan o'tgansiz"
-      description="Bu — o'quvchilar kabineti. Xodim kabinetingiz tugmasini chatga yubordik: botga qayting va «💼 Kabinet» tugmasini bosing."
+      title={t("Siz xodim sifatida ro'yxatdan o'tgansiz")}
+      description={t(
+        "Bu — o'quvchilar kabineti. Xodim kabinetingiz tugmasini chatga yubordik: botga qayting va {button} tugmasini bosing.",
+        { button: "«💼 Kabinet»" },
+      )}
     >
       <BackToBotButton />
     </Notice>

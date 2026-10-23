@@ -4780,6 +4780,34 @@ const en: Dictionary = {
   // Dashboard error screen
   "Sahifani ochib bo'lmadi": "The page could not be opened",
   "Nimadir noto'g'ri ketdi. Qayta urinib ko'ring yoki boshqa bo'limga o'ting.": "Something went wrong. Try again or go to another section.",
+  // Telegram Mini App entry (staff /tg) and its notices
+  "Kirib bo'lmadi. Internetni tekshirib, qayta urinib ko'ring.": "Could not sign in. Check your internet connection and try again.",
+  "Kirish bu oynada saqlanmadi. Telegram'ning brauzer versiyasida shunday bo'lishi mumkin — kabinetni telefon yoki kompyuterdagi Telegram ilovasidan oching.": "The sign-in was not kept in this window. This can happen in the browser version of Telegram — open your workspace in the Telegram app on your phone or computer.",
+  "Bu sahifa Telegram ichida ochiladi": "This page opens inside Telegram",
+  "Kabinetni Telegram botidagi {button} tugmasi orqali oching yoki telefon raqam va parol bilan kiring.": "Open your workspace with the {button} button in the Telegram bot, or sign in with your phone number and password.",
+  "Kirish sahifasi": "Sign-in page",
+  "Hisobdan chiqdingiz": "You have signed out",
+  "Kabinetga qayta kirish uchun tugmani bosing — parol kerak emas.": "Tap the button to sign back in — no password needed.",
+  "Qayta kirish": "Sign in again",
+  "Kim kiradi?": "Who is signing in?",
+  "Bu Telegram akkauntga bir nechta o'quvchi bog'langan. Kabinetini ochmoqchi bo'lgan o'quvchini tanlang.": "Several students are linked to this Telegram account. Choose the student whose workspace you want to open.",
+  "Kirib bo'lmadi": "Could not sign in",
+  "Botga qaytish": "Back to the bot",
+  "Telegram akkauntingiz xodim hisobiga bog'lanmagan": "Your Telegram account is not linked to a staff account",
+  "Bu Telegram akkaunt hech bir DaF xodimining hisobiga bog'lanmagan.": "This Telegram account is not linked to any DaF staff member's account.",
+  "Tizimdagi raqamingiz Telegram raqamingizdan boshqa bo'lsa, administrator bilan bog'laning.": "If your number in the system differs from your Telegram number, contact an administrator.",
+  "Botga qayting va {command} buyrug'ini yuboring, so'ng {button} orqali raqamingizni yuboring. Telegram'ingiz xodim hisobingizga bog'lanadi — kabinetni qayta oching.": "Go back to the bot and send the {command} command, then send your number with {button}. Your Telegram will be linked to your staff account — open your workspace again.",
+  "Telegram akkauntingiz ro'yxatdan o'tmagan": "Your Telegram account is not registered",
+  "Bu Telegram akkaunt hech bir DaF o'quvchisiga bog'lanmagan.": "This Telegram account is not linked to any DaF student.",
+  "Raqamingiz tizimda topilmasa, administrator bilan bog'laning.": "If your number is not found in the system, contact an administrator.",
+  "DaF o'quvchisi bo'lsangiz: botga qayting, {start} yuboring va {link} tugmasini bosing, so'ng {button} orqali raqamingizni yuboring. Akkauntingiz bog'lanadi — so'ng kabinetni qayta oching.": "If you are a DaF student: go back to the bot, send {start} and tap {link}, then send your number with {button}. Your account will be linked — then open your workspace again.",
+  "Siz xodim sifatida ro'yxatdan o'tgansiz": "You are registered as a staff member",
+  "Bu — o'quvchilar kabineti. Xodim kabinetingiz tugmasini chatga yubordik: botga qayting va {button} tugmasini bosing.": "This is the student workspace. We have sent the button for your staff workspace to the chat: go back to the bot and tap {button}.",
+  // Telegram sign-in callback
+  "Kirish ma'lumoti topilmadi. Qaytadan urinib ko'ring.": "Sign-in data not found. Please try again.",
+  "Kirishni tugatib bo'lmadi": "Could not complete the sign-in",
+  "Kirish sahifasiga qaytish": "Back to the sign-in page",
+  "Kirish tasdiqlanmoqda...": "Confirming sign-in...",
 };
 
 export default en;

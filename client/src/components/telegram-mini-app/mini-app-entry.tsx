@@ -7,6 +7,8 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
 import { Greeting, useGreeting } from "@/components/auth/staff-greeting";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import {
   ArrowClockwise,
   CaretRight,
@@ -54,12 +56,14 @@ type View =
 
 type Session = Extract<MiniAppSignInResult, { status: "authenticated" }>;
 
-const SIGN_IN_FAILED =
-  "Kirib bo'lmadi. Internetni tekshirib, qayta urinib ko'ring.";
+const SIGN_IN_FAILED = msg(
+  "Kirib bo'lmadi. Internetni tekshirib, qayta urinib ko'ring.",
+);
 
 /** Kirish muvaffaqiyatli bo'ldi, lekin portal uni ko'rmadi (`bouncedAfterSignIn`). */
-const SESSION_NOT_KEPT =
-  "Kirish bu oynada saqlanmadi. Telegram'ning brauzer versiyasida shunday bo'lishi mumkin — kabinetni telefon yoki kompyuterdagi Telegram ilovasidan oching.";
+const SESSION_NOT_KEPT = msg(
+  "Kirish bu oynada saqlanmadi. Telegram'ning brauzer versiyasida shunday bo'lishi mumkin — kabinetni telefon yoki kompyuterdagi Telegram ilovasidan oching.",
+);
 
 /**
  * Telegram Mini App'ning kirish nuqtasi: `student.` xostida o'quvchi kabineti
@@ -232,18 +236,22 @@ function MiniAppView({
   onReenter: () => void;
   onOpenLogin: () => void;
 }) {
+  const t = useT();
   switch (view.kind) {
     case "loading":
-      return <Loading>Kabinet ochilmoqda…</Loading>;
+      return <Loading>{t("Kabinet ochilmoqda…")}</Loading>;
 
     case "outside":
       return (
         <Notice
           icon={<TelegramLogo weight="fill" />}
-          title="Bu sahifa Telegram ichida ochiladi"
-          description="Kabinetni Telegram botidagi «Kabinet» tugmasi orqali oching yoki telefon raqam va parol bilan kiring."
+          title={t("Bu sahifa Telegram ichida ochiladi")}
+          description={t(
+            "Kabinetni Telegram botidagi {button} tugmasi orqali oching yoki telefon raqam va parol bilan kiring.",
+            { button: "«Kabinet»" },
+          )}
         >
-          <Action onClick={onOpenLogin}>Kirish sahifasi</Action>
+          <Action onClick={onOpenLogin}>{t("Kirish sahifasi")}</Action>
         </Notice>
       );
 
@@ -251,11 +259,11 @@ function MiniAppView({
       return (
         <Notice
           icon={<SignOut weight="bold" />}
-          title="Hisobdan chiqdingiz"
-          description="Kabinetga qayta kirish uchun tugmani bosing — parol kerak emas."
+          title={t("Hisobdan chiqdingiz")}
+          description={t("Kabinetga qayta kirish uchun tugmani bosing — parol kerak emas.")}
         >
           <Action iconBefore={<SignIn weight="bold" />} onClick={onReenter}>
-            Qayta kirish
+            {t("Qayta kirish")}
           </Action>
           <CloseButton />
         </Notice>
@@ -265,8 +273,10 @@ function MiniAppView({
       return (
         <Notice
           icon={<User weight="bold" />}
-          title="Kim kiradi?"
-          description="Bu Telegram akkauntga bir nechta o'quvchi bog'langan. Kabinetini ochmoqchi bo'lgan o'quvchini tanlang."
+          title={t("Kim kiradi?")}
+          description={t(
+            "Bu Telegram akkauntga bir nechta o'quvchi bog'langan. Kabinetini ochmoqchi bo'lgan o'quvchini tanlang.",
+          )}
         >
           <div className="space-y-2">
             {view.students.map((student) => (
@@ -290,22 +300,31 @@ function MiniAppView({
     case "staff_account":
       return <StaffAccountNotice />;
 
-    case "error":
+    case "error": {
+      // Our own fallback texts are translated when drawn; a message the
+      // server sent is shown as it came.
+      const message =
+        view.message === SIGN_IN_FAILED
+          ? t(SIGN_IN_FAILED)
+          : view.message === SESSION_NOT_KEPT
+            ? t(SESSION_NOT_KEPT)
+            : view.message;
       return (
         <Notice
           alert
           icon={<WarningCircle weight="bold" />}
-          title="Kirib bo'lmadi"
-          description={view.message}
+          title={t("Kirib bo'lmadi")}
+          description={message}
         >
           <Action
             iconBefore={<ArrowClockwise weight="bold" />}
             onClick={view.retry}
           >
-            Qayta urinish
+            {t("Qayta urinish")}
           </Action>
           <CloseButton />
         </Notice>
       );
+    }
   }
 }

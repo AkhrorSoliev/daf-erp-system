@@ -6,6 +6,14 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
 import { Greeting, useGreeting } from "@/components/auth/staff-greeting";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
+
+// Our own fallback texts: kept in state as written and translated when drawn,
+// so the sign-in effect does not depend on `t`. A message the server sent is
+// shown as it came.
+const NO_HANDOFF = msg("Kirish ma'lumoti topilmadi. Qaytadan urinib ko'ring.");
+const FINISH_FAILED = msg("Kirishni tugatib bo'lmadi");
 
 // Telegram → API callback → portal. Bu sahifa faqat bir martalik `handoff`
 // kodini tokenlarga almashtiradi: tokenlar URL'da hech qachon yurmaydi.
@@ -13,6 +21,7 @@ import { Greeting, useGreeting } from "@/components/auth/staff-greeting";
 //
 // `staff` — xodim xostida: kirish salomlashuv bilan tugaydi.
 export function TelegramCallback({ staff = false }: { staff?: boolean }) {
+  const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setAuth } = useAuth();
@@ -28,9 +37,7 @@ export function TelegramCallback({ staff = false }: { staff?: boolean }) {
   const [error, setError] = useState(() => {
     const fromServer = searchParams.get("error");
     if (fromServer) return fromServer;
-    return searchParams.get("handoff")
-      ? ""
-      : "Kirish ma'lumoti topilmadi. Qaytadan urinib ko'ring.";
+    return searchParams.get("handoff") ? "" : NO_HANDOFF;
   });
   // Strict Mode ikki marta chaqiradi, handoff esa bir martalik — qulflaymiz.
   const consumed = useRef(false);
@@ -54,30 +61,37 @@ export function TelegramCallback({ staff = false }: { staff?: boolean }) {
         else router.replace(destination);
       })
       .catch((err) => {
-        setError(getErrorMessage(err, "Kirishni tugatib bo'lmadi"));
+        setError(getErrorMessage(err, FINISH_FAILED));
       });
   }, [searchParams, setAuth, router, staff, greet]);
 
   if (greeted) return <Greeting user={greeted} />;
+
+  const shownError =
+    error === NO_HANDOFF
+      ? t(NO_HANDOFF)
+      : error === FINISH_FAILED
+        ? t(FINISH_FAILED)
+        : error;
 
   return (
     <div className={staff ? "flex flex-col items-start gap-3" : "space-y-4"}>
       {error ? (
         <>
           <p role="alert" className="text-sm text-destructive">
-            {error}
+            {shownError}
           </p>
           <button
             type="button"
             onClick={() => router.replace("/login")}
             className="text-sm text-primary hover:underline"
           >
-            Kirish sahifasiga qaytish
+            {t("Kirish sahifasiga qaytish")}
           </button>
         </>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Kirish tasdiqlanmoqda...
+          {t("Kirish tasdiqlanmoqda...")}
         </p>
       )}
     </div>
