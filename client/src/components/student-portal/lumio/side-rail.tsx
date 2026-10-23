@@ -15,6 +15,7 @@ import { useSidebar, RAIL_WIDTH } from "../lib/sidebar-store";
 import { ThemeSegmented } from "./theme-segmented";
 import { Avatar } from "./avatar";
 import { LogoutButton } from "../student-logout-button";
+import { useT } from "@/i18n/use-t";
 
 // Tablet + desktop side rail (>= md). Full portal menu: profile summary, the
 // nav list, and a footer with theme / logout. Replaces the mobile bottom nav on
@@ -39,6 +40,7 @@ export function RailNavItem({
   active: boolean;
   collapsed: boolean;
 }) {
+  const t = useT();
   const Icon = item.icon;
   return (
     <Link
@@ -64,13 +66,14 @@ export function RailNavItem({
       )}
       <Icon size={20} weight={active ? "fill" : "bold"} />
       <span className={cn("truncate", collapsed && "max-w-full")}>
-        {item.title}
+        {t(item.title)}
       </span>
     </Link>
   );
 }
 
 export function LumioSideRail({ className }: { className?: string }) {
+  const t = useT();
   const pathname = usePathname();
   const { data: profile } = useStudentProfile();
   const mode = useSidebar((s) => s.mode);
@@ -79,7 +82,7 @@ export function LumioSideRail({ className }: { className?: string }) {
 
   const fullName = profile
     ? `${profile.firstName} ${profile.lastName}`.trim()
-    : "Profil";
+    : t("Profil");
 
   function isActive(url: string) {
     if (url === "/portal") return pathname === "/portal";
@@ -128,7 +131,7 @@ export function LumioSideRail({ className }: { className?: string }) {
           />
           {collapsed ? (
             <span className="text-[11px] font-bold leading-tight text-ink-600">
-              Profil
+              {t("Profil")}
             </span>
           ) : (
             <>
@@ -137,7 +140,7 @@ export function LumioSideRail({ className }: { className?: string }) {
                   {fullName}
                 </span>
                 <span className="block text-xs font-semibold text-ink-500">
-                  Profilni ko&apos;rish
+                  {t("Profilni ko'rish")}
                 </span>
               </span>
               <CaretRight size={16} weight="bold" className="text-ink-400" />
@@ -164,9 +167,11 @@ export function LumioSideRail({ className }: { className?: string }) {
           onClick={toggle}
           aria-expanded={!collapsed}
           aria-label={
-            collapsed ? "Yon menyuni kengaytirish" : "Yon menyuni yig'ish"
+            collapsed
+              ? t("Yon menyuni kengaytirish")
+              : t("Yon menyuni yig'ish")
           }
-          title={collapsed ? "Kengaytirish" : undefined}
+          title={collapsed ? t("Kengaytirish") : undefined}
           className={cn(
             "mt-auto flex items-center rounded-md text-sm font-semibold text-ink-500 transition-colors hover:bg-tint hover:text-ink-900",
             collapsed ? "justify-center py-3" : "gap-3 px-3 py-2.5",
@@ -177,7 +182,7 @@ export function LumioSideRail({ className }: { className?: string }) {
           ) : (
             <CaretLineLeft size={20} weight="bold" />
           )}
-          {!collapsed && <span>Yig&apos;ish</span>}
+          {!collapsed && <span>{t("Yig'ish")}</span>}
         </button>
       </div>
 

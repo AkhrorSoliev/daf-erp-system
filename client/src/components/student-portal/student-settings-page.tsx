@@ -29,9 +29,9 @@ export function StudentSettingsPage() {
 
   return (
     <Screen narrow>
-      <StackHeader title="Sozlamalar" backHref="/portal/more" />
+      <StackHeader title={t("Sozlamalar")} backHref="/portal/more" />
 
-      <Section title="Mavzu">
+      <Section title={t("Mavzu")}>
         <Card pad="sm">
           <ThemeSegmented variant="full" />
         </Card>
@@ -44,15 +44,15 @@ export function StudentSettingsPage() {
         </Card>
       </Section>
 
-      <Section title="Xavfsizlik">
+      <Section title={t("Xavfsizlik")}>
         <ListRow
           icon={<Key weight="bold" />}
           iconTone="amber"
-          label="Parolni o'zgartirish"
+          label={t("Parolni o'zgartirish")}
           subtitle={
             profile?.login
-              ? `Login: ${profile.login}`
-              : "Hisobingizni himoyalang"
+              ? t("Login: {login}", { login: profile.login })
+              : t("Hisobingizni himoyalang")
           }
           onClick={() => setPasswordOpen(true)}
         />
@@ -61,19 +61,19 @@ export function StudentSettingsPage() {
         <ListRow
           icon={<SignOut weight="bold" />}
           iconTone="coral"
-          label="Boshqa qurilmalardan chiqish"
-          subtitle="Bu qurilmada qolasiz"
+          label={t("Boshqa qurilmalardan chiqish")}
+          subtitle={t("Bu qurilmada qolasiz")}
           chevron={false}
           onClick={() => setLogoutOthersOpen(true)}
         />
       </Section>
 
-      <Section title="Hisob">
+      <Section title={t("Hisobingiz")}>
         <ListRow
           icon={<User weight="bold" />}
           iconTone="sky"
-          label="Profil"
-          subtitle="Ism, rasm va aloqa ma'lumotlari"
+          label={t("Profil")}
+          subtitle={t("Ism, rasm va aloqa ma'lumotlari")}
           href="/portal/profile"
         />
       </Section>
@@ -83,7 +83,7 @@ export function StudentSettingsPage() {
         they hang off Settings there. On mobile the "Ko'proq" hub already lists
         them and a second entry point would just be a duplicate.
       */}
-      <Section title="Yordam" className="hidden md:flex">
+      <Section title={t("Yordam")} className="hidden md:flex">
         {settingsHelpItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -91,7 +91,7 @@ export function StudentSettingsPage() {
               key={item.url}
               icon={<Icon weight="bold" />}
               iconTone={item.tone}
-              label={item.title}
+              label={t(item.title)}
               href={item.url}
             />
           );

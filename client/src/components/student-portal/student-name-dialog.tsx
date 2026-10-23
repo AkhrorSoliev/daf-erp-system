@@ -15,6 +15,7 @@ import {
 import { Button, Input, Field } from "./lumio";
 import { useStudentProfile } from "./lib/queries";
 import type { StudentProfile } from "./lib/types";
+import { useT } from "@/i18n/context";
 
 export interface StudentNameDialogProps {
   open: boolean;
@@ -28,6 +29,7 @@ export function StudentNameDialog({
   open,
   onOpenChange,
 }: StudentNameDialogProps) {
+  const t = useT();
   const { data: profile } = useStudentProfile();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
@@ -62,10 +64,10 @@ export function StudentNameDialog({
               }
             : old,
       );
-      toast.success("Ism va familiya yangilandi");
+      toast.success(t("Ism va familiya yangilandi"));
       onOpenChange(false);
     } catch (err) {
-      toast.error(getErrorMessage(err, "Saqlashda xatolik"));
+      toast.error(getErrorMessage(err, t("Saqlashda xatolik")));
     } finally {
       setLoading(false);
     }
@@ -76,24 +78,24 @@ export function StudentNameDialog({
       <DialogContent className="lumio sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="font-display text-xl font-extrabold">
-            Ism va familiya
+            {t("Ism va familiya")}
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Field label="Ism">
+          <Field label={t("Ism")}>
             <Input
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              placeholder="Ismingiz"
+              placeholder={t("Ismingiz")}
               minLength={2}
               required
             />
           </Field>
-          <Field label="Familiya">
+          <Field label={t("Familiya")}>
             <Input
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              placeholder="Familiyangiz"
+              placeholder={t("Familiyangiz")}
               minLength={2}
               required
             />
@@ -105,10 +107,10 @@ export function StudentNameDialog({
               onClick={() => onOpenChange(false)}
               disabled={loading}
             >
-              Bekor qilish
+              {t("Bekor qilish")}
             </Button>
             <Button type="submit" loading={loading}>
-              Saqlash
+              {t("Saqlash")}
             </Button>
           </DialogFooter>
         </form>

@@ -12,6 +12,15 @@ import {
 } from "@/components/auth/forgot-password-fields";
 import { Button, Field, IconTile, Input } from "../lumio";
 import type { OnboardingStatus } from "../lib/types";
+import { useT } from "@/i18n/context";
+import {
+  CODE_LENGTH,
+  CODE_WRONG,
+  PASSWORD_REQUIRED,
+  PHONE_INCOMPLETE,
+  SMS_NOT_SENT,
+  portalFormError,
+} from "../lib/form-error";
 
 /**
  * Proves the student's phone by a 4-digit SMS code (ADR-0039).
@@ -32,6 +41,7 @@ export function PhoneStep({
   phone: string;
   onDone: (status: OnboardingStatus) => void;
 }) {
+  const t = useT();
   const [stage, setStage] = useState<Stage>("ask");
   // Where the last code went: the card's number, or the one the student typed.
   const [target, setTarget] = useState<"card" | "other">("card");
@@ -44,19 +54,19 @@ export function PhoneStep({
 
   useEffect(() => {
     if (cooldown <= 0) return;
-    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
   }, [cooldown]);
 
   async function send(to: "card" | "other") {
     if (busy || cooldown > 0) return;
     if (to === "other") {
       if (newPhone.length !== 9) {
-        setError("Telefon raqamni to'liq kiriting");
+        setError(PHONE_INCOMPLETE);
         return;
       }
       if (!password) {
-        setError("Joriy parolingizni kiriting");
+        setError(PASSWORD_REQUIRED);
         return;
       }
     }
@@ -77,12 +87,7 @@ export function PhoneStep({
       setCode("");
       setCooldown(res.data.resendInSec);
     } catch (err) {
-      setError(
-        getErrorMessage(
-          err,
-          "SMS yuborilmadi. Birozdan keyin qayta urinib ko'ring",
-        ),
-      );
+      setError(getErrorMessage(err, SMS_NOT_SENT));
     } finally {
       setBusy(null);
     }
@@ -90,7 +95,7 @@ export function PhoneStep({
 
   async function verify() {
     if (code.length !== 4) {
-      setError("Kod 4 xonali bo'lishi kerak");
+      setError(CODE_LENGTH);
       return;
     }
     setError("");
@@ -102,13 +107,15 @@ export function PhoneStep({
       );
       if (res.data.phone !== phone) {
         toast.success(
-          `Raqamingiz yangilandi. Endi tizimga ${formatPhone(res.data.phone)} bilan kirasiz`,
+          t("Raqamingiz yangilandi. Endi tizimga {phone} bilan kirasiz", {
+            phone: formatPhone(res.data.phone),
+          }),
           { duration: 6000 },
         );
       }
       onDone(res.data);
     } catch (err) {
-      setError(getErrorMessage(err, "Kod noto'g'ri yoki muddati tugagan"));
+      setError(getErrorMessage(err, CODE_WRONG));
       setCode("");
     } finally {
       setBusy(null);
@@ -123,6 +130,12 @@ export function PhoneStep({
   }
 
   const sentTo = target === "card" ? phone : newPhone;
+  // The number sits inside the sentence and is drawn bold, so the sentence is
+  // split around its placeholder.
+  const [sentBefore, sentAfter = ""] = t("Kod {phone} raqamiga yuborildi.").split(
+    "{phone}",
+  );
+  const shownError = error ? portalFormError(t, error) : "";
 
   return (
     <form
@@ -142,21 +155,21 @@ export function PhoneStep({
         />
         <div className="min-w-0">
           <h2 className="font-display text-xl font-extrabold text-ink-900">
-            Telefon raqamingizni tasdiqlang
+            {t("Telefon raqamingizni tasdiqlang")}
           </h2>
           <p className="mt-1 text-sm font-semibold text-ink-500">
             {stage === "code" ? (
               <>
-                Kod{" "}
+                {sentBefore}
                 <span className="whitespace-nowrap font-bold text-ink-700">
                   {formatPhone(sentTo)}
-                </span>{" "}
-                raqamiga yuborildi.
+                </span>
+                {sentAfter}
               </>
             ) : stage === "other" ? (
-              "O'zingiz ishlatadigan raqamni kiriting — kod shu raqamga boradi."
+              t("O'zingiz ishlatadigan raqamni kiriting — kod shu raqamga boradi.")
             ) : (
-              "Tizimdagi raqamingiz:"
+              t("Tizimdagi raqamingiz:")
             )}
           </p>
         </div>
@@ -169,12 +182,12 @@ export function PhoneStep({
               {formatPhone(phone)}
             </p>
             <p className="mt-1 text-sm font-bold text-ink-500">
-              Bu sizning raqamingizmi?
+              {t("Bu sizning raqamingizmi?")}
             </p>
           </div>
-          {error ? <StepError message={error} /> : null}
+          {shownError ? <StepError message={shownError} /> : null}
           <Button type="submit" block size="lg" loading={busy === "send"}>
-            Ha, kod yuborish
+            {t("Ha, kod yuborish")}
           </Button>
           <Button
             variant="secondary"
@@ -185,17 +198,17 @@ export function PhoneStep({
               setStage("other");
             }}
           >
-            Yo&apos;q, boshqa raqam
+            {t("Yo'q, boshqa raqam")}
           </Button>
         </>
       ) : null}
 
       {stage === "other" ? (
         <>
-          <Field label="Telefon raqamingiz">
+          <Field label={t("Telefon raqamingiz")}>
             <FpPhoneInput lumio value={newPhone} onChange={setNewPhone} />
           </Field>
-          <Field label="Joriy parolingiz">
+          <Field label={t("Joriy parolingiz")}>
             <Input
               type="password"
               value={password}
@@ -204,13 +217,13 @@ export function PhoneStep({
             />
           </Field>
           <p className="px-1 text-xs font-semibold text-ink-500">
-            Tasdiqlangach eski raqam o&apos;rniga shu raqam yoziladi va tizimga
-            u bilan kirasiz. Parol — hisobingizni begona qo&apos;ldan himoya
-            qilish uchun.
+            {t(
+              "Tasdiqlangach eski raqam o'rniga shu raqam yoziladi va tizimga u bilan kirasiz. Parol — hisobingizni begona qo'ldan himoya qilish uchun.",
+            )}
           </p>
-          {error ? <StepError message={error} /> : null}
+          {shownError ? <StepError message={shownError} /> : null}
           <Button type="submit" block size="lg" loading={busy === "send"}>
-            Kod yuborish
+            {t("Kod yuborish")}
           </Button>
           <Button
             variant="ghost"
@@ -218,17 +231,17 @@ export function PhoneStep({
             disabled={busy !== null}
             onClick={backToQuestion}
           >
-            Orqaga
+            {t("Orqaga")}
           </Button>
         </>
       ) : null}
 
       {stage === "code" ? (
         <>
-          <Field label="SMS kod">
+          <Field label={t("SMS kod")}>
             <FpCodeInput lumio value={code} onChange={setCode} />
           </Field>
-          {error ? <StepError message={error} /> : null}
+          {shownError ? <StepError message={shownError} /> : null}
           <Button
             type="submit"
             block
@@ -236,7 +249,7 @@ export function PhoneStep({
             loading={busy === "verify"}
             disabled={busy === "send"}
           >
-            Tasdiqlash
+            {t("Tasdiqlash")}
           </Button>
           <Button
             variant="ghost"
@@ -245,8 +258,8 @@ export function PhoneStep({
             disabled={cooldown > 0 || busy !== null}
           >
             {cooldown > 0
-              ? `Qayta yuborish (${cooldown}s)`
-              : "Kodni qayta yuborish"}
+              ? t("Qayta yuborish ({n}s)", { n: cooldown })
+              : t("Kodni qayta yuborish")}
           </Button>
           <Button
             variant="ghost"
@@ -254,13 +267,13 @@ export function PhoneStep({
             disabled={busy !== null}
             onClick={backToQuestion}
           >
-            Orqaga
+            {t("Orqaga")}
           </Button>
         </>
       ) : null}
 
       <p className="text-center text-xs font-semibold text-ink-500">
-        SMS kelmayaptimi? Administratorga murojaat qiling.
+        {t("SMS kelmayaptimi? Administratorga murojaat qiling.")}
       </p>
     </form>
   );
