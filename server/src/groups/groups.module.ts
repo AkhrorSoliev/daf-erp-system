@@ -10,9 +10,11 @@ import { GroupResumeCronService } from './group-resume-cron.service';
 import { GroupHolidayCascadeService } from './group-holiday-cascade.service';
 import { GroupsController } from './groups.controller';
 import { HolidaysModule } from '../holidays/holidays.module';
+import { SmsModule } from '../sms/sms.module';
+import { GroupPauseMessagesListener } from './group-pause-messages.listener';
 
 @Module({
-  imports: [forwardRef(() => HolidaysModule)],
+  imports: [forwardRef(() => HolidaysModule), SmsModule],
   controllers: [GroupsController],
   providers: [
     GroupsService,
@@ -21,6 +23,7 @@ import { HolidaysModule } from '../holidays/holidays.module';
     GroupsStatusService,
     GroupPausesService,
     GroupResumeCronService,
+    GroupPauseMessagesListener,
     GroupScheduleService,
     GroupStatusCronService,
     GroupHolidayCascadeService,

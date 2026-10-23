@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { GroupQueryDto } from './dto/group-query.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
+import { UpdateGroupPauseDto } from './dto/update-group-pause.dto';
 import { ChangeGroupStatusDto } from './dto/change-group-status.dto';
 import { GroupsReadService } from './groups-read.service';
 import { GroupsWriteService } from './groups-write.service';
@@ -129,5 +130,14 @@ export class GroupsService {
     companyId: number,
   ) {
     return this.statusService.changeStatus(id, dto, userId, companyId);
+  }
+
+  updatePause(
+    id: string,
+    dto: UpdateGroupPauseDto,
+    userId: number,
+    companyId: number,
+  ) {
+    return this.statusService.updatePause(id, dto, userId, companyId);
   }
 }

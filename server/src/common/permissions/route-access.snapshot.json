@@ -1525,6 +1525,11 @@
     "Branch Director",
     "CEO"
   ],
+  "PATCH /groups/:id/pause": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "PATCH /groups/:id/status": [
     "Administrator",
     "Branch Director",

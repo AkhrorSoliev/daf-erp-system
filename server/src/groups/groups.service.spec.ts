@@ -549,6 +549,95 @@ describe('GroupsService — status methods', () => {
         );
       });
 
+      it('tells the students after the commit: PAUSED with the planned day', async () => {
+        await service.changeStatus(
+          'group-1',
+          { status: 'PAUSED' as any, plannedResumeOn: '2999-01-05' },
+          1,
+          1001,
+        );
+
+        expect(emitter.emit).toHaveBeenCalledWith('group.pause.message', {
+          kind: 'PAUSED',
+          groupId: 'group-1',
+          companyId: 1001,
+          resumeDay: '2999-01-05',
+        });
+      });
+
+      it('sends no pause message when the change rolls back', async () => {
+        statusCascadeService.cascadeGroupStatusChange.mockRejectedValue(
+          new Error('boom'),
+        );
+        await expect(
+          service.changeStatus(
+            'group-1',
+            { status: 'PAUSED' as any, resumeUnknown: true },
+            1,
+            1001,
+          ),
+        ).rejects.toThrow();
+        expect(emitter.emit).not.toHaveBeenCalledWith(
+          'group.pause.message',
+          expect.anything(),
+        );
+      });
+
+      describe('updatePause', () => {
+        beforeEach(() => {
+          prisma.group.findFirst.mockResolvedValue({
+            ...mockGroup,
+            statusEnum: 'PAUSED',
+          });
+          tx.group.findUniqueOrThrow = jest.fn().mockResolvedValue({
+            ...mockGroup,
+            statusEnum: 'PAUSED',
+            course: { id: 'c1', name: 'Test' },
+            room: null,
+            branch: { id: 1, name: 'Branch' },
+            teachers: [],
+            _count: { enrollments: 0 },
+          });
+          pauses.setPlanned.mockResolvedValue({ before: null, after: null });
+        });
+
+        it('stores the new day and tells the students', async () => {
+          await service.updatePause(
+            'group-1',
+            { plannedResumeOn: '2999-02-01' },
+            1,
+            1001,
+          );
+          expect(pauses.setPlanned).toHaveBeenCalledWith(
+            tx,
+            expect.objectContaining({ plannedResumeOn: '2999-02-01' }),
+          );
+          expect(emitter.emit).toHaveBeenCalledWith(
+            'group.pause.message',
+            expect.objectContaining({
+              kind: 'RESUME_DAY',
+              resumeDay: '2999-02-01',
+            }),
+          );
+        });
+
+        it('refuses a group that is not paused', async () => {
+          prisma.group.findFirst.mockResolvedValue({
+            ...mockGroup,
+            statusEnum: 'ACTIVE',
+          });
+          await expect(
+            service.updatePause('group-1', { resumeUnknown: true }, 1, 1001),
+          ).rejects.toThrow('pauzada emas');
+        });
+
+        it('refuses a body with neither a day nor "unknown"', async () => {
+          await expect(
+            service.updatePause('group-1', {}, 1, 1001),
+          ).rejects.toThrow('Darslar qachondan');
+        });
+      });
+
       describe('from PAUSED', () => {
         beforeEach(() => {
           tx.group.findFirst.mockResolvedValue({
