@@ -86,7 +86,7 @@ function fakeUebungPrisma() {
  * tegadi, ya'ni kelajakdagi reytingga.
  */
 describe('DafPortalController — ruxsat', () => {
-  // The 16 routes of the learning section, found the way Nest finds them: a
+  // The 21 routes of the learning section, found the way Nest finds them: a
   // method that carries route metadata.
   const routes = Object.getOwnPropertyNames(DafPortalController.prototype)
     .filter((name) => name !== 'constructor')
@@ -97,8 +97,8 @@ describe('DafPortalController — ruxsat', () => {
       ),
     );
 
-  it('has the 16 learning routes', () => {
-    expect(routes).toHaveLength(16);
+  it('has the 21 learning routes', () => {
+    expect(routes).toHaveLength(21);
   });
 
   it('every route is student-only, set once at class level', () => {
@@ -185,5 +185,195 @@ describe('DafPortalController — mashq javobida sizib chiqish yo`q', () => {
     // tanadan kelgan `studentId`ni tashlab yuboradi.
     const dto = new CheckAntwortDto();
     expect('studentId' in dto).toBe(false);
+  });
+});
+
+describe('DafPortalController — seans yakuni natija bilan', () => {
+  const natija = {
+    punkte: 50,
+    serie: 3,
+    serieYangi: true,
+    orin: { gruppe: null, zentrum: { oldin: 4, hozir: 2 } },
+  };
+
+  function make() {
+    const uebung = {
+      abschluss: jest.fn(async () => ({ bestScore: 9, runs: 1 })),
+      wiederholungAbschluss: jest.fn(async () => ({
+        questionCount: 12,
+        firstTryCorrect: 10,
+      })),
+    };
+    const fortschritt = { seansNatijasiXavfsiz: jest.fn(async () => natija) };
+    const controller = new DafPortalController(
+      {} as any,
+      {} as any,
+      {} as any,
+      uebung as any,
+      fortschritt as any,
+    );
+    return { controller, uebung, fortschritt };
+  }
+
+  it('lesson end adds natija, studentId from the token', async () => {
+    const { controller, fortschritt } = make();
+    const r = await controller.postAbschluss(
+      5,
+      { richtig: 9, gesamt: 12, sessionId: 's-1' } as any,
+      55,
+      1,
+    );
+    expect(r).toEqual({ bestScore: 9, runs: 1, natija });
+    expect(fortschritt.seansNatijasiXavfsiz).toHaveBeenCalledWith('s-1', 55, 1);
+  });
+
+  it('review end adds natija', async () => {
+    const { controller } = make();
+    const r = await controller.postWiederholungAbschluss(
+      { sessionId: 's-2' } as any,
+      55,
+      1,
+    );
+    expect(r).toEqual({ questionCount: 12, firstTryCorrect: 10, natija });
+  });
+
+  it('natija is computed after the lesson is saved', async () => {
+    const { controller, uebung, fortschritt } = make();
+    const order: string[] = [];
+    uebung.abschluss.mockImplementation(async () => {
+      order.push('abschluss');
+      return { bestScore: 9, runs: 1 };
+    });
+    fortschritt.seansNatijasiXavfsiz.mockImplementation(async () => {
+      order.push('natija');
+      return natija;
+    });
+    await controller.postAbschluss(
+      5,
+      { richtig: 9, gesamt: 12, sessionId: 's-1' } as any,
+      55,
+      1,
+    );
+    expect(order).toEqual(['abschluss', 'natija']);
+  });
+});
+
+describe('DafPortalController — maqsad va nishonlar (S2)', () => {
+  const maqsad = {
+    daraja: 'JIDDIY',
+    ball: 160,
+    hozir: 20,
+    bajarildi: false,
+    bosh: false,
+  };
+
+  function make() {
+    const fortschritt = {
+      maqsadniOzgartir: jest.fn(async () => maqsad),
+      nishonlar: jest.fn(async () => []),
+    };
+    const controller = new DafPortalController(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      fortschritt as any,
+    );
+    return { controller, fortschritt };
+  }
+
+  it('PATCH maqsad — faqat tokendagi o`quvchiniki', async () => {
+    const { controller, fortschritt } = make();
+    const r = await controller.patchMaqsad({ daraja: 'JIDDIY' } as any, 55, 1);
+    expect(r).toEqual(maqsad);
+    expect(fortschritt.maqsadniOzgartir).toHaveBeenCalledWith(55, 1, 'JIDDIY');
+  });
+
+  it('GET nishonlar — tokendagi o`quvchi', async () => {
+    const { controller, fortschritt } = make();
+    await controller.getNishonlar(55, 1);
+    expect(fortschritt.nishonlar).toHaveBeenCalledWith(55, 1);
+  });
+
+  it('yo`llar va usullar', () => {
+    const proto = DafPortalController.prototype as any;
+    expect(Reflect.getMetadata('path', proto.patchMaqsad)).toBe('maqsad');
+    expect(Reflect.getMetadata('method', proto.patchMaqsad)).toBe(
+      RequestMethod.PATCH,
+    );
+    expect(Reflect.getMetadata('path', proto.getNishonlar)).toBe('nishonlar');
+    expect(Reflect.getMetadata('method', proto.getNishonlar)).toBe(
+      RequestMethod.GET,
+    );
+  });
+});
+
+describe('DafPortalController — liga va guruhlar (S3)', () => {
+  function make() {
+    const fortschritt = {
+      liga: jest.fn(async () => ({ azo: false })),
+      guruhlar: jest.fn(async () => ({ qatorlar: [] })),
+    };
+    const controller = new DafPortalController(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      fortschritt as any,
+    );
+    return { controller, fortschritt };
+  }
+
+  it('GET liga — tokendagi o`quvchi', async () => {
+    const { controller, fortschritt } = make();
+    expect(await controller.getLiga(55)).toEqual({ azo: false });
+    expect(fortschritt.liga).toHaveBeenCalledWith(55);
+  });
+
+  it('GET guruhlar — tokendagi o`quvchi va kompaniya', async () => {
+    const { controller, fortschritt } = make();
+    await controller.getGuruhlar(55, 1);
+    expect(fortschritt.guruhlar).toHaveBeenCalledWith(55, 1);
+  });
+
+  it('yo`llar va usullar', () => {
+    const proto = DafPortalController.prototype as any;
+    expect(Reflect.getMetadata('path', proto.getLiga)).toBe('liga');
+    expect(Reflect.getMetadata('method', proto.getLiga)).toBe(
+      RequestMethod.GET,
+    );
+    expect(Reflect.getMetadata('path', proto.getGuruhlar)).toBe('guruhlar');
+    expect(Reflect.getMetadata('method', proto.getGuruhlar)).toBe(
+      RequestMethod.GET,
+    );
+  });
+});
+
+describe('DafPortalController — eslatmalar (S4)', () => {
+  it('PATCH eslatmalar — faqat tokendagi o`quvchiniki', async () => {
+    const fortschritt = {
+      eslatmalarniOzgartir: jest.fn(async () => ({ eslatmalar: false })),
+    };
+    const controller = new DafPortalController(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      fortschritt as any,
+    );
+    expect(
+      await controller.patchEslatmalar({ yoqilgan: false } as any, 55, 1),
+    ).toEqual({ eslatmalar: false });
+    expect(fortschritt.eslatmalarniOzgartir).toHaveBeenCalledWith(55, 1, false);
+  });
+
+  it('yo`l va usul', () => {
+    const proto = DafPortalController.prototype as any;
+    expect(Reflect.getMetadata('path', proto.patchEslatmalar)).toBe(
+      'eslatmalar',
+    );
+    expect(Reflect.getMetadata('method', proto.patchEslatmalar)).toBe(
+      RequestMethod.PATCH,
+    );
   });
 });

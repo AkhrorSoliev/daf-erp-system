@@ -1,14 +1,18 @@
-import { QueryClient, QueryObserver } from "@tanstack/react-query";
+import { MutationObserver, QueryClient, QueryObserver } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
+import api from "@/lib/api";
 
-vi.mock("@/lib/api", () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+vi.mock("@/lib/api", () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } }));
 
 import {
+  eslatmalarMutation,
+  guruhlarQuery,
+  ligaQuery,
   sozHisobiniEskirt,
   uebungSeansQuery,
   wiederholungQuery,
 } from "./queries";
-import type { PublicFrage } from "./types";
+import type { Fortschritt, Maqsad, PublicFrage } from "./types";
 
 const frage = { index: 0 } as PublicFrage;
 const gcTick = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -54,5 +58,115 @@ describe("sozHisobiniEskirt — leaving a round marks the counters stale", () =>
     expect(qc.getQueryState(["lernen", "unit", 7])?.isInvalidated).toBe(true);
     expect(qc.getQueryState(["lernen", "levels"])?.isInvalidated).toBe(true);
     expect(qc.getQueryState(["lernen", "grammar"])?.isInvalidated).toBe(false);
+  });
+});
+
+describe("liga va guruhlar so'rovlari", () => {
+  it("tab ko'rinmaguncha so'ramaydi, kesh qisqa", () => {
+    expect(ligaQuery().enabled).toBe(true);
+    expect(ligaQuery(false).enabled).toBe(false);
+    expect(guruhlarQuery(false).enabled).toBe(false);
+    expect(ligaQuery().queryKey).toEqual(["lernen", "liga"]);
+    expect(guruhlarQuery().queryKey).toEqual(["lernen", "guruhlar"]);
+    expect(ligaQuery().staleTime).toBe(30_000);
+    expect(guruhlarQuery().staleTime).toBe(30_000);
+  });
+});
+
+describe("eslatmalarMutation — almashtirgich darrov saqlanadi (spec S4 §7)", () => {
+  const KEY = ["lernen", "fortschritt"];
+  const boshlangich = { eslatmalar: true, telegramUlangan: true } as Fortschritt;
+
+  it("so'rovdan oldin ko'rinadi, server javobi bilan qoladi", async () => {
+    const qc = new QueryClient();
+    qc.setQueryData(KEY, boshlangich);
+    let sorovPaytida: boolean | undefined;
+    // `as never`: the axios generic signature is not worth restating in a test.
+    vi.mocked(api.patch).mockImplementationOnce((async () => {
+      sorovPaytida = qc.getQueryData<Fortschritt>(KEY)?.eslatmalar;
+      return { data: { eslatmalar: false } };
+    }) as never);
+    await new MutationObserver(qc, eslatmalarMutation(qc)).mutate(false);
+    expect(api.patch).toHaveBeenCalledWith("/student-portal/lernen/eslatmalar", { yoqilgan: false });
+    expect(sorovPaytida).toBe(false);
+    expect(qc.getQueryData<Fortschritt>(KEY)?.eslatmalar).toBe(false);
+  });
+
+  it("xato — eski holatga qaytadi", async () => {
+    const qc = new QueryClient();
+    qc.setQueryData(KEY, boshlangich);
+    vi.mocked(api.patch).mockRejectedValueOnce(new Error("network"));
+    await new MutationObserver(qc, eslatmalarMutation(qc)).mutate(false).catch(() => undefined);
+    expect(qc.getQueryData<Fortschritt>(KEY)?.eslatmalar).toBe(true);
+  });
+});
+
+describe("eslatmalarMutation — poyga va tor qaytarish (fix round 1)", () => {
+  const KEY = ["lernen", "fortschritt"];
+  const server = { eslatmalar: true, telegramUlangan: true } as Fortschritt;
+
+  it("ikki tez bosish, ikkalasi xato — kesh serverdagi asl qiymatda qoladi", async () => {
+    const qc = new QueryClient();
+    qc.setQueryData(KEY, server);
+    // The server never changed: a refetch returns the original value.
+    const observer = new QueryObserver(qc, {
+      queryKey: KEY,
+      queryFn: async () => server,
+      staleTime: Infinity,
+    });
+    const unsubscribe = observer.subscribe(() => undefined);
+    vi.mocked(api.patch).mockRejectedValue(new Error("network"));
+    const a = new MutationObserver(qc, eslatmalarMutation(qc)).mutate(false).catch(() => undefined);
+    const b = new MutationObserver(qc, eslatmalarMutation(qc)).mutate(true).catch(() => undefined);
+    await Promise.all([a, b]);
+    unsubscribe();
+    vi.mocked(api.patch).mockReset();
+    expect(qc.getQueryData<Fortschritt>(KEY)?.eslatmalar).toBe(true);
+  });
+
+  it("so'rov paytidagi boshqa maydon (maqsad) qaytarishdan keyin ham saqlanadi", async () => {
+    const qc = new QueryClient();
+    qc.setQueryData(KEY, server);
+    const yangiMaqsad: Maqsad = { daraja: "ORTA", ball: 20, hozir: 5, bajarildi: false, bosh: false };
+    vi.mocked(api.patch).mockImplementationOnce((async () => {
+      qc.setQueryData<Fortschritt>(KEY, (old) => old && { ...old, maqsad: yangiMaqsad });
+      throw new Error("network");
+    }) as never);
+    await new MutationObserver(qc, eslatmalarMutation(qc)).mutate(false).catch(() => undefined);
+    const keshda = qc.getQueryData<Fortschritt>(KEY);
+    expect(keshda?.eslatmalar).toBe(true);
+    expect(keshda?.maqsad).toEqual(yangiMaqsad);
+  });
+
+  it("server so'ralganidan boshqa qiymat qaytarsa — keshda server qiymati", async () => {
+    const qc = new QueryClient();
+    qc.setQueryData(KEY, server);
+    vi.mocked(api.patch).mockResolvedValueOnce({ data: { eslatmalar: true } } as never);
+    await new MutationObserver(qc, eslatmalarMutation(qc)).mutate(false);
+    expect(qc.getQueryData<Fortschritt>(KEY)?.eslatmalar).toBe(true);
+  });
+});
+
+describe("eslatmalarMutation — sekin qayta yuklash saqlashni ushlab turmaydi", () => {
+  const KEY = ["lernen", "fortschritt"];
+
+  // Hook darajasidagi `onSettled` qaytargan promise'ni RQ kutadi: `fortschritt` sekin yoki
+  // uzilgan bo'lsa, xato xabari (mutate darajasidagi `onError`) va almashtirgichning
+  // `isPending` i o'sha qayta yuklash tugaguncha kechikardi (backend o'chiq — ~7 s).
+  it("qayta yuklash tugamasa ham saqlash darrov tugaydi (xato xabari kechikmaydi)", async () => {
+    const qc = new QueryClient();
+    qc.setQueryData(KEY, { eslatmalar: true, telegramUlangan: true } as Fortschritt);
+    const observer = new QueryObserver(qc, {
+      queryKey: KEY,
+      queryFn: () => new Promise<Fortschritt>(() => undefined),
+    });
+    const unsubscribe = observer.subscribe(() => undefined);
+    vi.mocked(api.patch).mockRejectedValueOnce(new Error("network"));
+    const tugadi = new MutationObserver(qc, eslatmalarMutation(qc))
+      .mutate(false)
+      .then(() => "tugadi", () => "tugadi");
+    const kechikdi = new Promise((r) => setTimeout(() => r("kechikdi"), 300));
+    expect(await Promise.race([tugadi, kechikdi])).toBe("tugadi");
+    unsubscribe();
   });
 });

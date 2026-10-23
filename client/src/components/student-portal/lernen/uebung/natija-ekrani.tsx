@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 import { Clock, Fire, Star, Trophy } from "@phosphor-icons/react";
 import { Button, Card, FadeIn, StatChip } from "../../lumio";
 import type { SeansXato } from "../seans-navbat";
-import { useFortschritt } from "../queries";
-import { orinXabari, xatoYorligi } from "./natija-xabari";
+import type { SeansNatijasi } from "../types";
+import { natijaQatorlari, xatoYorligi } from "./natija-xabari";
 import { DeWort } from "./de-wort";
 import { sinovKorinishi, type SinovHolati } from "./sinov-natijasi";
 
@@ -18,15 +18,8 @@ export interface NatijaEkraniProps {
   xatolar: SeansXato[];
   unitId: number | null;
   onQayta: () => void;
-  /**
-   * Seans BOSHLANGANDAGI `Fortschritt` — bittasi ham serverdan qayta
-   * hisoblanmaydi, faqat seans oxiridagi (`useFortschritt` ning joriy
-   * javobi) qiymat bilan solishtiriladi. Barchasi `null` bo'lishi mumkin:
-   * seans boshlanganda `useFortschritt` hali yuklanmagan bo'lsa.
-   */
-  gesamtBoshida: number | null;
-  serieBoshida: number | null;
-  orinBoshida: number | null;
+  /** Server javobidagi seans natijasi; yo'q bo'lsa yutuqlar kartasi chizilmaydi. */
+  natija: SeansNatijasi | null;
   /** Yakuniy sinov darsida — server qarori holati; oddiy darsda yo'q. */
   sinov?: SinovHolati | null;
   /** `sinov.tur === "xato"` bo'lganda natijani qayta yuborish. */
@@ -174,12 +167,8 @@ function XatoQatori({ xato }: { xato: SeansXato }) {
  * ichida allaqachon bor — bu ekran hech narsani qayta hisoblamaydi,
  * faqat `seans-navbat.ts` yig'gan holatni ko'rsatadi.
  *
- * Ball, seriya va o'rin ham xuddi shunday — MIJOZ ULARNI HISOBLAMAYDI.
- * `useFortschritt` seans boshida bir marta o'qilib (`gesamtBoshida` va
- * hokazo — chaqiruvchi eslab qoladi), shu yerda ESA joriy (seansdan
- * keyingi, `useAbschluss`/`SeansEkrani` allaqachon yangilagan) qiymat
- * bilan solishtiriladi. Ekranda ko'rinadigan raqam shu ikkisining farqi
- * — ya'ni serverning o'zi bergan raqam, mijoz hisob-kitobi emas.
+ * Ball, seriya va o'rinni server `natija` sifatida qaytaradi — bu ekran
+ * faqat ko'rsatadi (spec 2026-10-18 §5).
  */
 export function NatijaEkrani({
   togri,
@@ -188,48 +177,24 @@ export function NatijaEkrani({
   xatolar,
   unitId,
   onQayta,
-  gesamtBoshida,
-  serieBoshida,
-  orinBoshida,
+  natija,
   sinov,
   onNatijaQaytaYubor,
 }: NatijaEkraniProps) {
   const router = useRouter();
-  const fortschritt = useFortschritt();
   const davomHref = unitId
     ? `/portal/lernen/units/${unitId}`
     : "/portal/lernen";
   const korinish = sinov ? sinovKorinishi(sinov) : null;
 
-  // Farq faqat IKKALA uchi ham ma'lum bo'lganda hisoblanadi — aks holda
-  // "0 ball topdingiz" kabi noto'g'ri xabar chiqib ketardi, holbuki
-  // haqiqatda serverdan javob hali kelmagan, xolos.
-  const topilganBall =
-    gesamtBoshida != null && fortschritt.data
-      ? Math.max(0, fortschritt.data.gesamt - gesamtBoshida)
-      : null;
-  const sanaladiganBall = useSanaladiganBall(topilganBall);
-  // Nol — qonuniy natija (masalan takrorlashda hech narsa muddati
-  // kelmagan bo'lishi mumkin), lekin "+0 ball" chipi buzilishdek
-  // o'qiladi. Shuning uchun BALL FAQAT musbat bo'lganda ko'rsatiladi —
-  // seriya va o'rin qatorlari esa nol ball bilan ham o'z holicha turaveradi.
-  const ballKorsatilsinmi = topilganBall != null && topilganBall > 0;
-
-  // Seriya faqat OSHGANDA ko'rsatiladi (bugungi birinchi seans) — buni
-  // aytadigan server, mijoz emas: `serieBoshida` seansdan oldingi qiymat,
-  // `fortschritt.data.serie` esa hozirgisi.
-  const serieOshdimi =
-    serieBoshida != null &&
-    fortschritt.data != null &&
-    fortschritt.data.serie > serieBoshida;
-
-  const orinXabariMatni = orinXabari(
-    orinBoshida,
-    fortschritt.data?.wochePlatzGruppe ?? null,
-  );
-
+  const qator = natijaQatorlari(natija);
+  const sanaladiganBall = useSanaladiganBall(qator.ball);
   const yutuqlarBormi =
-    ballKorsatilsinmi || serieOshdimi || orinXabariMatni != null;
+    qator.ball != null ||
+    qator.serie != null ||
+    qator.orin != null ||
+    qator.maqsad != null ||
+    qator.nishonlar.length > 0;
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col justify-center gap-4 px-4 py-8">
@@ -266,24 +231,32 @@ export function NatijaEkrani({
 
         {yutuqlarBormi ? (
           <Card className="flex flex-wrap items-center justify-center gap-2 text-center">
-            {ballKorsatilsinmi && sanaladiganBall != null ? (
+            {qator.ball != null && sanaladiganBall != null ? (
               <StatChip
                 icon={<Star weight="fill" className="text-amber-500" />}
                 value={`+${sanaladiganBall} ball`}
               />
             ) : null}
-            {serieOshdimi ? (
+            {qator.serie != null ? (
               <StatChip
                 icon={<Fire weight="fill" className="text-coral-500" />}
-                value={`${fortschritt.data?.serie} kun`}
+                value={`${qator.serie} kun`}
                 label="seriya"
               />
             ) : null}
-            {orinXabariMatni ? (
+            {qator.orin ? (
               <p className="w-full text-sm font-semibold text-ink-700">
-                {orinXabariMatni}
+                {qator.orin}
               </p>
             ) : null}
+            {qator.maqsad ? (
+              <p className="w-full text-sm font-bold text-success">{qator.maqsad}</p>
+            ) : null}
+            {qator.nishonlar.map((matn) => (
+              <p key={matn} className="w-full text-sm font-bold text-ink-900">
+                {matn}
+              </p>
+            ))}
           </Card>
         ) : null}
 

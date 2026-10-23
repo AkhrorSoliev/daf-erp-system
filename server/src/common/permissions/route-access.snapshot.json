@@ -1164,6 +1164,9 @@
   "GET /student-portal/lernen/grammar": [
     "Student"
   ],
+  "GET /student-portal/lernen/guruhlar": [
+    "Student"
+  ],
   "GET /student-portal/lernen/lessons/:id": [
     "Student"
   ],
@@ -1177,6 +1180,12 @@
     "Student"
   ],
   "GET /student-portal/lernen/levels": [
+    "Student"
+  ],
+  "GET /student-portal/lernen/liga": [
+    "Student"
+  ],
+  "GET /student-portal/lernen/nishonlar": [
     "Student"
   ],
   "GET /student-portal/lernen/reyting": [
@@ -1669,6 +1678,12 @@
     "Administrator",
     "Branch Director",
     "CEO"
+  ],
+  "PATCH /student-portal/lernen/eslatmalar": [
+    "Student"
+  ],
+  "PATCH /student-portal/lernen/maqsad": [
+    "Student"
   ],
   "PATCH /student-portal/name": [
     "Student"

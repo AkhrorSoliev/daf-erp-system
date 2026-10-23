@@ -6,6 +6,7 @@ import { EntityHistoryService } from '../common/entity-history';
 import { SmsMessageType } from '@prisma/client';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
 import { describeError } from '../telegram-digest/telegram-send';
+import type { InlineKeyboardMarkup } from 'telegraf/types';
 
 @Injectable()
 export class SmsService {
@@ -34,7 +35,11 @@ export class SmsService {
     type: SmsMessageType,
     senderUserId?: number,
     companyId?: number,
-    opts?: { assertCallerBranch?: boolean },
+    opts?: {
+      assertCallerBranch?: boolean;
+      /** S4 (ADR-0117): an inline keyboard under the message — the reminder's stop button. */
+      replyMarkup?: InlineKeyboardMarkup;
+    },
   ) {
     // A free-text message to a student the caller picked. Sending one to
     // another branch's student is contact with someone else's customer, under
@@ -80,6 +85,7 @@ export class SmsService {
         } else {
           const result = await bot.telegram.sendMessage(chatId, content, {
             parse_mode: 'HTML',
+            ...(opts?.replyMarkup && { reply_markup: opts.replyMarkup }),
           });
           status = 'SENT';
           telegramMessageId = result.message_id;

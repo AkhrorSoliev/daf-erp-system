@@ -15,6 +15,12 @@ export interface BottomSheetProps {
   title?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  /**
+   * Oynacha yopilgach fokus qayerga qaytishini hal qiladi. Oynacha tugma
+   * (`Trigger`) orqali emas, tashqi holat bilan ochilsa, Radix fokusni hech
+   * qayerga qaytarmaydi va klaviatura foydalanuvchisi sahifa boshiga tushadi.
+   */
+  onCloseAutoFocus?: (event: Event) => void;
 }
 
 // Lumio bottom sheet — shadcn Sheet (auto-themed via the `.lumio` remap) with a
@@ -25,11 +31,13 @@ export function BottomSheet({
   title,
   children,
   className,
+  onCloseAutoFocus,
 }: BottomSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
+        onCloseAutoFocus={onCloseAutoFocus}
         className={cn(
           "lumio mx-auto max-h-[85dvh] gap-0 rounded-t-[28px] border-line bg-surface p-0 sm:max-w-[560px]",
           className,

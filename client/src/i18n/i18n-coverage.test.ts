@@ -79,6 +79,7 @@ export const STRICT_FILES: string[] = [
   "components/dashboard/schedule-client.tsx",
   "components/dashboard/dashboard-daily-schedule.tsx",
   "components/dashboard/dashboard-room-occupancy.tsx",
+  "components/dashboard/dashboard-planned-groups.tsx",
   "components/attendance/unmarked/unmarked-lesson-prompt.tsx",
   "components/attendance/unmarked/late-attendance-dialog.tsx",
   "components/attendance/unmarked/not-held-dialog.tsx",

@@ -769,6 +769,12 @@ model Student {
   salaryAccruals    SalaryAccrual[]           @relation("StudentSalaryAccruals")
   paymentPromises   PaymentPromise[]
   dafAttempts       DafAttempt[]
+  dafStudentDays    DafStudentDay[]
+  dafSetting        DafStudentSetting?
+  dafBadges         DafStudentBadge[]
+  dafLeague         DafStudentLeague?
+  dafLeagueEntries  DafLeagueEntry[]
+  dafReminders      DafReminderLog[]
   appSessions       StudentAppSession[]
   dafLexemeStates   DafLexemeState[]
   dafLessonProgress DafLessonProgress[]
@@ -1558,6 +1564,7 @@ model Group {
   monthlyCharges         EnrollmentMonthlyCharge[]
   unmarkedLessons        UnmarkedLesson[]          @relation("UnmarkedLessonGroup")
   lessonRatings          LessonRating[]
+  dafWeeks               DafGroupWeek[]
 
   @@unique([name, branchId])
   @@index([deletedAt])
@@ -4289,6 +4296,167 @@ model DafAttempt {
   @@index([branchId, createdAt])
   @@index([sessionId])
   @@index([studentId, sessionId])
+}
+
+/// DERIVED: the source of truth is DafAttempt. Rebuilt from it at any time by
+/// `scripts/rebuild-daf-student-day.ts`. One writer: `recordAttempt`
+/// (src/daf/shared/attempt-writer.ts). ADR-0114.
+model DafStudentDay {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  companyId Int
+  /// Tashkent calendar day.
+  day       DateTime @db.Date
+  /// The attempt's sealed groupId; "" for no group (never NULL: a NULL key
+  /// would not block a duplicate row).
+  groupKey  String   @default("")
+  points    Int      @default(0)
+  attempts  Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, day, groupKey])
+  @@index([companyId, day])
+  @@index([groupKey, day])
+}
+
+/// Kunlik maqsad darajasi. Ballari kodda (`src/daf/uebung/punkte.ts`,
+/// `MAQSAD_BALL`), shuning uchun ularni o'zgartirish deploy bilan.
+enum DafDailyGoal {
+  YENGIL
+  ORTA
+  JIDDIY
+}
+
+/// The student's own choice — NOT derived, cannot be rebuilt (ADR-0115).
+/// No row = ORTA, reminders on. Written by `PATCH student-portal/lernen/maqsad`
+/// (`dailyGoal`) and `eslatmalarniSaqla` (`remindersEnabled`, ADR-0117), both upsert.
+model DafStudentSetting {
+  studentId        Int          @id
+  companyId        Int
+  dailyGoal        DafDailyGoal @default(ORTA)
+  /// S4 (ADR-0117): kechki eslatma va dushanba xulosasi; o'chirish ikkalasini to'xtatadi.
+  remindersEnabled Boolean      @default(true)
+  updatedAt        DateTime     @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id])
+}
+
+/// A badge the student earned: given once, NEVER taken back (ADR-0115).
+/// Only the catalogue key is stored (`src/daf/nishon/nishon-katalogi.ts`).
+/// One writer: `grantBadges` (`src/daf/nishon/nishon-berish.ts`).
+model DafStudentBadge {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  companyId Int
+  key       String
+  earnedAt  DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, key])
+}
+
+/// Doimiy liga darajasi (ADR-0116): o'quvchiga bitta qator, faqat o'sadi
+/// (`GREATEST`). Qator yo'q = Bronza (0); migratsiyada hech narsa
+/// to'ldirilmaydi. Yozuvchi: `settleWeek` (`src/daf/liga/liga-hisob.ts`).
+model DafStudentLeague {
+  studentId Int      @id
+  companyId Int
+  tier      Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id])
+}
+
+/// Haftalik liga xonasi (ADR-0116). `settledAt` — hafta hisoblangan payt:
+/// hisob xonani `UPDATE … WHERE "settledAt" IS NULL RETURNING` bilan oladi,
+/// shuning uchun ikkinchi hisob hech narsa olmaydi.
+/// Yozuvchilar: `src/daf/liga/liga-xona.ts`, `src/daf/liga/liga-hisob.ts`.
+model DafLeagueRoom {
+  id        Int       @id @default(autoincrement())
+  companyId Int
+  weekStart DateTime  @db.Date
+  tier      Int
+  number    Int
+  settledAt DateTime?
+
+  leagueEntries DafLeagueEntry[]
+
+  @@unique([companyId, weekStart, tier, number])
+  @@index([companyId, settledAt])
+}
+
+/// Xonadagi a'zolik: hafta ichida bitta xona. `place`, `points`, `promoted`
+/// hafta hisoblangach yoziladi — tarix va nishonlar shulardan o'qiydi; hafta
+/// davomida ball bu yerda saqlanmaydi (`DafStudentDay` dan yig'iladi).
+model DafLeagueEntry {
+  id        Int      @id @default(autoincrement())
+  roomId    Int
+  studentId Int
+  companyId Int
+  weekStart DateTime @db.Date
+  tier      Int
+  place     Int?
+  points    Int?
+  promoted  Boolean  @default(false)
+
+  room    DafLeagueRoom @relation(fields: [roomId], references: [id])
+  student Student       @relation(fields: [studentId], references: [id])
+
+  @@unique([weekStart, studentId])
+  @@index([roomId])
+  @@index([studentId])
+}
+
+/// Guruhlar jadvalining hafta natijasi (ADR-0116), hafta oxirida bir marta
+/// yoziladi. Jonli jadval o'qishda hisoblanadi (`src/daf/liga/guruhlar-jadvali.ts`).
+model DafGroupWeek {
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  weekStart DateTime @db.Date
+  groupId   String
+  place     Int
+  average   Float
+  members   Int
+  points    Int
+
+  group Group @relation(fields: [groupId], references: [id])
+
+  @@unique([weekStart, groupId])
+}
+
+/// Kechki eslatma (S4 §1) yoki dushanba xulosasi (§2) turi.
+enum DafReminderKind {
+  EVENING
+  WEEKLY
+}
+
+enum DafReminderStatus {
+  SENT
+  FAILED
+}
+
+/// S4 xabarlari jurnali (ADR-0117). Qator yuborishdan OLDIN egallanadi
+/// (`INSERT … ON CONFLICT DO NOTHING RETURNING id`): qatorni yaratgan chaqiruv
+/// yuboradi, ikkinchisi hech narsa qilmaydi. `FAILED` qayta urinilmaydi va
+/// chegaraga sanalmaydi; 90 kundan eski qatorlar o'chiriladi.
+/// Yagona yozuvchi: `src/daf/eslatma/eslatma-jurnali.ts`.
+model DafReminderLog {
+  id        Int               @id @default(autoincrement())
+  companyId Int
+  studentId Int
+  kind      DafReminderKind
+  /// Toshkent kuni.
+  sentOn    DateTime          @db.Date
+  status    DafReminderStatus
+  createdAt DateTime          @default(now())
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, kind, sentOn])
+  @@index([companyId, sentOn])
 }
 
 /// Bitta mashq seansi. Klient uuid yaratadi; server birinchi urinishda

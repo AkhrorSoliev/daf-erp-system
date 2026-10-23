@@ -1,4 +1,5 @@
-import type { FrageFormat, PruefErgebnis } from "../types";
+import { nishonNomi } from "../nishon";
+import type { FrageFormat, PruefErgebnis, SeansNatijasi } from "../types";
 
 /**
  * What the panel under a checked question says. A picture choice's
@@ -33,13 +34,43 @@ export function javobPaneliMatni(
 export function orinXabari(
   oldin: number | null,
   keyin: number | null,
+  joy: "Guruhda" | "Markazda" = "Guruhda",
 ): string | null {
   if (keyin == null) return null;
-  if (oldin == null) return `Guruhda ${keyin}-o'rin`;
+  if (oldin == null) return `${joy} ${keyin}-o'rin`;
   if (oldin === keyin) return null;
   const farq = Math.abs(oldin - keyin);
   const yonalish = keyin < oldin ? "ko'tarildingiz" : "tushdingiz";
-  return `Guruhda ${keyin}-o'rin — ${farq} pog'ona ${yonalish}`;
+  return `${joy} ${keyin}-o'rin — ${farq} pog'ona ${yonalish}`;
+}
+
+/**
+ * The end screen's lines, straight from the server's `natija` (spec §5,
+ * S2 §3.2): points only when above 0, the streak only on the day's first
+ * practice, a rank only when it moved, the daily goal only when THIS session
+ * reached it (an unmet goal is noise — the ring is on the path), one line per
+ * new badge. The group speaks first; a student with no group gets the centre.
+ */
+export function natijaQatorlari(n: SeansNatijasi | null | undefined): {
+  ball: number | null;
+  serie: number | null;
+  orin: string | null;
+  maqsad: string | null;
+  nishonlar: string[];
+} {
+  if (!n) return { ball: null, serie: null, orin: null, maqsad: null, nishonlar: [] };
+  const orin = n.orin.gruppe
+    ? orinXabari(n.orin.gruppe.oldin, n.orin.gruppe.hozir)
+    : orinXabari(n.orin.zentrum.oldin, n.orin.zentrum.hozir, "Markazda");
+  return {
+    ball: n.punkte > 0 ? n.punkte : null,
+    serie: n.serieYangi ? n.serie : null,
+    orin,
+    maqsad: n.maqsad?.yangiBajarildi
+      ? `Kunlik maqsad bajarildi — ${n.maqsad.hozir} / ${n.maqsad.ball}`
+      : null,
+    nishonlar: (n.yangiNishonlar ?? []).map((k) => `Yangi nishon: ${nishonNomi(k)}`),
+  };
 }
 
 /**

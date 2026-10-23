@@ -119,9 +119,26 @@ export interface YakuniySinovNatijasi {
   kerak: number;
 }
 
+/** Seans oxiri — server hisoblagan ball, seriya va o'rin (oldin/hozir). */
+export interface SeansNatijasi {
+  punkte: number;
+  serie: number;
+  /** Bugungi birinchi mashq — seriya qatori faqat shunda ko'rinadi. */
+  serieYangi: boolean;
+  orin: {
+    gruppe: { oldin: number; hozir: number } | null;
+    zentrum: { oldin: number; hozir: number };
+  };
+  /** Kunlik maqsad; `yangiBajarildi` — shu seans uni kesib o'tdi. Eski server javobida yo'q. */
+  maqsad?: { ball: number; hozir: number; bajarildi: boolean; yangiBajarildi: boolean };
+  /** Shu seans bergan nishon kalitlari. */
+  yangiNishonlar?: string[];
+}
+
 export interface AbschlussErgebnis {
   bestScore: number;
   runs: number;
+  natija?: SeansNatijasi | null;
   /** Faqat yakuniy sinov darsida. */
   sinov?: YakuniySinovNatijasi;
 }
@@ -279,6 +296,26 @@ export interface LernenGrammarItem {
   exerciseCount: number;
 }
 
+export type MaqsadDarajasi = "YENGIL" | "ORTA" | "JIDDIY";
+
+/** Kunlik maqsad — server hisoblaydi; `bosh` — bugun qiladigan mashq qolmagan. */
+export interface Maqsad {
+  daraja: MaqsadDarajasi;
+  ball: number;
+  hozir: number;
+  bajarildi: boolean;
+  bosh: boolean;
+}
+
+/** `GET .../nishonlar` qatori: `olingan` — ISO sana yoki `null`, `qoldi` — chegaragacha. */
+export interface NishonQatori {
+  key: string;
+  tur: "SERIE" | "WOERTER" | "LIGA" | "XONA" | "GURUH";
+  chegara: number;
+  olingan: string | null;
+  qoldi: number | null;
+}
+
 /** Yo'l tepasidagi chiplar uchun umumiy ilgarilash. */
 export interface Fortschritt {
   gesamt: number;
@@ -297,6 +334,17 @@ export interface Fortschritt {
    * takrorlanadigan so'z yo'q" deb bosilmay qoladi.
    */
   faelligeWoerter: number;
+  /** Kunlik maqsad (S2). Eski server javobida yo'q — karta chizilmaydi. */
+  maqsad?: Maqsad;
+  /** S4: Telegram eslatmalari yoqilganmi. Eski server javobida yo'q — qator chizilmaydi. */
+  eslatmalar?: boolean;
+  /** S4: karta botga ulangan va chat uzilmagan. */
+  telegramUlangan?: boolean;
+}
+
+/** `PATCH .../eslatmalar` javobi. */
+export interface EslatmalarJavob {
+  eslatmalar: boolean;
 }
 
 /** Reyting jadvalidagi bitta qator. */
@@ -307,6 +355,46 @@ export interface ReytingZeile {
   platz: number;
   /** Shu qator so'rovni yuborgan o'quvchining o'zimi. */
   selbst: boolean;
+}
+
+export interface LigaDarajasi {
+  tier: number;
+  nomi: string;
+}
+
+/** `GET .../liga` — haftalik liga xonasi (S3). Xonada bo'lmasa `xona: null`. */
+export interface Liga {
+  haftaBoshi: string;
+  haftaOxiri: string;
+  azo: boolean;
+  daraja: LigaDarajasi;
+  xona: {
+    raqam: number;
+    hajmi: number;
+    qatorlar: ReytingZeile[];
+    /** `soni` — Olmosda 0; `faol` — xona ≥ 15 kishi. */
+    kotarilishZonasi: { soni: number; faol: boolean };
+  } | null;
+  /** Hisoblangan o'tgan hafta; `daraja` — o'sha xonaning darajasi. */
+  otganHafta: { daraja: LigaDarajasi; orin: number; kotarildi: boolean; hajmi: number } | null;
+}
+
+/** Guruhlar jadvalining qatori: `baho` — a'zolarning o'rtacha haftalik bali. */
+export interface GuruhQatori {
+  groupId: string;
+  name: string;
+  baho: number;
+  azolar: number;
+  platz: number;
+  selbst: boolean;
+}
+
+/** `GET .../guruhlar` — TOP 10 + o'z guruhi; `oz: null` — guruhsiz yoki kichik guruh. */
+export interface Guruhlar {
+  haftaBoshi: string;
+  qatorlar: GuruhQatori[];
+  oz: { orin: number; baho: number; azolar: number; nomi: string } | null;
+  minAzolar: number;
 }
 
 export interface AttemptResult {
@@ -342,4 +430,5 @@ export interface DrillResult {
 export interface SeansYakun {
   questionCount: number;
   firstTryCorrect: number;
+  natija?: SeansNatijasi | null;
 }

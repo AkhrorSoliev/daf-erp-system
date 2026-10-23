@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -25,6 +26,8 @@ import { DafDrillService } from './lesson/daf-drill.service';
 import { UebungService } from './uebung/uebung.service';
 import { FortschrittService } from './fortschritt/fortschritt.service';
 import { ReytingQueryDto } from './dto/reyting-query.dto';
+import { MaqsadDto } from './dto/maqsad.dto';
+import { EslatmalarDto } from './dto/eslatmalar.dto';
 
 /**
  * O'quvchi portalining o'quv bo'limi.
@@ -182,13 +185,23 @@ export class DafPortalController {
    * ilgarilashini buzishi mumkin bo'lardi.
    */
   @Post('lessons/:id/abschluss')
-  postAbschluss(
+  async postAbschluss(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: AbschlussDto,
     @CurrentUser('studentId') studentId: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.uebung.abschluss(id, dto, { studentId, companyId });
+    const ergebnis = await this.uebung.abschluss(id, dto, {
+      studentId,
+      companyId,
+    });
+    // After the save: the figures read what this session just wrote.
+    const natija = await this.fortschritt.seansNatijasiXavfsiz(
+      dto.sessionId,
+      studentId,
+      companyId,
+    );
+    return { ...ergebnis, natija };
   }
 
   /**
@@ -196,12 +209,21 @@ export class DafPortalController {
    * bilan bir xil sabab. `studentId` TOKENDAN.
    */
   @Post('wiederholung/abschluss')
-  postWiederholungAbschluss(
+  async postWiederholungAbschluss(
     @Body() dto: WiederholungAbschlussDto,
     @CurrentUser('studentId') studentId: number,
     @CurrentUser('companyId') companyId: number,
   ) {
-    return this.uebung.wiederholungAbschluss(dto, { studentId, companyId });
+    const yakun = await this.uebung.wiederholungAbschluss(dto, {
+      studentId,
+      companyId,
+    });
+    const natija = await this.fortschritt.seansNatijasiXavfsiz(
+      dto.sessionId,
+      studentId,
+      companyId,
+    );
+    return { ...yakun, natija };
   }
 
   /**
@@ -242,5 +264,72 @@ export class DafPortalController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.fortschritt.reyting(studentId, companyId, query.scope);
+  }
+
+  /**
+   * Kunlik maqsad darajasi (spec S2 1.3). `studentId` TOKENDAN — o'quvchi
+   * faqat o'z maqsadini o'zgartiradi. Javob — yangi maqsad bugungi ball bilan.
+   */
+  @Patch('maqsad')
+  patchMaqsad(
+    @Body() dto: MaqsadDto,
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.fortschritt.maqsadniOzgartir(studentId, companyId, dto.daraja);
+  }
+
+  /**
+   * Nishonlar katalogi o'quvchining o'z nishonlari bilan (spec S2 2.3).
+   * Alohida marshrut — «Darajam» tabi ochilgandagina so'raladi. Hech narsa
+   * yozmaydi: nishon seans oxirida beriladi.
+   */
+  @Get('nishonlar')
+  getNishonlar(
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.fortschritt.nishonlar(studentId, companyId);
+  }
+
+  /**
+   * Haftalik liga xonasi (spec S3 §4). `studentId` TOKENDAN. Hech narsa
+   * YOZMAYDI: xonaga qo'shilish seans oxirida — xonada bo'lmagan o'quvchi
+   * «birinchi seansdan keyin» ko'radi. Liga filialga cheklanmaydi
+   * (`branch-route-policy.ts` dagi SELF sababi).
+   */
+  @Get('liga')
+  getLiga(@CurrentUser('studentId') studentId: number) {
+    return this.fortschritt.liga(studentId);
+  }
+
+  /**
+   * Markazning haftalik guruhlar jadvali: TOP 10 + o'quvchining o'z guruhi.
+   * Alohida marshrut — «Guruhlar» tabi ochilgandagina so'raladi. Yozmaydi.
+   */
+  @Get('guruhlar')
+  getGuruhlar(
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.fortschritt.guruhlar(studentId, companyId);
+  }
+
+  /**
+   * Telegram eslatmalari (spec S4 §3). `studentId` TOKENDAN — o'quvchi faqat
+   * o'zinikini o'zgartiradi. Yozuvchi bitta (`eslatmalarniSaqla`): bot
+   * tugmasi ham shuni chaqiradi. Javob — `{ eslatmalar }`.
+   */
+  @Patch('eslatmalar')
+  patchEslatmalar(
+    @Body() dto: EslatmalarDto,
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.fortschritt.eslatmalarniOzgartir(
+      studentId,
+      companyId,
+      dto.yoqilgan,
+    );
   }
 }

@@ -1,6 +1,6 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
-import { Prisma } from '@prisma/client';
+import { DafDailyGoal, Prisma } from '@prisma/client';
 
 /**
  * Sxema qarorlarini qo'riqlaydigan testlar.
@@ -77,6 +77,114 @@ describe('Daf sxemasi', () => {
       expect(body).toMatch(/sourceId\s+String\s+@unique/);
     },
   );
+
+  // DafStudentDay — a DERIVED table: the source of truth stays DafAttempt
+  // (points included). groupKey is never NULL: a NULL key would not block
+  // a duplicate row. (Task 7 adds: the rebuild script must exist.)
+  it('DafStudentDay is derived and its key cannot duplicate', () => {
+    const schema = readFileSync(
+      join(__dirname, '..', '..', 'prisma', 'schema.prisma'),
+      'utf8',
+    );
+    const block = schema.slice(schema.indexOf('model DafStudentDay {'));
+    const body = block.slice(0, block.indexOf('\n}'));
+    expect(body).toMatch(/groupKey\s+String\s+@default\(""\)/);
+    expect(body).toMatch(/@@unique\(\[studentId, day, groupKey\]\)/);
+    expect(body).toMatch(/day\s+DateTime\s+@db\.Date/);
+    expect(fieldsOf('DafAttempt')).toContain('points');
+    // The table is derived only while it can be rebuilt (ADR-0114).
+    expect(
+      existsSync(
+        join(__dirname, '..', '..', 'scripts', 'rebuild-daf-student-day.ts'),
+      ),
+    ).toBe(true);
+  });
+
+  // S2 (ADR-0115). The goal is the student's CHOICE — it cannot be rebuilt
+  // from attempts, so it is stored; one row per student. A badge is earned
+  // once and never taken back: one row per (student, key), and no column
+  // that could revoke it.
+  it('DafStudentSetting is one row per student, DafStudentBadge one per key', () => {
+    const schema = readFileSync(
+      join(__dirname, '..', '..', 'prisma', 'schema.prisma'),
+      'utf8',
+    );
+    const body = (name: string) => {
+      const start = schema.indexOf(`model ${name} {`);
+      expect(start).toBeGreaterThan(-1);
+      const block = schema.slice(start);
+      return block.slice(0, block.indexOf('\n}'));
+    };
+    expect(body('DafStudentSetting')).toMatch(/studentId\s+Int\s+@id/);
+    expect(body('DafStudentSetting')).toMatch(
+      /dailyGoal\s+DafDailyGoal\s+@default\(ORTA\)/,
+    );
+    expect(body('DafStudentBadge')).toMatch(/@@unique\(\[studentId, key\]\)/);
+    expect(fieldsOf('DafStudentBadge')).not.toContain('revokedAt');
+    expect(DafDailyGoal).toEqual({
+      YENGIL: 'YENGIL',
+      ORTA: 'ORTA',
+      JIDDIY: 'JIDDIY',
+    });
+  });
+
+  // S3 (ADR-0116). The tier is permanent and only rises — one row per
+  // student, no column that could take it back. A room is weekly and a
+  // student is in one room per week. A group's week result is written once.
+  it('liga: doimiy daraja, haftalik xona, haftada bitta a`zolik, guruh haftasi bir marta', () => {
+    const schema = readFileSync(
+      join(__dirname, '..', '..', 'prisma', 'schema.prisma'),
+      'utf8',
+    );
+    const body = (name: string) => {
+      const start = schema.indexOf(`model ${name} {`);
+      expect(start).toBeGreaterThan(-1);
+      const block = schema.slice(start);
+      return block.slice(0, block.indexOf('\n}'));
+    };
+    expect(body('DafStudentLeague')).toMatch(/studentId\s+Int\s+@id/);
+    expect(body('DafStudentLeague')).toMatch(/tier\s+Int\s+@default\(0\)/);
+    expect(fieldsOf('DafStudentLeague')).not.toContain('demotedAt');
+    expect(body('DafLeagueRoom')).toMatch(
+      /@@unique\(\[companyId, weekStart, tier, number\]\)/,
+    );
+    expect(body('DafLeagueRoom')).toMatch(/weekStart\s+DateTime\s+@db\.Date/);
+    expect(body('DafLeagueRoom')).toMatch(/settledAt\s+DateTime\?/);
+    expect(body('DafLeagueEntry')).toMatch(
+      /@@unique\(\[weekStart, studentId\]\)/,
+    );
+    expect(body('DafLeagueEntry')).toMatch(
+      /promoted\s+Boolean\s+@default\(false\)/,
+    );
+    expect(body('DafGroupWeek')).toMatch(/@@unique\(\[weekStart, groupId\]\)/);
+    expect(body('DafGroupWeek')).toMatch(/average\s+Float/);
+  });
+
+  // S4 (ADR-0117). The log is claimed before the send: one row per (student,
+  // kind, Tashkent day), so a second cron instance claims nothing. The
+  // opt-out is the student's own choice on their settings row, on by default.
+  it('eslatma: jurnal o`quvchi, tur va kun bo`yicha yagona; eslatmalar standart yoqilgan', () => {
+    const schema = readFileSync(
+      join(__dirname, '..', '..', 'prisma', 'schema.prisma'),
+      'utf8',
+    );
+    const body = (name: string) => {
+      const start = schema.indexOf(`model ${name} {`);
+      expect(start).toBeGreaterThan(-1);
+      const block = schema.slice(start);
+      return block.slice(0, block.indexOf('\n}'));
+    };
+    expect(body('DafReminderLog')).toMatch(
+      /@@unique\(\[studentId, kind, sentOn\]\)/,
+    );
+    expect(body('DafReminderLog')).toMatch(/sentOn\s+DateTime\s+@db\.Date/);
+    expect(body('DafReminderLog')).toMatch(/@@index\(\[companyId, sentOn\]\)/);
+    expect(body('DafStudentSetting')).toMatch(
+      /remindersEnabled\s+Boolean\s+@default\(true\)/,
+    );
+    expect(schema).toMatch(/enum DafReminderKind \{\s*EVENING\s+WEEKLY\s*\}/);
+    expect(schema).toMatch(/enum DafReminderStatus \{\s*SENT\s+FAILED\s*\}/);
+  });
 });
 
 describe('A1 strukturasi', () => {
