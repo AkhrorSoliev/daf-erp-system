@@ -12,7 +12,7 @@ import {
   type SegmentOption,
 } from "../../lumio";
 import { msg } from "@/i18n/msg";
-import { useT } from "@/i18n/use-t";
+import { useLocale, useT } from "@/i18n/use-t";
 import { useFortschritt } from "../queries";
 import { darajaFoizi, qisqaRaqam } from "../yol/yol-tuzilishi";
 import { Nishonlarim } from "./nishonlarim";
@@ -54,6 +54,7 @@ export const REYTING_TABLARI: SegmentOption<ReytingTab>[] = [
  */
 function DarajamTab() {
   const t = useT();
+  const { locale } = useLocale();
   const query = useFortschritt();
   const { data } = query;
 
@@ -85,11 +86,18 @@ function DarajamTab() {
           <div className="space-y-1.5 text-left">
             <ProgressBar value={foiz} />
             <p className="text-xs font-semibold text-ink-500">
-              {t("{level} ({levelUz}) darajagacha {n} ball qoldi", {
-                level: naechsteStufe.de,
-                levelUz: naechsteStufe.uz,
-                n: qisqaRaqam(qoldi),
-              })}
+              {/* The Uzbek level name comes from the server: only the Uzbek
+                  sentence carries it. */}
+              {locale === "uz"
+                ? t("{level} ({levelUz}) darajagacha {n} ball qoldi", {
+                    level: naechsteStufe.de,
+                    levelUz: naechsteStufe.uz,
+                    n: qisqaRaqam(qoldi),
+                  })
+                : t("{level} darajagacha {n} ball qoldi", {
+                    level: naechsteStufe.de,
+                    n: qisqaRaqam(qoldi),
+                  })}
             </p>
           </div>
         ) : (

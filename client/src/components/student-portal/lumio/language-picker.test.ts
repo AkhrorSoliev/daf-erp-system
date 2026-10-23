@@ -8,7 +8,7 @@ vi.mock("@/i18n/use-t", () => ({
 }));
 
 import { LOCALES } from "@/i18n/locales";
-import { LanguagePicker, pickPortalLocale } from "./language-picker";
+import { LanguagePicker, pickPortalLocale, radioKeyTarget } from "./language-picker";
 
 const render = (variant: "list" | "compact") =>
   renderToStaticMarkup(createElement(LanguagePicker, { variant })).replace(/&#x27;/g, "'");
@@ -44,5 +44,28 @@ describe("pickPortalLocale", () => {
     pickPortalLocale("ru", "ru", setLocale);
     pickPortalLocale("fr", "ru", setLocale);
     expect(setLocale).not.toHaveBeenCalled();
+  });
+});
+
+describe("radioKeyTarget (roving tabindex)", () => {
+  const ids = LOCALES.map((l) => l.id);
+
+  it("moves to the next language on ArrowDown/ArrowRight and back on ArrowUp/ArrowLeft, wrapping round", () => {
+    expect(radioKeyTarget("ArrowDown", "uz", ids)).toBe("uz-Cyrl");
+    expect(radioKeyTarget("ArrowRight", "ru", ids)).toBe("de");
+    expect(radioKeyTarget("ArrowDown", "en", ids)).toBe("uz");
+    expect(radioKeyTarget("ArrowUp", "ru", ids)).toBe("uz-Cyrl");
+    expect(radioKeyTarget("ArrowLeft", "uz", ids)).toBe("en");
+  });
+
+  it("ignores every other key", () => {
+    for (const key of ["Tab", "Enter", " ", "Home", "a"]) expect(radioKeyTarget(key, "ru", ids)).toBeNull();
+  });
+
+  it("makes only the chosen language a tab stop", () => {
+    const html = render("list");
+    expect(html.match(/tabindex="0"/g)).toHaveLength(1);
+    expect(html).toMatch(/lang="ru" tabindex="0"/);
+    expect(html.match(/tabindex="-1"/g)).toHaveLength(LOCALES.length - 1);
   });
 });

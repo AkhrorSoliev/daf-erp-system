@@ -65,7 +65,15 @@ export function RailNavItem({
         />
       )}
       <Icon size={20} weight={active ? "fill" : "bold"} />
-      <span className={cn("truncate", collapsed && "max-w-full")}>
+      {/* Collapsed: a long ru/de name («Посещаемость», «Einstellungen»)
+          takes a second line and hyphenates instead of being cut. */}
+      <span
+        className={cn(
+          collapsed
+            ? "line-clamp-2 max-w-full break-words text-center hyphens-auto"
+            : "truncate",
+        )}
+      >
         {t(item.title)}
       </span>
     </Link>

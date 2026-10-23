@@ -60,13 +60,21 @@ const uzCyrl: Dictionary = {
   "Keyingi stansiya": "Кейинги станция",
   "Boshqa stansiya tanlash": "Бошқа станция танлаш",
   "Klassika, jazz, adabiyot va uzun ko'rsatuvlar": "Классика, жаз, адабиёт ва узун кўрсатувлар",
-  "Eski hitlar va schlager — sekin, tushunarli qo'shiqlar": "Эски ҳитлар ва schlager — секин, тушунарли қўшиқлар",
+  "Eski hitlar va schlager — sekin, tushunarli qo'shiqlar": "Эски хитлар ва schlager — секин, тушунарли қўшиқлар",
   "Mustaqil indie kanali, reklamasiz.": "Мустақил indie канали, рекламасиз.",
   "Eng yuqori sifat (256 kbps) — klassika va jazz.": "Энг юқори сифат (256 kbps) — классика ва жаз.",
   "Uzluksiz jazz, deyarli gapsiz — diqqatni buzmaydi.": "Узлуксиз жаз, деярли гапсиз — диққатни бузмайди.",
-  "Nemis schlageri va eski hitlar — so'zlari sekin va aniq.": "Немис schlageri ва эски ҳитлар — сўзлари секин ва аниқ.",
+  "Nemis schlageri va eski hitlar — so'zlari sekin va aniq.": "Немис schlageri ва эски хитлар — сўзлари секин ва аниқ.",
   "Bavariyaning eng katta kanali, oldies va mintaqaviy xabarlar.": "Бавариянинг энг катта канали, oldies ва минтақавий хабарлар.",
   "Faqat nemis schlageri — qo'shiq matnini ilg'ash oson.": "Фақат немис schlageri — қўшиқ матнини илғаш осон.",
+  // Loanwords from Russian: «хит» (not «ҳит») and «альтернатив» with its soft sign.
+  "Pop va hitlar": "Поп ва хитлар",
+  "Bavariya hitlari va ertalabki jonli suhbatlar.": "Бавария хитлари ва эрталабки жонли суҳбатлар.",
+  "Hit musiqa va kun davomida yangiliklar.": "Хит мусиқа ва кун давомида янгиликлар.",
+  "Frankfurt hitlari, yengil kundalik so'zlashuv.": "Франкфурт хитлари, енгил кундалик сўзлашув.",
+  "60-90 yillar xalqaro hitlari.": "60-90 йиллар халқаро хитлари.",
+  "Zamonaviy so'zlashuv tili va alternativ musiqa": "Замонавий сўзлашув тили ва альтернатив мусиқа",
+  "Alternativ musiqa, nemis va ingliz tillari aralash.": "Альтернатив мусиқа, немис ва инглиз тиллари аралаш.",
 };
 
 export default uzCyrl;

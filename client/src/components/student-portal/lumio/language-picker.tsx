@@ -1,5 +1,6 @@
 "use client";
 
+import type { KeyboardEvent } from "react";
 import { CaretDown, Check, Translate } from "@phosphor-icons/react";
 import { useLocale, useT } from "@/i18n/use-t";
 import { LOCALES, isUiLocale, type UiLocale } from "@/i18n/locales";
@@ -17,6 +18,17 @@ export function pickPortalLocale(next: string, current: UiLocale, setLocale: Set
   void setLocale(next, { save: false });
 }
 
+/**
+ * Radio-group keys (WAI-ARIA): an arrow moves to the next or previous language,
+ * wrapping round, and picks it. Any other key → null.
+ */
+export function radioKeyTarget(key: string, current: UiLocale, ids: readonly UiLocale[]): UiLocale | null {
+  const step = key === "ArrowDown" || key === "ArrowRight" ? 1 : key === "ArrowUp" || key === "ArrowLeft" ? -1 : 0;
+  if (step === 0 || ids.length === 0) return null;
+  const at = Math.max(0, ids.indexOf(current));
+  return ids[(at + step + ids.length) % ids.length];
+}
+
 export interface LanguagePickerProps {
   /** "list" — a row per language (Settings), "compact" — a small menu (sign-in page). */
   variant?: "list" | "compact";
@@ -29,6 +41,16 @@ export function LanguagePicker({ variant = "list", className }: LanguagePickerPr
   const t = useT();
   const { locale, setLocale } = useLocale();
   const pick = (next: string) => pickPortalLocale(next, locale, setLocale);
+
+  // Roving tabindex: only the chosen language is a tab stop; arrows move the
+  // choice and the focus with it.
+  const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
+    const next = radioKeyTarget(e.key, locale, LOCALES.map((l) => l.id));
+    if (!next) return;
+    e.preventDefault();
+    pick(next);
+    e.currentTarget.parentElement?.querySelector<HTMLButtonElement>(`[lang="${next}"]`)?.focus();
+  };
 
   if (variant === "compact") {
     // A native select: on a phone it opens the system's own list.
@@ -63,6 +85,8 @@ export function LanguagePicker({ variant = "list", className }: LanguagePickerPr
             role="radio"
             aria-checked={active}
             lang={id}
+            tabIndex={active ? 0 : -1}
+            onKeyDown={onKeyDown}
             onClick={() => pick(id)}
             className={cn(
               "flex h-11 items-center justify-between rounded-pill px-4 font-display text-base font-bold transition-colors",

@@ -125,9 +125,12 @@ export function LernenLevelsPage() {
                     <p className="font-display font-bold text-ink-900">
                       {s.label}
                     </p>
-                    <p className="text-xs font-semibold text-ink-500">
-                      {t(s.sub)}
-                    </p>
+                    {/* In German the subtitle is the label itself («Hören»). */}
+                    {t(s.sub) !== s.label && (
+                      <p className="text-xs font-semibold text-ink-500">
+                        {t(s.sub)}
+                      </p>
+                    )}
                   </div>
                   <Badge tone="neutral" size="sm">
                     {t("Tez orada")}

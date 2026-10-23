@@ -83,7 +83,11 @@ export function SegmentedControl<T extends string>({
             aria-pressed={active}
             className={cn(
               "relative z-10 flex items-center justify-center font-display text-sm font-bold transition-colors",
-              compact ? "h-8" : "h-10 gap-1.5",
+              // Labelled: a longer translation wraps onto a second line and the
+              // segment grows; the pill follows (it is pinned by top/bottom).
+              compact
+                ? "h-8"
+                : "h-auto min-h-10 gap-1.5 px-1 py-1 text-center text-[13px] leading-tight sm:text-sm",
               active ? "text-coral-600" : "text-ink-500",
             )}
           >

@@ -58,7 +58,10 @@ export function LumioBottomNav({ className }: { className?: string }) {
               <Icon size={24} weight={active ? "fill" : "regular"} />
               <span
                 className={cn(
-                  "text-[11px] leading-none",
+                  // A longer ru/de label («Расписание», «Stundenplan») wraps
+                  // and hyphenates (<html lang> is set) into a second line;
+                  // the 68px pill has room for two.
+                  "w-full break-words text-center text-[10px] leading-tight hyphens-auto min-[380px]:text-[11px]",
                   active ? "font-extrabold" : "font-bold",
                 )}
               >

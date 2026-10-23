@@ -243,7 +243,7 @@ export function NatijaEkrani({
             {qator.serie != null ? (
               <StatChip
                 icon={<Fire weight="fill" className="text-coral-500" />}
-                value={t("{n} kun", { n: qator.serie })}
+                value={t("{n} kun ketma-ket", { n: qator.serie })}
                 label={t("seriya")}
               />
             ) : null}

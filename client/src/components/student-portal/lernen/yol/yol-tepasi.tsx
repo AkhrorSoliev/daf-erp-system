@@ -125,7 +125,7 @@ export function YolTepasi() {
           icon={<Fire size={18} weight="fill" />}
           tone="text-coral-500"
           value={qisqaRaqam(data.serie)}
-          wide={t("{n} kun", { n: qisqaRaqam(data.serie) })}
+          wide={t("{n} kun ketma-ket", { n: qisqaRaqam(data.serie) })}
         />
         <Belgi
           icon={<Trophy size={18} weight="fill" />}
