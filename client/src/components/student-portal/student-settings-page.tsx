@@ -9,7 +9,9 @@ import {
   Card,
   ListRow,
   ThemeSegmented,
+  LanguagePicker,
 } from "./lumio";
+import { useT } from "@/i18n/context";
 import { StudentPasswordDialog } from "./student-password-dialog";
 import { LogoutOthersDialog } from "@/components/shared/logout-others-dialog";
 import { useStudentProfile } from "./lib/queries";
@@ -20,6 +22,7 @@ import { settingsHelpItems } from "@/lib/student-nav-items";
 // the Profile screen, which this page links to. One field, one place to edit
 // it: the photo uploader and the name row that used to sit here are gone.
 export function StudentSettingsPage() {
+  const t = useT();
   const { data: profile } = useStudentProfile();
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [logoutOthersOpen, setLogoutOthersOpen] = useState(false);
@@ -31,6 +34,13 @@ export function StudentSettingsPage() {
       <Section title="Mavzu">
         <Card pad="sm">
           <ThemeSegmented variant="full" />
+        </Card>
+      </Section>
+
+      {/* Kept on this device only (cookie): a student has no account language. */}
+      <Section title={t("Til")}>
+        <Card pad="sm">
+          <LanguagePicker />
         </Card>
       </Section>
 

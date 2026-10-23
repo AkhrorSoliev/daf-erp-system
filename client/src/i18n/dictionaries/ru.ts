@@ -4808,6 +4808,9 @@ const ru: Dictionary = {
   "Kirishni tugatib bo'lmadi": "Не удалось завершить вход",
   "Kirish sahifasiga qaytish": "Вернуться на страницу входа",
   "Kirish tasdiqlanmoqda...": "Подтверждаем вход...",
+  // Student portal — sign-in page
+  "Telefon raqam yoki parol noto'g'ri": "Неверный номер телефона или пароль",
+  "DAF Sprachzentrum — o'quvchi kabineti": "DAF Sprachzentrum — кабинет ученика",
 };
 
 export default ru;

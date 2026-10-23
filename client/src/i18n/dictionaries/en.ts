@@ -4808,6 +4808,9 @@ const en: Dictionary = {
   "Kirishni tugatib bo'lmadi": "Could not complete the sign-in",
   "Kirish sahifasiga qaytish": "Back to the sign-in page",
   "Kirish tasdiqlanmoqda...": "Confirming sign-in...",
+  // Student portal — sign-in page
+  "Telefon raqam yoki parol noto'g'ri": "Incorrect phone number or password",
+  "DAF Sprachzentrum — o'quvchi kabineti": "DAF Sprachzentrum — student workspace",
 };
 
 export default en;

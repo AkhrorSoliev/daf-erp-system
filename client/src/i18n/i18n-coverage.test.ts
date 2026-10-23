@@ -760,6 +760,12 @@ export const STRICT_FILES: string[] = [
   "data/searchable-pages.ts",
   "hooks/use-global-search.ts",
   "components/shared/group-students-hover-card.tsx",
+  // Student portal — language mechanism, sign-in page
+  "app/(auth)/login/student-login-form.tsx",
+  "components/student-portal/lumio/language-picker.tsx",
+  "components/student-portal/lumio/theme-segmented.tsx",
+  "components/student-portal/lumio/input.tsx",
+  "components/student-portal/student-settings-page.tsx",
 ];
 
 function walk(dir: string): string[] {
