@@ -33,4 +33,13 @@ describe("sozHisoblagichi — seen / total words of a section (ADR-0071)", () =>
     expect(sozHisoblagichi(undefined)).toBeNull();
     expect(sozHisoblagichi({ jami: 0, gesehen: 0 })).toBeNull();
   });
+
+  it("puts both lines through the page's t; the counts stay numbers", () => {
+    const t = (s: string, p?: Record<string, string | number>) =>
+      `[${s.replace(/\{(\w+)\}/g, (_, k: string) => String(p?.[k]))}]`;
+    expect(sozHisoblagichi({ jami: 28, gesehen: 14 }, t)).toMatchObject({
+      matn: "[So'zlar: 14 / 28]",
+      yanaMashq: "[Yana mashq qilish · 14 yangi so'z]",
+    });
+  });
 });

@@ -3,6 +3,7 @@
 import { UsersThree } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Card, EmptyState, Skeleton } from "../../lumio";
+import { useT } from "@/i18n/use-t";
 import { useGuruhlar } from "../queries";
 import { bahoMatni } from "../liga";
 import type { GuruhQatori } from "../types";
@@ -11,6 +12,7 @@ import { LoadFailed } from "../../load-failed";
 
 /** Bitta guruh qatori; `min-h-[62px]` — skelet shu balandlikni egallaydi. */
 function GuruhQatoriKorinishi({ qator }: { qator: GuruhQatori }) {
+  const t = useT();
   return (
     <li
       className={cn(
@@ -23,13 +25,13 @@ function GuruhQatoriKorinishi({ qator }: { qator: GuruhQatori }) {
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate font-semibold text-ink-900">
-          {qator.selbst ? <span className="sr-only">Sizning guruhingiz: </span> : null}
+          {qator.selbst ? <span className="sr-only">{t("Sizning guruhingiz:")} </span> : null}
           {qator.name}
         </span>
-        <span className="block text-xs font-semibold text-ink-500">{qator.azolar} kishi</span>
+        <span className="block text-xs font-semibold text-ink-500">{t("{n} kishi", { n: qator.azolar })}</span>
       </span>
       <span className="shrink-0 font-display text-sm font-extrabold text-ink-900">
-        {bahoMatni(qator.baho)}
+        {bahoMatni(qator.baho, t)}
       </span>
     </li>
   );
@@ -52,6 +54,7 @@ export function GuruhlarSkelet() {
  * a'zo soni serverdan (`minAzolar`) — matnga qo'lda yozilmaydi.
  */
 export function GuruhlarTab() {
+  const t = useT();
   const query = useGuruhlar();
   const { data } = query;
 
@@ -64,22 +67,27 @@ export function GuruhlarTab() {
   return (
     <div className="space-y-2">
       <p className="px-1 text-xs font-semibold text-ink-500">
-        Guruhning o&apos;rtacha balli (hamma a&apos;zolar bo&apos;yicha). {data.minAzolar} kishidan
-        kam guruh jadvalga kirmaydi.
+        {t(
+          "Guruhning o'rtacha balli (hamma a'zolar bo'yicha). {n} kishidan kam guruh jadvalga kirmaydi.",
+          { n: data.minAzolar },
+        )}
       </p>
       {data.oz ? null : (
         <Card className="text-sm font-semibold text-ink-700">
-          Guruhingiz jadvalga hali kirmaydi (kamida {data.minAzolar} kishi kerak)
+          {t("Guruhingiz jadvalga hali kirmaydi (kamida {n} kishi kerak)", { n: data.minAzolar })}
         </Card>
       )}
       {data.qatorlar.length === 0 ? (
         <EmptyState
           icon={<UsersThree size={28} weight="bold" />}
-          title="Bu hafta jadvalda guruh yo'q"
-          description={`Kamida ${data.minAzolar} kishilik faol guruhlar shu yerda haftalik o'rtacha ball bilan ko'rinadi.`}
+          title={t("Bu hafta jadvalda guruh yo'q")}
+          description={t(
+            "Kamida {n} kishilik faol guruhlar shu yerda haftalik o'rtacha ball bilan ko'rinadi.",
+            { n: data.minAzolar },
+          )}
         />
       ) : (
-        <ul className="space-y-2" aria-label="Guruhlar jadvali">
+        <ul className="space-y-2" aria-label={t("Guruhlar jadvali")}>
           {top.map((q) => (
             <GuruhQatoriKorinishi key={q.groupId} qator={q} />
           ))}

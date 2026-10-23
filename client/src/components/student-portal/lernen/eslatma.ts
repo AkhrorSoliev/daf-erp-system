@@ -1,3 +1,4 @@
+import { msg } from "@/i18n/msg";
 import type { Fortschritt } from "./types";
 
 /**
@@ -15,7 +16,8 @@ export function eslatmaHolati(
   return f.eslatmalar ? "yoqilgan" : "ochirilgan";
 }
 
-export const ESLATMA_SARLAVHA = "Telegram eslatmalari";
-export const ESLATMA_IZOH = "Kechki eslatma va dushanba xulosasi";
-export const ULANMAGAN_IZOH = "Botga ulang";
-export const SAQLANMADI = "Saqlab bo'lmadi. Qayta urinib ko'ring";
+// `msg()` texts, drawn with `t()` by `EslatmalarQatori`.
+export const ESLATMA_SARLAVHA = msg("Telegram eslatmalari");
+export const ESLATMA_IZOH = msg("Kechki eslatma va dushanba xulosasi");
+export const ULANMAGAN_IZOH = msg("Botga ulang");
+export const SAQLANMADI = msg("Saqlab bo'lmadi. Qayta urinib ko'ring");

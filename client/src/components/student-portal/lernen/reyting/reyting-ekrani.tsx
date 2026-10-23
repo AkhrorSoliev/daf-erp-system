@@ -11,6 +11,8 @@ import {
   StackHeader,
   type SegmentOption,
 } from "../../lumio";
+import { msg } from "@/i18n/msg";
+import { useLocale, useT } from "@/i18n/use-t";
 import { useFortschritt } from "../queries";
 import { darajaFoizi, qisqaRaqam } from "../yol/yol-tuzilishi";
 import { Nishonlarim } from "./nishonlarim";
@@ -29,10 +31,10 @@ type ReytingTab = "liga" | "guruhim" | "guruhlar" | "darajam";
  * so'rovini faqat chizilganda yuboradi.
  */
 export const REYTING_TABLARI: SegmentOption<ReytingTab>[] = [
-  { value: "liga", label: "Liga" },
-  { value: "guruhim", label: "Guruhim" },
-  { value: "guruhlar", label: "Guruhlar" },
-  { value: "darajam", label: "Darajam" },
+  { value: "liga", label: msg("Liga") },
+  { value: "guruhim", label: msg("Guruhim") },
+  { value: "guruhlar", label: msg("Guruhlar") },
+  { value: "darajam", label: msg("Darajam") },
 ];
 
 /**
@@ -51,6 +53,8 @@ export const REYTING_TABLARI: SegmentOption<ReytingTab>[] = [
  * Ostida «Nishonlarim» (S2) — o'z so'rovi bilan, faqat shu tab ochilganda — va «Telegram eslatmalari» qatori (S4, `fortschritt` dan).
  */
 function DarajamTab() {
+  const t = useT();
+  const { locale } = useLocale();
   const query = useFortschritt();
   const { data } = query;
 
@@ -68,7 +72,7 @@ function DarajamTab() {
           <p className="font-display text-4xl font-extrabold text-ink-900">
             {qisqaRaqam(gesamt)}
           </p>
-          <p className="text-sm font-semibold text-ink-500">umumiy ball</p>
+          <p className="text-sm font-semibold text-ink-500">{t("umumiy ball")}</p>
         </div>
 
         <div>
@@ -82,13 +86,23 @@ function DarajamTab() {
           <div className="space-y-1.5 text-left">
             <ProgressBar value={foiz} />
             <p className="text-xs font-semibold text-ink-500">
-              {naechsteStufe.de} ({naechsteStufe.uz}) darajagacha{" "}
-              {qisqaRaqam(qoldi)} ball qoldi
+              {/* The Uzbek level name comes from the server: only the Uzbek
+                  sentence carries it. */}
+              {locale === "uz"
+                ? t("{level} ({levelUz}) darajagacha {n} ball qoldi", {
+                    level: naechsteStufe.de,
+                    levelUz: naechsteStufe.uz,
+                    n: qisqaRaqam(qoldi),
+                  })
+                : t("{level} darajagacha {n} ball qoldi", {
+                    level: naechsteStufe.de,
+                    n: qisqaRaqam(qoldi),
+                  })}
             </p>
           </div>
         ) : (
           <Badge tone="amber" size="md" className="mx-auto">
-            Eng yuqori daraja
+            {t("Eng yuqori daraja")}
           </Badge>
         )}
       </Card>
@@ -99,13 +113,18 @@ function DarajamTab() {
 }
 
 export function ReytingEkrani() {
+  const t = useT();
   const [tab, setTab] = React.useState<ReytingTab>("liga");
 
   return (
     <Screen narrow>
-      <StackHeader title="Reyting" backHref="/portal/lernen" />
-      <div role="group" aria-label="Reyting bo'limlari">
-        <SegmentedControl<ReytingTab> options={REYTING_TABLARI} value={tab} onChange={setTab} />
+      <StackHeader title={t("Reyting")} backHref="/portal/lernen" />
+      <div role="group" aria-label={t("Reyting bo'limlari")}>
+        <SegmentedControl<ReytingTab>
+          options={REYTING_TABLARI.map((o) => ({ ...o, label: t(o.label) }))}
+          value={tab}
+          onChange={setTab}
+        />
       </div>
 
       {tab === "liga" ? (

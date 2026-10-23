@@ -67,4 +67,13 @@ describe("nishonQoldi", () => {
   it("olingan — matn yo'q", () => {
     expect(nishonQoldi(q({ olingan: "2026-10-18T07:00:00.000Z", qoldi: null }))).toBeNull();
   });
+
+  it("names and hints go through the page's t; an unknown key stays as sent", () => {
+    const t = (s: string, p?: Record<string, string | number>) =>
+      `[${s.replace(/\{(\w+)\}/g, (_, k: string) => String(p?.[k]))}]`;
+    expect(nishonNomi("SERIE_14", t)).toBe("[14 kun ketma-ket]");
+    expect(nishonNomi("LIGA_KUMUSH", t)).toBe("[[Kumush] ligasi]");
+    expect(nishonNomi("LIGA_TEMIR", t)).toBe("LIGA_TEMIR");
+    expect(nishonQoldi(q({}), t)).toBe("[yana 4 kun]");
+  });
 });

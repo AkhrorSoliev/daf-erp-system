@@ -1,3 +1,5 @@
+import { interpolate } from "@/i18n/translate";
+import type { Translate } from "../liga";
 import type { LernenSectionGroup, LernenSeans } from "../types";
 
 export type YolTugunTuri = "daraja" | "unit" | "seans" | "tez-orada";
@@ -72,8 +74,14 @@ interface Manzilli {
  * bo'lgani `active`, undan keyingilarining hammasi `locked`. Bo'lim
  * ichida yoki unit ichida alohida sanalsa, ekranda bir vaqtda bir necha
  * "navbatdagi" tugun yonardi.
+ *
+ * `t` — the page's translator for the path's own words («Tez orada», «Yakuniy
+ * sinov»); titles from the server stay as sent.
  */
-export function yolTugunlari(levels: YolDarajaKirish[]): YolTugun[] {
+export function yolTugunlari(
+  levels: YolDarajaKirish[],
+  t: Translate = interpolate,
+): YolTugun[] {
   const hammaSeanslar: Manzilli[] = [];
   for (const daraja of levels) {
     for (const unit of daraja.units) {
@@ -122,7 +130,7 @@ export function yolTugunlari(levels: YolDarajaKirish[]): YolTugun[] {
       tugunlar.push({
         tur: "tez-orada",
         id: null,
-        matn: "Tez orada",
+        matn: t("Tez orada"),
         ostyozuv: null,
         daraja: daraja.level,
         holat: "locked",
@@ -144,7 +152,7 @@ export function yolTugunlari(levels: YolDarajaKirish[]): YolTugun[] {
         tugunlar.push({
           tur: "tez-orada",
           id: null,
-          matn: "Tez orada",
+          matn: t("Tez orada"),
           ostyozuv: null,
           daraja: daraja.level,
           holat: "locked",
@@ -178,7 +186,7 @@ export function yolTugunlari(levels: YolDarajaKirish[]): YolTugun[] {
           tur: "seans",
           id: unit.finalTest.id,
           matn: unit.finalTest.titleUz ?? unit.finalTest.titleDe,
-          ostyozuv: "Yakuniy sinov",
+          ostyozuv: t("Yakuniy sinov"),
           daraja: daraja.level,
           holat: holatOl(sanoq),
         });

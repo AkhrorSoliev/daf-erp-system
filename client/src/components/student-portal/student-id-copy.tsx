@@ -2,6 +2,7 @@
 
 import toast from "react-hot-toast";
 import { Copy } from "@phosphor-icons/react";
+import { useT } from "@/i18n/context";
 
 /**
  * The student's ID with a tap to copy it. Payme (`student_id`) and Click
@@ -9,12 +10,13 @@ import { Copy } from "@phosphor-icons/react";
  * from their own Payme or Click app has to type it in.
  */
 export function StudentIdCopy({ id }: { id: number }) {
+  const t = useT();
   async function copy() {
     try {
       await navigator.clipboard.writeText(String(id));
-      toast.success("ID nusxalandi");
+      toast.success(t("ID nusxalandi"));
     } catch {
-      toast.error("Nusxalab bo'lmadi, raqamni qo'lda yozib oling");
+      toast.error(t("Nusxalab bo'lmadi, raqamni qo'lda yozib oling"));
     }
   }
 
@@ -22,7 +24,7 @@ export function StudentIdCopy({ id }: { id: number }) {
     <button
       type="button"
       onClick={copy}
-      aria-label={`ID ${id} ni nusxalash`}
+      aria-label={t("ID {id} ni nusxalash", { id })}
       className="inline-flex items-center gap-1.5 rounded-pill border border-line bg-surface px-3 py-1 font-display text-sm font-bold tabular-nums text-ink-700 transition-colors hover:bg-tint"
     >
       ID: {id}

@@ -6,18 +6,20 @@ import { moreNavItems } from "@/lib/student-nav-items";
 import { Screen, ScreenHeader, FadeIn, ListRow, Avatar } from "./lumio";
 import { LogoutButton } from "./student-logout-button";
 import { useStudentProfile } from "./lib/queries";
+import { useT } from "@/i18n/context";
 
 // The rows come from the nav config, never from a list kept here: a copy of
 // its own is how this hub once missed Ta'lim while listing To'lovlar twice.
 export function StudentMoreHub() {
+  const t = useT();
   const { data: profile } = useStudentProfile();
   const name = profile
     ? `${profile.firstName} ${profile.lastName}`.trim()
-    : "Profil";
+    : t("Profil");
 
   return (
     <Screen>
-      <ScreenHeader title="Ko'proq" />
+      <ScreenHeader title={t("Ko'proq")} />
 
       <FadeIn index={0}>
         <Link
@@ -30,7 +32,7 @@ export function StudentMoreHub() {
               {name}
             </span>
             <span className="block text-sm font-semibold text-ink-500">
-              Profilni ko&apos;rish
+              {t("Profilni ko'rish")}
             </span>
           </span>
           <CaretRight size={20} weight="bold" className="text-ink-400" />
@@ -45,7 +47,7 @@ export function StudentMoreHub() {
               <ListRow
                 icon={<Icon weight="bold" />}
                 iconTone={item.tone}
-                label={item.title}
+                label={t(item.title)}
                 href={item.url}
               />
             </FadeIn>

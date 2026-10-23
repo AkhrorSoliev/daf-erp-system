@@ -8,8 +8,12 @@ import { formatBalance } from "@/lib/format-utils";
 import { CheckCircle, CaretLeft } from "@phosphor-icons/react";
 import { Screen, Card, Button, Skeleton } from "./lumio";
 import type { StudentProfile } from "./lib/types";
+import { useT } from "@/i18n/context";
+
+const BACK_AFTER_SECONDS = 10;
 
 export function PaymentResultPage() {
+  const t = useT();
   const router = useRouter();
 
   const { data: profile, isLoading } = useQuery<StudentProfile>({
@@ -19,7 +23,7 @@ export function PaymentResultPage() {
   });
 
   useEffect(() => {
-    const timer = setTimeout(() => router.replace("/portal/payments"), 10_000);
+    const timer = setTimeout(() => router.replace("/portal/payments"), BACK_AFTER_SECONDS * 1000);
     return () => clearTimeout(timer);
   }, [router]);
 
@@ -46,22 +50,23 @@ export function PaymentResultPage() {
 
           <div className="space-y-1.5">
             <h2 className="font-display text-xl font-extrabold text-ink-900">
-              To&apos;lov jarayoni yakunlandi
+              {t("To'lov jarayoni yakunlandi")}
             </h2>
             <p className="text-sm font-semibold text-ink-500">
-              To&apos;lovingiz qayta ishlanmoqda. Balans bir necha daqiqa ichida
-              yangilanadi.
+              {t(
+                "To'lovingiz qayta ishlanmoqda. Balans bir necha daqiqa ichida yangilanadi.",
+              )}
             </p>
           </div>
 
           <div className="inset-well rounded-card bg-sunk p-4">
             <p className="text-xs font-bold uppercase tracking-wider text-ink-500">
-              Joriy balans
+              {t("Joriy balans")}
             </p>
             <p
               className={`mt-1 font-display text-2xl font-extrabold ${inDebt ? "text-danger" : "text-success"}`}
             >
-              {formatBalance(balance)}
+              {formatBalance(balance, t("so'm"))}
             </p>
           </div>
 
@@ -71,11 +76,13 @@ export function PaymentResultPage() {
             onClick={() => router.replace("/portal/payments")}
             iconBefore={<CaretLeft size={18} weight="bold" />}
           >
-            To&apos;lovlarga qaytish
+            {t("To'lovlarga qaytish")}
           </Button>
 
           <p className="text-xs font-semibold text-ink-400">
-            10 soniyadan keyin avtomatik qaytariladi
+            {t("{n} soniyadan keyin avtomatik qaytariladi", {
+              n: BACK_AFTER_SECONDS,
+            })}
           </p>
         </Card>
       </div>

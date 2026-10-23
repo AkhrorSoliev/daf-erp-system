@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/use-t";
 import { Play, Pause, ArrowClockwise, CircleNotch, X } from "../lumio/icon";
 import { TILE_TONE } from "../lumio/tones";
 import { categoryOf } from "@/lib/radio-stations";
@@ -19,6 +20,7 @@ import { LiveBars } from "./live-bars";
  * page it sits on.
  */
 export function RadioMiniPlayer() {
+  const t = useT();
   const stationId = useRadio((s) => s.stationId);
   const status = useRadio((s) => s.status);
   const toggle = useRadio((s) => s.toggle);
@@ -37,12 +39,12 @@ export function RadioMiniPlayer() {
   const failed = status === "error";
 
   const statusLine = failed
-    ? "Ulanib bo'lmadi"
+    ? t("Ulanib bo'lmadi")
     : loading
-      ? "Ulanmoqda..."
+      ? t("Ulanmoqda...")
       : playing
-        ? "Jonli efir"
-        : "To'xtatilgan";
+        ? t("Jonli efir")
+        : t("To'xtatilgan");
 
   return (
     <div
@@ -62,7 +64,7 @@ export function RadioMiniPlayer() {
           type="button"
           onClick={() => setExpanded(true)}
           className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl py-1 pl-1 pr-1 text-left transition-colors hover:bg-tint"
-          aria-label={`${station.name} — to'liq playerni ochish`}
+          aria-label={t("{name} — to'liq playerni ochish", { name: station.name })}
         >
           <span
             className={cn(
@@ -96,7 +98,7 @@ export function RadioMiniPlayer() {
           <button
             type="button"
             onClick={retry}
-            aria-label="Qayta ulanish"
+            aria-label={t("Qayta ulanish")}
             className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-danger/12 text-danger transition-colors hover:bg-danger/20"
           >
             <ArrowClockwise size={20} weight="bold" />
@@ -105,7 +107,7 @@ export function RadioMiniPlayer() {
           <button
             type="button"
             onClick={toggle}
-            aria-label={playing || loading ? "To'xtatish" : "Eshitish"}
+            aria-label={playing || loading ? t("To'xtatish") : t("Eshitish")}
             className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-coral-500 text-white shadow-lumio-sm transition-transform active:scale-95"
           >
             {loading ? (
@@ -121,7 +123,7 @@ export function RadioMiniPlayer() {
         <button
           type="button"
           onClick={stop}
-          aria-label="Radioni yopish"
+          aria-label={t("Radioni yopish")}
           className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-ink-400 transition-colors hover:bg-tint hover:text-ink-700"
         >
           <X size={16} weight="bold" />

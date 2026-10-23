@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { cn } from "@/lib/utils";
 import { Card } from "../../lumio";
+import { useT } from "@/i18n/use-t";
 import { useEslatmalarOzgartir, useFortschritt } from "../queries";
 import {
   ESLATMA_IZOH,
@@ -24,6 +25,7 @@ import {
  * alohida so'rov yo'q.
  */
 export function EslatmalarQatori() {
+  const t = useT();
   const { data } = useFortschritt();
   const ozgartir = useEslatmalarOzgartir();
   const id = useId();
@@ -39,10 +41,10 @@ export function EslatmalarQatori() {
     <Card className="flex items-center justify-between gap-3">
       <div className="min-w-0">
         <p id={sarlavhaId} className="font-display text-sm font-extrabold text-ink-900">
-          {ESLATMA_SARLAVHA}
+          {t(ESLATMA_SARLAVHA)}
         </p>
         <p id={izohId} className="text-xs font-semibold text-ink-500">
-          {faol ? ESLATMA_IZOH : ULANMAGAN_IZOH}
+          {faol ? t(ESLATMA_IZOH) : t(ULANMAGAN_IZOH)}
         </p>
       </div>
       <button
@@ -56,7 +58,7 @@ export function EslatmalarQatori() {
           // `disabled` emas: u tugmani fokusdan chiqaradi va har bosishda xira miltillatadi.
           if (!faol || ozgartir.isPending) return;
           ozgartir.mutate(!yoqiq, {
-            onError: (err) => toast.error(getErrorMessage(err, SAQLANMADI)),
+            onError: (err) => toast.error(getErrorMessage(err, t(SAQLANMADI))),
           });
         }}
         className="flex min-h-11 min-w-12 shrink-0 items-center justify-center aria-disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral-500"

@@ -11,6 +11,8 @@ import {
   Button,
   LoadingCards,
 } from "../lumio";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/use-t";
 import { RadioSessionToggle } from "../radio/radio-session-toggle";
 import { useLernenLesson } from "./queries";
 import { loadState } from "../lib/load-state";
@@ -22,11 +24,11 @@ import type { LernenExercise, LernenLexeme } from "./types";
 
 /** Turi bo'yicha nom — o'quvchi nima kelayotganini biladi. */
 const KIND_LABEL: Record<LernenExercise["kind"], string> = {
-  MC: "Variant tanlash",
-  GAP: "Bo'sh joyni to'ldirish",
-  CLOZE: "Matnni to'ldirish",
-  REORDER: "So'zlarni tartiblash",
-  FREE_WRITE: "Yozma topshiriq",
+  MC: msg("Variant tanlash"),
+  GAP: msg("Bo'sh joyni to'ldirish"),
+  CLOZE: msg("Matnni to'ldirish"),
+  REORDER: msg("So'zlarni tartiblash"),
+  FREE_WRITE: msg("Yozma topshiriq"),
 };
 
 /**
@@ -37,6 +39,7 @@ const KIND_LABEL: Record<LernenExercise["kind"], string> = {
  * so'zni o'ynatadi.
  */
 function LexemeRow({ lexeme }: { lexeme: LernenLexeme }) {
+  const t = useT();
   const play = useClipPlayer(
     lexeme.audioUrl
       ? {
@@ -52,14 +55,14 @@ function LexemeRow({ lexeme }: { lexeme: LernenLexeme }) {
       <div className="min-w-0 flex-1">
         <p className="font-semibold text-ink-900">{lexeme.de}</p>
         <p className="text-sm font-semibold text-ink-500">
-          {lexeme.uz ?? <span className="italic">tarjima tayyorlanmoqda</span>}
+          {lexeme.uz ?? <span className="italic">{t("tarjima tayyorlanmoqda")}</span>}
         </p>
       </div>
       {lexeme.audioUrl ? (
         <button
           type="button"
           onClick={play}
-          aria-label="Tinglash"
+          aria-label={t("So'zni tinglash")}
           className="rounded-full bg-sky-500/12 p-2 text-sky-600 transition-colors hover:bg-sky-500/20"
         >
           <SpeakerHigh size={18} weight="bold" />
@@ -83,7 +86,9 @@ function NotYetExercise({
   exercise: LernenExercise;
   index: number;
 }) {
+  const t = useT();
   const open = exercise.answerStatus === "OPEN";
+  const kindLabel = KIND_LABEL[exercise.kind];
 
   return (
     <Card className="space-y-2 opacity-75">
@@ -93,10 +98,10 @@ function NotYetExercise({
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="neutral" size="sm">
-          {KIND_LABEL[exercise.kind]}
+          {t(kindLabel)}
         </Badge>
         <Badge tone={open ? "amber" : "neutral"} size="sm">
-          {open ? "Bitta to'g'ri javobi yo'q" : "Tez orada"}
+          {open ? t("Bitta to'g'ri javobi yo'q") : t("Tez orada")}
         </Badge>
       </div>
     </Card>
@@ -125,12 +130,13 @@ type Stage = "study" | "drill" | "done";
 const MASHQ_TUGMASI_YOQILGAN = false;
 
 export function LernenLessonPage({ lessonId }: { lessonId: number }) {
+  const t = useT();
   const query = useLernenLesson(lessonId);
   const { data } = query;
   const [stage, setStage] = React.useState<Stage>("study");
   const [score, setScore] = React.useState({ correct: 0, total: 0 });
 
-  const title = data ? (data.titleUz ?? data.titleDe) : "Dars";
+  const title = data ? (data.titleUz ?? data.titleDe) : t("Dars");
   const isVocab = MASHQ_TUGMASI_YOQILGAN && (data?.lexemes.length ?? 0) >= 2;
 
   return (
@@ -173,8 +179,8 @@ export function LernenLessonPage({ lessonId }: { lessonId: number }) {
               </p>
               <p className="mt-1 font-semibold text-ink-500">
                 {score.correct === score.total
-                  ? "Hammasi to'g'ri!"
-                  : "Yaxshi ish — qaytarib mustahkamlang"}
+                  ? t("Hammasi to'g'ri!")
+                  : t("Yaxshi ish — qaytarib mustahkamlang")}
               </p>
             </div>
             <div className="flex gap-2">
@@ -183,10 +189,10 @@ export function LernenLessonPage({ lessonId }: { lessonId: number }) {
                 className="flex-1"
                 onClick={() => setStage("study")}
               >
-                So&apos;zlarni ko&apos;rish
+                {t("So'zlarni ko'rish")}
               </Button>
               <Button className="flex-1" onClick={() => setStage("drill")}>
-                Qayta mashq
+                {t("Qayta mashq")}
               </Button>
             </div>
           </Card>
@@ -207,7 +213,7 @@ export function LernenLessonPage({ lessonId }: { lessonId: number }) {
               </p>
               {data.grammar.explanationUz ? null : (
                 <Badge tone="neutral" size="sm">
-                  Tarjima tayyorlanmoqda
+                  {t("Tarjima tayyorlanmoqda")}
                 </Badge>
               )}
             </Card>
@@ -216,7 +222,7 @@ export function LernenLessonPage({ lessonId }: { lessonId: number }) {
           {data.lexemes.length > 0 ? (
             <Card>
               <p className="mb-1 font-display text-sm font-bold uppercase tracking-wide text-ink-500">
-                Lug&apos;at · {data.lexemes.length} so&apos;z
+                {t("Lug'at · {n} so'z", { n: data.lexemes.length })}
               </p>
               {data.lexemes.map((l) => (
                 <LexemeRow key={l.id} lexeme={l} />
@@ -228,14 +234,14 @@ export function LernenLessonPage({ lessonId }: { lessonId: number }) {
               bo'lib qolardi va o'quvchi bilganini tekshirmasdi. */}
           {isVocab ? (
             <Button className="w-full" onClick={() => setStage("drill")}>
-              Mashqni boshlash
+              {t("Mashqni boshlash")}
             </Button>
           ) : null}
 
           {data.exercises.length > 0 ? (
             <section className="space-y-3">
               <h2 className="font-display text-sm font-bold uppercase tracking-wide text-ink-500">
-                Mashqlar · {data.exercises.length}
+                {t("Mashqlar · {n}", { n: data.exercises.length })}
               </h2>
               {data.exercises.map((ex, i) =>
                 ex.kind === "MC" && ex.answerStatus !== "OPEN" ? (

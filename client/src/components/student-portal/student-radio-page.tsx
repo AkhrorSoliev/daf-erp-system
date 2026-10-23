@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/use-t";
+import { formatNumber } from "@/lib/format-utils";
 import { Screen, StackHeader, FadeIn, Badge } from "./lumio";
 import { Play, Pause, CircleNotch, Heart, Broadcast } from "./lumio/icon";
 import { TILE_TONE } from "./lumio/tones";
@@ -29,6 +31,7 @@ type Filter = "all" | "favorites" | RadioCategoryId;
  * carries the same message at the row level.
  */
 export function StudentRadioPage() {
+  const t = useT();
   const [filter, setFilter] = useState<Filter>("all");
   const favorites = useRadio((s) => s.favorites);
 
@@ -37,11 +40,11 @@ export function StudentRadioPage() {
     .filter((s): s is RadioStation => Boolean(s));
 
   const chips: { id: Filter; label: string }[] = [
-    { id: "all", label: "Hammasi" },
+    { id: "all", label: t("Hammasi") },
     ...(favoriteStations.length
-      ? [{ id: "favorites" as Filter, label: "Sevimli" }]
+      ? [{ id: "favorites" as Filter, label: t("Sevimli") }]
       : []),
-    ...RADIO_CATEGORIES.map((c) => ({ id: c.id as Filter, label: c.label })),
+    ...RADIO_CATEGORIES.map((c) => ({ id: c.id as Filter, label: t(c.label) })),
   ];
 
   const visibleCategories =
@@ -54,20 +57,20 @@ export function StudentRadioPage() {
       {/* On a phone Radio is a "Ko'proq" row, not a tab, so it needs the way
           back its sibling screens have. */}
       <StackHeader
-        title="Radio"
+        title={t("Radio")}
         backHref="/portal/more"
         right={
           <span className="hidden items-center gap-1.5 rounded-pill bg-coral-500/12 px-3 py-1.5 text-xs font-extrabold text-coral-600 sm:inline-flex">
             <Broadcast size={14} weight="fill" />
-            {RADIO_STATIONS.length} ta stansiya
+            {t("{n} ta stansiya", { n: formatNumber(RADIO_STATIONS.length) })}
           </span>
         }
       />
 
       <p className="-mt-1 max-w-[62ch] text-sm font-semibold leading-relaxed text-ink-600">
-        Germaniya va Avstriyaning jonli radiostansiyalari. Kuniga 15 daqiqa
-        tinglash ham quloqni nemis tiliga o&apos;rgatadi — dars qilayotganda
-        fonda qoldiring.
+        {t(
+          "Germaniya va Avstriyaning jonli radiostansiyalari. Kuniga 15 daqiqa tinglash ham quloqni nemis tiliga o'rgatadi — dars qilayotganda fonda qoldiring.",
+        )}
       </p>
 
       {/* Filter chips — horizontal scroller on narrow screens. */}
@@ -97,8 +100,8 @@ export function StudentRadioPage() {
 
       {filter === "favorites" ? (
         <StationGroup
-          heading="Sevimli"
-          blurb="Yurak bosgan stansiyalaringiz"
+          heading={t("Sevimli")}
+          blurb={t("Yurak bosgan stansiyalaringiz")}
           stations={favoriteStations}
           index={0}
         />
@@ -106,8 +109,8 @@ export function StudentRadioPage() {
         <>
           {filter === "all" && favoriteStations.length > 0 ? (
             <StationGroup
-              heading="Sevimli"
-              blurb="Yurak bosgan stansiyalaringiz"
+              heading={t("Sevimli")}
+              blurb={t("Yurak bosgan stansiyalaringiz")}
               stations={favoriteStations}
               index={0}
             />
@@ -116,8 +119,8 @@ export function StudentRadioPage() {
           {visibleCategories.map((category, i) => (
             <StationGroup
               key={category.id}
-              heading={category.label}
-              blurb={category.blurb}
+              heading={t(category.label)}
+              blurb={t(category.blurb)}
               stations={stationsInCategory(category.id)}
               index={i + 1}
             />
@@ -162,6 +165,7 @@ function StationGroup({
 }
 
 function StationRow({ station }: { station: RadioStation }) {
+  const t = useT();
   const stationId = useRadio((s) => s.stationId);
   const status = useRadio((s) => s.status);
   const favorites = useRadio((s) => s.favorites);
@@ -192,8 +196,8 @@ function StationRow({ station }: { station: RadioStation }) {
         onClick={() => (current ? toggle() : play(station))}
         aria-label={
           playing
-            ? `${station.name} — to'xtatish`
-            : `${station.name} — eshitish`
+            ? t("{name} — to'xtatish", { name: station.name })
+            : t("{name} — eshitish", { name: station.name })
         }
         className={cn(
           "group relative inline-flex size-12 shrink-0 items-center justify-center rounded-card transition-transform active:scale-95",
@@ -233,7 +237,7 @@ function StationRow({ station }: { station: RadioStation }) {
           </h3>
           {station.talk ? (
             <Badge tone="sky" size="sm" className="shrink-0">
-              Nutq ko&apos;p
+              {t("Nutq ko'p")}
             </Badge>
           ) : null}
         </div>
@@ -252,12 +256,12 @@ function StationRow({ station }: { station: RadioStation }) {
               did) left every row ending in a stub. Two lines fit it. */}
           <span className="line-clamp-2">
             {failed
-              ? "Ulanib bo'lmadi"
+              ? t("Ulanib bo'lmadi")
               : loading
-                ? "Ulanmoqda..."
+                ? t("Ulanmoqda...")
                 : playing
-                  ? "Jonli efir"
-                  : station.note}
+                  ? t("Jonli efir")
+                  : t(station.note)}
           </span>
         </p>
       </div>
@@ -266,7 +270,9 @@ function StationRow({ station }: { station: RadioStation }) {
         type="button"
         onClick={() => toggleFavorite(station.id)}
         aria-label={
-          isFavorite ? "Sevimlilardan olib tashlash" : "Sevimlilarga qo'shish"
+          isFavorite
+            ? t("Sevimlilardan olib tashlash")
+            : t("Sevimlilarga qo'shish")
         }
         aria-pressed={isFavorite}
         className={cn(

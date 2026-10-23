@@ -12,8 +12,10 @@ import {
   type Icon,
 } from "@/components/student-portal/lumio/icon";
 import type { LumioTone } from "@/components/student-portal/lumio/tones";
+import { msg } from "@/i18n/msg";
 
 export interface StudentNavItem {
+  /** A `msg()` text: draw it with `t(item.title)`. */
   title: string;
   url: string;
   icon: Icon;
@@ -41,65 +43,65 @@ export interface StudentNavItem {
 // daily habit (streak, weekly rank), Jadval and To'lovlar are weekly and
 // monthly, and the rest waits one tap deeper in the hub.
 export const studentNavItems: StudentNavItem[] = [
-  { title: "Asosiy", url: "/portal", icon: House, slot: "both", tone: "coral" },
+  { title: msg("Bosh sahifa"), url: "/portal", icon: House, slot: "both", tone: "coral" },
   {
-    title: "Ta'lim",
+    title: msg("Ta'lim"),
     url: "/portal/lernen",
     icon: GraduationCap,
     slot: "both",
     tone: "grape",
   },
   {
-    title: "Jadval",
+    title: msg("Jadval"),
     url: "/portal/schedule",
     icon: CalendarBlank,
     slot: "both",
     tone: "sky",
   },
   {
-    title: "To'lovlar",
+    title: msg("To'lovlar"),
     url: "/portal/payments",
     icon: Wallet,
     slot: "both",
     tone: "teal",
   },
   {
-    title: "Ko'proq",
+    title: msg("Ko'proq"),
     url: "/portal/more",
     icon: DotsThreeOutline,
     slot: "tab",
     tone: "ink",
   },
   {
-    title: "Davomat",
+    title: msg("Davomat"),
     url: "/portal/attendance",
     icon: ChartLineUp,
     slot: "more",
     tone: "amber",
   },
   {
-    title: "Radio",
+    title: msg("Radio"),
     url: "/portal/radio",
     icon: Radio,
     slot: "more",
     tone: "coral",
   },
   {
-    title: "Sozlamalar",
+    title: msg("Sozlamalar"),
     url: "/portal/settings",
     icon: Gear,
     slot: "more",
     tone: "ink",
   },
   {
-    title: "FAQ",
+    title: msg("FAQ"),
     url: "/portal/faq",
     icon: Question,
     slot: "help",
     tone: "sky",
   },
   {
-    title: "Biz haqimizda",
+    title: msg("Biz haqimizda"),
     url: "/portal/about",
     icon: Info,
     slot: "help",
