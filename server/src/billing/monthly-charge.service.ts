@@ -67,6 +67,8 @@ export interface ChargeableEnrollment {
     statusEnum: GroupStatus;
     /** A charge never covers lessons before the group opened. */
     startDate: Date | null;
+    /** The day the group last came back from a pause (ADR-0119). */
+    lastResumedOn?: Date | null;
     exactDays: string[];
     course: { price: number; paymentModel: PaymentModel };
   };
@@ -145,6 +147,7 @@ const CHARGEABLE_ENROLLMENT_SELECT = {
       companyId: true,
       statusEnum: true,
       startDate: true,
+      lastResumedOn: true,
       exactDays: true,
       course: { select: { price: true, paymentModel: true } },
     },
@@ -1766,6 +1769,7 @@ export class MonthlyChargeService {
             companyId: true,
             statusEnum: true,
             startDate: true,
+            lastResumedOn: true,
             exactDays: true,
             course: { select: { price: true, paymentModel: true } },
           },

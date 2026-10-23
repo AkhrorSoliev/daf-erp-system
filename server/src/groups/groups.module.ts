@@ -5,6 +5,7 @@ import { GroupsWriteService } from './groups-write.service';
 import { GroupsStatusService } from './groups-status.service';
 import { GroupScheduleService } from './group-schedule.service';
 import { GroupStatusCronService } from './group-status-cron.service';
+import { GroupPausesService } from './group-pauses.service';
 import { GroupHolidayCascadeService } from './group-holiday-cascade.service';
 import { GroupsController } from './groups.controller';
 import { HolidaysModule } from '../holidays/holidays.module';
@@ -17,6 +18,7 @@ import { HolidaysModule } from '../holidays/holidays.module';
     GroupsReadService,
     GroupsWriteService,
     GroupsStatusService,
+    GroupPausesService,
     GroupScheduleService,
     GroupStatusCronService,
     GroupHolidayCascadeService,

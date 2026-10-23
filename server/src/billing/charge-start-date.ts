@@ -20,13 +20,17 @@ import { addDaysToDateStr, tashkentDateStr } from '../common/date/tashkent';
  *   to the join date and bill the frozen weeks too. The return day itself
  *   stays free — the rule `MonthlyChargeService.restoreChargeForReturn`
  *   applies when the month already has a charge.
+ * - Never before the day the group last came back from a pause. Unlike a
+ *   student's return, the resume day itself is billed: the lessons restart
+ *   that day (ADR-0119). The group was paused, so the earlier lessons of the
+ *   month were cancelled and are not charged again.
  */
 export function chargeStartDate(enrollment: {
   startDate: Date | null;
   createdAt: Date;
   /** When the enrollment last came back to ACTIVE; null if it never left. */
   returnedAt: Date | null;
-  group: { startDate: Date | null };
+  group: { startDate: Date | null; lastResumedOn?: Date | null };
 }): string {
   const own = tashkentDateStr(enrollment.startDate ?? enrollment.createdAt);
   const groupStart = enrollment.group.startDate
@@ -35,7 +39,10 @@ export function chargeStartDate(enrollment: {
   const afterReturn = enrollment.returnedAt
     ? addDaysToDateStr(tashkentDateStr(enrollment.returnedAt), 1)
     : null;
-  return [groupStart, afterReturn].reduce<string>(
+  const afterPause = enrollment.group.lastResumedOn
+    ? tashkentDateStr(enrollment.group.lastResumedOn)
+    : null;
+  return [groupStart, afterReturn, afterPause].reduce<string>(
     (latest, day) => (day !== null && day > latest ? day : latest),
     own,
   );

@@ -16,6 +16,9 @@ import {
 } from '../common/entity-history';
 import { assertNoUnansweredLessons } from '../unmarked-lessons/unanswered-lessons';
 import { ChangeGroupStatusDto } from './dto/change-group-status.dto';
+import { decidePauseChange } from './group-pause-rules';
+import { GroupPausesService } from './group-pauses.service';
+import { tashkentDateStr } from '../common/date/tashkent';
 import {
   groupInclude,
   formatGroup,
@@ -58,6 +61,7 @@ export class GroupsStatusService {
     private statusHistoryService: StatusHistoryService,
     private statusCascadeService: StatusCascadeService,
     private entityHistoryService: EntityHistoryService,
+    private groupPauses: GroupPausesService,
   ) {}
 
   /**
@@ -104,6 +108,26 @@ export class GroupsStatusService {
             throw new NotFoundException(`Guruh #${id} topilmadi`);
           }
 
+          // ADR-0119: a pause names the day lessons restart; a resume
+          // confirms it. A day still ahead keeps the group PAUSED.
+          const pause = decidePauseChange(
+            group.statusEnum,
+            dto,
+            tashkentDateStr(at),
+          );
+          if (pause.kind === 'resume-later') {
+            await this.groupPauses.scheduleResume(tx, {
+              groupId: id,
+              companyId: group.companyId,
+              resumeOn: pause.resumeOn,
+              userId,
+            });
+            return tx.group.findUniqueOrThrow({
+              where: { id },
+              include: groupInclude,
+            });
+          }
+
           const auditData = await this.statusHistoryService.changeStatus({
             entityType: 'Group',
             entityId: id,
@@ -131,6 +155,25 @@ export class GroupsStatusService {
             tx,
             deferredEvents,
           });
+
+          if (pause.kind === 'pause') {
+            await this.groupPauses.open(tx, {
+              groupId: id,
+              companyId: group.companyId,
+              at,
+              plannedResumeOn: pause.plannedResumeOn,
+              reason: dto.reason,
+              userId,
+            });
+          } else if (group.statusEnum === GroupStatus.PAUSED) {
+            await this.groupPauses.close(tx, {
+              groupId: id,
+              companyId: group.companyId,
+              at,
+              resumeOn: pause.kind === 'resume-now' ? pause.resumeOn : null,
+              userId,
+            });
+          }
 
           await this.statusCascadeService.cascadeGroupStatusChange(tx, {
             groupId: id,
