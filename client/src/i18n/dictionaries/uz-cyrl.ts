@@ -49,6 +49,24 @@ const uzCyrl: Dictionary = {
   "Hali tranzaksiya yo'q": "Ҳали транзакция йўқ",
   "Profil rasmini qanday o'zgartiraman?": "Профиль расмини қандай ўзгартираман?",
   "Profil sahifasini oching (telefonda «Ko'proq» ichida, kompyuterda yon menyuning tepasida), rasm ustiga bosing va yangi rasm tanlang.": "Профиль саҳифасини очинг (телефонда «Кўпроқ» ичида, компьютерда ён менюнинг тепасида), расм устига босинг ва янги расм танланг.",
+  // Student portal radio: «станция», «плеер» and «жаз» are written so in Cyrillic Uzbek;
+  // German and English genre words (schlager, oldies, indie) and «kbps» stay Latin.
+  "{n} ta stansiya": "{n} та станция",
+  "Germaniya va Avstriyaning jonli radiostansiyalari. Kuniga 15 daqiqa tinglash ham quloqni nemis tiliga o'rgatadi — dars qilayotganda fonda qoldiring.": "Германия ва Австриянинг жонли радиостанциялари. Кунига 15 дақиқа тинглаш ҳам қулоқни немис тилига ўргатади — дарс қилаётганда фонда қолдиринг.",
+  "Yurak bosgan stansiyalaringiz": "Юрак босган станцияларингиз",
+  "{name} — to'liq playerni ochish": "{name} — тўлиқ плеерни очиш",
+  "Internet aloqasini tekshiring. Radiostansiya vaqtincha o'chirilgan bo'lishi ham mumkin — boshqasini tanlab ko'ring.": "Интернет алоқасини текширинг. Радиостанция вақтинча ўчирилган бўлиши ҳам мумкин — бошқасини танлаб кўринг.",
+  "Oldingi stansiya": "Олдинги станция",
+  "Keyingi stansiya": "Кейинги станция",
+  "Boshqa stansiya tanlash": "Бошқа станция танлаш",
+  "Klassika, jazz, adabiyot va uzun ko'rsatuvlar": "Классика, жаз, адабиёт ва узун кўрсатувлар",
+  "Eski hitlar va schlager — sekin, tushunarli qo'shiqlar": "Эски ҳитлар ва schlager — секин, тушунарли қўшиқлар",
+  "Mustaqil indie kanali, reklamasiz.": "Мустақил indie канали, рекламасиз.",
+  "Eng yuqori sifat (256 kbps) — klassika va jazz.": "Энг юқори сифат (256 kbps) — классика ва жаз.",
+  "Uzluksiz jazz, deyarli gapsiz — diqqatni buzmaydi.": "Узлуксиз жаз, деярли гапсиз — диққатни бузмайди.",
+  "Nemis schlageri va eski hitlar — so'zlari sekin va aniq.": "Немис schlageri ва эски ҳитлар — сўзлари секин ва аниқ.",
+  "Bavariyaning eng katta kanali, oldies va mintaqaviy xabarlar.": "Бавариянинг энг катта канали, oldies ва минтақавий хабарлар.",
+  "Faqat nemis schlageri — qo'shiq matnini ilg'ash oson.": "Фақат немис schlageri — қўшиқ матнини илғаш осон.",
 };
 
 export default uzCyrl;

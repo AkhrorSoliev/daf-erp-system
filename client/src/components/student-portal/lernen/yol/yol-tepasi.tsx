@@ -4,30 +4,29 @@ import * as React from "react";
 import Link from "next/link";
 import { Fire, Medal, Star, Trophy } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/use-t";
 import { Skeleton } from "../../lumio";
 import { useFortschritt } from "../queries";
 import { MaqsadKartasi } from "./maqsad-kartasi";
 import { qisqaRaqam } from "./yol-tuzilishi";
 
 /**
- * Bitta belgi: piktogramma + son, `sm`dan boshlab qo'shimcha yozuv bilan.
- *
- * Ikkinchi razmetka QURILMAYDI — yozuv bitta `<span>` ichida
- * `hidden sm:inline` bilan yashiriladi/ko'rsatiladi, xuddi shu DOM ikkala
- * o'lchamda ham xizmat qiladi.
+ * Bitta belgi: piktogramma + son; `sm`dan boshlab son o'rniga to'liq yozuv
+ * (`wide`, masalan «120 ball») — tarjimada son so'zning oldida yoki ortida
+ * turishi mumkin, shuning uchun yozuv sondan alohida qo'shilmaydi.
  */
 function Belgi({
   icon,
   tone,
   value,
-  suffix,
+  wide,
   href,
   ariaLabel,
 }: {
   icon: React.ReactNode;
   tone: string;
   value: React.ReactNode;
-  suffix?: string;
+  wide?: string;
   href?: string;
   ariaLabel?: string;
 }) {
@@ -40,8 +39,14 @@ function Belgi({
         {icon}
       </span>
       <span className="whitespace-nowrap font-display text-sm font-extrabold leading-none text-ink-900">
-        {value}
-        {suffix ? <span className="hidden sm:inline">{suffix}</span> : null}
+        {wide ? (
+          <>
+            <span className="sm:hidden">{value}</span>
+            <span className="hidden sm:inline">{wide}</span>
+          </>
+        ) : (
+          value
+        )}
       </span>
     </span>
   );
@@ -95,6 +100,7 @@ export function YolTepasiSkelet() {
  * Ostida kunlik maqsad kartasi (S2) — to'rt belgidan keyingi qator, telefonda to'liq kenglikda.
  */
 export function YolTepasi() {
+  const t = useT();
   const { data, isLoading, isError } = useFortschritt();
 
   if (isError) return null;
@@ -113,21 +119,21 @@ export function YolTepasi() {
           icon={<Star size={18} weight="fill" />}
           tone="text-amber-500"
           value={qisqaRaqam(data.gesamt)}
-          suffix=" ball"
+          wide={t("{n} ball", { n: qisqaRaqam(data.gesamt) })}
         />
         <Belgi
           icon={<Fire size={18} weight="fill" />}
           tone="text-coral-500"
           value={qisqaRaqam(data.serie)}
-          suffix=" kun"
+          wide={t("{n} kun", { n: qisqaRaqam(data.serie) })}
         />
         <Belgi
           icon={<Trophy size={18} weight="fill" />}
           tone="text-sky-500"
           value={qisqaRaqam(data.wochePlatzZentrum)}
-          suffix="-o'rin"
+          wide={t("{n}-o'rin", { n: qisqaRaqam(data.wochePlatzZentrum) })}
           href="/portal/lernen/reyting"
-          ariaLabel={`Reyting: ${data.wochePlatzZentrum}-o'rin`}
+          ariaLabel={t("Reyting: {n}-o'rin", { n: data.wochePlatzZentrum })}
         />
       </div>
       {data.maqsad ? (

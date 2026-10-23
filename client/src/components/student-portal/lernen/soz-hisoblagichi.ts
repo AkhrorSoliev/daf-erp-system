@@ -1,3 +1,6 @@
+import { interpolate } from "@/i18n/translate";
+import type { Translate } from "./liga";
+
 /**
  * What the unit page says about a section's words (ADR-0071): the section's
  * pool is larger than one lesson, and each repeat of a lesson brings the
@@ -14,16 +17,17 @@ export interface SozHisoblagichi {
 
 export function sozHisoblagichi(
   woerter: { jami: number; gesehen: number } | undefined,
+  t: Translate = interpolate,
 ): SozHisoblagichi | null {
   if (!woerter || woerter.jami <= 0) return null;
   const { jami } = woerter;
   const gesehen = Math.min(Math.max(woerter.gesehen, 0), jami);
   const qoldi = jami - gesehen;
   return {
-    matn: `So'zlar: ${gesehen} / ${jami}`,
+    matn: t("So'zlar: {n} / {total}", { n: gesehen, total: jami }),
     foiz: Math.round((gesehen / jami) * 100),
     qoldi,
     tugadi: qoldi === 0,
-    yanaMashq: qoldi > 0 ? `Yana mashq qilish · ${qoldi} yangi so'z` : null,
+    yanaMashq: qoldi > 0 ? t("Yana mashq qilish · {n} yangi so'z", { n: qoldi }) : null,
   };
 }

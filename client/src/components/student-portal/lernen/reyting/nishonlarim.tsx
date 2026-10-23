@@ -3,6 +3,7 @@
 import { BookOpen, Crown, Fire, Trophy, UsersThree } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { LoadingCards, Section } from "../../lumio";
+import { useT } from "@/i18n/use-t";
 import { useNishonlar } from "../queries";
 import { nishonNomi, nishonQoldi } from "../nishon";
 import type { NishonQatori } from "../types";
@@ -32,11 +33,12 @@ const TOLDIRISH: Record<NishonQatori["tur"], string> = {
  * nishon to'la rangda, olinmagani chiziqli ramkada «yana N».
  */
 export function Nishonlarim() {
+  const t = useT();
   const query = useNishonlar();
   const { data } = query;
 
   return (
-    <Section title="Nishonlarim">
+    <Section title={t("Nishonlarim")}>
       {loadState(query) === "loading" ? (
         <LoadingCards count={2} />
       ) : !data ? (
@@ -57,9 +59,9 @@ export function Nishonlarim() {
                 )}
               >
                 <Icon size={24} weight={olingan ? "fill" : "bold"} aria-hidden />
-                <span className="font-display text-sm font-extrabold">{nishonNomi(n.key)}</span>
+                <span className="font-display text-sm font-extrabold">{nishonNomi(n.key, t)}</span>
                 {olingan ? null : (
-                  <span className="text-xs font-semibold">{nishonQoldi(n)}</span>
+                  <span className="text-xs font-semibold">{nishonQoldi(n, t)}</span>
                 )}
               </li>
             );

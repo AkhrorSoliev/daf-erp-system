@@ -1,6 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/use-t";
 import { ArrowClockwise, CircleNotch, Radio } from "../lumio/icon";
 import { useRadio, type RadioStatus } from "../lib/radio-store";
 import { LiveBars } from "./live-bars";
@@ -31,12 +33,12 @@ export function RadioSessionToggle() {
   );
 }
 
-/** What a tap does next, spoken after the station's name. */
+/** What a tap does next, with the station's name. */
 const NEXT_STEP: Record<RadioStatus, string> = {
-  playing: "to'xtatish",
-  loading: "to'xtatish",
-  idle: "eshitish",
-  error: "qayta ulanish",
+  playing: msg("{name} — to'xtatish"),
+  loading: msg("{name} — to'xtatish"),
+  idle: msg("{name} — eshitish"),
+  error: msg("{name} — qayta ulanish"),
 };
 
 export function RadioSessionButton({
@@ -50,9 +52,11 @@ export function RadioSessionButton({
   onToggle: () => void;
   onRetry: () => void;
 }) {
+  const t = useT();
   const failed = status === "error";
   const on = status === "playing" || status === "loading";
-  const label = `${name} — ${NEXT_STEP[status]}`;
+  const step = NEXT_STEP[status];
+  const label = t(step, { name });
 
   return (
     <button
