@@ -4780,6 +4780,14 @@ const de: Dictionary = {
   // Dashboard error screen
   "Sahifani ochib bo'lmadi": "Die Seite konnte nicht geöffnet werden",
   "Nimadir noto'g'ri ketdi. Qayta urinib ko'ring yoki boshqa bo'limga o'ting.": "Etwas ist schiefgelaufen. Versuchen Sie es erneut oder wechseln Sie in einen anderen Bereich.",
+  "Darslar qachondan qayta boshlanadi?": "Ab wann geht der Unterricht weiter?",
+  "Hozircha noma'lum": "Noch nicht bekannt",
+  "Pauza davomida o'tmagan darslar puli o'quvchilarga har kecha avtomatik qaytariladi. O'quvchilarga xabar yuboriladi.": "Das Geld für die in der Pause ausgefallenen Stunden wird den Lernenden jede Nacht automatisch zurückerstattet. Die Lernenden werden benachrichtigt.",
+  "Darslar qaysi kundan boshlanadi?": "Ab welchem Tag beginnt der Unterricht?",
+  "Oldindan belgilangan sana: {day}. Shu kundanmi?": "Vorher festgelegtes Datum: {day}. Ab diesem Tag?",
+  "Sana belgilanmagan — avval sanani tanlang.": "Kein Datum festgelegt — wählen Sie zuerst ein Datum.",
+  "Keyingi kun tanlansa, guruh o'sha kuni o'zi ochiladi. Oylik to'lov shu kundan hisoblanadi.": "Bei einem späteren Tag öffnet sich die Gruppe an diesem Morgen von selbst. Die Monatsgebühr wird ab diesem Tag berechnet.",
+  "Guruh {day} kuni ochiladi": "Die Gruppe öffnet am {day}",
 };
 
 export default de;

@@ -4780,6 +4780,14 @@ const en: Dictionary = {
   // Dashboard error screen
   "Sahifani ochib bo'lmadi": "The page could not be opened",
   "Nimadir noto'g'ri ketdi. Qayta urinib ko'ring yoki boshqa bo'limga o'ting.": "Something went wrong. Try again or go to another section.",
+  "Darslar qachondan qayta boshlanadi?": "When do lessons restart?",
+  "Hozircha noma'lum": "Not known yet",
+  "Pauza davomida o'tmagan darslar puli o'quvchilarga har kecha avtomatik qaytariladi. O'quvchilarga xabar yuboriladi.": "Money for lessons missed during the pause goes back to students automatically every night. Students are notified.",
+  "Darslar qaysi kundan boshlanadi?": "From which day do lessons start?",
+  "Oldindan belgilangan sana: {day}. Shu kundanmi?": "Date set in advance: {day}. From that day?",
+  "Sana belgilanmagan — avval sanani tanlang.": "No date set — pick a date first.",
+  "Keyingi kun tanlansa, guruh o'sha kuni o'zi ochiladi. Oylik to'lov shu kundan hisoblanadi.": "If a later day is picked, the group opens by itself that morning. The monthly fee counts from that day.",
+  "Guruh {day} kuni ochiladi": "The group opens on {day}",
 };
 
 export default en;
