@@ -6,10 +6,12 @@ import api from "@/lib/api";
 import { downloadAuthedFile } from "@/lib/download-file";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useIsMiniApp } from "@/hooks/use-is-mini-app";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/use-t";
 import { Button, Card, IconTile } from "./lumio";
 import { DownloadSimple, FileText, TelegramLogo } from "./lumio/icon";
 
-export const SENT_TO_TELEGRAM = "Hisobot Telegram chatingizga yuborildi";
+export const SENT_TO_TELEGRAM = msg("Hisobot Telegram chatingizga yuborildi");
 
 /**
  * What a tap does. Telegram's WebView cannot save a file, so inside the Mini
@@ -32,6 +34,7 @@ export async function deliverStatement(isMiniApp: boolean): Promise<void> {
  * `GET /student-portal/statement.pdf`, whose student comes from the token.
  */
 export function StatementCard() {
+  const t = useT();
   const isMiniApp = useIsMiniApp();
   const [busy, setBusy] = useState(false);
 
@@ -39,12 +42,12 @@ export function StatementCard() {
     setBusy(true);
     try {
       await deliverStatement(isMiniApp);
-      if (isMiniApp) toast.success(SENT_TO_TELEGRAM);
+      if (isMiniApp) toast.success(t(SENT_TO_TELEGRAM));
     } catch (err) {
       toast.error(
         isMiniApp
-          ? getErrorMessage(err, "Hisobotni Telegram'ga yuborib bo'lmadi")
-          : "PDF yuklab olishda xatolik",
+          ? getErrorMessage(err, t("Hisobotni Telegram'ga yuborib bo'lmadi"))
+          : t("PDF yuklab olishda xatolik"),
       );
     } finally {
       setBusy(false);
@@ -60,10 +63,10 @@ export function StatementCard() {
           <IconTile icon={<FileText weight="bold" />} tone="coral" />
           <div className="min-w-0 space-y-1">
             <h2 className="font-display text-lg font-bold text-ink-900">
-              To&apos;lovlar hisoboti
+              {t("To'lovlar hisoboti")}
             </h2>
             <p className="text-sm text-ink-500">
-              Har bir to&apos;lovingiz qaysi darslarga ketgani, oyma-oy
+              {t("Har bir to'lovingiz qaysi darslarga ketgani, oyma-oy")}
             </p>
           </div>
         </div>
@@ -81,7 +84,7 @@ export function StatementCard() {
           onClick={deliver}
           className="w-full @sm:w-auto @sm:shrink-0"
         >
-          {isMiniApp ? "Telegram'ga yuborish" : "PDF yuklab olish"}
+          {isMiniApp ? t("Telegram'ga yuborish") : t("PDF yuklab olish")}
         </Button>
       </div>
     </Card>

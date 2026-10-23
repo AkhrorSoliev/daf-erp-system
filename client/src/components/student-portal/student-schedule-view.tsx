@@ -12,7 +12,8 @@ import {
   CalendarX,
 } from "@phosphor-icons/react";
 import { format, startOfWeek, addDays, isSameDay, addWeeks } from "date-fns";
-import { uz } from "date-fns/locale";
+import { useLocale, useT } from "@/i18n/context";
+import { dateFnsLocale } from "@/lib/date-fns-locale";
 import {
   Screen,
   ScreenHeader,
@@ -37,6 +38,9 @@ const WEEKDAY_INDEX: Record<string, number> = {
 };
 
 export function StudentScheduleView() {
+  const t = useT();
+  const { locale } = useLocale();
+  const dateLocale = dateFnsLocale(locale);
   const query = useQuery({
     queryKey: ["student-portal", "schedule"],
     queryFn: () =>
@@ -82,7 +86,7 @@ export function StudentScheduleView() {
   if (state === "loading") {
     return (
       <Screen narrow>
-        <ScreenHeader title="Jadval" />
+        <ScreenHeader title={t("Jadval")} />
         <LoadingCards />
       </Screen>
     );
@@ -93,7 +97,7 @@ export function StudentScheduleView() {
   if (state !== "ready") {
     return (
       <Screen narrow>
-        <ScreenHeader title="Jadval" />
+        <ScreenHeader title={t("Jadval")} />
         <LoadFailed query={query} />
       </Screen>
     );
@@ -101,13 +105,13 @@ export function StudentScheduleView() {
 
   return (
     <Screen narrow>
-      <ScreenHeader title="Jadval" />
+      <ScreenHeader title={t("Jadval")} />
 
       {/* Week selector */}
       <Card pad="sm" className="flex items-center justify-between">
         <button
           type="button"
-          aria-label="Oldingi hafta"
+          aria-label={t("Oldingi hafta")}
           onClick={() => setWeekOffset((o) => o - 1)}
           className="inline-flex size-9 items-center justify-center rounded-full text-ink-700 transition-colors hover:bg-tint"
         >
@@ -115,18 +119,18 @@ export function StudentScheduleView() {
         </button>
         <div className="text-center">
           <p className="font-display text-sm font-bold text-ink-900">
-            {format(weekDays[0], "d MMM", { locale: uz })} –{" "}
-            {format(weekDays[6], "d MMM yyyy", { locale: uz })}
+            {format(weekDays[0], "d MMM", { locale: dateLocale })} –{" "}
+            {format(weekDays[6], "d MMM yyyy", { locale: dateLocale })}
           </p>
           {weekOffset === 0 ? (
             <p className="text-[10px] font-bold uppercase tracking-wider text-coral-600">
-              Joriy hafta
+              {t("Joriy hafta")}
             </p>
           ) : null}
         </div>
         <button
           type="button"
-          aria-label="Keyingi hafta"
+          aria-label={t("Keyingi hafta")}
           onClick={() => setWeekOffset((o) => o + 1)}
           className="inline-flex size-9 items-center justify-center rounded-full text-ink-700 transition-colors hover:bg-tint"
         >
@@ -140,15 +144,15 @@ export function StudentScheduleView() {
           onClick={() => setWeekOffset(0)}
           className="-mt-1 text-center text-xs font-bold text-coral-600 hover:underline"
         >
-          Bugunga qaytish
+          {t("Bugunga qaytish")}
         </button>
       ) : null}
 
       {daySchedule.length === 0 ? (
         <EmptyState
           icon={<CalendarX weight="bold" />}
-          title="Bu hafta darslar yo'q"
-          description="Boshqa haftani ko'rish uchun strelkalardan foydalaning."
+          title={t("Bu hafta darslar yo'q")}
+          description={t("Boshqa haftani ko'rish uchun strelkalardan foydalaning.")}
         />
       ) : (
         <div className="space-y-4">
@@ -161,11 +165,11 @@ export function StudentScheduleView() {
                     <p
                       className={`font-display text-sm font-bold capitalize ${isToday ? "text-coral-600" : "text-ink-500"}`}
                     >
-                      {format(date, "EEEE, d MMM", { locale: uz })}
+                      {format(date, "EEEE, d MMM", { locale: dateLocale })}
                     </p>
                     {isToday ? (
                       <Badge tone="coral" size="sm">
-                        Bugun
+                        {t("Bugun")}
                       </Badge>
                     ) : null}
                   </div>
@@ -201,7 +205,7 @@ export function StudentScheduleView() {
                               <span className="flex items-center gap-1">
                                 <GraduationCap size={13} weight="bold" />
                                 {cls.teachers
-                                  .map((t) => `${t.firstName} ${t.lastName}`)
+                                  .map((teacher) => `${teacher.firstName} ${teacher.lastName}`)
                                   .join(", ")}
                               </span>
                             ) : null}

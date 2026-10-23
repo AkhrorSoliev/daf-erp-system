@@ -45,6 +45,10 @@ const uzCyrl: Dictionary = {
   // «t» + «s» across a suffix boundary: the rules would read it as «ц».
   "Narx kiritilmadi. Agar shunday davom etsangiz, imtihon bepul bo'lib yaratiladi va bot ro'yxatdan o'tganlardan to'lov so'ramaydi.": "Нарх киритилмади. Агар шундай давом этсангиз, имтиҳон бепул бўлиб яратилади ва бот рўйхатдан ўтганлардан тўлов сўрамайди.",
   "Bu ishtirokchi {amount} so'm to'lagan. O'chirilsa, bu to'lov mock daromadidan chiqadi, qayta ro'yxatdan o'tsa undan yana to'lov so'raladi. Avval pulni odamga qaytaring.": "Бу иштирокчи {amount} сўм тўлаган. Ўчирилса, бу тўлов mock даромадидан чиқади, қайта рўйхатдан ўтса ундан яна тўлов сўралади. Аввал пулни одамга қайтаринг.",
+  // Student portal: loanwords with «ц» and a soft sign.
+  "Hali tranzaksiya yo'q": "Ҳали транзакция йўқ",
+  "Profil rasmini qanday o'zgartiraman?": "Профиль расмини қандай ўзгартираман?",
+  "Profil sahifasini oching (telefonda «Ko'proq» ichida, kompyuterda yon menyuning tepasida), rasm ustiga bosing va yangi rasm tanlang.": "Профиль саҳифасини очинг (телефонда «Кўпроқ» ичида, компьютерда ён менюнинг тепасида), расм устига босинг ва янги расм танланг.",
 };
 
 export default uzCyrl;

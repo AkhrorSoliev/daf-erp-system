@@ -785,6 +785,15 @@ export const STRICT_FILES: string[] = [
   "components/student-portal/onboarding/phone-step.tsx",
   "components/student-portal/onboarding/profile-step.tsx",
   "components/student-portal/onboarding/birth-date.ts",
+  "components/student-portal/student-home-page.tsx",
+  "components/student-portal/student-schedule-view.tsx",
+  "components/student-portal/student-attendance-history.tsx",
+  "components/student-portal/student-payment-summary.tsx",
+  "components/student-portal/statement-card.tsx",
+  "components/student-portal/gateway-handoff.tsx",
+  "components/student-portal/payment-result-page.tsx",
+  "components/student-portal/student-faq-page.tsx",
+  "components/student-portal/student-about-page.tsx",
 ];
 
 function walk(dir: string): string[] {
