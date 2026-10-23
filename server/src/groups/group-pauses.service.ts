@@ -143,6 +143,13 @@ export class GroupPausesService {
         where: { id: p.groupId },
         data: { lastResumedOn: resumeOn },
       });
+    } else if (open && open.extendedLessons > 0 && open.endDateBefore) {
+      // The group ends instead of coming back: the lessons it was never going
+      // to hold must not keep pushing its end date out.
+      await tx.group.update({
+        where: { id: p.groupId },
+        data: { endDate: open.endDateBefore },
+      });
     }
   }
 
