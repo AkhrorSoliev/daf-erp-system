@@ -34,6 +34,7 @@ const uzCyrl: Dictionary = {
   "Noy": "Ноя",
   // Loanwords: Cyrillic Uzbek writes «ц» here, which the rules (s → с) cannot know.
   "Kvitansiya": "Квитанция",
+  "Kvitansiya № {code}": "Квитанция № {code}",
   "Ism, telefon, ID yoki kvitansiya raqami": "Исм, телефон, ID ёки квитанция рақами",
   "Kassa qoldig'idan shu summa ayiriladi va kvitansiya chiqadi. Sana — bugun.": "Касса қолдиғидан шу сумма айирилади ва квитанция чиқади. Сана — бугун.",
   "Tranzaksiya raqami ({provider} tizimida)": "Транзакция рақами ({provider} тизимида)",

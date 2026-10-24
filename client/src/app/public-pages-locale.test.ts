@@ -1,11 +1,17 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { createElement } from "react";
+import { createElement, type ComponentProps, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import { I18nProvider } from "@/i18n/context";
+import de from "@/i18n/dictionaries/de";
+import en from "@/i18n/dictionaries/en";
+import ru from "@/i18n/dictionaries/ru";
 import { LOCALES } from "@/i18n/locales";
 import { LanguagePicker, pickPortalLocale } from "@/components/student-portal/lumio/language-picker";
 import { ReceiptView, type VerificationDto } from "./r/[id]/receipt-view";
+import { CertificateView } from "./t/[id]/certificate-view";
+import type { VerifyDto } from "./t/[id]/load-verify";
 
 // The public pages (receipt /r, certificate /t, form /f) have no login: the
 // language lives on the device only (ADR-0120), exactly as in the student portal.
@@ -92,4 +98,71 @@ describe("public pages language", () => {
     expect(html).toContain("Ali Valiyev (10001)");
     expect(html).toContain("01.10.2026 12:00");
   });
+});
+
+// A trust page must never read as genuine for a cancelled document, in any language.
+describe("public pages verdict", () => {
+  const DICTS = { ru, de, en } as const;
+  const GENUINE_WORD = { ru: "подлинный", de: "echt", en: "genuine" } as const;
+  const inLocale = (locale: keyof typeof DICTS, el: ReactElement) =>
+    renderToStaticMarkup(
+      createElement(
+        I18nProvider,
+        { initialLocale: locale, initialDictionary: DICTS[locale] } as ComponentProps<typeof I18nProvider>,
+        el,
+      ),
+    );
+  // The verdict line is the first text after the status icon.
+  const verdict = (html: string) => html.match(/<div class="text-base font-semibold">([^<]*)<\/div>/)?.[1] ?? "";
+
+  const cert: VerifyDto = {
+    valid: true,
+    revoked: false,
+    number: "T-0001",
+    studentName: "Ali Valiyev",
+    level: "A1",
+    from: "2026-05-01",
+    to: "2026-08-31",
+    issuedAt: "2026-09-01T07:00:00.000Z",
+    companyName: "DaF Sprachzentrum",
+  };
+  const receipt: VerificationDto = {
+    kind: "payment",
+    receiptCode: "KV-0001",
+    reversed: false,
+    reversedReason: null,
+    amount: 1000,
+    currency: "UZS",
+    date: "2026-10-01T07:00:00.000Z",
+    studentName: "Ali Valiyev",
+    studentId: 10001,
+    groupName: null,
+    branchName: null,
+    companyName: "DaF Sprachzentrum",
+    receivedByName: null,
+    pdfUrl: "https://example.test/r.pdf",
+  };
+
+  for (const locale of ["ru", "de", "en"] as const) {
+    it(`${locale}: a revoked certificate and a reversed receipt never read as genuine`, () => {
+      const pairs = [
+        [
+          inLocale(locale, createElement(CertificateView, { data: cert })),
+          inLocale(locale, createElement(CertificateView, { data: { ...cert, valid: false, revoked: true } })),
+        ],
+        [
+          inLocale(locale, createElement(ReceiptView, { data: receipt })),
+          inLocale(locale, createElement(ReceiptView, { data: { ...receipt, reversed: true, reversedReason: "x" } })),
+        ],
+      ];
+      for (const [okHtml, cancelledHtml] of pairs) {
+        const ok = verdict(okHtml);
+        const cancelled = verdict(cancelledHtml);
+        expect(ok).toContain(GENUINE_WORD[locale]);
+        expect(cancelled).not.toBe("");
+        expect(cancelled).not.toBe(ok);
+        expect(cancelled.toLowerCase()).not.toContain(GENUINE_WORD[locale]);
+      }
+    });
+  }
 });

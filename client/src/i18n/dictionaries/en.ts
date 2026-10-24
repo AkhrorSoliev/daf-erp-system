@@ -5219,7 +5219,9 @@ const en: Dictionary = {
   "So'zlarga qaytish": "Back to the words",
   "Mashqni yakunlash": "Finish",
   // Public pages: receipt /r, certificate /t, form /f (device language, ADR-0120).
-  "Qaytarish hujjati": "Refund document",
+  "Kvitansiya № {code}": "Receipt No. {code}",
+  "Qaytarish hujjati № {code}": "Refund document No. {code}",
+  "Bekor qilinish sababi": "Reason for cancellation",
   "Bu hujjat haqiqiy": "This document is genuine",
   "Bu hujjat bekor qilingan": "This document has been cancelled",
   "PDF hujjatni yuklab olish": "Download the PDF document",

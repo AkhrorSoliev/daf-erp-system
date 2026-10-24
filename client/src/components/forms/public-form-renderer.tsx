@@ -38,6 +38,17 @@ const MUST_CHECK = msg("Bu maydon belgilanishi kerak");
 const REQUIRED = msg("To'ldirilishi shart");
 const OWN_MESSAGES: ReadonlySet<string> = new Set([PHONE_9, EMAIL, NUMBER, MUST_CHECK, REQUIRED]);
 
+const SUBMIT_FAILED = msg("Yuborishda xatolik. Qayta urinib ko'ring.");
+const RECEIVED = msg("Ma'lumotlaringiz qabul qilindi.");
+const NO_SERVER = msg("Server bilan aloqa o'rnatib bo'lmadi");
+
+interface ShownText {
+  text: string;
+  own?: boolean;
+}
+
+const shown = (t: (source: string) => string, s: ShownText) => (s.own ? t(s.text) : s.text);
+
 /** A validation message in the page language; only the schema's own texts go through `t`. */
 export function fieldError(t: (source: string) => string, message: unknown): string | undefined {
   if (typeof message !== "string" || !message) return undefined;
@@ -102,8 +113,10 @@ export function PublicFormRenderer({ slug, schema, source }: Props) {
   const t = useT();
   const zodSchema = useMemo(() => buildZodSchema(schema.fields), [schema.fields]);
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  // `own` = our Uzbek source text, translated when drawn so a language switch
+  // reaches it; a text the server sent has no flag and is shown as sent.
+  const [done, setDone] = useState<ShownText | null>(null);
+  const [submitError, setSubmitError] = useState<ShownText | null>(null);
 
   const defaultValues = useMemo(() => {
     const out: Record<string, unknown> = {};
@@ -142,13 +155,13 @@ export function PublicFormRenderer({ slug, schema, source }: Props) {
           ? body.message[0]
           : body?.message;
         // The server's text is shown as sent; only our own fallback is translated.
-        setSubmitError(serverMessage || t("Yuborishda xatolik. Qayta urinib ko'ring."));
+        setSubmitError(serverMessage ? { text: serverMessage } : { text: SUBMIT_FAILED, own: true });
         return;
       }
       // The success text the staff wrote (or the server's) is data, never `t()`.
-      setDone(body?.message || t("Ma'lumotlaringiz qabul qilindi."));
+      setDone(body?.message ? { text: body.message } : { text: RECEIVED, own: true });
     } catch {
-      setSubmitError(t("Server bilan aloqa o'rnatib bo'lmadi"));
+      setSubmitError({ text: NO_SERVER, own: true });
     } finally {
       setSubmitting(false);
     }
@@ -187,7 +200,7 @@ export function PublicFormRenderer({ slug, schema, source }: Props) {
             role="status"
             className="mx-auto mt-2 max-w-xs text-base leading-relaxed text-muted-foreground"
           >
-            {done}
+            {shown(t, done)}
           </p>
           <a
             href={COMPANY.websiteHref}
@@ -223,7 +236,7 @@ export function PublicFormRenderer({ slug, schema, source }: Props) {
             scrolls under it; from sm up it is an ordinary last row. */}
         <div className="sticky bottom-0 z-10 -mx-5 space-y-3 border-t border-border bg-card px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:static sm:mx-0 sm:border-0 sm:p-0 sm:pt-2">
           {submitError && (
-            <FieldError id="submit-error" error={submitError} />
+            <FieldError id="submit-error" error={shown(t, submitError)} />
           )}
           <Button
             type="submit"

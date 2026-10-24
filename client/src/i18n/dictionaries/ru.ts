@@ -5219,7 +5219,9 @@ const ru: Dictionary = {
   "So'zlarga qaytish": "Вернуться к словам",
   "Mashqni yakunlash": "Завершить",
   // Public pages: receipt /r, certificate /t, form /f (device language, ADR-0120).
-  "Qaytarish hujjati": "Документ о возврате",
+  "Kvitansiya № {code}": "Квитанция № {code}",
+  "Qaytarish hujjati № {code}": "Документ о возврате № {code}",
+  "Bekor qilinish sababi": "Причина аннулирования",
   "Bu hujjat haqiqiy": "Этот документ подлинный",
   "Bu hujjat bekor qilingan": "Этот документ аннулирован",
   "PDF hujjatni yuklab olish": "Скачать PDF-документ",
@@ -5235,7 +5237,7 @@ const ru: Dictionary = {
   "Forma — DaF Sprachzentrum": "Форма — DaF Sprachzentrum",
   "DaF Sprachzentrum public formasi": "Публичная форма DaF Sprachzentrum",
   "Telefon — 9 raqam": "Телефон — 9 цифр",
-  "To'g'ri email kiriting": "Введите правильный email",
+  "To'g'ri email kiriting": "Введите корректный email",
   "Son kiriting": "Введите число",
   "Bu maydon belgilanishi kerak": "Это поле нужно отметить",
   "To'ldirilishi shart": "Обязательно для заполнения",
@@ -5247,7 +5249,7 @@ const ru: Dictionary = {
   "Bevosita kirish mumkin emas": "Прямой доступ невозможен",
   "Bu sahifa faqat sizga yuborilgan maxsus havola orqali ochiladi. Iltimos, formaga kirish uchun siz qabul qilgan havolani bosing.": "Эта страница открывается только по специальной ссылке, отправленной вам. Чтобы открыть форму, нажмите на полученную ссылку.",
   "Forma topilmadi": "Форма не найдена",
-  "Bu havola eskirgan yoki forma o'chirilgan bo'lishi mumkin.": "Ссылка могла устареть, или форма была удалена.",
+  "Bu havola eskirgan yoki forma o'chirilgan bo'lishi mumkin.": "Ссылка могла устареть, или форма могла быть удалена.",
 };
 
 export default ru;

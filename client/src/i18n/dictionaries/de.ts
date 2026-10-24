@@ -5219,7 +5219,9 @@ const de: Dictionary = {
   "So'zlarga qaytish": "Zurück zu den Wörtern",
   "Mashqni yakunlash": "Abschließen",
   // Public pages: receipt /r, certificate /t, form /f (device language, ADR-0120).
-  "Qaytarish hujjati": "Rückerstattungsbeleg",
+  "Kvitansiya № {code}": "Quittung Nr. {code}",
+  "Qaytarish hujjati № {code}": "Rückerstattungsbeleg Nr. {code}",
+  "Bekor qilinish sababi": "Stornierungsgrund",
   "Bu hujjat haqiqiy": "Dieses Dokument ist echt",
   "Bu hujjat bekor qilingan": "Dieses Dokument wurde annulliert",
   "PDF hujjatni yuklab olish": "PDF-Dokument herunterladen",

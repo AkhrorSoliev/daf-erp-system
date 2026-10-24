@@ -35,7 +35,11 @@ function formatDate(iso: string): string {
 export function ReceiptView({ data }: { data: VerificationDto }) {
   const t = useT();
   const ok = !data.reversed;
-  const title = data.kind === "payment" ? t("Kvitansiya") : t("Qaytarish hujjati");
+  const code = data.receiptCode;
+  const title =
+    data.kind === "payment"
+      ? t("Kvitansiya № {code}", { code })
+      : t("Qaytarish hujjati № {code}", { code });
 
   return (
     <div className="rounded-lg border bg-background shadow-sm overflow-hidden">
@@ -57,7 +61,7 @@ export function ReceiptView({ data }: { data: VerificationDto }) {
               {ok ? t("Bu hujjat haqiqiy") : t("Bu hujjat bekor qilingan")}
             </div>
             <div className="text-xs text-muted-foreground">
-              {title} № {data.receiptCode}
+              {title}
             </div>
           </div>
         </div>
@@ -77,7 +81,7 @@ export function ReceiptView({ data }: { data: VerificationDto }) {
           />
         )}
         {data.reversed && data.reversedReason && (
-          <Row label={t("Bekor qilish sababi")} value={data.reversedReason} />
+          <Row label={t("Bekor qilinish sababi")} value={data.reversedReason} />
         )}
       </div>
 
