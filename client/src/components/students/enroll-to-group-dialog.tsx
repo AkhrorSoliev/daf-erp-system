@@ -154,7 +154,19 @@ export function EnrollToGroupDialog({
 
   // Current (active) enrollment group — use first enrolled group as "from".
   // Backend marks the previous ACTIVE enrollment as TRANSFERRED on the new POST.
-  const currentGroup = groups.find((g) => enrolledGroupIds.includes(g.id));
+  const listedCurrent = groups.find((g) => enrolledGroupIds.includes(g.id));
+  // Hozirgi guruh ro'yxatda bo'lmasligi mumkin (qidiruv, 50 tadan keyin, yopilgan
+  // holat). Shunda ustoz farqini bilish uchun uni alohida yuklaymiz — server
+  // baribir ustoz farqli bo'lsa sabab talab qiladi.
+  const missingCurrentId = listedCurrent ? undefined : enrolledGroupIds[0];
+  const { data: fetchedCurrent } = useQuery<GroupOption>({
+    queryKey: ["enroll-current-group", missingCurrentId],
+    queryFn: () =>
+      api.get<GroupOption>(`/groups/${missingCurrentId}`).then((r) => r.data),
+    enabled: open && !!missingCurrentId,
+    staleTime: 60_000,
+  });
+  const currentGroup = listedCurrent ?? fetchedCurrent;
   const targetGroup = selectedId
     ? groups.find((g) => g.id === selectedId)
     : null;
