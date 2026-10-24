@@ -166,6 +166,7 @@ export class DafPortalReadService {
    * yashirish «B1 umuman yo'q» degan taassurot qoldirardi.
    */
   async getLevels(studentId: number): Promise<LevelPathItem[]> {
+    const ochiq = this.hammasiOchiq(studentId);
     const units = await this.prisma.dafUnit.findMany({
       // Nafaqaga chiqarilgan unit yo'lga chiqmaydi. A1 migratsiyasi eski
       // 20 ta DiB unitini `retiredAt` bilan belgilab, `order`ini
@@ -288,6 +289,7 @@ export class DafPortalReadService {
             bolimlarByUnit.get(u.id) ?? [],
             fortschritt,
             sozlar,
+            ochiq,
           );
           return {
             id: u.id,
@@ -302,6 +304,19 @@ export class DafPortalReadService {
           };
         }),
     }));
+  }
+
+  /**
+   * Sinovchi o'quvchilar (env `DAF_TESTER_IDS`, vergul bilan) butun yo'lni
+   * ochiq ko'radi: javobda har dars "bajarilgan" deb qaytadi, bazaga yozilmaydi.
+   * Qulf mijozda faqat shu belgidan hisoblanadi, serverda dars o'zi qulflanmagan.
+   */
+  private hammasiOchiq(studentId: number): boolean {
+    const ids = this.config.get<string>('DAF_TESTER_IDS') ?? '';
+    return ids
+      .split(',')
+      .map((s) => s.trim())
+      .includes(String(studentId));
   }
 
   /**
@@ -321,6 +336,7 @@ export class DafPortalReadService {
     sections: XomBolim[],
     fortschritt: XomFortschritt[],
     sozlar: Map<number, SozHisobi>,
+    ochiq = false,
   ): {
     lessons: LernenSeansItem[];
     sections: BolimGuruhi[];
@@ -341,7 +357,7 @@ export class DafPortalReadService {
         exerciseCount: l._count.exercises,
         // `Date` obyekti JSON'da ISO satrga aylanadi — mijoz tipi
         // (`LernenSeans.completedAt: string | null`) shuni kutadi.
-        completedAt: f?.completedAt ?? null,
+        completedAt: f?.completedAt ?? (ochiq ? new Date(0) : null),
         bestScore: f?.bestScore ?? 0,
         runs: f?.runs ?? 0,
       };
@@ -492,7 +508,14 @@ export class DafPortalReadService {
       lessons: alle,
       sections: sectionGruppen,
       finalTest,
-    } = this.gruppiereLektionen(unitId, lessons, sections, fortschritt, sozlar);
+    } = this.gruppiereLektionen(
+      unitId,
+      lessons,
+      sections,
+      fortschritt,
+      sozlar,
+      this.hammasiOchiq(studentId),
+    );
 
     const tayyorSozlar = await this.prisma.dafLexeme.count({
       where: { unitId, ...TAYYOR_SOZ },
