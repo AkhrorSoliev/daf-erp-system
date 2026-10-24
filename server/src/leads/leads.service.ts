@@ -77,7 +77,8 @@ const andList = (a: Prisma.LeadWhereInput['AND']): Prisma.LeadWhereInput[] =>
  */
 export type LeadCreateActor =
   | { kind: 'user'; id: number }
-  | { kind: 'public-form' };
+  | { kind: 'public-form' }
+  | { kind: 'meta-lead-ads' };
 
 @Injectable()
 export class LeadsService {
@@ -569,7 +570,10 @@ export class LeadsService {
    * qiladi, ochiq forma esa manbasiz havoladan kelishi mumkin.
    */
   async create(
-    dto: Omit<CreateLeadDto, 'sourceId'> & { sourceId?: string | null },
+    dto: Omit<CreateLeadDto, 'sourceId'> & {
+      sourceId?: string | null;
+      metaLeadId?: string;
+    },
     companyId: number,
     actor: LeadCreateActor,
   ) {
@@ -655,6 +659,7 @@ export class LeadsService {
           extraPhone: dto.extraPhone || null,
           sectionId: dto.sectionId,
           sourceId: dto.sourceId ?? null,
+          metaLeadId: dto.metaLeadId ?? null,
           order: (maxOrder._max.order ?? -1) + 1,
           statusEnum,
           status: statusEnum.toLowerCase(),
