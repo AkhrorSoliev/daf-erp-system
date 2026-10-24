@@ -834,6 +834,17 @@ export const STRICT_FILES: string[] = [
   "components/student-portal/lernen/uebung/seans-ekrani.tsx",
   "components/student-portal/lernen/mc-exercise.tsx",
   "components/student-portal/lernen/vocab-drill.tsx",
+  "app/r/layout.tsx",
+  "app/r/[id]/receipt-view.tsx",
+  "app/r/[id]/not-found.tsx",
+  "app/t/layout.tsx",
+  "app/t/[id]/certificate-view.tsx",
+  "app/t/[id]/not-found.tsx",
+  "app/f/layout.tsx",
+  "app/f/page.tsx",
+  "app/f/[slug]/not-found.tsx",
+  "components/forms/public-form-renderer.tsx",
+  "components/forms/public-form-fields.tsx",
 ];
 
 function walk(dir: string): string[] {
