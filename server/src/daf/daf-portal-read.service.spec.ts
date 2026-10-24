@@ -1002,7 +1002,7 @@ describe("DAF_TESTER_IDS — sinovchi butun yo'lni ochiq ko'radi", () => {
         p.dafLesson.findMany = jest.fn(async () => darslar);
         p.dafLessonProgress.findMany = jest.fn(async () => []);
         return p;
-      })(),
+      })() as any,
       { get: () => ids } as any,
     );
 
