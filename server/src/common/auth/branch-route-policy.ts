@@ -218,6 +218,15 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     ],
   },
   {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      "O'quvchi profilidagi daraja testi natijalari (ADR-0122). Marshrut " +
+      "o'quvchining filialini aniqlab, chaqiruvchini `assertCallerMayTouchStudent` " +
+      'bilan tekshiradi; sarlavhadagi filial o‘qilmaydi: natija o‘quvchining ' +
+      'o‘z filialiga tegishli.',
+    routes: ['GET /students/:id/level-tests'],
+  },
+  {
     policy: 'COMPANY_WIDE',
     reason:
       'Teilnahmebestätigung thresholds: `participation.*` are company-level ' +
@@ -1228,6 +1237,16 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /telegram/channel-report/list',
       'GET /telegram/channel-report/summary',
     ],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      '«Bot hisoboti», daraja testi statistikasi (ADR-0122): oyiga nechta test ' +
+      'boshlangan, tugagan, yarmida qolgan va hokazo. Bu sonlar butun markaz ' +
+      'bo‘yicha: test filialni bilmaydigan odamni ham qamraydi (lid oqimi), ' +
+      'shuning uchun cheklanadigan filial yo‘q. Marshrut `DEFAULT_COMPANY_ID` ' +
+      'ni o‘qiydi, `reports.students` ni talab qiladi.',
+    routes: ['GET /telegram/channel-report/level-tests'],
   },
   {
     policy: 'COMPANY_WIDE',

@@ -4,6 +4,7 @@ import * as React from "react";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/use-t";
 import { BottomSheet, ProgressRing } from "../../lumio";
 import { useMaqsadOzgartir } from "../queries";
 import { MAQSAD_VARIANTLARI, maqsadKartasi } from "../maqsad";
@@ -21,7 +22,8 @@ export function MaqsadKartasi({ maqsad }: { maqsad: Maqsad }) {
   const [ochiq, setOchiq] = React.useState(false);
   const kartaRef = React.useRef<HTMLButtonElement>(null);
   const ozgartir = useMaqsadOzgartir();
-  const k = maqsadKartasi(maqsad);
+  const t = useT();
+  const k = maqsadKartasi(maqsad, t);
   const tolgan = k.holat !== "jarayon";
 
   return (
@@ -52,7 +54,7 @@ export function MaqsadKartasi({ maqsad }: { maqsad: Maqsad }) {
           </span>
           <span className="block text-sm font-semibold text-ink-600">{k.ballMatni}</span>
           <span className="block text-xs font-semibold text-ink-500">
-            {k.darajaNomi} · o&apos;zgartirish
+            {t("{level} · o'zgartirish", { level: k.darajaNomi })}
           </span>
         </span>
       </button>
@@ -60,7 +62,7 @@ export function MaqsadKartasi({ maqsad }: { maqsad: Maqsad }) {
       <BottomSheet
         open={ochiq}
         onOpenChange={setOchiq}
-        title="Kunlik maqsad"
+        title={t("Kunlik maqsad")}
         onCloseAutoFocus={(e) => {
           // Fokus kartaga qaytadi: oynachada Tab/Escape bilan ishlagan
           // foydalanuvchi o'z joyidan ketmaydi.
@@ -81,7 +83,7 @@ export function MaqsadKartasi({ maqsad }: { maqsad: Maqsad }) {
                   ozgartir.mutate(v.daraja, {
                     onSuccess: () => setOchiq(false),
                     onError: (err) =>
-                      toast.error(getErrorMessage(err, "Saqlashda xatolik")),
+                      toast.error(getErrorMessage(err, t("Saqlashda xatolik"))),
                   })
                 }
                 className={cn(
@@ -90,11 +92,11 @@ export function MaqsadKartasi({ maqsad }: { maqsad: Maqsad }) {
                 )}
               >
                 <span>
-                  <span className="block font-display font-extrabold text-ink-900">{v.nomi}</span>
-                  <span className="block text-xs font-semibold text-ink-500">{v.seans}</span>
+                  <span className="block font-display font-extrabold text-ink-900">{t(v.nomi)}</span>
+                  <span className="block text-xs font-semibold text-ink-500">{t(v.seans)}</span>
                 </span>
                 <span className="shrink-0 font-display text-sm font-extrabold text-ink-900">
-                  {v.ball} ball
+                  {t("{n} ball", { n: v.ball })}
                 </span>
               </button>
             );

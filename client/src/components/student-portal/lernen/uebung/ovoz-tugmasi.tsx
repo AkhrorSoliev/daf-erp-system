@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { SpeakerHigh, ArrowClockwise } from "@phosphor-icons/react";
+import { useT } from "@/i18n/use-t";
 import { registerMedia } from "../../lib/media-registry";
 
 /**
@@ -43,6 +44,7 @@ export function OvozTugmasi({
    */
   compact?: boolean;
 }) {
+  const t = useT();
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   // Faollik hisobi: bu audio ijro etilayotganda o'quvchi ekranga tegmasa ham
   // faol (dizayn 4.5). `<audio key={url}>` url almashganda qayta yaratiladi —
@@ -142,12 +144,12 @@ export function OvozTugmasi({
         <button
           type="button"
           onClick={qoy}
-          aria-label={xato ? "Ovozni qayta yuklash" : "Ovozni eshitish"}
+          aria-label={xato ? t("Ovozni qayta yuklash") : t("Ovozni eshitish")}
           // Matn o'rniga `title` — jadval qatorida xato paragrafiga joy yo'q,
           // lekin xatoni yashirmaslik kerak (brief: "hali ham ko'rsatishi
           // kerak"). Ikonka almashishi (karnay → qayta yuklash) allaqachon
           // ko'zga ko'rinadigan signal, `title` uni gapga aylantiradi.
-          title={xato ? "Ovoz yuklanmadi — qayta urinib ko'ring" : undefined}
+          title={xato ? t("Ovoz yuklanmadi — qayta urinib ko'ring") : undefined}
           className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-transform hover:bg-primary/20 active:scale-95 motion-reduce:transition-none"
         >
           {xato ? <ArrowClockwise size={16} weight="bold" /> : <SpeakerHigh size={16} weight="fill" />}
@@ -162,7 +164,7 @@ export function OvozTugmasi({
       <button
         type="button"
         onClick={qoy}
-        aria-label={xato ? "Ovozni qayta yuklash" : "Ovozni eshitish"}
+        aria-label={xato ? t("Ovozni qayta yuklash") : t("Ovozni eshitish")}
         className="flex size-20 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-95 motion-reduce:transition-none"
       >
         {xato ? <ArrowClockwise size={36} weight="bold" /> : <SpeakerHigh size={36} weight="fill" />}
@@ -170,7 +172,7 @@ export function OvozTugmasi({
       {xato ? (
         // Savol O'TKAZILMAYDI va ball yo'qotilmaydi — tarmoq muammosi
         // o'quvchining bilimi emas.
-        <p className="text-sm text-muted-foreground">Ovoz yuklanmadi — qayta urinib ko&apos;ring</p>
+        <p className="text-sm text-muted-foreground">{t("Ovoz yuklanmadi — qayta urinib ko'ring")}</p>
       ) : null}
     </div>
   );

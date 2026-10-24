@@ -697,6 +697,7 @@ model Course {
 
 model Student {
   id                     Int           @id @default(autoincrement())
+  levelTestAttempts      LevelTestAttempt[]
   firstName              String
   lastName               String
   phone                  String
@@ -863,7 +864,8 @@ model Lead {
   // stage 2 (the backfill restores the ones since KPI_START).
   conversionKind LeadConversionKind?
 
-  formSubmissions CustomFormSubmission[]
+  formSubmissions   CustomFormSubmission[]
+  levelTestAttempts LevelTestAttempt[]
 
   // Meta Lead Ads `leadgen_id`. Meta resends a webhook until it gets a 200, so
   // the unique key is what keeps a retry from creating the lead twice.
@@ -890,6 +892,59 @@ model Lead {
   @@index([sectionId])
   @@index([sourceId])
   @@index([ownerId])
+}
+
+/// Test urinishining holati (ADR-0121, ADR-0122).
+enum LevelTestStatus {
+  /// Test boshlangan, hali tugamagan (yoki odam tashlab ketgan).
+  IN_PROGRESS
+  /// Hamma 20 savolga javob berilgan.
+  COMPLETED
+  /// Odam «Natijani bilish» ni bosib o'zi to'xtatgan: natija bor.
+  STOPPED
+  /// Ketma-ket bir necha savol javobsiz qolgan, test to'xtatilgan.
+  TIMED_OUT
+  /// Odam /cancel yozgan.
+  CANCELLED
+}
+
+/// Botdagi «📊 Darajani aniqlash» testining bitta urinishi (ADR-0121, ADR-0122).
+///
+/// Urinish test BOSHLANGANDA yoziladi va har javobdan keyin yangilanadi, shuning
+/// uchun "yarim qoldirgan" ham hisobotda ko'rinadi. `questionIds` — berilgan
+/// savollar (`level-test-questions.ts` dagi barqaror id'lar): keyingi urinishda
+/// shu chatga avval ko'rmagan savollar beriladi.
+/// `leadId` — odam telefonini yuborib lid bo'lgach to'ldiriladi.
+/// `studentId` — chat bitta o'quvchi kartasiga bog'langan bo'lsa: natija
+/// o'quvchi profilida ko'rinadi va lid ochilmaydi.
+model LevelTestAttempt {
+  id          String   @id @default(uuid())
+  chatId      String
+  questionIds String[]
+  /// Nechta savolga javob berilgan (vaqt tugagani ham hisobda).
+  answered Int @default(0)
+  /// `{ "A1": 5, "A2": 4 }` — darajalar bo'yicha to'g'ri javoblar.
+  correctByLevel Json
+  status         LevelTestStatus @default(IN_PROGRESS)
+  /// BEGINNER | A1 | A2 | B1 | B2 | UNKNOWN. null — natija chiqarilmagan
+  /// (tugamagan, bekor qilingan yoki javobsiz qolgan test).
+  result     String?
+  createdAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  leadId String?
+  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  studentId Int?
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
+
+  @@index([chatId, createdAt])
+  @@index([leadId])
+  @@index([studentId, createdAt])
+  @@index([companyId, createdAt])
 }
 
 enum LeadOwnershipKind {
@@ -1974,6 +2029,7 @@ model Company {
   leadColumns                 LeadColumn[]
   leadSections                LeadSection[]
   leadSources                 LeadSource[]
+  levelTestAttempts           LevelTestAttempt[]
   mockExamSections            MockExamSection[]
   mockExams                   MockExam[]
   mockExamParticipants        MockExamParticipant[]

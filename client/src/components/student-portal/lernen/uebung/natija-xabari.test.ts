@@ -18,7 +18,7 @@ describe("javobPaneliMatni", () => {
 
   it("a wrong answer shows the right one", () => {
     expect(javobPaneliMatni({ isCorrect: false, richtig: "Bahnhof" })).toEqual({
-      sarlavha: "Xato",
+      sarlavha: "Noto'g'ri",
       izoh: null,
       soz: "Bahnhof",
     });
@@ -189,5 +189,40 @@ describe("natijaQatorlari", () => {
     expect(
       natijaQatorlari({ ...base, yangiNishonlar: ["SERIE_14", "WOERTER_50"] }).nishonlar,
     ).toEqual(["Yangi nishon: 14 kun ketma-ket", "Yangi nishon: 50 ta so'z"]);
+  });
+});
+
+// A marking `t`: every text it receives comes back in brackets, filled in.
+const tr = (s: string, p?: Record<string, string | number>) =>
+  `[${s.replace(/\{(\w+)\}/g, (_, k: string) => String(p?.[k]))}]`;
+
+describe("the page's t", () => {
+  it("translates the client's words, never the exercise data", () => {
+    expect(javobPaneliMatni({ isCorrect: false, richtig: "der Bahnhof" }, tr)).toEqual({
+      sarlavha: "[Noto'g'ri]",
+      izoh: null,
+      soz: "der Bahnhof",
+    });
+    expect(
+      javobPaneliMatni({ isCorrect: true, richtig: "Bahnhof", tippfehler: true }, tr),
+    ).toEqual({ sarlavha: "[To'g'ri!]", izoh: "[Imlosiga e'tibor bering:]", soz: "Bahnhof" });
+    expect(xatoYorligi("AUDIO_WORT", "", tr)).toBe("[Eshitish savoli]");
+    expect(xatoYorligi("LUECKE", "Ich ___ Student.", tr)).toBe("Ich ___ Student.");
+    expect(orinXabari(null, 4, "Markazda", tr)).toBe("[Markazda 4-o'rin]");
+    expect(orinXabari(3, 5, "Guruhda", tr)).toBe("[Guruhda 5-o'rin — 2 pog'ona tushdingiz]");
+    const r = natijaQatorlari(
+      {
+        punkte: 10,
+        serie: 2,
+        serieYangi: false,
+        orin: { gruppe: null, zentrum: { oldin: 5, hozir: 3 } },
+        maqsad: { ball: 80, hozir: 85, bajarildi: true, yangiBajarildi: true },
+        yangiNishonlar: ["SERIE_7"],
+      },
+      tr,
+    );
+    expect(r.orin).toBe("[Markazda 3-o'rin — 2 pog'ona ko'tarildingiz]");
+    expect(r.maqsad).toBe("[Kunlik maqsad bajarildi — 85 / 80]");
+    expect(r.nishonlar).toEqual(["[Yangi nishon: [7 kun ketma-ket]]"]);
   });
 });

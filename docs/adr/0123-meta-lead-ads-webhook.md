@@ -1,4 +1,4 @@
-# ADR-0120 — Instagram va Facebook reklama formasidagi lidlar webhook orqali to'g'ridan-to'g'ri doskaga tushadi
+# ADR-0123 — Instagram va Facebook reklama formasidagi lidlar webhook orqali to'g'ridan-to'g'ri doskaga tushadi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-24

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowsClockwise, CaretRight } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { LessonNode, type LessonNodeTone } from "../../lumio";
+import { useT } from "@/i18n/use-t";
 import { useFortschritt } from "../queries";
 import type { LernenLevel } from "../types";
 import { useYolSkroll } from "./yol-skroll";
@@ -146,7 +147,8 @@ function SeansTuguni({
  */
 export function LernenYol({ levels }: LernenYolProps) {
   const router = useRouter();
-  const tugunlar = React.useMemo(() => yolTugunlari(levels), [levels]);
+  const t = useT();
+  const tugunlar = React.useMemo(() => yolTugunlari(levels, t), [levels, t]);
   // Zigzag bosqichi va "bo'lim o'zgardimi" bayrog'i `yol-tuzilishi.ts`da
   // hisoblanadi va sinaladi (`yol-tuzilishi.test.ts`) — bu komponent faqat
   // bosqich raqamini Tailwind tekislanish sinfiga aylantiradi.
@@ -200,7 +202,7 @@ export function LernenYol({ levels }: LernenYolProps) {
           weight="bold"
           className={xiraTakrorlash ? "text-ink-400" : "text-coral-500"}
         />
-        {xiraTakrorlash ? "Bugun takrorlanadigan so'z yo'q" : "Takrorlash"}
+        {xiraTakrorlash ? t("Bugun takrorlanadigan so'z yo'q") : t("Takrorlash")}
       </button>
 
       <div className="flex flex-col gap-5">

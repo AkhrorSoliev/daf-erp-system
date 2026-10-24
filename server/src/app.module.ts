@@ -69,6 +69,7 @@ import { SettingsModule } from './settings/settings.module';
 import { CallLogsModule } from './call-logs/call-logs.module';
 import { StatementsModule } from './statements/statements.module';
 import { ContractDocumentsModule } from './contract-documents/contract-documents.module';
+import { LevelTestModule } from './level-test/level-test.module';
 import { JwtAuthGuard, BranchScopeGuard } from './common/guards';
 import { PermissionGuard } from './common/permissions/permission.guard';
 import { PermissionsModule } from './common/permissions/permissions.module';
@@ -159,6 +160,7 @@ import { validateEnv } from './config/env.validation';
     CallLogsModule,
     StatementsModule,
     ContractDocumentsModule,
+    LevelTestModule,
   ],
   providers: [
     {

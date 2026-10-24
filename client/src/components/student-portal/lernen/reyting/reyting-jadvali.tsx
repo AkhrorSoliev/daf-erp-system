@@ -3,6 +3,7 @@
 import { ArrowUp, Trophy, UsersThree } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Avatar, EmptyState, LoadingCards } from "../../lumio";
+import { useT } from "@/i18n/use-t";
 import { useReyting } from "../queries";
 import { KOTARILISH_MIN_BALL } from "../liga";
 import { qisqaRaqam } from "../yol/yol-tuzilishi";
@@ -18,6 +19,7 @@ import { LoadFailed } from "../../load-failed";
  * `min-h-[54px]` — skelet (`LigaSkelet`) shu balandlikni egallaydi.
  */
 export function ReytingQatori({ qator, zona = false }: { qator: ReytingZeile; zona?: boolean }) {
+  const t = useT();
   return (
     <li
       className={cn(
@@ -34,7 +36,7 @@ export function ReytingQatori({ qator, zona = false }: { qator: ReytingZeile; zo
           ataylab barcha filiallarni aralashtiradi, bu leak emas, CEO
           qarori. */}
       <span className="min-w-0 flex-1 truncate font-semibold text-ink-900">
-        {qator.selbst ? <span className="sr-only">Siz: </span> : null}
+        {qator.selbst ? <span className="sr-only">{t("Siz:")} </span> : null}
         {qator.name}
       </span>
       {zona ? (
@@ -43,11 +45,11 @@ export function ReytingQatori({ qator, zona = false }: { qator: ReytingZeile; zo
           weight="bold"
           className="shrink-0 text-success"
           role="img"
-          aria-label={`Ko'tarilish zonasi (kamida ${KOTARILISH_MIN_BALL} ball bilan)`}
+          aria-label={t("Ko'tarilish zonasi (kamida {n} ball bilan)", { n: KOTARILISH_MIN_BALL })}
         />
       ) : null}
       <span className="shrink-0 font-display text-sm font-extrabold text-ink-900">
-        {qisqaRaqam(qator.punkte)} ball
+        {t("{n} ball", { n: qisqaRaqam(qator.punkte) })}
       </span>
     </li>
   );
@@ -59,6 +61,7 @@ export function ReytingQatori({ qator, zona = false }: { qator: ReytingZeile; zo
  * markazda esa haqiqiy «hali hech kim mashq qilmagan» — ikki xil xabar.
  */
 export function ReytingJadvali({ scope }: { scope: "gruppe" | "zentrum" }) {
+  const t = useT();
   const query = useReyting(scope);
   const { data } = query;
 
@@ -69,14 +72,16 @@ export function ReytingJadvali({ scope }: { scope: "gruppe" | "zentrum" }) {
     return scope === "gruppe" ? (
       <EmptyState
         icon={<UsersThree size={28} weight="bold" />}
-        title="Siz hali guruhga qo'shilmagansiz"
-        description="Guruhga qo'shilgach, guruhdoshlaringiz bilan haftalik ballaringizni solishtira olasiz."
+        title={t("Siz hali guruhga qo'shilmagansiz")}
+        description={t(
+          "Guruhga qo'shilgach, guruhdoshlaringiz bilan haftalik ballaringizni solishtira olasiz.",
+        )}
       />
     ) : (
       <EmptyState
         icon={<Trophy size={28} weight="bold" />}
-        title="Bu hafta hali hech kim ball to'plamagan"
-        description="Birinchi bo'lib mashq qiling — jadval boshida siz turasiz."
+        title={t("Bu hafta hali hech kim ball to'plamagan")}
+        description={t("Birinchi bo'lib mashq qiling — jadval boshida siz turasiz.")}
       />
     );
   }
@@ -84,7 +89,7 @@ export function ReytingJadvali({ scope }: { scope: "gruppe" | "zentrum" }) {
   return (
     <ul
       className="space-y-2"
-      aria-label={scope === "gruppe" ? "Guruhim jadvali" : "Butun markaz jadvali"}
+      aria-label={scope === "gruppe" ? t("Guruhim jadvali") : t("Butun markaz jadvali")}
     >
       {data.map((qator) => (
         <ReytingQatori key={qator.studentId} qator={qator} />

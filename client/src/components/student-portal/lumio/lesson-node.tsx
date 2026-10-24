@@ -3,6 +3,7 @@
 import * as React from "react";
 import { LockSimple } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/use-t";
 
 export type LessonNodeState = "locked" | "active" | "done";
 
@@ -86,14 +87,15 @@ export function LessonNode({
   style,
 }: LessonNodeProps) {
   const locked = state === "locked";
-  const t = TONE[tone];
+  const palette = TONE[tone];
+  const t = useT();
 
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={locked || !onClick}
-      aria-label={`${label}${locked ? " — hali ochilmagan" : ""}`}
+      aria-label={locked ? t("{label} — hali ochilmagan", { label }) : label}
       className={cn(
         "relative flex size-[132px] shrink-0 flex-col justify-between rounded-3xl p-4 text-left transition-transform",
         "active:translate-y-[3px]",
@@ -107,13 +109,13 @@ export function LessonNode({
       )}
       style={{
         ...style,
-        background: locked ? "var(--bg-sunk)" : t.face,
-        color: locked ? "var(--ink-400)" : t.text,
+        background: locked ? "var(--bg-sunk)" : palette.face,
+        color: locked ? "var(--ink-400)" : palette.text,
         boxShadow: locked
           ? "0 6px 0 var(--line), 0 12px 22px rgba(14,42,61,.10)"
           : state === "active"
-            ? `0 0 0 5px ${t.ring}, 0 6px 0 ${t.lip}, 0 16px 26px rgba(14,42,61,.18)`
-            : `0 6px 0 ${t.lip}, 0 12px 22px rgba(14,42,61,.10)`,
+            ? `0 0 0 5px ${palette.ring}, 0 6px 0 ${palette.lip}, 0 16px 26px rgba(14,42,61,.18)`
+            : `0 6px 0 ${palette.lip}, 0 12px 22px rgba(14,42,61,.10)`,
       }}
     >
       <span className="font-display text-[26px] font-extrabold leading-none">
