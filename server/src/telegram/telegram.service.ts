@@ -43,8 +43,8 @@ import { createStatementScene } from './scenes/statement.scene';
 import {
   LEVEL_TEST_ACTION,
   createLevelTestScene,
-  levelTestTimeoutUpdate,
 } from './scenes/level-test.scene';
+import { levelTestTimeoutUpdate } from './scenes/level-test-timer';
 import {
   ACCOUNT_LINK_ACTION,
   ACCOUNT_LINK_BUTTON,

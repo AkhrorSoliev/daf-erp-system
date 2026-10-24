@@ -3,8 +3,12 @@ import type { UserFromGetMe } from 'telegraf/types';
 import {
   branchChoices,
   createLeadFromTest,
-  saveAttempt,
+  finishAttempt,
+  linkedStudent,
+  recordStudentResult,
+  saveProgress,
   seenQuestionIds,
+  startAttempt,
 } from '../../level-test/level-test.store';
 import {
   LEVEL_TEST_BRANCH_PROMPT,
@@ -13,6 +17,8 @@ import {
   LEVEL_TEST_LEAD_DONE,
   LEVEL_TEST_PHONE_PROMPT,
   LEVEL_TEST_STALE,
+  LEVEL_TEST_STOP_CONFIRM,
+  LEVEL_TEST_STUDENT_DONE,
 } from '../../level-test/level-test.texts';
 import {
   LEVEL_TEST_LEVELS,
@@ -29,19 +35,25 @@ import {
   LEVEL_TEST_ABANDONED,
   LEVEL_TEST_TIMEOUT_NOTE,
 } from '../../level-test/level-test.texts';
-import {
-  createLevelTestScene,
-  levelTestTimeoutUpdate,
-} from './level-test.scene';
+import { createLevelTestScene } from './level-test.scene';
+import { levelTestTimeoutUpdate } from './level-test-timer';
 
 jest.mock('../../level-test/level-test.store', () => ({
   branchChoices: jest.fn(),
   createLeadFromTest: jest.fn(),
-  saveAttempt: jest.fn(),
+  finishAttempt: jest.fn(),
+  linkedStudent: jest.fn(),
+  recordStudentResult: jest.fn(),
+  saveProgress: jest.fn(),
   seenQuestionIds: jest.fn(),
+  startAttempt: jest.fn(),
 }));
 const seen = seenQuestionIds as jest.Mock;
-const save = saveAttempt as jest.Mock;
+const save = finishAttempt as jest.Mock;
+const start = startAttempt as jest.Mock;
+const progress = saveProgress as jest.Mock;
+const linked = linkedStudent as jest.Mock;
+const recordResult = recordStudentResult as jest.Mock;
 const branches = branchChoices as jest.Mock;
 const makeLead = createLeadFromTest as jest.Mock;
 
@@ -179,7 +191,11 @@ describe('level-test scene («📊 Darajani aniqlash»)', () => {
     clock = 1_000_000;
     session = { step: 0, data: {}, processing: false };
     seen.mockResolvedValue(new Set());
-    save.mockResolvedValue('att-1');
+    start.mockResolvedValue('att-1');
+    save.mockResolvedValue(undefined);
+    progress.mockResolvedValue(undefined);
+    linked.mockResolvedValue(null);
+    recordResult.mockResolvedValue(undefined);
     branches.mockResolvedValue([
       { id: 1, name: 'Farg‘ona' },
       { id: 2, name: 'Namangan' },
@@ -203,7 +219,8 @@ describe('level-test scene («📊 Darajani aniqlash»)', () => {
     expect(q[1].parse_mode).toBe('HTML');
     // Variantlar matnda, tugmalar — bitta qatorda A B C D.
     const rows = q[1].reply_markup.inline_keyboard;
-    expect(rows).toHaveLength(1);
+    // 1-qator: harflar; 2-qator: «Natijani bilish».
+    expect(rows).toHaveLength(2);
     expect(rows[0].map((b: any) => b.text)).toEqual(['A', 'B', 'C', 'D']);
     expect(rows[0].map((b: any) => b.callback_data)).toEqual([
       'lt:1:0',
@@ -231,14 +248,58 @@ describe('level-test scene («📊 Darajani aniqlash»)', () => {
     for (let i = 0; i < 20; i++) await answer(true);
 
     expect(save).toHaveBeenCalledTimes(1);
-    const saved = save.mock.calls[0][1];
+    expect(save.mock.calls[0][1]).toBe('att-1');
+    const saved = save.mock.calls[0][2];
+    expect(saved.status).toBe('COMPLETED');
     expect(saved.result).toBe('B2');
+    expect(saved.answered).toBe(20);
     expect(saved.questionIds).toHaveLength(20);
     expect(new Set(saved.questionIds).size).toBe(20);
     expect(saved.correctByLevel).toEqual({ A1: 5, A2: 5, B1: 5, B2: 5 });
-    expect(saved.companyId).toBe(DEFAULT_COMPANY_ID);
-    expect(saved.chatId).toBe(String(CHAT));
     expect(session.data.lt.phase).toBe('contact');
+  });
+
+  it('test BOSHLANGANDA yoziladi va har javobdan keyin jarayon saqlanadi', async () => {
+    await enter();
+
+    expect(start).toHaveBeenCalledWith(expect.anything(), {
+      chatId: String(CHAT),
+      studentId: null,
+      companyId: DEFAULT_COMPANY_ID,
+    });
+    expect(progress).not.toHaveBeenCalled();
+
+    await answer(true);
+    await answer(false);
+
+    expect(progress).toHaveBeenCalledTimes(2);
+    expect(progress).toHaveBeenLastCalledWith(
+      expect.anything(),
+      'att-1',
+      expect.objectContaining({
+        answered: 2,
+        correctByLevel: { A1: 1 },
+      }),
+    );
+    // Hali yopilmagan: yarim qolsa "tugamagan" bo'lib turadi.
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it("urinishni boshlab bo'lmasa — test boshlanmaydi", async () => {
+    start.mockRejectedValue(new Error('db'));
+    const ctx = await enter();
+
+    expect(ctx.scene.leave).toHaveBeenCalled();
+    expect(ctx.reply).toHaveBeenCalledTimes(1);
+    expect(session.data.lt.counter).toBe(0);
+  });
+
+  it("jarayonni yozib bo'lmasa ham test davom etadi", async () => {
+    await enter();
+    progress.mockRejectedValue(new Error('db'));
+    await answer(true);
+
+    expect(session.data.lt.counter).toBe(2);
   });
 
   it("A1 dan o'tilmasa ham hamma daraja so'raladi: 20 savol, keyin natija BEGINNER", async () => {
@@ -254,11 +315,11 @@ describe('level-test scene («📊 Darajani aniqlash»)', () => {
     for (let i = 0; i < 15; i++) last = await answer(true);
 
     expect(save).toHaveBeenCalledTimes(1);
-    expect(save.mock.calls[0][1]).toMatchObject({
+    expect(save.mock.calls[0][2]).toMatchObject({
       result: 'BEGINNER',
       correctByLevel: { A1: 2, A2: 5, B1: 5, B2: 5 },
     });
-    expect(save.mock.calls[0][1].questionIds).toHaveLength(20);
+    expect(save.mock.calls[0][2].questionIds).toHaveLength(20);
     const texts = last.reply.mock.calls.map((c: any[]) => c[0]);
     expect(texts[0]).toContain('A1 dan past');
     expect(texts[0]).toContain('17 / 20');
@@ -271,11 +332,11 @@ describe('level-test scene («📊 Darajani aniqlash»)', () => {
     for (let i = 0; i < 5; i++) await answer(i < 3);
     for (let i = 0; i < 10; i++) await answer(true);
 
-    expect(save.mock.calls[0][1]).toMatchObject({
+    expect(save.mock.calls[0][2]).toMatchObject({
       result: 'A1',
       correctByLevel: { A1: 5, A2: 3, B1: 5, B2: 5 },
     });
-    expect(save.mock.calls[0][1].questionIds).toHaveLength(20);
+    expect(save.mock.calls[0][2].questionIds).toHaveLength(20);
   });
 
   it("hamma darajadan 5 tadan so'raladi, tartib A1 → B2", async () => {
@@ -542,7 +603,7 @@ describe('level-test scene («📊 Darajani aniqlash»)', () => {
       expect(session.data.lt.timeoutsInRow).toBe(0);
     });
 
-    it("ketma-ket 3 ta javobsiz savoldan keyin test to'xtatiladi va saqlanmaydi", async () => {
+    it("ketma-ket 3 ta javobsiz savoldan keyin test to'xtatiladi: TIMED_OUT, natijasiz", async () => {
       await enter();
       let last: any;
       for (let i = 0; i < MAX_TIMEOUTS_IN_ROW; i++) {
@@ -552,7 +613,12 @@ describe('level-test scene («📊 Darajani aniqlash»)', () => {
 
       expect(last.scene.leave).toHaveBeenCalled();
       expect(last.reply.mock.calls[0][0]).toBe(LEVEL_TEST_ABANDONED);
-      expect(save).not.toHaveBeenCalled();
+      expect(save).toHaveBeenCalledTimes(1);
+      expect(save.mock.calls[0][2]).toMatchObject({
+        status: 'TIMED_OUT',
+        result: null,
+        answered: MAX_TIMEOUTS_IN_ROW,
+      });
     });
 
     it("yuqori darajada vaqt ko'proq", async () => {
@@ -649,24 +715,212 @@ describe('level-test scene («📊 Darajani aniqlash»)', () => {
       expect(save).toHaveBeenCalledTimes(1);
     });
 
-    it("urinish saqlanmasa, telefon so'ralmaydi", async () => {
+    it("urinishni yopib bo'lmasa ham natija va telefon so'rovi chiqadi", async () => {
       save.mockRejectedValue(new Error('db'));
       await enter();
       let last: any;
       for (let i = 0; i < 20; i++) last = await answer(false);
 
-      expect(last.scene.leave).toHaveBeenCalled();
       const texts = last.reply.mock.calls.map((c: any[]) => c[0]);
-      expect(texts).not.toContain(LEVEL_TEST_PHONE_PROMPT);
+      expect(texts[0]).toContain('📊 Natija');
+      expect(texts).toContain(LEVEL_TEST_PHONE_PROMPT);
     });
   });
 
-  it("/cancel testni to'xtatadi", async () => {
+  it("/cancel testni to'xtatadi: urinish CANCELLED, natijasiz", async () => {
     await enter();
+    await answer(true);
     const ctx = textCtx('/cancel', session);
     await scene().middleware()(ctx, async () => {});
 
     expect(ctx.scene.leave).toHaveBeenCalled();
-    expect(save).not.toHaveBeenCalled();
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save.mock.calls[0][2]).toMatchObject({
+      status: 'CANCELLED',
+      result: null,
+      answered: 1,
+    });
+  });
+
+  describe('«🏁 Natijani bilish» — testni o‘zi to‘xtatish', () => {
+    const tap = async (data: string) => {
+      const ctx = callbackCtx(data, session);
+      await scene().middleware()(ctx, async () => {});
+      return ctx;
+    };
+    const n = () => session.data.lt.counter;
+
+    it('har savolda tugma bor; bosilsa avval Ha/Yo‘q so‘raladi', async () => {
+      const q = await enter();
+      const rows = q.reply.mock.calls[1][1].reply_markup.inline_keyboard;
+      expect(rows[1][0]).toMatchObject({
+        text: '🏁 Natijani bilish',
+        callback_data: 'ltx:1',
+      });
+
+      const ctx = await tap('ltx:1');
+      expect(ctx.answerCbQuery).toHaveBeenCalledWith(LEVEL_TEST_STOP_CONFIRM);
+      const kb = ctx.editMessageText.mock.calls[0][1].reply_markup;
+      expect(kb.inline_keyboard).toHaveLength(1);
+      expect(kb.inline_keyboard[0].map((b: any) => b.callback_data)).toEqual([
+        'lty:1',
+        'ltn:1',
+      ]);
+      // Hali hech narsa to'xtamagan.
+      expect(save).not.toHaveBeenCalled();
+      expect(session.data.lt.current).not.toBeNull();
+    });
+
+    it('«Yo‘q, davom etaman» javob tugmalarini qaytaradi', async () => {
+      await enter();
+      await tap('ltx:1');
+      const ctx = await tap('ltn:1');
+
+      const rows =
+        ctx.editMessageText.mock.calls[0][1].reply_markup.inline_keyboard;
+      expect(rows[0].map((b: any) => b.text)).toEqual(['A', 'B', 'C', 'D']);
+      expect(session.data.lt.confirmStop).toBe(false);
+    });
+
+    it('javob berilsa tasdiq holati tozalanadi', async () => {
+      await enter();
+      await tap('ltx:1');
+      await answer(true);
+      expect(session.data.lt.confirmStop).toBe(false);
+    });
+
+    it('A2 ning o‘rtasida to‘xtatilsa: STOPPED, natija “kamida A1”, shu yerda to‘xtaydi', async () => {
+      await enter();
+      for (let i = 0; i < 5; i++) await answer(true); // A1: 5/5
+      await answer(true);
+      await answer(false); // A2: 1/2
+      await tap(`ltx:${n()}`);
+      const ctx = await tap(`lty:${n()}`);
+
+      expect(save).toHaveBeenCalledTimes(1);
+      expect(save.mock.calls[0][2]).toMatchObject({
+        status: 'STOPPED',
+        result: 'A1',
+        answered: 7,
+        correctByLevel: { A1: 5, A2: 1 },
+      });
+      const texts = ctx.reply.mock.calls.map((c: any[]) => c[0]);
+      expect(texts[0]).toContain('taxminan A1');
+      expect(texts[0]).toContain('6 / 7');
+      expect(texts[0]).toContain('oxiriga yetkazmadingiz (7 / 20)');
+      expect(texts[1]).toBe(LEVEL_TEST_PHONE_PROMPT);
+      // Yakuniy xabar tugmasiz, jami tarix bilan.
+      const finalEdit = ctx.editMessageText.mock.calls[0];
+      expect(finalEdit[0]).toContain('tugadi');
+      expect(finalEdit[1].reply_markup).toBeUndefined();
+    });
+
+    it('A1 tugamasdan to‘xtatilsa natija aniqlanmaydi (UNKNOWN)', async () => {
+      await enter();
+      await answer(true);
+      await answer(true);
+      await tap(`ltx:${n()}`);
+      const ctx = await tap(`lty:${n()}`);
+
+      expect(save.mock.calls[0][2]).toMatchObject({
+        status: 'STOPPED',
+        result: 'UNKNOWN',
+        answered: 2,
+      });
+      expect(ctx.reply.mock.calls[0][0]).toContain('hali aniqlanmadi');
+      expect(ctx.reply.mock.calls[0][0]).not.toContain(
+        'oxiriga yetkazmadingiz',
+      );
+    });
+
+    it('to‘xtatilgach telefon va filialdan so‘ng lid shu natija bilan ochiladi', async () => {
+      await enter();
+      for (let i = 0; i < 5; i++) await answer(true);
+      await tap(`ltx:${n()}`);
+      await tap(`lty:${n()}`);
+      await scene().middleware()(contactCtx(OWN, session), async () => {});
+      await scene().middleware()(callbackCtx('ltb:2', session), async () => {});
+
+      expect(makeLead).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        expect.objectContaining({ result: 'A1', attemptId: 'att-1' }),
+      );
+    });
+
+    it('eski yoki band savolga to‘xtatish e‘tiborsiz', async () => {
+      await enter();
+      await answer(true);
+      const old = await tap('ltx:1');
+      expect(old.answerCbQuery).toHaveBeenCalledWith(LEVEL_TEST_STALE);
+      expect(old.editMessageText).not.toHaveBeenCalled();
+
+      session.processing = true;
+      const busy = await tap(`lty:${n()}`);
+      expect(busy.answerCbQuery).toHaveBeenCalledWith(LEVEL_TEST_STALE);
+      expect(save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('bot chati o‘quvchi kartasiga bog‘langan', () => {
+    const STUDENT = {
+      id: 12345,
+      firstName: 'Ali',
+      lastName: 'Valiyev',
+      companyId: 1001,
+    };
+    beforeEach(() => linked.mockResolvedValue(STUDENT));
+
+    it('urinish o‘quvchiga bog‘lanadi', async () => {
+      await enter();
+      expect(start).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ studentId: 12345 }),
+      );
+    });
+
+    it('tugagach telefon/filial so‘ralmaydi, lid ochilmaydi, tarixga yoziladi', async () => {
+      await enter();
+      let last: any;
+      for (let i = 0; i < 20; i++) last = await answer(true);
+
+      expect(recordResult).toHaveBeenCalledWith(expect.anything(), STUDENT, {
+        status: 'COMPLETED',
+        result: 'B2',
+        answered: 20,
+        correct: 20,
+      });
+      const texts = last.reply.mock.calls.map((c: any[]) => c[0]);
+      expect(texts).not.toContain(LEVEL_TEST_PHONE_PROMPT);
+      expect(texts[1]).toBe(LEVEL_TEST_STUDENT_DONE);
+      expect(last.scene.leave).toHaveBeenCalled();
+      expect(makeLead).not.toHaveBeenCalled();
+    });
+
+    it('o‘zi to‘xtatsa ham profilga yoziladi; natijasi aniqlanmasa yozilmaydi', async () => {
+      await enter();
+      for (let i = 0; i < 5; i++) await answer(true);
+      let ctx = callbackCtx(`ltx:${session.data.lt.counter}`, session);
+      await scene().middleware()(ctx, async () => {});
+      ctx = callbackCtx(`lty:${session.data.lt.counter}`, session);
+      await scene().middleware()(ctx, async () => {});
+
+      expect(recordResult).toHaveBeenCalledWith(
+        expect.anything(),
+        STUDENT,
+        expect.objectContaining({ status: 'STOPPED', result: 'A1' }),
+      );
+
+      // Alohida urinish: 1 ta savol — UNKNOWN, tarixga yozilmaydi.
+      recordResult.mockClear();
+      session = { step: 0, data: {}, processing: false };
+      await enter();
+      await answer(true);
+      ctx = callbackCtx(`ltx:${session.data.lt.counter}`, session);
+      await scene().middleware()(ctx, async () => {});
+      ctx = callbackCtx(`lty:${session.data.lt.counter}`, session);
+      await scene().middleware()(ctx, async () => {});
+      expect(recordResult).not.toHaveBeenCalled();
+    });
   });
 });

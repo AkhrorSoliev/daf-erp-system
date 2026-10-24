@@ -7,6 +7,12 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-24",
+    sarlavha: "Daraja testi natijalari o'quvchi kartasida va hisobotda",
+    matn: "Botdagi «Darajani aniqlash» testida endi «🏁 Natijani bilish» tugmasi bor: savollar qiyinlashganda odam testni shu joyida to'xtatib, yetgan darajasini bilib oladi. Test boshlangan zahoti yoziladi, shuning uchun yarmida qolganlar ham hisobga olinadi. Allaqachon o'qiyotgan o'quvchi (chatiga bitta karta bog'langan) testni yechsa, bot telefon va filialni so'ramaydi, lid ochilmaydi, natija o'quvchi kartasining «Guruhlar» yorlig'idagi «Daraja testi» blokida va tarixida ko'rinadi. Umumiy statistika — Hisobotlar → «Bot hisoboti» sahifasidagi «Daraja testi» bloki: oyda nechta urinish boshlangan, nechtasi oxirigacha yechilgan, nechtasi yarmida qolgan va nechanchi savolda, natijalar darajalar bo'yicha. Bir soatdan ortiq tugatilmagan urinish «yarmida qoldi» deb sanaladi.",
+    rollar: [1, 2, 3],
+  },
+  {
+    sana: "2026-10-24",
     sarlavha: "Botdagi «Darajani aniqlash» testi lid yig'adi",
     matn: "Telegram botdagi «📊 Darajani aniqlash» tugmasi endi ishlaydi. Odam hamma darajadan 20 ta savolga javob beradi (A1, A2, B1, B2 — har biridan 5 tadan) va oxirida taxminiy darajasini ko'radi (darajadan o'tish uchun 5 dan 4 to'g'ri javob kerak). Har savolga vaqt beriladi (A1 20, A2 30, B1 40, B2 50 soniya): vaqt tugasa javob hisobga olinmaydi va bot keyingi savolga o'zi o'tadi; qolgan vaqt xabarda har 5 soniyada kamayib boradi, savollar va javoblar esa bitta xabarda to'planib boradi; ketma-ket 3 ta savolga javob berilmasa, test to'xtatiladi. Savollar 200 talik havzadan tasodifiy olinadi, variantlar har safar aralashadi, qayta topshirganga avval ko'rmagan savollar chiqadi. Natijadan keyin bot telefon raqamini (faqat o'zining kontakti) va filialni so'raydi: shundan so'ng lid tanlangan filialning «Yangi» ustunidagi birinchi bo'limga tushadi, manbasi «Telegram bot — daraja testi», daraja natijasi lidning tarixida («darajaTesti») turadi. Shu telefonli lid allaqachon bo'lsa, ikkinchisi ochilmaydi. Raqamni yubormagan odamga lid ochilmaydi. Natija taxminiy: aniq darajani o'qituvchi suhbatda belgilaydi.",
     rollar: [1, 2, 3],
