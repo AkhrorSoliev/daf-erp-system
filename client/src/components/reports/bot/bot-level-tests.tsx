@@ -11,7 +11,7 @@ export interface LevelTestStats {
   month: string;
   started: number;
   people: number;
-  completed: number;
+  finished: number;
   stopped: number;
   timedOut: number;
   cancelled: number;
@@ -67,7 +67,7 @@ export function BotLevelTests({ month }: { month: string }) {
             <div className="flex flex-col gap-1.5">
               <Row label={t("Boshlagan urinishlar")} value={data.started} />
               <Row label={t("Har xil odam")} value={data.people} />
-              <Row label={t("Oxirigacha yechdi")} value={data.completed} />
+              <Row label={t("Oxirigacha yechdi")} value={data.finished} />
               <Row label={t("Yarmida to'xtadi")} value={unfinished} />
               <Row label={t("Hozir yechilmoqda")} value={data.running} />
               <Row label={t("Telefon qoldirdi (lid)")} value={data.leads} />

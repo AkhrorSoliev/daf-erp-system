@@ -75,7 +75,7 @@ describe('summarize', () => {
 
     expect(s).toMatchObject({
       started: 6,
-      completed: 1,
+      finished: 1,
       stopped: 1,
       timedOut: 1,
       cancelled: 1,
@@ -83,7 +83,7 @@ describe('summarize', () => {
       running: 1,
     });
     expect(
-      s.completed +
+      s.finished +
         s.stopped +
         s.timedOut +
         s.cancelled +

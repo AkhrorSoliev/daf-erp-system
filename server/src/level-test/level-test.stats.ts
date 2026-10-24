@@ -58,7 +58,7 @@ export interface LevelTestStats {
   started: number;
   people: number;
   /** Holatlar bo'yicha (yig'indisi `started`). */
-  completed: number;
+  finished: number;
   stopped: number;
   timedOut: number;
   cancelled: number;
@@ -93,7 +93,7 @@ export function summarize(rows: StatRow[], now: Date): LevelTestStats {
   const stats: LevelTestStats = {
     started: rows.length,
     people: new Set(rows.map((r) => r.chatId)).size,
-    completed: 0,
+    finished: 0,
     stopped: 0,
     timedOut: 0,
     cancelled: 0,
@@ -109,7 +109,7 @@ export function summarize(rows: StatRow[], now: Date): LevelTestStats {
 
   for (const r of rows) {
     const s = displayStatus(r.status, r.createdAt, now);
-    if (s === 'COMPLETED') stats.completed += 1;
+    if (s === 'COMPLETED') stats.finished += 1;
     else if (s === 'STOPPED') stats.stopped += 1;
     else if (s === 'TIMED_OUT') stats.timedOut += 1;
     else if (s === 'CANCELLED') stats.cancelled += 1;

@@ -10,7 +10,7 @@ describe('TelegramChannelReportController', () => {
   let controller: TelegramChannelReportController;
 
   const levelTests = {
-    stats: jest.fn().mockResolvedValue({ started: 7, completed: 3 }),
+    stats: jest.fn().mockResolvedValue({ started: 7, finished: 3 }),
   };
 
   const gateStats = {
@@ -122,7 +122,7 @@ describe('TelegramChannelReportController', () => {
         expect.any(Number),
         '2026-07',
       );
-      expect(res).toEqual({ started: 7, completed: 3, month: '2026-07' });
+      expect(res).toEqual({ started: 7, finished: 3, month: '2026-07' });
     });
 
     it('no month means the current Tashkent month', async () => {
