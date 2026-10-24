@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
@@ -50,6 +51,7 @@ export function ConvertParticipantDialog({
   onClose,
   onConverted,
 }: ConvertParticipantDialogProps) {
+  const t = useT();
   const branches = useBranchSwitcher((s) => s.branches);
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const [branchId, setBranchId] = useState("");
@@ -73,7 +75,7 @@ export function ConvertParticipantDialog({
   async function handleConfirm() {
     if (!participant) return;
     if (!branchId) {
-      toast.error("Filialni tanlang");
+      toast.error(t("Filialni tanlang"));
       return;
     }
     setSubmitting(true);
@@ -83,11 +85,14 @@ export function ConvertParticipantDialog({
         { branchId: Number(branchId) },
       );
       onConverted(participant.id, data);
-      toast.success(`✅ O'quvchi yaratildi: #${data.id}`);
+      toast.success(`✅ ${t("O'quvchi yaratildi: #{id}", { id: data.id })}`);
       onClose();
     } catch (error) {
       toast.error(
-        getErrorMessage(error, "O'quvchiga aylantirishda xatolik yuz berdi"),
+        getErrorMessage(
+          error,
+          t("Ishtirokchini o'quvchiga aylantirishda xatolik yuz berdi"),
+        ),
       );
     } finally {
       setSubmitting(false);
@@ -103,22 +108,23 @@ export function ConvertParticipantDialog({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>O&apos;quvchiga aylantirish</DialogTitle>
+          <DialogTitle>{t("O'quvchiga aylantirish")}</DialogTitle>
           <DialogDescription>
-            <span className="font-medium text-foreground">
-              {participant.firstName} {participant.lastName}
-            </span>{" "}
-            (ID #{participant.publicId}) ma&apos;lumotlari asosida yangi
-            DaF o&apos;quvchisi yaratiladi. ID raqami o&apos;zgarmaydi —
-            mock natijalari ham yangi profilga avtomatik bog&apos;lanadi.
+            {t(
+              "{name} (ID #{id}) ma'lumotlari asosida yangi DaF o'quvchisi yaratiladi. ID raqami o'zgarmaydi — mock natijalari ham yangi profilga avtomatik bog'lanadi.",
+              {
+                name: `${participant.firstName} ${participant.lastName}`,
+                id: participant.publicId,
+              },
+            )}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-1.5">
-          <Label>Filial</Label>
+          <Label>{t("Filial")}</Label>
           <Select value={branchId} onValueChange={setBranchId}>
             <SelectTrigger>
-              <SelectValue placeholder="Filialni tanlang" />
+              <SelectValue placeholder={t("Filialni tanlang")} />
             </SelectTrigger>
             <SelectContent>
               {branches.map((branch) => (
@@ -129,8 +135,9 @@ export function ConvertParticipantDialog({
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            Kurs va guruhga yozish keyinroq o&apos;quvchi profilida amalga
-            oshiriladi.
+            {t(
+              "Kurs va guruhga yozish keyinroq o'quvchi profilida amalga oshiriladi.",
+            )}
           </p>
         </div>
 
@@ -141,7 +148,7 @@ export function ConvertParticipantDialog({
             onClick={onClose}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button
             type="button"
@@ -153,7 +160,7 @@ export function ConvertParticipantDialog({
             ) : (
               <UserPlus className="size-4" />
             )}
-            Aylantirish
+            {t("Aylantirish")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarWithPreview } from "@/components/ui/avatar-with-preview";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { TranslatedStatusBadge } from "@/components/shared/translated-status-badge";
 import {
   Table,
   TableBody,
@@ -16,6 +16,7 @@ import type { TeacherData } from "@/hooks/use-edit-teacher";
 import { TeacherRowActions } from "./teacher-row-actions";
 import { useCan } from "@/hooks/use-permissions";
 import { formatPhone } from "@/lib/format-utils";
+import { useT } from "@/i18n/context";
 
 interface TeachersTableProps {
   teachers: TeacherData[];
@@ -23,12 +24,13 @@ interface TeachersTableProps {
 }
 
 export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
+  const t = useT();
   const canManageTeachers = useCan("teachers.manage");
 
   if (teachers.length === 0) {
     return (
       <div className="text-muted-foreground flex h-40 items-center justify-center rounded-md border">
-        O&apos;qituvchilar topilmadi
+        {t("O'qituvchilar topilmadi")}
       </div>
     );
   }
@@ -39,12 +41,12 @@ export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
         <TableHeader>
           <TableRow>
             <TableHead className="w-12 border-r">#</TableHead>
-            <TableHead className="w-10">Rasm</TableHead>
-            <TableHead className="min-w-36">Ism familiya</TableHead>
-            <TableHead className="w-28">Holat</TableHead>
-            <TableHead className="hidden min-w-32 sm:table-cell">Telefon</TableHead>
-            <TableHead className="hidden md:table-cell">Guruhlar</TableHead>
-            <TableHead className="hidden md:table-cell">O&apos;quvchilar</TableHead>
+            <TableHead className="w-10">{t("Rasm")}</TableHead>
+            <TableHead className="min-w-36">{t("Ism familiya")}</TableHead>
+            <TableHead className="w-28">{t("Holat")}</TableHead>
+            <TableHead className="hidden min-w-32 sm:table-cell">{t("Telefon")}</TableHead>
+            <TableHead className="hidden md:table-cell">{t("Guruhlar")}</TableHead>
+            <TableHead className="hidden md:table-cell">{t("O'quvchilar")}</TableHead>
             {canManageTeachers && <TableHead className="w-10" />}
           </TableRow>
         </TableHeader>
@@ -80,7 +82,7 @@ export function TeachersTable({ teachers, onDeleted }: TeachersTableProps) {
                   {fullName}
                 </TableCell>
                 <TableCell>
-                  <StatusBadge entityType="teachers" status={teacher.status} />
+                  <TranslatedStatusBadge entityType="teachers" status={teacher.status} />
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   {formatPhone(teacher.phone)}

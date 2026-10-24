@@ -103,19 +103,23 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'usable by someone who has no branch yet; the public form and its schema ' +
       'are handed to strangers on purpose (the resulting lead takes its branch ' +
       'from the section it routes into); the receipt endpoints exist so a payer ' +
-      'can verify a document they were given.',
+      'can verify a document they were given, and so does the certificate QR ' +
+      'route (`GET /participation-certificates/:id/verify`), which shows a ' +
+      "printed Teilnahmebestätigung's number, name, level and validity only.",
     routes: [
       'GET /auth/otp/poll',
       'GET /auth/telegram/callback',
       'GET /auth/telegram/start',
       'GET /auth/telegram/status',
       'GET /notifications/vapid-public-key',
+      'GET /participation-certificates/:id/verify',
       'GET /public/forms/:slug',
       'GET /receipts/:id/verify',
       'GET /receipts/payment/:id.pdf',
       'GET /receipts/payment/:id/verify',
       'GET /receipts/refund/:id.pdf',
       'GET /receipts/refund/:id/verify',
+      'GET /webhooks/meta-leads',
       'POST /auth/forgot-password/request',
       'POST /auth/forgot-password/reset',
       'POST /auth/forgot-password/verify',
@@ -125,6 +129,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /auth/telegram/webapp',
       'POST /auth/telegram/webapp/staff',
       'POST /public/forms/:slug/submit',
+      'POST /webhooks/meta-leads',
     ],
   },
   {
@@ -149,6 +154,105 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       "The caller's own capability list, read through " +
       "`PermissionsService.forUser(@CurrentUser('id'))`. No branch question.",
     routes: ['GET /permissions/me'],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      "The «Ruxsatlar» page (ADR-0087): a role's capability settings belong to " +
+      'the whole company — `RolePermission` has no branch, and one row turns a ' +
+      'key on or off for every holder of that role in every branch — and so ' +
+      'does their change history. CEO-only through `@CeoOnly()`, a database ' +
+      'role check that is never a capability (spec §4.2).',
+    routes: [
+      'GET /permissions',
+      'GET /permissions/history',
+      'POST /permissions/roles/:roleId/reset',
+      'PUT /permissions/roles/:roleId',
+    ],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      '«Dars baholari» switch (spec 2026-10-13 §6.1): `lessonRating.enabled` is a ' +
+      'company-level setting (`companyLevelOnly`) — one value for every branch. ' +
+      'CEO-only through `@CeoOnly()`. The three reads take `@BranchScope()`.',
+    routes: ['PATCH /lesson-ratings/settings'],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      'Lead ownership limits (ADR-0093): `leads.maxUntouched`, ' +
+      '`leads.firstActionHours` and `leads.followUpDays` are company-level ' +
+      'settings (`companyLevelOnly`) — one value for every branch. The read ' +
+      'carries numbers only; the write is CEO-only through `@CeoOnly()`. The ' +
+      'other ownership routes take `@BranchScope()`.',
+    routes: [
+      'GET /leads/ownership/settings',
+      'PATCH /leads/ownership/settings',
+    ],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      'KPI prices and switch (ADR-0096): `kpi.enabled`, `kpi.leadPaid.*` and ' +
+      '`kpi.promiseKept.*` are company-level settings (`companyLevelOnly`) — one ' +
+      'value for every branch. The read carries the rules only; the write is ' +
+      'CEO-only through `@CeoOnly()`. `GET /kpi/overview` and ' +
+      '`GET /kpi/users/:id` take `@BranchScope()`.',
+    routes: ['GET /kpi/settings', 'PATCH /kpi/settings'],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      'Teilnahmebestätigung (spec 2026-10-17). The student routes resolve the ' +
+      "student's branch and check the caller against it with " +
+      '`assertCallerMayTouchStudent`; the PDF loads the certificate, then does ' +
+      'the same for its student; so does the cancel (ADR-0104). The header ' +
+      'branch is never read: a document belongs to the branch of the student ' +
+      'it was issued for.',
+    routes: [
+      'GET /students/:id/participation-certificates/preview',
+      'POST /students/:id/participation-certificates',
+      'GET /participation-certificates/:id/pdf',
+      'POST /participation-certificates/:id/revoke',
+    ],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      "O'quvchi profilidagi daraja testi natijalari (ADR-0122). Marshrut " +
+      "o'quvchining filialini aniqlab, chaqiruvchini `assertCallerMayTouchStudent` " +
+      'bilan tekshiradi; sarlavhadagi filial o‘qilmaydi: natija o‘quvchining ' +
+      'o‘z filialiga tegishli.',
+    routes: ['GET /students/:id/level-tests'],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      'Teilnahmebestätigung thresholds: `participation.*` are company-level ' +
+      'settings (`companyLevelOnly`) — one value for every branch. Both routes ' +
+      'are CEO-only through `@CeoOnly()`.',
+    routes: [
+      'GET /participation-certificates/settings',
+      'PATCH /participation-certificates/settings',
+    ],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      'Personal Telegram report recipients (ADR-0095): who receives the daily ' +
+      'report in their own chat, with which branches. Company-level settings, ' +
+      'CEO-only through `@CeoOnly()`; the CEO picks any branch for anyone.',
+    routes: [
+      'GET /telegram-report/recipients',
+      'GET /telegram-report/candidates',
+      'POST /telegram-report/recipients',
+      'PATCH /telegram-report/recipients/:id',
+      'DELETE /telegram-report/recipients/:id',
+      'POST /telegram-report/recipients/:id/test',
+      'POST /telegram-report/recipients/:id/check',
+      'GET /telegram-report/recipients/:id/preview',
+    ],
   },
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
@@ -264,6 +368,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     routes: [
       'GET /cash-accounts',
       'GET /expenses',
+      'GET /expenses/month-summary',
       'GET /expenses/pdf',
       'GET /payments/debtors',
       'GET /payments/debtors/summary',
@@ -346,6 +451,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /groups',
       'PATCH /groups/:id',
       'PATCH /groups/:id/status',
+      'PATCH /groups/:id/pause',
       'DELETE /groups/:id',
     ],
   },
@@ -475,10 +581,12 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       "`assertCallerMayTouchGroup` — sof o'qituvchi uchun biriktirilganlik, " +
       "qolganlar uchun filial; yon oyna qo'shimcha ravishda o'quvchi shu " +
       "guruhning faol a'zosi ekanini tekshiradi. Profil route'i " +
-      '`assertCallerMayTouchStudent`.',
+      '`assertCallerMayTouchStudent`. ' +
+      '«Musobaqa» tabi (S5, ADR-0124) shu qorovulni qayta ishlatadi.',
     routes: [
       'GET /groups/:id/app-activity',
       'GET /groups/:id/app-activity/students/:studentId',
+      'GET /groups/:id/musobaqa',
       'GET /students/:id/app-activity',
     ],
   },
@@ -575,9 +683,13 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       "`@CurrentUser('id')` and never from the request, so there is no " +
       'other account it could reach and a branch check would gate nothing.',
     routes: [
+      'DELETE /users/sessions/:sid',
+      'GET /users/sessions',
       'PATCH /users/password',
       'PATCH /users/phone',
       'PATCH /users/profile',
+      'PATCH /users/ui-locale',
+      'PATCH /users/ui-skin',
       'POST /users/logout-others',
     ],
   },
@@ -597,6 +709,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'payslip reads took no caller at all, and the matrix let an ' +
       'Administrator see every branch.',
     routes: [
+      'DELETE /salary/monthly/user/:userId/adjustment',
       'GET /salary/accruals/:userId',
       'GET /salary/config-history/:userId',
       'GET /salary/config/:userId',
@@ -608,6 +721,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /salary/payments/settle-month/preview',
       'POST /salary/payments/:id/pay',
       'POST /salary/payments/settle-month',
+      'PUT /salary/monthly/user/:userId/adjustment',
     ],
   },
   {
@@ -632,7 +746,12 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'Branch Director changing it would move the other branch without seeing ' +
       'it. The cron it configures runs company-wide and resolves each ' +
       "student's branch from the student, never from the caller.",
-    routes: ['GET /absence-pause/settings', 'PATCH /absence-pause/settings'],
+    routes: [
+      'GET /absence-pause/history',
+      'GET /absence-pause/preview',
+      'GET /absence-pause/settings',
+      'PATCH /absence-pause/settings',
+    ],
   },
   {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
@@ -831,10 +950,24 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       '`docs/superpowers/specs/2026-09-06-ball-va-yol-design.md` section 6.1, ' +
       "and in the comment on `FortschrittService`'s centre query " +
       '(`fortschritt/fortschritt.service.ts`). Do not add a `branchId` filter ' +
-      "there — that would be 'fixing' a considered decision.",
+      "there — that would be 'fixing' a considered decision. " +
+      '`GET .../nishonlar` and `PATCH .../maqsad` (S2, ADR-0115) are SELF ' +
+      "the ordinary way: the caller's own badges and the caller's own goal " +
+      'row (`DafStudentSetting`, keyed on the token `studentId`) — no branch question. ' +
+      '`GET .../liga` and `GET .../guruhlar` (S3, ADR-0116) are SELF on the same ' +
+      "terms as the centre ranking: the caller's own league room (rooms are " +
+      'filled centre-wide) and the centre-wide weekly group table — both ' +
+      'deliberately not limited to a branch (06.09 §6.1). ' +
+      '`PATCH .../eslatmalar` (S4, ADR-0117) is SELF the ordinary way: the ' +
+      "caller's own reminder switch on their own `DafStudentSetting` row.",
     routes: [
       'GET /student-portal/lernen/fortschritt',
       'GET /student-portal/lernen/reyting',
+      'GET /student-portal/lernen/nishonlar',
+      'PATCH /student-portal/lernen/maqsad',
+      'GET /student-portal/lernen/liga',
+      'GET /student-portal/lernen/guruhlar',
+      'PATCH /student-portal/lernen/eslatmalar',
     ],
   },
   {
@@ -910,23 +1043,36 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'duplicate creates the copy through the same branch resolution as a new ' +
       'task. A recurrence rule is loaded by id AND company and checked with ' +
       'the same `resolveAccess` on the RULE (author, the CEO, a Branch ' +
-      'Director of its `branchId`); anyone else gets 404.',
+      'Director of its `branchId`); anyone else gets 404. A task file route ' +
+      '(list, upload, delete) loads the task through the same `loadForAccess` ' +
+      'first; a delete then also needs the uploader or `canManage`.',
     routes: [
+      'DELETE /tasks/:id/files/:fileId',
       'DELETE /tasks/:id/steps/:stepId',
       'DELETE /tasks/recurrences/:id',
       'GET /tasks/:id',
+      'GET /tasks/:id/files',
       'PATCH /tasks/:id',
       'PATCH /tasks/:id/steps/:stepId',
       'PATCH /tasks/recurrences/:id',
       'POST /tasks/:id/cancel',
       'POST /tasks/:id/duplicate',
       'POST /tasks/:id/events',
+      'POST /tasks/:id/files',
       'POST /tasks/:id/review',
       'POST /tasks/:id/seen',
       'POST /tasks/:id/status',
       'POST /tasks/:id/steps',
       'PUT /tasks/:id/participants',
     ],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      'A server switch, not data: whether the private task-file bucket is ' +
+      'configured (`R2_TASKS_BUCKET_NAME`, ADR-0086). The same answer for ' +
+      'every caller and branch.',
+    routes: ['GET /tasks/config'],
   },
   {
     policy: 'SELF',
@@ -1093,6 +1239,16 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /telegram/channel-report/list',
       'GET /telegram/channel-report/summary',
     ],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      '«Bot hisoboti», daraja testi statistikasi (ADR-0122): oyiga nechta test ' +
+      'boshlangan, tugagan, yarmida qolgan va hokazo. Bu sonlar butun markaz ' +
+      'bo‘yicha: test filialni bilmaydigan odamni ham qamraydi (lid oqimi), ' +
+      'shuning uchun cheklanadigan filial yo‘q. Marshrut `DEFAULT_COMPANY_ID` ' +
+      'ni o‘qiydi, `reports.students` ni talab qiladi.',
+    routes: ['GET /telegram/channel-report/level-tests'],
   },
   {
     policy: 'COMPANY_WIDE',

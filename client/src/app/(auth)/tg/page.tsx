@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { MiniAppEntry } from "@/components/telegram-mini-app/mini-app-entry";
 import { getPortalType } from "@/lib/portal";
 import { miniAppAudienceForHost } from "@/lib/telegram-mini-app";
-import { DaftarSheet } from "../daftar-sheet";
+import { StaffSignInShell } from "../staff-sign-in-shell";
 
 export const metadata: Metadata = {
   title: "DaF — kabinet",
@@ -28,8 +28,8 @@ export const viewport: Viewport = {
  * yaratadi.
  *
  * The host also picks the look, here on the server, so the first paint is
- * already the right one: the staff cabinet is written on the Daftar sheet of
- * the staff sign-in pages, the student cabinet stays Lumio.
+ * already the right one: the staff cabinet opens in the shell of the staff
+ * sign-in pages, the student cabinet stays Lumio.
  */
 export default async function TelegramMiniAppPage() {
   const headersList = await headers();
@@ -38,9 +38,9 @@ export default async function TelegramMiniAppPage() {
 
   if (miniAppAudienceForHost(host) === "staff") {
     return (
-      <DaftarSheet portal={getPortalType(host)}>
-        <MiniAppEntry daftar />
-      </DaftarSheet>
+      <StaffSignInShell portal={getPortalType(host)}>
+        <MiniAppEntry staff />
+      </StaffSignInShell>
     );
   }
 

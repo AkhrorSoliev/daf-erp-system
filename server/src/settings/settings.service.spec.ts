@@ -116,7 +116,84 @@ describe('SettingsService', () => {
         'payment.attendanceOpensMinutesBefore': 10,
         'payment.admissionMinPaidPercent': 50,
         'payment.paidThroughReminderDays': 3,
+        'lessonRating.enabled': false,
+        'leads.maxUntouched': 10,
+        'leads.firstActionHours': 2,
+        'leads.followUpDays': 3,
+        'kpi.enabled': true,
+        'kpi.leadPaid.mode': 'FIXED',
+        'kpi.leadPaid.value': 50000,
+        'kpi.promiseKept.mode': 'FIXED',
+        'kpi.promiseKept.value': 20000,
+        'participation.minAttendancePercent': 80,
+        'participation.minAppPercent.A1': 100,
+        'participation.minAppPercent.A2': 100,
+        'participation.minAppPercent.B1': 100,
+        'participation.minLessons': 20,
+        'participation.maxLatePercent': 20,
       });
+    });
+  });
+
+  describe('lastWrittenAt', () => {
+    it("reads the company row's updatedAt; null without a row", async () => {
+      const at = new Date('2026-10-20T05:00:00Z');
+      prisma.setting.findFirst
+        .mockResolvedValueOnce({ updatedAt: at })
+        .mockResolvedValueOnce(null);
+      await expect(
+        service.lastWrittenAt(COMPANY_ID, 'kpi.enabled'),
+      ).resolves.toEqual(at);
+      await expect(
+        service.lastWrittenAt(COMPANY_ID, 'kpi.enabled'),
+      ).resolves.toBeNull();
+      expect(prisma.setting.findFirst).toHaveBeenCalledWith({
+        where: { companyId: COMPANY_ID, branchId: null, key: 'kpi.enabled' },
+        select: { updatedAt: true },
+      });
+    });
+  });
+
+  describe('setMany', () => {
+    beforeEach(() => {
+      prisma.$transaction = jest.fn((fn: (tx: unknown) => unknown) =>
+        fn(prisma),
+      );
+      prisma.setting.create.mockImplementation(({ data }: { data: object }) =>
+        Promise.resolve({ id: 's1', ...data }),
+      );
+    });
+
+    it('writes every key in one transaction, history on the same client, then clears the cache once', async () => {
+      await service.setMany(
+        COMPANY_ID,
+        [
+          ['kpi.leadPaid.mode', 'PERCENT'],
+          ['kpi.leadPaid.value', 5],
+        ],
+        7,
+      );
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(prisma.setting.create).toHaveBeenCalledTimes(2);
+      expect(entityHistoryService.recordCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ entityType: 'Setting', tx: prisma }),
+      );
+      expect(redis.del).toHaveBeenCalledTimes(1);
+    });
+
+    it('refuses a bad value before anything is written', async () => {
+      await expect(
+        service.setMany(
+          COMPANY_ID,
+          [
+            ['kpi.leadPaid.mode', 'PERCENT'],
+            ['kpi.leadPaid.value', -1],
+          ],
+          7,
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(prisma.setting.create).not.toHaveBeenCalled();
     });
   });
 
@@ -144,6 +221,21 @@ describe('SettingsService', () => {
         'payment.attendanceOpensMinutesBefore': [],
         'payment.admissionMinPaidPercent': [],
         'payment.paidThroughReminderDays': [],
+        'lessonRating.enabled': [],
+        'leads.maxUntouched': [],
+        'leads.firstActionHours': [],
+        'leads.followUpDays': [],
+        'kpi.enabled': [],
+        'kpi.leadPaid.mode': [],
+        'kpi.leadPaid.value': [],
+        'kpi.promiseKept.mode': [],
+        'kpi.promiseKept.value': [],
+        'participation.minAttendancePercent': [],
+        'participation.minAppPercent.A1': [],
+        'participation.minAppPercent.A2': [],
+        'participation.minAppPercent.B1': [],
+        'participation.minLessons': [],
+        'participation.maxLatePercent': [],
       });
     });
 

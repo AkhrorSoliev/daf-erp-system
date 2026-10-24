@@ -1,7 +1,7 @@
 import type { MultiSelectOption } from "@/components/ui/multi-select-combobox";
 import { filterParams, type TaskCard, type TaskFilters, type TaskStatus } from "@/hooks/use-tasks";
 import { dueState, tashkentDayAndTime } from "./task-due";
-import { ENTITY_LABEL, KIND_LABEL, isOpenStatus } from "./task-labels";
+import { ENTITY_LABEL, KIND_LABEL, isOpenStatus, uzbek, type Translate } from "./task-labels";
 
 const PAGE_SIZE = 50;
 /** Closed tasks (done, cancelled) are listed for the last 30 days only; the server cuts both. */
@@ -42,9 +42,9 @@ export function assigneeFromUrl(raw: string | null): number[] | undefined {
 }
 
 /** A person picked through a link may be missing from the list (no longer assignable); keep the pick visible as an option. */
-export function withSelected(options: MultiSelectOption[], selected: string[]): MultiSelectOption[] {
+export function withSelected(options: MultiSelectOption[], selected: string[], t: Translate = uzbek): MultiSelectOption[] {
   const missing = selected.filter((v) => !options.some((o) => o.value === v));
-  return [...options, ...missing.map((value) => ({ value, label: `Xodim ${value}` }))];
+  return [...options, ...missing.map((value) => ({ value, label: t("Xodim {id}", { id: value }) }))];
 }
 
 /** `more`: another page exists, so the counts are lower bounds. */
@@ -88,16 +88,18 @@ export function appendPage(prev: AllResult | null, query: AllQuery, page: TaskCa
 const fullName = (p: { firstName: string; lastName: string }) => `${p.firstName} ${p.lastName}`;
 
 /** Names (two, then «+N»), or for a batch the author's own count: «5 xodim · 2/5 bajardi». */
-export function assigneeLabel(t: Pick<TaskCard, "assignees" | "batch">): string {
-  if (t.batch) return `${t.batch.total} xodim · ${t.batch.done}/${t.batch.total} bajardi`;
-  const names = t.assignees.map(fullName);
+export function assigneeLabel(task: Pick<TaskCard, "assignees" | "batch">, t: Translate = uzbek): string {
+  if (task.batch) return t("{total} xodim · {done}/{total} bajardi", { total: task.batch.total, done: task.batch.done });
+  const names = task.assignees.map(fullName);
   if (names.length === 0) return "—";
   return names.length <= 2 ? names.join(", ") : `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
 }
 
 /** The line under a title: what the system task is about and what it hangs off. */
-export function topicLine(t: Pick<TaskCard, "kind" | "entityType">): string {
-  return [KIND_LABEL[t.kind], t.entityType ? ENTITY_LABEL[t.entityType] : ""].filter(Boolean).join(" · ");
+export function topicLine(task: Pick<TaskCard, "kind" | "entityType">, t: Translate = uzbek): string {
+  const kind = KIND_LABEL[task.kind];
+  const entity = task.entityType ? ENTITY_LABEL[task.entityType] : undefined;
+  return [kind ? t(kind) : "", entity ? t(entity) : ""].filter(Boolean).join(" · ");
 }
 
 export function branchLabel(branchId: number | null, branches: { id: number; name: string }[]): string {

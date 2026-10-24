@@ -1,6 +1,8 @@
-import { createElement } from "react";
+import { createElement, type ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { I18nProvider } from "@/i18n/context";
+import ru from "@/i18n/dictionaries/ru";
 import { StatementReport } from "./statement-report";
 import { LessonDayChips, MonthDetails } from "./statement-months-table";
 import { StatementPayments } from "./statement-payments";
@@ -163,7 +165,7 @@ describe("StatementReport", () => {
   it("puts the notes and the raw ledger in closed sections under Batafsil", () => {
     const html = render(data());
     expect(html).toContain("Batafsil");
-    expect(html).toContain("Izohlar");
+    expect(html).toContain("Hisob izohlari");
     // Closed: its contents are not drawn yet.
     expect(html).not.toContain("Izoh matni.");
   });
@@ -282,5 +284,54 @@ describe("LessonDayChips", () => {
     );
     expect(html).toContain("07.09");
     expect(html).toContain("kelmagan");
+  });
+});
+
+describe("the statement in Russian", () => {
+  const inRussian = (node: ReturnType<typeof createElement>) =>
+    renderToStaticMarkup(
+      createElement(
+        I18nProvider,
+        // `children` is the third argument (react/no-children-prop).
+        { initialLocale: "ru", initialDictionary: ru } as ComponentProps<typeof I18nProvider>,
+        node,
+      ),
+    )
+      .replace(/&#x27;/g, "'")
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ");
+
+  it("translates the headings, the tiles and the table heads, not the server's sentences", () => {
+    const text = inRussian(
+      createElement(StatementReport, {
+        data: data(),
+        who: { isCeo: false, canCorrect: true },
+        now: NOW,
+        onCorrect: () => {},
+      }),
+    );
+    expect(text).toContain("Платежи");
+    expect(text).toContain("По месяцам");
+    expect(text).toContain("Подробнее");
+    expect(text).toContain("Пояснения к отчёту");
+    expect(text).toContain("Оплачено");
+    expect(text).toContain("Стоимость занятий");
+    expect(text).toContain("Остаток");
+    expect(text).toContain("Способ");
+    expect(text).toContain("Всего оплачено");
+    expect(text).toContain("Долг");
+    // The server's words stay as they came.
+    expect(text).toContain("avgust");
+  });
+
+  it("translates a lesson day's status", () => {
+    const text = inRussian(
+      createElement(LessonDayChips, {
+        days: [{ day: "2026-09-07", group: "#001", status: "kelmagan" }],
+        showGroup: false,
+      }),
+    );
+    expect(text).toContain("07.09");
+    expect(text).toContain("не пришёл");
   });
 });

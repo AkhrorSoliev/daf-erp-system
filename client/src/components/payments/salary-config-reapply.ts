@@ -1,4 +1,6 @@
 import { formatPrice } from "@/lib/format-utils";
+import { interpolate } from "@/i18n/translate";
+import type { Translate } from "./record-payment-admission";
 
 /**
  * What a rate save does to the lessons already written from its start date
@@ -29,24 +31,34 @@ function signed(n: number): string {
 export function reapplyLines(
   s: RateReapplySummary,
   fromLabel: string,
+  t: Translate = interpolate,
 ): { main: string | null; notes: string[] } {
   const main =
     s.lessons > 0
-      ? `${fromLabel} dan beri yozilgan ${s.lessons} ta dars yangi stavka bilan qayta hisoblanadi: ${formatPrice(s.before)} → ${formatPrice(s.after)} so'm (${signed(s.delta)} so'm).`
+      ? t(
+          "{from} dan beri yozilgan {n} ta dars yangi stavka bilan qayta hisoblanadi: {before} → {after} so'm ({delta} so'm).",
+          {
+            from: fromLabel,
+            n: s.lessons,
+            before: formatPrice(s.before),
+            after: formatPrice(s.after),
+            delta: signed(s.delta),
+          },
+        )
       : null;
   const notes: string[] = [];
   if (s.settled > 0) {
     notes.push(
-      `${s.settled} ta dars oyligi hisoblangan oyga tushadi — ular o'zgarmaydi.`,
+      t("{n} ta dars oyligi hisoblangan oyga tushadi — ular o'zgarmaydi.", { n: s.settled }),
     );
   }
   if (s.unpriced > 0) {
     notes.push(
-      `${s.unpriced} ta darsni bu stavka bilan hisoblab bo'lmadi — ular o'zgarmaydi.`,
+      t("{n} ta darsni bu stavka bilan hisoblab bo'lmadi — ular o'zgarmaydi.", { n: s.unpriced }),
     );
   }
   if (main === null && notes.length === 0) {
-    notes.push("Oldingi darslarning summasi o'zgarmaydi.");
+    notes.push(t("Oldingi darslarning summasi o'zgarmaydi."));
   }
   return { main, notes };
 }
@@ -55,7 +67,8 @@ export function reapplyLines(
 export function savedToastText(
   base: string,
   s: RateReapplySummary | undefined,
+  t: Translate = interpolate,
 ): string {
   if (!s || s.lessons === 0) return base;
-  return `${base}. ${s.lessons} ta dars qayta hisoblandi (${signed(s.delta)} so'm)`;
+  return t("{base}. {n} ta dars qayta hisoblandi ({delta} so'm)", { base, n: s.lessons, delta: signed(s.delta) });
 }

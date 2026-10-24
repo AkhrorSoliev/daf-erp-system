@@ -70,8 +70,8 @@ export class MonthlyBillingCronService {
         });
         this.logger.log(
           `Kompaniya ${company.id}: ${periodYear}-${periodMonth} oylik hisobi — ` +
-            `${res.created} yozildi, ${res.skipped} o'tkazildi, ` +
-            `jami ${res.totalCharged} so'm`,
+            `${res.created} yozildi, ${res.skipped} ta yozadigan dars yo'q, ` +
+            `${res.failed} ta xato, jami ${res.totalCharged} so'm`,
         );
       } catch (error) {
         this.logger.error(

@@ -13,53 +13,54 @@ import {
   YAxis,
 } from "recharts";
 import { ChartCard } from "@/components/shared/chart-card";
+import { useT } from "@/i18n/context";
 import { formatNumber } from "@/lib/format-utils";
+import { chartMonthLabel } from "./chart-months";
 import { ChartTooltip } from "./chart-tooltip";
 import { useChartTheme } from "./use-chart-theme";
 import type { ChartTrendPoint } from "./dashboard-charts-types";
 
 /** Millionlarda qisqartirish — o'qda 128 450 000 emas, «128 mln». */
-function shortSom(v: number): string {
-  if (Math.abs(v) >= 1_000_000) return `${Math.round(v / 1_000_000)} mln`;
-  if (Math.abs(v) >= 1_000) return `${Math.round(v / 1_000)} ming`;
+function shortSom(v: number, t: (source: string) => string): string {
+  if (Math.abs(v) >= 1_000_000) return `${Math.round(v / 1_000_000)} ${t("mln")}`;
+  if (Math.abs(v) >= 1_000) return `${Math.round(v / 1_000)} ${t("ming")}`;
   return String(v);
 }
 
 export function ChartMoneyTrend({ data }: { data: ChartTrendPoint[] }) {
+  const t = useT();
   const { palette } = useChartTheme();
   const last = data[data.length - 1];
+  const shaped = data.map((d) => ({ ...d, month: chartMonthLabel(d.month, t) }));
 
   return (
     <ChartCard
-      title="Moliya trendi"
+      title={t("Moliya trendi")}
       subtitle={
         last
-          ? `Oxirgi oy: kassaga ${formatNumber(last.income)}, sof foyda ${formatNumber(last.profit)} so'm`
+          ? t("Oxirgi oy: kassaga {income}, sof foyda {profit} so'm", {
+              income: formatNumber(last.income),
+              profit: formatNumber(last.profit),
+            })
           : undefined
       }
-      tooltip={
-        "Oxirgi 6 oy.\n\n" +
-        "Ustunlar — KASSA harakati: haqiqatan kirgan va chiqqan pul.\n\n" +
-        "Chiziq — sof foyda, u o'tilgan DARSLAR bo'yicha hisoblanadi va « Sof foyda » " +
-        "kartasi bilan bitta manbadan keladi.\n\n" +
-        "Ikkalasi turli o'lchov: chiziq ustunlar ayirmasiga TENG EMAS va undan " +
-        "yuqori ham bo'lishi mumkin — masalan o'quvchi oldindan to'lagan oyda kassa " +
-        "to'ladi, dars esa keyingi oyda o'tiladi."
-      }
+      tooltip={t(
+        "Oxirgi 6 oy.\n\nUstunlar — KASSA harakati: haqiqatan kirgan va chiqqan pul.\n\nChiziq — sof foyda, u o'tilgan DARSLAR bo'yicha hisoblanadi va « Sof foyda » kartasi bilan bitta manbadan keladi.\n\nIkkalasi turli o'lchov: chiziq ustunlar ayirmasiga TENG EMAS va undan yuqori ham bo'lishi mumkin — masalan o'quvchi oldindan to'lagan oyda kassa to'ladi, dars esa keyingi oyda o'tiladi.",
+      )}
       isEmpty={data.length === 0}
-      emptyMessage="Bu davrda moliyaviy harakat yo'q"
+      emptyMessage={t("Bu davrda moliyaviy harakat yo'q")}
       headerAction={
         <Link
           href="/payments/overview"
           className="text-xs text-muted-foreground underline-offset-4 hover:underline"
         >
-          Batafsil
+          {t("Batafsil")}
         </Link>
       }
     >
       <div className="h-[240px]">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
+          <ComposedChart data={shaped} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
             <CartesianGrid stroke={palette.grid} vertical={false} />
             <XAxis
               dataKey="month"
@@ -72,11 +73,11 @@ export function ChartMoneyTrend({ data }: { data: ChartTrendPoint[] }) {
               tick={{ fontSize: 11, fill: palette.axis }}
               tickLine={false}
               axisLine={false}
-              tickFormatter={shortSom}
+              tickFormatter={(v: number) => shortSom(v, t)}
               width={54}
             />
             <Tooltip
-              content={<ChartTooltip suffix="so'm" />}
+              content={<ChartTooltip suffix={t("so'm")} />}
               cursor={{ fill: palette.grid }}
             />
             <Legend
@@ -86,14 +87,14 @@ export function ChartMoneyTrend({ data }: { data: ChartTrendPoint[] }) {
             />
             <Bar
               dataKey="income"
-              name="Kassa tushumi"
+              name={t("Kassa tushumi")}
               fill={palette.series1}
               radius={[4, 4, 0, 0]}
               maxBarSize={22}
             />
             <Bar
               dataKey="expenses"
-              name="Kassa xarajati"
+              name={t("Kassa xarajati")}
               fill={palette.series2}
               radius={[4, 4, 0, 0]}
               maxBarSize={22}
@@ -101,7 +102,7 @@ export function ChartMoneyTrend({ data }: { data: ChartTrendPoint[] }) {
             <Line
               type="monotone"
               dataKey="profit"
-              name="Sof foyda"
+              name={t("Sof foyda")}
               stroke={palette.series3}
               strokeWidth={2}
               dot={{ r: 3, strokeWidth: 0, fill: palette.series3 }}

@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { useAuth } from "@/hooks/use-auth";
+import { isCeoUser, useAuth } from "@/hooks/use-auth";
 import { usePermissions, usePermissionsReady } from "@/hooks/use-permissions";
 import { canOpenSettingsPath, getVisibleSettingsSections } from "@/lib/settings-nav";
 
@@ -15,12 +15,13 @@ export function SettingsLayoutShell({ children }: { children: React.ReactNode })
   // One rule with the /settings list (`permission` in settings-nav.ts), so a
   // page hidden from a user is closed to them by URL too. Wait for the list:
   // redirecting on "not known yet" would bounce everyone on a fresh sign-in.
+  const isCeo = isCeoUser(user);
   const redirectTo =
     !user || !ready
       ? null
-      : getVisibleSettingsSections(can).length === 0
+      : getVisibleSettingsSections(can, isCeo).length === 0
         ? "/"
-        : canOpenSettingsPath(pathname, can)
+        : canOpenSettingsPath(pathname, can, isCeo)
           ? null
           : "/settings";
 

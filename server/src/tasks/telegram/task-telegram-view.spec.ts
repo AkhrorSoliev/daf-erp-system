@@ -159,12 +159,14 @@ describe('usersWithTelegram (the assignee picker, one query for the list)', () =
 });
 
 describe('taskOpenUrl', () => {
-  it('admin portal for roles 1, 2, 3, 5; teacher portal for a teacher only', () => {
-    expect(taskOpenUrl(STUDENT_URL, [3], 't1')).toBe(
-      'https://admin.dafzentrum.uz/tasks?task=t1',
+  const TASK = '0b6c2e1a-7d3f-4b8c-9e2a-5f1d3c7b9a4e';
+
+  it('the staff Mini App page for the task: admin portal for roles 1, 2, 3, 5; teacher portal for a teacher only', () => {
+    expect(taskOpenUrl(STUDENT_URL, [3], TASK)).toBe(
+      `https://admin.dafzentrum.uz/tg?next=%2Ftasks%3Ftask%3D${TASK}`,
     );
-    expect(taskOpenUrl(STUDENT_URL, [4], 't1')).toBe(
-      'https://lehrer.dafzentrum.uz/tasks?task=t1',
+    expect(taskOpenUrl(STUDENT_URL, [4], TASK)).toBe(
+      `https://lehrer.dafzentrum.uz/tg?next=%2Ftasks%3Ftask%3D${TASK}`,
     );
   });
 
@@ -197,6 +199,7 @@ describe('loadTaskView', () => {
       },
     ],
     steps: [{ id: 's1', title: 'Matn', doneAt: new Date() }],
+    events: [],
   };
   const db = (task: unknown) => ({
     task: { findUnique: jest.fn().mockResolvedValue(task) },
@@ -233,7 +236,72 @@ describe('loadTaskView', () => {
       entityLabel: 'A1-3 guruh',
       participants: [{ userId: 40, role: 'ASSIGNEE', name: 'Rahimov A.' }],
       steps: [{ id: 's1', title: 'Matn', done: true }],
+      history: [],
     });
+  });
+
+  it('history: the last status events, newest first, with short actor names', async () => {
+    const d = db({
+      ...row,
+      events: [
+        {
+          type: 'STATUS',
+          actorId: 40,
+          text: null,
+          meta: { from: 'IN_PROGRESS', to: 'IN_REVIEW' },
+          createdAt: new Date('2026-10-14T10:00:00Z'),
+          actor: { firstName: 'Bobur', lastName: 'Karimov' },
+        },
+        {
+          type: 'RETURN',
+          actorId: 30,
+          text: 'Rasm yo‘q',
+          meta: { from: 'IN_REVIEW', to: 'IN_PROGRESS' },
+          createdAt: new Date('2026-10-14T09:00:00Z'),
+          actor: { firstName: 'Ahror', lastName: 'Soliyev' },
+        },
+      ],
+    });
+    const view = await loadTaskView(d as any, 't1');
+    expect(view!.history).toEqual([
+      {
+        type: 'STATUS',
+        to: 'IN_REVIEW',
+        actorId: 40,
+        actorName: 'Karimov B.',
+        text: null,
+        at: new Date('2026-10-14T10:00:00Z'),
+      },
+      {
+        type: 'RETURN',
+        to: null,
+        actorId: 30,
+        actorName: 'Soliyev A.',
+        text: 'Rasm yo‘q',
+        at: new Date('2026-10-14T09:00:00Z'),
+      },
+    ]);
+    expect(d.task.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          events: {
+            where: {
+              type: { in: ['STATUS', 'RETURN', 'CANCELLED', 'AUTO_CLOSED'] },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+            select: {
+              type: true,
+              actorId: true,
+              text: true,
+              meta: true,
+              createdAt: true,
+              actor: { select: { firstName: true, lastName: true } },
+            },
+          },
+        }),
+      }),
+    );
   });
 
   it.each([

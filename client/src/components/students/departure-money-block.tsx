@@ -9,11 +9,12 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/context";
 import {
   CONTRACT_NOTE,
   DEFAULT_DEPARTURE_POLICY,
   LOCKED_POLICY_NOTE,
-  POLICY_TITLES,
+  policyTitle,
   departureConsequence,
   factsLine,
   lessonChips,
@@ -25,6 +26,8 @@ import {
   type DeparturePolicy,
   type DeparturePreview,
   type MonthlyRow,
+  type WithheldWarning,
+  withheldWarning,
 } from "./departure-money";
 
 interface DepartureMoneyBlockProps {
@@ -37,6 +40,8 @@ interface DepartureMoneyBlockProps {
   context: DepartureContext;
   /** An expulsion closes every group the student is in: name each one. */
   showGroupNames?: boolean;
+  /** The picked exit reason reads like a move to another group. */
+  looksLikeMove?: boolean;
   disabled?: boolean;
 }
 
@@ -54,17 +59,18 @@ export function DepartureMoneyBlock({
   onPolicyChange,
   context,
   showGroupNames = false,
+  looksLikeMove = false,
   disabled = false,
 }: DepartureMoneyBlockProps) {
+  const t = useT();
   if (isLoading) return <BlockSkeleton />;
   // Figures already shown stay shown when a later refetch fails.
   if (!preview && isError) {
     return (
       <section className="flex flex-col gap-1 border-t pt-3">
-        <p className="text-sm font-medium">Pul (shartnoma bo&apos;yicha)</p>
+        <p className="text-sm font-medium">{t("Pul (shartnoma bo'yicha)")}</p>
         <p className="text-xs text-muted-foreground">
-          Pul hisobini yuklab bo&apos;lmadi. Oy to&apos;lovi shartnoma qoidasi
-          bo&apos;yicha hisoblanadi.
+          {t("Pul hisobini yuklab bo'lmadi. Oy to'lovi shartnoma qoidasi bo'yicha hisoblanadi.")}
         </p>
       </section>
     );
@@ -74,12 +80,16 @@ export function DepartureMoneyBlock({
   if (!preview || rows.length === 0) return null;
   const offered = offeredPolicies(context, preview.mayChoosePolicy);
   const shown = offered.includes(policy) ? policy : DEFAULT_DEPARTURE_POLICY;
-  const consequence = departureConsequence(preview, shown);
+  const consequence = departureConsequence(preview, shown, t);
   const first = rows[0].month;
+  const warning =
+    context === "removal"
+      ? withheldWarning(preview, { looksLikeMove }, t)
+      : null;
 
   return (
     <section className="flex flex-col gap-3 border-t pt-3">
-      <p className="text-sm font-medium">Pul (shartnoma bo&apos;yicha)</p>
+      <p className="text-sm font-medium">{t("Pul (shartnoma bo'yicha)")}</p>
       {rows.map((row) => (
         <MonthFacts
           key={row.enrollmentId}
@@ -88,10 +98,12 @@ export function DepartureMoneyBlock({
         />
       ))}
 
+      {warning && <WithheldBox warning={warning} />}
+
       {offered.length > 1 ? (
         <div
           role="radiogroup"
-          aria-label="Pulni qaytarish tartibi"
+          aria-label={t("Pulni qaytarish tartibi")}
           className="flex flex-col gap-1.5"
         >
           {offered.map((p) => (
@@ -115,9 +127,9 @@ export function DepartureMoneyBlock({
                 className="mt-1"
               />
               <span className="flex flex-col">
-                <span className="text-sm font-medium">{POLICY_TITLES[p]}</span>
+                <span className="text-sm font-medium">{policyTitle(p, t)}</span>
                 <span className="text-xs text-muted-foreground">
-                  {policyHint(p, first)}
+                  {policyHint(p, first, t)}
                 </span>
               </span>
             </label>
@@ -125,7 +137,7 @@ export function DepartureMoneyBlock({
           {!preview.mayChoosePolicy && (
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Lock className="size-3.5 shrink-0" />
-              {LOCKED_POLICY_NOTE}
+              {t(LOCKED_POLICY_NOTE)}
             </p>
           )}
         </div>
@@ -134,17 +146,17 @@ export function DepartureMoneyBlock({
           <Lock className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
           <span className="flex flex-col">
             <span className="text-sm font-medium">
-              {POLICY_TITLES[DEFAULT_DEPARTURE_POLICY]}
+              {policyTitle(DEFAULT_DEPARTURE_POLICY, t)}
             </span>
             <span className="text-xs text-muted-foreground">
-              {LOCKED_POLICY_NOTE}
+              {t(LOCKED_POLICY_NOTE)}
             </span>
           </span>
         </div>
       )}
 
       {consequence && <ConsequenceBox consequence={consequence} />}
-      <p className="text-[11px] text-muted-foreground">{CONTRACT_NOTE}</p>
+      <p className="text-[11px] text-muted-foreground">{t(CONTRACT_NOTE)}</p>
     </section>
   );
 }
@@ -156,7 +168,8 @@ function MonthFacts({
   row: MonthlyRow;
   showGroupName: boolean;
 }) {
-  const facts = factsLine(row.month);
+  const t = useT();
+  const facts = factsLine(row.month, t);
   return (
     <div className="flex flex-col gap-2">
       <p className="text-xs leading-relaxed text-muted-foreground">
@@ -172,7 +185,7 @@ function MonthFacts({
         {lessonChips(row.month).map((chip) => (
           <span
             key={chip.date}
-            title={chip.held ? "O'tgan dars" : "Hali o'tmagan dars"}
+            title={chip.held ? t("O'tgan dars") : t("Hali o'tmagan dars")}
             className={cn(
               "flex h-6 w-7 items-center justify-center rounded-md border text-[11px] tabular-nums",
               chip.held
@@ -216,6 +229,22 @@ function ConsequenceBox({ consequence }: { consequence: Consequence }) {
         {consequence.line && (
           <p className="text-xs leading-relaxed">{consequence.line}</p>
         )}
+      </div>
+    </div>
+  );
+}
+
+function WithheldBox({ warning }: { warning: WithheldWarning }) {
+  const box =
+    warning.tone === "danger"
+      ? "border-red-300 bg-red-50 text-red-900 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"
+      : TONES.warning.box;
+  return (
+    <div role="alert" className={cn("flex items-start gap-2 rounded-md border p-3", box)}>
+      <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+      <div className="flex flex-col gap-0.5">
+        <p className="text-sm font-medium">{warning.title}</p>
+        <p className="text-xs leading-relaxed">{warning.body}</p>
       </div>
     </div>
   );

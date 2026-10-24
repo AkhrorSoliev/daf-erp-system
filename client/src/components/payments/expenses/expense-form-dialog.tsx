@@ -1,0 +1,230 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { format } from "date-fns";
+import { Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useT } from "@/i18n/context";
+import api from "@/lib/api";
+import { getErrorMessage } from "@/lib/get-error-message";
+import { categoryLabel, EXPENSE_CATEGORIES, EXPENSE_METHOD_LABELS } from "./expenses-labels";
+import { ExpenseSourceField, NO_SOURCE } from "./expense-source-field";
+import type { ExpensePreset, ExpenseRow } from "./expenses-types";
+
+interface ExpenseFormDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** Edit mode when given; otherwise it creates. */
+  expense?: ExpenseRow | null;
+  /** «Yozish» (spec B6 §3.3, §3.7): category, the missing amount, description and branch filled in; its branch wins over the header's. */
+  preset?: ExpensePreset | null;
+  branchId?: number;
+  onSaved: () => void;
+}
+
+export function ExpenseFormDialog({
+  open,
+  onOpenChange,
+  expense,
+  preset,
+  branchId,
+  onSaved,
+}: ExpenseFormDialogProps) {
+  const t = useT();
+  const isEdit = !!expense;
+
+  const [category, setCategory] = useState<string>("OTHER");
+  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD">("CASH");
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [date, setDate] = useState<Date | null>(new Date());
+  const [sourceId, setSourceId] = useState(NO_SOURCE);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Seed the form whenever the dialog opens (edit → existing values, create →
+  // sensible defaults). Keyed on open + expense id so re-opening always resets.
+  useEffect(() => {
+    if (!open) return;
+    if (expense) {
+      setCategory(expense.category);
+      setPaymentMethod(expense.paymentMethod);
+      setAmount(expense.amount.toLocaleString("uz-UZ"));
+      setDescription(expense.description);
+      setDate(new Date(expense.date));
+      setSourceId(expense.leadSource?.id ?? NO_SOURCE);
+    } else {
+      setSourceId(NO_SOURCE);
+      setCategory(preset?.category ?? "OTHER");
+      setPaymentMethod("CASH");
+      setAmount(preset ? preset.amount.toLocaleString("uz-UZ") : "");
+      setDescription(preset?.description ?? "");
+      setDate(new Date());
+    }
+  }, [open, expense, preset]);
+
+  const rawAmount = parseInt(amount.replace(/\D/g, ""), 10) || 0;
+
+  const handleAmountChange = (val: string) => {
+    const digits = val.replace(/\D/g, "");
+    setAmount(digits ? parseInt(digits, 10).toLocaleString("uz-UZ") : "");
+  };
+
+  const handleSubmit = async () => {
+    if (rawAmount < 1 || !description.trim() || !date) return;
+    const targetBranchId = preset?.branchId ?? branchId;
+    setSubmitting(true);
+    try {
+      const payload = {
+        category,
+        paymentMethod,
+        amount: rawAmount,
+        description: description.trim(),
+        date: format(date, "yyyy-MM-dd"),
+        relatedUserId: null,
+        // Only marketing money has a channel (ADR-0109); null also clears it on edit.
+        leadSourceId: category === "MARKETING" && sourceId !== NO_SOURCE ? sourceId : null,
+      };
+      if (isEdit) {
+        await api.patch(`/expenses/${expense!.id}`, payload);
+        toast.success(t("Xarajat yangilandi"));
+      } else {
+        // Every expense belongs to exactly one branch — a branch-less one
+        // would sit in no branch's profit calculation at all.
+        if (!targetBranchId) {
+          toast.error(t("Avval filialni tanlang — xarajat filialsiz saqlanmaydi"));
+          return;
+        }
+        await api.post("/expenses", { ...payload, branchId: targetBranchId });
+        toast.success(t("Xarajat qayd qilindi"));
+      }
+      onOpenChange(false);
+      onSaved();
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err, t("Xarajatni saqlashda xatolik")));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!submitting) onOpenChange(v);
+      }}
+    >
+      <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
+        <DialogHeader className="border-b px-6 py-4">
+          <DialogTitle>
+            {isEdit ? t("Xarajatni tahrirlash") : t("Xarajat qo'shish")}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
+          <div className="space-y-2">
+            <Label>{t("Turkum")}</Label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {EXPENSE_CATEGORIES.map((k) => (
+                  <SelectItem key={k} value={k}>
+                    {categoryLabel(k, t)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {category === "MARKETING" && (
+            <ExpenseSourceField value={sourceId} onChange={setSourceId} current={expense?.leadSource} />
+          )}
+          <div className="space-y-2">
+            <Label>{t("To'lov turi")}</Label>
+            <Select
+              value={paymentMethod}
+              onValueChange={(v) => setPaymentMethod(v as "CASH" | "CARD")}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(EXPENSE_METHOD_LABELS).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>
+                    {t(v)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>{t("Summa")}</Label>
+            <div className="relative">
+              <Input
+                placeholder="0"
+                value={amount}
+                onChange={(e) => handleAmountChange(e.target.value)}
+                inputMode="numeric"
+                className="pr-12"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                {t("so'm")}
+              </span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>{t("Tavsif")}</Label>
+            <Textarea
+              placeholder={t("Xarajat haqida...")}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>{t("Sana")}</Label>
+            <DatePicker
+              value={date}
+              onChange={(d) => setDate(d ?? null)}
+              placeholder={t("Sanani tanlang")}
+            />
+          </div>
+        </div>
+        <DialogFooter className="border-t px-6 py-4">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={submitting}
+          >
+            {t("Bekor qilish")}
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={rawAmount < 1 || !description.trim() || !date || submitting}
+          >
+            {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
+            {t("Saqlash")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

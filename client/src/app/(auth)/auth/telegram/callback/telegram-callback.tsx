@@ -4,20 +4,28 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
-import { Greeting, useGreeting } from "@/components/auth/daftar-greeting";
+import { Greeting, useGreeting } from "@/components/auth/staff-greeting";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
+
+// Our own fallback texts: kept in state as written and translated when drawn,
+// so the sign-in effect does not depend on `t`. A message the server sent is
+// shown as it came.
+const NO_HANDOFF = msg("Kirish ma'lumoti topilmadi. Qaytadan urinib ko'ring.");
+const FINISH_FAILED = msg("Kirishni tugatib bo'lmadi");
 
 // Telegram → API callback → portal. Bu sahifa faqat bir martalik `handoff`
 // kodini tokenlarga almashtiradi: tokenlar URL'da hech qachon yurmaydi.
-// Qobiq (o'quvchida markazlashgan sahifa, xodimda Daftar varag'i) page.tsx da.
+// Qobiq (o'quvchida markazlashgan sahifa, xodimda `StaffSignInShell`) page.tsx da.
 //
-// `sheet` — matn Daftar varag'ida turadi: har qator varaq chizig'iga tushadi.
-export function TelegramCallback({ sheet = false }: { sheet?: boolean }) {
+// `staff` — xodim xostida: kirish salomlashuv bilan tugaydi.
+export function TelegramCallback({ staff = false }: { staff?: boolean }) {
+  const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setAuth } = useAuth();
-  // On the staff sheet the sign-in ends with the greeting, as on the form.
+  // On a staff host the sign-in ends with the greeting, as on the form.
   const { greeted, greet } = useGreeting("replace");
   // Server tomon xatosi (`?error=`) va `handoff` yo'qligi darhol aniqlanadi —
   // lazy initializer'da hisoblanadi, shu bilan effekt ichida sinxron setState
@@ -29,11 +37,8 @@ export function TelegramCallback({ sheet = false }: { sheet?: boolean }) {
   const [error, setError] = useState(() => {
     const fromServer = searchParams.get("error");
     if (fromServer) return fromServer;
-    return searchParams.get("handoff")
-      ? ""
-      : "Kirish ma'lumoti topilmadi. Qaytadan urinib ko'ring.";
+    return searchParams.get("handoff") ? "" : NO_HANDOFF;
   });
-  const row = sheet ? "daftar-row" : undefined;
   // Strict Mode ikki marta chaqiradi, handoff esa bir martalik — qulflaymiz.
   const consumed = useRef(false);
 
@@ -52,34 +57,41 @@ export function TelegramCallback({ sheet = false }: { sheet?: boolean }) {
           (r: { id: number }) => r.id === 6,
         );
         const destination = isStudent ? "/portal" : "/";
-        if (sheet) greet(res.data.user, destination);
+        if (staff) greet(res.data.user, destination);
         else router.replace(destination);
       })
       .catch((err) => {
-        setError(getErrorMessage(err, "Kirishni tugatib bo'lmadi"));
+        setError(getErrorMessage(err, FINISH_FAILED));
       });
-  }, [searchParams, setAuth, router, sheet, greet]);
+  }, [searchParams, setAuth, router, staff, greet]);
 
   if (greeted) return <Greeting user={greeted} />;
 
+  const shownError =
+    error === NO_HANDOFF
+      ? t(NO_HANDOFF)
+      : error === FINISH_FAILED
+        ? t(FINISH_FAILED)
+        : error;
+
   return (
-    <div className={sheet ? "flex flex-col items-start" : "space-y-4"}>
+    <div className={staff ? "flex flex-col items-start gap-3" : "space-y-4"}>
       {error ? (
         <>
-          <p role="alert" className={cn(row, "text-sm text-destructive")}>
-            {error}
+          <p role="alert" className="text-sm text-destructive">
+            {shownError}
           </p>
           <button
             type="button"
             onClick={() => router.replace("/login")}
-            className={cn(row, "text-sm text-primary hover:underline")}
+            className="text-sm text-primary hover:underline"
           >
-            Kirish sahifasiga qaytish
+            {t("Kirish sahifasiga qaytish")}
           </button>
         </>
       ) : (
-        <p className={cn(row, "text-sm text-muted-foreground")}>
-          Kirish tasdiqlanmoqda...
+        <p className="text-sm text-muted-foreground">
+          {t("Kirish tasdiqlanmoqda...")}
         </p>
       )}
     </div>

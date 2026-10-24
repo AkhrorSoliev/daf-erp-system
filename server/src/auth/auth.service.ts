@@ -1,5 +1,8 @@
 import {
+  BadRequestException,
   Injectable,
+  Logger,
+  NotFoundException,
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
@@ -27,6 +30,13 @@ import {
 } from '../common/auth/student-account';
 import { SIGN_IN_USER_STATUSES } from '../common/auth/blocked-user';
 import { staffLinkedToChatWhere } from '../common/auth/staff-telegram';
+import {
+  SESSION_REVOKED_CACHE_TTL_SEC,
+  activeSessionCutoff,
+  describeDevice,
+  sessionRevokedKey,
+  type SessionMeta,
+} from '../common/auth/user-session';
 
 export const STUDENT_ACCOUNT_CLOSED_MESSAGE =
   "Hisobingiz yopilgan. Administrator bilan bog'laning.";
@@ -67,6 +77,8 @@ type SessionUser = Prisma.UserGetPayload<{
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
@@ -265,6 +277,8 @@ export class AuthService {
       lastName: user.lastName,
       phone: user.phone,
       photo: user.photo,
+      uiSkin: user.uiSkin ?? null,
+      uiLocale: user.uiLocale ?? null,
       gender: user.gender,
       balance: user.balance,
       companyId: user.companyId,
@@ -284,6 +298,7 @@ export class AuthService {
     roles: string[],
     companyId: number,
     sessionVersion: number,
+    sid: string,
     studentId?: number,
   ) {
     const secret = this.configService.get<string>('JWT_SECRET')!;
@@ -295,6 +310,7 @@ export class AuthService {
       roles,
       companyId,
       sv: sessionVersion,
+      sid,
     };
     if (studentId) payload.studentId = studentId;
 
@@ -304,7 +320,7 @@ export class AuthService {
     });
 
     const refreshToken = this.jwtService.sign(
-      { sub: userId, type: 'refresh', sv: sessionVersion },
+      { sub: userId, type: 'refresh', sv: sessionVersion, sid },
       { secret, expiresIn: REFRESH_TOKEN_TTL_SEC },
     );
 
@@ -317,17 +333,27 @@ export class AuthService {
    * tokens stamped with the account's CURRENT session version, and the user
    * payload.
    */
-  private async sessionFor(user: SessionUser) {
+  private async sessionFor(
+    user: SessionUser,
+    opts: { meta?: SessionMeta; sid?: string } = {},
+  ) {
     const roles = user.roles.map((ur) => ur.role.name);
     const roleIds = user.roles.map((ur) => ur.role.id);
 
     const studentId = await this.resolveStudentId(user.id, roleIds);
+
+    // Qator `resolveStudentId` dan KEYIN ochiladi: rad etilgan kirish iz
+    // qoldirmasin (ADR-0113).
+    const sid =
+      opts.sid ??
+      (await this.startSession(user.id, user.sessionVersion, opts.meta));
 
     const tokens = this.generateTokens(
       user.id,
       roles,
       user.companyId,
       user.sessionVersion,
+      sid,
       studentId,
     );
 
@@ -388,7 +414,40 @@ export class AuthService {
     return undefined;
   }
 
-  async login(user: any, origin?: string, portal?: string) {
+  /**
+   * Yangi qurilma qatori (ADR-0113). Shu hisobning o'lik qatorlari — versiyasi
+   * orqada qolgan yoki refresh token'i allaqachon o'lgan — shu yerda
+   * tozalanadi, alohida cron kerak emas.
+   */
+  private async startSession(
+    userId: number,
+    sessionVersion: number,
+    meta?: SessionMeta,
+  ): Promise<string> {
+    const [, row] = await this.prisma.$transaction([
+      this.prisma.userSession.deleteMany({
+        where: {
+          userId,
+          OR: [
+            { sessionVersion: { lt: sessionVersion } },
+            { lastUsedAt: { lt: activeSessionCutoff() } },
+          ],
+        },
+      }),
+      this.prisma.userSession.create({
+        data: {
+          userId,
+          sessionVersion,
+          userAgent: meta?.userAgent ?? null,
+          ip: meta?.ip ?? null,
+        },
+        select: { id: true },
+      }),
+    ]);
+    return row.id;
+  }
+
+  async login(user: any, origin?: string, portal?: string, meta?: SessionMeta) {
     const allowedRoleIds = resolveAllowedRoleIds(origin, portal);
     if (allowedRoleIds !== null) {
       const userRoleIds: number[] = user.roles.map((ur: any) => ur.role.id);
@@ -400,15 +459,15 @@ export class AuthService {
       }
     }
 
-    return this.sessionFor(user);
+    return this.sessionFor(user, { meta });
   }
 
   /** Poll a link-based app login request; pending until the bot approves it. */
-  async pollLoginRequest(requestId: string) {
+  async pollLoginRequest(requestId: string, meta?: SessionMeta) {
     if (!requestId) return { status: 'pending' as const };
     const userId = await consumeLoginRequest(this.redis, requestId);
     if (!userId) return { status: 'pending' as const };
-    const session = await this.buildStudentSession(userId);
+    const session = await this.buildStudentSession(userId, meta);
     return { status: 'approved' as const, ...session };
   }
 
@@ -419,7 +478,7 @@ export class AuthService {
    * and the Telegram Mini App — so neither can issue a session the other
    * would refuse.
    */
-  async buildStudentSession(userId: number) {
+  async buildStudentSession(userId: number, meta?: SessionMeta) {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null },
       include: SESSION_USER_INCLUDE,
@@ -437,10 +496,11 @@ export class AuthService {
       throw new ForbiddenException("Bu faqat o'quvchilar uchun");
     }
 
-    return this.sessionFor(user);
+    return this.sessionFor(user, { meta });
   }
 
-  async refresh(refreshToken: string) {
+  /** `meta` faqat `sid`siz eski token qator olayotganda ishlatiladi. */
+  async refresh(refreshToken: string, meta?: SessionMeta) {
     try {
       const secret = this.configService.get<string>('JWT_SECRET')!;
       const payload = this.jwtService.verify(refreshToken, { secret });
@@ -458,7 +518,19 @@ export class AuthService {
         throw new UnauthorizedException(SESSION_ENDED_MESSAGE);
       }
 
-      return await this.sessionFor(user);
+      // Qurilma ro'yxatdan o'chirilgan bo'lsa refresh ham to'xtaydi
+      // (ADR-0113). `sid`siz eski token ADR'dan oldin berilgan: u shu yerda
+      // o'z qatorini oladi, hech kim chiqib ketmaydi.
+      const sid = typeof payload.sid === 'string' ? payload.sid : undefined;
+      if (sid) {
+        const { count } = await this.prisma.userSession.updateMany({
+          where: { id: sid, userId: user.id },
+          data: { lastUsedAt: new Date() },
+        });
+        if (count !== 1) throw new UnauthorizedException(SESSION_ENDED_MESSAGE);
+      }
+
+      return await this.sessionFor(user, { sid, meta });
     } catch (error) {
       if (error instanceof UnauthorizedException) throw error;
       throw new UnauthorizedException(
@@ -479,9 +551,19 @@ export class AuthService {
    * reset) landed in between, it must win, and a pair signed with the older
    * number stops on its next request.
    */
-  async issueSession(userId: number, sessionVersion: number) {
+  async issueSession(userId: number, sessionVersion: number, keepSid?: string) {
     const user = await this.loadSessionUser(userId);
-    return this.sessionFor({ ...user, sessionVersion });
+    // Qurilma o'z qatorini saqlab qoladi (ADR-0113): yangi versiya yoziladi,
+    // `createdAt` o'zgarmaydi. Qator topilmasa (eski token) yangisi ochiladi.
+    let sid: string | undefined;
+    if (keepSid) {
+      const { count } = await this.prisma.userSession.updateMany({
+        where: { id: keepSid, userId },
+        data: { sessionVersion, lastUsedAt: new Date() },
+      });
+      if (count === 1) sid = keepSid;
+    }
+    return this.sessionFor({ ...user, sessionVersion }, { sid });
   }
 
   /**
@@ -493,7 +575,11 @@ export class AuthService {
    * or one whose session ended mid-request — is refused here and changes
    * nothing, instead of minting itself a current session.
    */
-  async logoutOtherSessions(userId: number, callerVersion: number) {
+  async logoutOtherSessions(
+    userId: number,
+    callerVersion: number,
+    callerSid?: string,
+  ) {
     const { count } = await this.prisma.user.updateMany({
       where: { id: userId, sessionVersion: callerVersion },
       data: endSessionsWrite(),
@@ -504,8 +590,87 @@ export class AuthService {
     const sessionVersion = callerVersion + 1;
     await recordSessionsEnded(this.redis, userId, sessionVersion);
 
-    // Journaled where staff look for it: the student card for a student, the
-    // employee record for everyone else.
+    // Ro'yxat ham darrov toza bo'lsin: boshqa qurilmalar qatori o'chadi,
+    // chaqirgan qurilmanikisi qoladi (`issueSession` uni yangilaydi).
+    await this.prisma.userSession.deleteMany({
+      where: { userId, ...(callerSid && { id: { not: callerSid } }) },
+    });
+
+    await this.journalSessions(userId, 'boshqa qurilmalardan chiqildi');
+
+    return this.issueSession(userId, sessionVersion, callerSid);
+  }
+
+  /**
+   * Profildagi «Faol seanslar» (ADR-0113). Faqat shu hisobning JORIY versiyasi
+   * va tirik refresh token'li qatorlar; chaqiruvchining o'zi `current`.
+   */
+  async listSessions(
+    userId: number,
+    sessionVersion: number,
+    currentSid?: string,
+  ) {
+    const rows = await this.prisma.userSession.findMany({
+      where: {
+        userId,
+        sessionVersion,
+        lastUsedAt: { gte: activeSessionCutoff() },
+      },
+      orderBy: { lastUsedAt: 'desc' },
+      take: 50,
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      device: describeDevice(row.userAgent),
+      ip: row.ip,
+      createdAt: row.createdAt,
+      lastUsedAt: row.lastUsedAt,
+      current: row.id === currentSid,
+    }));
+  }
+
+  /**
+   * Bitta qurilmadan chiqarish. Qator o'chadi (refresh to'xtaydi), Redis
+   * belgisi esa access token'ni keyingi so'rovdayoq to'xtatadi. O'z
+   * qurilmangiz «Chiqish» tugmasi bilan chiqiladi, bu yerda emas.
+   */
+  async revokeSession(userId: number, sid: string, callerSid?: string) {
+    if (sid === callerSid) {
+      throw new BadRequestException(
+        'Joriy qurilmadan «Chiqish» tugmasi bilan chiqing',
+      );
+    }
+    const { count } = await this.prisma.userSession.deleteMany({
+      where: { id: sid, userId },
+    });
+    if (count !== 1) throw new NotFoundException('Seans topilmadi');
+
+    // Redis ishlamasa ham o'chirish o'tadi: `refresh` bazaga qarab to'xtatadi,
+    // eng ko'pi bilan access token'ning qolgan soati ochiq qoladi.
+    try {
+      await this.redis.set(
+        sessionRevokedKey(sid),
+        '1',
+        'EX',
+        SESSION_REVOKED_CACHE_TTL_SEC,
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Session-revoked mark not written for ${sid}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+
+    await this.journalSessions(userId, 'bitta qurilmadan chiqarildi');
+    return { message: 'Qurilmadan chiqarildi' };
+  }
+
+  /**
+   * Journaled where staff look for it: the student card for a student, the
+   * employee record for everyone else.
+   */
+  private async journalSessions(userId: number, what: string) {
     const account = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { companyId: true, student: { select: { id: true } } },
@@ -514,11 +679,9 @@ export class AuthService {
       entityType: account?.student ? 'Student' : 'User',
       entityId: account?.student?.id ?? userId,
       oldValues: { kirishlar: 'faol' },
-      newValues: { kirishlar: 'boshqa qurilmalardan chiqildi' },
+      newValues: { kirishlar: what },
       changedById: userId,
       companyId: account?.companyId,
     });
-
-    return this.issueSession(userId, sessionVersion);
   }
 }

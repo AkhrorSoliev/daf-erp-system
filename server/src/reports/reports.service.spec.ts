@@ -7,13 +7,9 @@ import { ReportsAttendanceAnalyticsService } from './reports-attendance-analytic
 import { ReportsFinancialService } from './reports-financial.service';
 import { ReportsDebtHistoryService } from './reports-debt-history.service';
 import { ReportsPaymentsService } from './reports-payments.service';
-import { ReportsTeacherPaymentsService } from './reports-teacher-payments.service';
 import { ReportsStudentPaymentsService } from './reports-student-payments.service';
-import { ReportsDepartedStudentsService } from './reports-departed-students.service';
-import { ReportsDepartedListsService } from './reports-departed-lists.service';
 import { ReportsDepartedReasonsService } from './reports-departed-reasons.service';
 import { ReportsTeacherChangesService } from './reports-teacher-changes.service';
-import { ReportsCenterActivityService } from './reports-center-activity.service';
 import { ReportsProfitLossService } from './reports-profit-loss.service';
 import { ReportsCashFlowService } from './reports-cash-flow.service';
 import { ReportsBalanceSheetService } from './reports-balance-sheet.service';
@@ -21,11 +17,29 @@ import { ExpensesService } from '../expenses/expenses.service';
 import { SalaryPaymentService } from '../salary/salary-payment.service';
 import { SalaryService } from '../salary/salary.service';
 import { PaymentsDebtorsService } from '../payments/payments-debtors.service';
+import { loadTeacherChangeDepartures } from './shared/teacher-change-departures';
+import { tashkentRangeUtc } from '../common/date/tashkent';
 import { DEPARTURE_GRACE_DAYS } from '../students/shared/departure-episodes';
 import {
   resolveMonthlyScope,
   type SalaryMonthlyQuery,
 } from '../salary/shared/resolve-monthly-scope';
+import {
+  countRows,
+  markOf,
+  rateOf,
+} from './attendance-stats/attendance-counts';
+
+const kpiMarks = (
+  n: number,
+  status: string,
+  cancellationId: string | null = null,
+) =>
+  Array.from({ length: n }, () => ({
+    date: new Date('2026-10-01T00:00:00.000Z'),
+    status,
+    cancellationId,
+  }));
 
 /**
  * One teacher change (5 March, 10:00 Tashkent) in group g1 whose five lessons
@@ -186,13 +200,9 @@ describe('ReportsService', () => {
         ReportsFinancialService,
         ReportsDebtHistoryService,
         ReportsPaymentsService,
-        ReportsTeacherPaymentsService,
         ReportsStudentPaymentsService,
-        ReportsDepartedStudentsService,
-        ReportsDepartedListsService,
         ReportsDepartedReasonsService,
         ReportsTeacherChangesService,
-        ReportsCenterActivityService,
         ReportsProfitLossService,
         ReportsCashFlowService,
         ReportsBalanceSheetService,
@@ -254,10 +264,10 @@ describe('ReportsService', () => {
 
       prisma.group.count.mockResolvedValue(10);
 
-      prisma.attendance.groupBy.mockResolvedValue([
-        { status: 'PRESENT', _count: { id: 80 } },
-        { status: 'ABSENT', _count: { id: 15 } },
-        { status: 'LATE', _count: { id: 5 } },
+      prisma.attendance.findMany.mockResolvedValue([
+        ...kpiMarks(80, 'PRESENT'),
+        ...kpiMarks(15, 'ABSENT'),
+        ...kpiMarks(5, 'LATE'),
       ]);
 
       prisma.lead.count
@@ -286,11 +296,11 @@ describe('ReportsService', () => {
 
       prisma.group.count.mockResolvedValue(10);
 
-      prisma.attendance.groupBy.mockResolvedValue([
-        { status: 'PRESENT', _count: { id: 70 } },
-        { status: 'LATE', _count: { id: 10 } },
-        { status: 'ABSENT', _count: { id: 10 } },
-        { status: 'EXCUSED', _count: { id: 10 } },
+      prisma.attendance.findMany.mockResolvedValue([
+        ...kpiMarks(70, 'PRESENT'),
+        ...kpiMarks(10, 'LATE'),
+        ...kpiMarks(10, 'ABSENT'),
+        ...kpiMarks(10, 'EXCUSED'),
       ]);
 
       prisma.lead.count
@@ -299,21 +309,62 @@ describe('ReportsService', () => {
 
       const result = await service.getKpis(1, {});
 
-      expect(result.averageAttendance).toBe(89); // round(80 / 90 × 100)
+      expect(result.averageAttendance).toBe(88.9); // 80 / 90, one decimal (the report's rateOf)
     });
 
     it('should handle zero students gracefully', async () => {
       prisma.student.count.mockResolvedValue(0);
       prisma.group.count.mockResolvedValue(0);
       prisma.enrollment.count.mockResolvedValue(0);
-      prisma.attendance.groupBy.mockResolvedValue([]);
+      prisma.attendance.findMany.mockResolvedValue([]);
       prisma.lead.count.mockResolvedValue(0);
 
       const result = await service.getKpis(1, {});
 
       expect(result.activeStudents.trend).toBe(0);
-      expect(result.averageAttendance).toBe(0);
+      expect(result.averageAttendance).toBeNull(); // no mark: «—», never 0%
       expect(result.leadConversionRate).toBe(0);
+    });
+
+    it("the home rate is the report's own function: a cancelled lesson counts nowhere", async () => {
+      const rows = [
+        ...kpiMarks(8, 'PRESENT'),
+        ...kpiMarks(2, 'ABSENT'),
+        ...kpiMarks(5, 'EXCUSED', 'c1'),
+      ];
+      prisma.attendance.findMany.mockResolvedValue(rows);
+      prisma.student.count.mockResolvedValue(0);
+      prisma.group.count.mockResolvedValue(0);
+      prisma.lead.count.mockResolvedValue(0);
+      const result = await service.getKpis(1, {});
+      expect(result.averageAttendance).toBe(
+        rateOf(countRows(rows.map((r) => markOf(r as never)))),
+      );
+      expect(result.averageAttendance).toBe(80);
+    });
+
+    it('reads the current Tashkent month, 1st to today, in the picked branch', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-31T19:30:00.000Z')); // 01.11 00:30 in Tashkent
+      try {
+        prisma.attendance.findMany.mockResolvedValue([]);
+        prisma.student.count.mockResolvedValue(0);
+        prisma.group.count.mockResolvedValue(0);
+        prisma.lead.count.mockResolvedValue(0);
+        await service.getKpis(1, { branchId: 4 });
+        const call = prisma.attendance.findMany.mock.calls.find(
+          (c: any[]) => c[0]?.select?.cancellationId,
+        );
+        expect(call[0].where).toEqual({
+          companyId: 1,
+          date: {
+            gte: new Date('2026-11-01T00:00:00.000Z'),
+            lt: new Date('2026-11-02T00:00:00.000Z'),
+          },
+          group: { branchId: { in: [4] } },
+        });
+      } finally {
+        jest.useRealTimers();
+      }
     });
 
     // RULING C — voronka konversiyasi faqat voronka lidlarini sanaydi.
@@ -324,7 +375,7 @@ describe('ReportsService', () => {
       prisma.student.count.mockResolvedValue(0);
       prisma.group.count.mockResolvedValue(0);
       prisma.enrollment.count.mockResolvedValue(0);
-      prisma.attendance.groupBy.mockResolvedValue([]);
+      prisma.attendance.findMany.mockResolvedValue([]);
       prisma.lead.count.mockResolvedValue(0);
 
       await service.getKpis(1, {});
@@ -336,6 +387,83 @@ describe('ReportsService', () => {
       for (const where of leadWheres) {
         expect(where.sectionId).toEqual({ not: null });
       }
+    });
+  });
+
+  describe('getKpis branch scope', () => {
+    const emptyReads = () => {
+      prisma.student.count.mockResolvedValue(0);
+      prisma.group.count.mockResolvedValue(0);
+      prisma.attendance.findMany.mockResolvedValue([]);
+      prisma.lead.count.mockResolvedValue(0);
+    };
+
+    it('confines every KPI read to the whole branch list a several-branch caller holds', async () => {
+      emptyReads();
+
+      await service.getKpis(1, { branchIds: [2, 3] });
+
+      for (const [{ where }] of prisma.student.count.mock.calls) {
+        expect(where.branches).toEqual({
+          some: { branchId: { in: [2, 3] } },
+        });
+      }
+      expect(prisma.student.count).toHaveBeenCalledTimes(3);
+      expect(prisma.group.count.mock.calls[0][0].where.branchId).toEqual({
+        in: [2, 3],
+      });
+      expect(prisma.attendance.findMany.mock.calls[0][0].where.group).toEqual({
+        branchId: { in: [2, 3] },
+      });
+    });
+
+    it('puts no branch predicate on any read when the scope is every branch (null)', async () => {
+      emptyReads();
+
+      await service.getKpis(1, { branchIds: null });
+
+      for (const [{ where }] of prisma.student.count.mock.calls) {
+        expect(where).not.toHaveProperty('branches');
+      }
+      expect(prisma.group.count.mock.calls[0][0].where).not.toHaveProperty(
+        'branchId',
+      );
+      expect(
+        prisma.attendance.findMany.mock.calls[0][0].where,
+      ).not.toHaveProperty('group');
+    });
+
+    it('answers zeros without reading anything when the scope is empty', async () => {
+      const result = await service.getKpis(1, { branchIds: [] });
+
+      expect(result).toEqual({
+        activeStudents: { current: 0, trend: 0 },
+        activeGroups: 0,
+        averageAttendance: null,
+        leadConversionRate: 0,
+        newStudentsThisMonth: 0,
+        churnedThisMonth: 0,
+        pendingDepartures: 0,
+        departureGraceDays: DEPARTURE_GRACE_DAYS,
+      });
+      expect(prisma.student.count).not.toHaveBeenCalled();
+      expect(prisma.student.findMany).not.toHaveBeenCalled();
+      expect(prisma.group.count).not.toHaveBeenCalled();
+      expect(prisma.attendance.findMany).not.toHaveBeenCalled();
+      expect(prisma.lead.count).not.toHaveBeenCalled();
+    });
+
+    it('still reads the single branch of the plain branchId query', async () => {
+      emptyReads();
+
+      await service.getKpis(1, { branchId: 5 });
+
+      expect(prisma.student.count.mock.calls[0][0].where.branches).toEqual({
+        some: { branchId: { in: [5] } },
+      });
+      expect(prisma.group.count.mock.calls[0][0].where.branchId).toEqual({
+        in: [5],
+      });
     });
   });
 
@@ -554,522 +682,6 @@ describe('ReportsService', () => {
     });
   });
 
-  describe('getPaymentReports', () => {
-    it('returns the expected response shape with 3 metric blocks', async () => {
-      prisma.payment.aggregate.mockResolvedValue({
-        _sum: { amount: 1_000_000 },
-        _count: 10,
-      });
-      prisma.payment.groupBy.mockResolvedValue([]);
-      prisma.transaction.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
-      prisma.transaction.count.mockResolvedValue(0);
-      prisma.branch.findMany.mockResolvedValue([
-        { id: 1, name: 'Asosiy filial' },
-      ]);
-
-      const result = await service.getPaymentReports(1, {
-        months: 6,
-        branchIds: null,
-      });
-
-      expect(result).toHaveProperty('totalPayments');
-      expect(result).toHaveProperty('branchBreakdown');
-      expect(result).toHaveProperty('refunds');
-      // «Vaqtida to'lovlar» (12 darslik qoida) oylik tizimda doim xato edi.
-      expect(result).not.toHaveProperty('onTimePayments');
-      expect(result.totalPayments.trend).toHaveLength(6);
-      expect(result.totalPayments.current).toBe(1_000_000);
-    });
-
-    it('supports 3-month window', async () => {
-      prisma.payment.aggregate.mockResolvedValue({
-        _sum: { amount: 500_000 },
-        _count: 5,
-      });
-      prisma.payment.groupBy.mockResolvedValue([]);
-      prisma.transaction.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
-      prisma.transaction.count.mockResolvedValue(0);
-      prisma.branch.findMany.mockResolvedValue([]);
-
-      const result = await service.getPaymentReports(1, {
-        months: 3,
-        branchIds: null,
-      });
-      expect(result.totalPayments.trend).toHaveLength(3);
-    });
-
-    it('computes branch breakdown sorted by amount desc', async () => {
-      prisma.payment.aggregate.mockResolvedValue({
-        _sum: { amount: 0 },
-        _count: 0,
-      });
-      prisma.payment.groupBy.mockResolvedValue([
-        { branchId: 1, _sum: { amount: 2_000_000 } },
-        { branchId: 2, _sum: { amount: 5_000_000 } },
-      ]);
-      prisma.transaction.aggregate.mockResolvedValue({ _sum: { amount: 0 } });
-      prisma.transaction.count.mockResolvedValue(0);
-      prisma.branch.findMany.mockResolvedValue([
-        { id: 1, name: 'Filial A' },
-        { id: 2, name: 'Filial B' },
-      ]);
-
-      const result = await service.getPaymentReports(1, { branchIds: null });
-      expect(result.branchBreakdown.byBranch).toEqual([
-        { branchId: 2, branchName: 'Filial B', amount: 5_000_000 },
-        { branchId: 1, branchName: 'Filial A', amount: 2_000_000 },
-      ]);
-    });
-  });
-
-  describe('getTeacherPaymentReports', () => {
-    it('returns empty list when there are no teachers with active groups', async () => {
-      prisma.user.findMany.mockResolvedValueOnce([]);
-      const result = await service.getTeacherPaymentReports(1, {});
-      expect(result).toEqual({ teachers: [] });
-    });
-
-    it('aggregates student count and debt per teacher', async () => {
-      prisma.user.findMany.mockResolvedValueOnce([
-        {
-          id: 10001,
-          firstName: 'Ali',
-          lastName: 'Valiyev',
-          groupTeachers: [
-            { group: { id: 'g1', course: { name: 'B1 German' } } },
-            { group: { id: 'g2', course: { name: 'A1 German' } } },
-          ],
-        },
-      ]);
-
-      prisma.enrollment.groupBy.mockResolvedValueOnce([
-        { groupId: 'g1', _count: { _all: 10 } },
-        { groupId: 'g2', _count: { _all: 5 } },
-      ]);
-
-      prisma.student.findMany.mockResolvedValueOnce([
-        {
-          balance: -100_000,
-          enrollments: [{ groupId: 'g1' }],
-        },
-      ]);
-
-      const result = await service.getTeacherPaymentReports(1, {});
-
-      expect(result.teachers).toHaveLength(1);
-      // toEqual: a revived `totalPayments` (payments looked up through
-      // contracts — always 0) would fail here.
-      expect(result.teachers[0]).toEqual({
-        id: 10001,
-        name: 'Ali Valiyev',
-        groupCount: 2,
-        courses: ['B1 German', 'A1 German'],
-        studentCount: 15,
-        debtAmount: 100_000,
-      });
-      // Payments are no longer looked up at all.
-      expect(prisma.payment.findMany).not.toHaveBeenCalled();
-    });
-
-    it('filters out teachers with no active groups', async () => {
-      prisma.user.findMany.mockResolvedValueOnce([
-        {
-          id: 10002,
-          firstName: 'Bek',
-          lastName: 'Nazarov',
-          groupTeachers: [], // no active groups
-        },
-      ]);
-
-      const result = await service.getTeacherPaymentReports(1, {});
-      expect(result.teachers).toEqual([]);
-    });
-
-    it('sorts teachers by debt desc', async () => {
-      prisma.user.findMany.mockResolvedValueOnce([
-        {
-          id: 1,
-          firstName: 'A',
-          lastName: 'A',
-          groupTeachers: [{ group: { id: 'g1', course: { name: 'C1' } } }],
-        },
-        {
-          id: 2,
-          firstName: 'B',
-          lastName: 'B',
-          groupTeachers: [{ group: { id: 'g2', course: { name: 'C2' } } }],
-        },
-      ]);
-      prisma.enrollment.groupBy.mockResolvedValueOnce([
-        { groupId: 'g1', _count: { _all: 1 } },
-        { groupId: 'g2', _count: { _all: 1 } },
-      ]);
-      prisma.student.findMany.mockResolvedValueOnce([
-        { balance: -100, enrollments: [{ groupId: 'g1' }] },
-        { balance: -900, enrollments: [{ groupId: 'g2' }] },
-      ]);
-
-      const result = await service.getTeacherPaymentReports(1, {});
-      expect(result.teachers.map((t) => t.id)).toEqual([2, 1]);
-      expect(result.teachers.map((t) => t.debtAmount)).toEqual([900, 100]);
-    });
-  });
-
-  describe('getTeacherGroupsReport', () => {
-    it('throws NotFound when teacher does not exist', async () => {
-      prisma.user.findFirst.mockResolvedValueOnce(null);
-      await expect(
-        service.getTeacherGroupsReport(1, 99999, {}),
-      ).rejects.toThrow("O'qituvchi topilmadi");
-    });
-
-    it('returns teacher info and empty groups when teacher has no groups', async () => {
-      prisma.user.findFirst.mockResolvedValueOnce({
-        id: 10001,
-        firstName: 'Ali',
-        lastName: 'Valiyev',
-      });
-      prisma.groupTeacher.findMany.mockResolvedValueOnce([]);
-      const result = await service.getTeacherGroupsReport(1, 10001, {});
-      expect(result).toEqual({
-        teacher: { id: 10001, name: 'Ali Valiyev' },
-        groups: [],
-      });
-    });
-
-    it('computes per-group stats: students, debtors, expected', async () => {
-      prisma.user.findFirst.mockResolvedValueOnce({
-        id: 10001,
-        firstName: 'Ali',
-        lastName: 'Valiyev',
-      });
-      prisma.groupTeacher.findMany.mockResolvedValueOnce([
-        {
-          group: {
-            id: 'g1',
-            name: 'B1-01',
-            course: { price: 300_000 },
-          },
-        },
-      ]);
-      prisma.enrollment.findMany.mockResolvedValueOnce([
-        { groupId: 'g1', studentId: 101 },
-        { groupId: 'g1', studentId: 102 },
-        { groupId: 'g1', studentId: 103 },
-      ]);
-      prisma.student.findMany.mockResolvedValueOnce([
-        { balance: -50_000, enrollments: [{ groupId: 'g1' }] },
-      ]);
-
-      const result = await service.getTeacherGroupsReport(1, 10001, {});
-      expect(result.groups).toHaveLength(1);
-      // toEqual: a revived `paidCount` / `totalPayments` (payments looked up
-      // through contracts — always 0) would fail here.
-      expect(result.groups[0]).toEqual({
-        id: 'g1',
-        name: 'B1-01',
-        coursePrice: 300_000,
-        totalStudents: 3,
-        debtorCount: 1,
-        debtAmount: 50_000,
-        expectedAmount: 900_000,
-      });
-      // Payments are no longer looked up at all.
-      expect(prisma.payment.findMany).not.toHaveBeenCalled();
-    });
-
-    it('sorts groups by debt desc', async () => {
-      prisma.user.findFirst.mockResolvedValueOnce({
-        id: 10001,
-        firstName: 'Ali',
-        lastName: 'Valiyev',
-      });
-      prisma.groupTeacher.findMany.mockResolvedValueOnce([
-        { group: { id: 'g1', name: 'B1-01', course: { price: 300_000 } } },
-        { group: { id: 'g2', name: 'B1-02', course: { price: 300_000 } } },
-      ]);
-      prisma.enrollment.findMany.mockResolvedValueOnce([
-        { groupId: 'g1', studentId: 101 },
-        { groupId: 'g2', studentId: 102 },
-      ]);
-      prisma.student.findMany.mockResolvedValueOnce([
-        { balance: -50_000, enrollments: [{ groupId: 'g1' }] },
-        { balance: -200_000, enrollments: [{ groupId: 'g2' }] },
-      ]);
-
-      const result = await service.getTeacherGroupsReport(1, 10001, {});
-      expect(result.groups.map((g) => g.id)).toEqual(['g2', 'g1']);
-      expect(result.groups.map((g) => g.debtAmount)).toEqual([200_000, 50_000]);
-    });
-  });
-
-  describe('getStudentPaymentsReport', () => {
-    it('returns paginated rows with student/group/teacher fields', async () => {
-      const payments = [
-        {
-          id: 'p1',
-          amount: 500_000,
-          method: 'CASH',
-          note: "To'lov 1",
-          createdAt: new Date('2026-04-01T10:00:00Z'),
-          student: { id: 10001, firstName: 'Ali', lastName: 'Valiyev' },
-          receivedBy: { id: 20001, firstName: 'Laziz', lastName: 'Kassa' },
-          contract: {
-            group: {
-              id: 'g1',
-              name: 'B1-01',
-              teachers: [
-                {
-                  teacher: {
-                    id: 30001,
-                    firstName: 'Feruz',
-                    lastName: 'Ustoz',
-                  },
-                },
-              ],
-            },
-          },
-        },
-      ];
-      prisma.$transaction.mockResolvedValueOnce([payments, 1]);
-
-      const result = await service.getStudentPaymentsReport(1, {
-        page: 1,
-        pageSize: 10,
-      });
-      expect(result.total).toBe(1);
-      expect(result.page).toBe(1);
-      expect(result.pageSize).toBe(10);
-      expect(result.data).toHaveLength(1);
-      expect(result.data[0]).toMatchObject({
-        id: 'p1',
-        student: { id: 10001, fullName: 'Ali Valiyev' },
-        group: { id: 'g1', name: 'B1-01' },
-        teachers: [{ id: 30001, fullName: 'Feruz Ustoz' }],
-        amount: 500_000,
-        bonus: null,
-        method: 'CASH',
-        receivedBy: { id: 20001, fullName: 'Laziz Kassa' },
-      });
-    });
-
-    it('falls back to active enrollment when payment has no contract group', async () => {
-      const payments = [
-        {
-          id: 'p2',
-          amount: 300_000,
-          method: 'PAYME',
-          note: null,
-          createdAt: new Date('2026-04-02T10:00:00Z'),
-          student: { id: 10002, firstName: 'Jasur', lastName: 'Tursun' },
-          receivedBy: null,
-          contract: null,
-        },
-      ];
-      prisma.$transaction.mockResolvedValueOnce([payments, 1]);
-      prisma.enrollment.findMany.mockResolvedValueOnce([
-        {
-          studentId: 10002,
-          group: {
-            id: 'g9',
-            name: 'A2-03',
-            teachers: [
-              { teacher: { id: 30002, firstName: 'Nodira', lastName: 'Opa' } },
-            ],
-          },
-        },
-      ]);
-
-      const result = await service.getStudentPaymentsReport(1, {});
-      expect(result.data[0].group).toEqual({ id: 'g9', name: 'A2-03' });
-      expect(result.data[0].teachers).toEqual([
-        { id: 30002, fullName: 'Nodira Opa' },
-      ]);
-      expect(result.data[0].receivedBy).toBeNull();
-    });
-
-    it('applies method filter to the where clause', async () => {
-      prisma.$transaction.mockResolvedValueOnce([[], 0]);
-      await service.getStudentPaymentsReport(1, {
-        methods: ['CASH', 'PAYME'],
-      });
-      expect(prisma.payment.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            companyId: 1,
-            status: 'COMPLETED',
-            method: { in: ['CASH', 'PAYME'] },
-          }),
-        }),
-      );
-    });
-
-    it('clamps pageSize to 100 and page to >= 1', async () => {
-      prisma.$transaction.mockResolvedValueOnce([[], 0]);
-      const result = await service.getStudentPaymentsReport(1, {
-        page: 0,
-        pageSize: 9999,
-      });
-      expect(result.page).toBe(1);
-      expect(result.pageSize).toBe(100);
-    });
-  });
-
-  describe('getDepartedStudentsSummary', () => {
-    // Only the teacher-change metrics are covered here; departures have their own spec.
-    const baseParams = {
-      scope: null,
-      startDate: '2026-03-01',
-      endDate: '2026-03-31',
-    };
-
-    it('counts a departure by the freeze that started it, even after the enrollment was closed later', async () => {
-      prisma.student.findMany.mockResolvedValueOnce([]);
-      prisma.student.count.mockResolvedValueOnce(0);
-      mockTeacherChangeDepartures(prisma);
-
-      const result = await service.getDepartedStudentsSummary(1, baseParams);
-
-      expect(result.totalTeacherChanges).toBe(1);
-      // e1 and e3 froze inside the window; e2 froze before the change.
-      expect(result.departedAfterTeacherChange).toBe(2);
-      // "Left" after a teacher change = DROPPED or FROZEN.
-      const enrWhere = prisma.enrollment.findMany.mock.calls[0][0].where;
-      expect(enrWhere.status).toEqual({ in: ['DROPPED', 'FROZEN'] });
-    });
-
-    it('skips teacher changes with no lessons conducted after', async () => {
-      prisma.student.findMany.mockResolvedValueOnce([]);
-      prisma.student.count.mockResolvedValueOnce(0);
-      prisma.groupTeacherHistory.findMany.mockResolvedValueOnce([
-        { id: 'ch1', groupId: 'g1', createdAt: new Date('2026-03-05') },
-      ]);
-      prisma.attendance.findMany.mockResolvedValueOnce([]);
-
-      const result = await service.getDepartedStudentsSummary(1, baseParams);
-
-      expect(result.totalTeacherChanges).toBe(1);
-      expect(result.departedAfterTeacherChange).toBe(0);
-    });
-
-    it("counts a student inside two teacher changes' windows once", async () => {
-      prisma.student.findMany.mockResolvedValueOnce([]);
-      prisma.student.count.mockResolvedValueOnce(0);
-      mockTeacherChangeDepartures(prisma);
-      prisma.groupTeacherHistory.findMany.mockResolvedValue([
-        {
-          id: 'ch1',
-          groupId: 'g1',
-          previousTeacherIds: [],
-          newTeacherIds: [30002],
-          createdAt: new Date('2026-03-05T05:00:00Z'),
-        },
-        {
-          id: 'ch2',
-          groupId: 'g1',
-          previousTeacherIds: [30002],
-          newTeacherIds: [30003],
-          createdAt: new Date('2026-03-07T05:00:00Z'),
-        },
-      ]);
-
-      const result = await service.getDepartedStudentsSummary(1, baseParams);
-
-      expect(result.totalTeacherChanges).toBe(2);
-      // e1 and e3 stopped inside both windows; each counts once.
-      expect(result.departedAfterTeacherChange).toBe(2);
-    });
-  });
-
-  describe('getDepartedStudentsReasons', () => {
-    const baseParams = {
-      startDate: '2026-03-01',
-      endDate: '2026-03-31',
-    };
-
-    it('returns counts by reason with names, sorted descending', async () => {
-      prisma.enrollment.groupBy.mockResolvedValueOnce([
-        { departureReasonId: 'r1', _count: { _all: 3 } },
-        { departureReasonId: 'r2', _count: { _all: 5 } },
-        { departureReasonId: null, _count: { _all: 2 } },
-      ]);
-      prisma.studentExitReason.findMany.mockResolvedValueOnce([
-        { id: 'r1', name: 'Moliyaviy' },
-        { id: 'r2', name: 'Vaqt yetmasligi' },
-      ]);
-
-      const result = await service.getDepartedStudentsReasons(1, baseParams);
-      expect(result.data.map((d: any) => d.count)).toEqual([5, 3, 2]);
-      expect(result.data[0]).toMatchObject({
-        reasonId: 'r2',
-        reasonName: 'Vaqt yetmasligi',
-      });
-      const nullRow = result.data.find((d: any) => d.reasonId === null);
-      expect(nullRow?.reasonName).toBe("Sababi ko'rsatilmagan");
-    });
-
-    it('returns empty data when no dropped enrollments exist', async () => {
-      prisma.enrollment.groupBy.mockResolvedValueOnce([]);
-      const result = await service.getDepartedStudentsReasons(1, baseParams);
-      expect(result.data).toEqual([]);
-      // no follow-up reason lookup needed
-      expect(prisma.studentExitReason.findMany).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('getDepartedStudentsByReason', () => {
-    const baseParams = {
-      startDate: '2026-03-01',
-      endDate: '2026-03-31',
-    };
-
-    it('returns enrollment-level DROPPED rows flattened', async () => {
-      const row = {
-        id: 'e1',
-        createdAt: new Date('2026-01-01'),
-        statusChangedAt: new Date('2026-03-10'),
-        statusChangeReason: 'Moliyaviy',
-        departureReasonId: 'r1',
-        student: { id: 10001, firstName: 'Ali', lastName: 'Valiyev' },
-        group: {
-          id: 'g1',
-          name: 'B1-01',
-          branch: { id: 1, name: 'Bosh' },
-          course: { id: 'c1', name: 'A1' },
-          teachers: [
-            { teacher: { id: 30001, firstName: 'Feruz', lastName: 'Ustoz' } },
-          ],
-        },
-      };
-      prisma.$transaction.mockResolvedValueOnce([[row], 1]);
-
-      const result = await service.getDepartedStudentsByReason(1, baseParams);
-      expect(result.total).toBe(1);
-      expect(result.data[0]).toMatchObject({
-        id: 'e1',
-        student: { id: 10001, fullName: 'Ali Valiyev' },
-        group: { id: 'g1', name: 'B1-01' },
-        branch: { id: 1, name: 'Bosh' },
-        course: { id: 'c1', name: 'A1' },
-        teachers: [{ id: 30001, fullName: 'Feruz Ustoz' }],
-        reason: 'Moliyaviy',
-        departureReasonId: 'r1',
-        departedAt: new Date('2026-03-10').toISOString(),
-      });
-    });
-
-    it('clamps pageSize to 100 and page to >= 1', async () => {
-      prisma.$transaction.mockResolvedValueOnce([[], 0]);
-      const result = await service.getDepartedStudentsByReason(1, {
-        ...baseParams,
-        page: 0,
-        pageSize: 9999,
-      });
-      expect(result.page).toBe(1);
-      expect(result.pageSize).toBe(100);
-    });
-  });
-
   describe('getDepartedAfterTeacherChangeList', () => {
     it('lists who left within 5 lessons, dated by the stop that started their absence', async () => {
       mockTeacherChangeDepartures(prisma);
@@ -1118,21 +730,74 @@ describe('ReportsService', () => {
       expect(enrWhere.status).toEqual({ in: ['DROPPED', 'FROZEN'] });
     });
 
-    it('lists exactly as many students as the retention KPI counts', async () => {
+    it('with a course and teacher filter, the list and the changes behind the card match the overview card', async () => {
+      const filter = {
+        courseId: [
+          '3f2a8c1e-0000-4000-8000-000000000001',
+          '3f2a8c1e-0000-4000-8000-000000000002',
+        ],
+        teacherIds: [30001, 30002],
+      };
+      const range = { startDate: '2026-03-01', endDate: '2026-03-31' };
       mockTeacherChangeDepartures(prisma);
       prisma.user.findMany.mockResolvedValue([]);
-      prisma.student.findMany.mockResolvedValueOnce([]);
-      prisma.student.count.mockResolvedValueOnce(0);
-      const range = { startDate: '2026-03-01', endDate: '2026-03-31' };
 
-      const summary = await service.getDepartedStudentsSummary(1, {
-        ...range,
+      // What the card counts: the loader with the page's filter.
+      const { gte: start, lt: end } = tashkentRangeUtc(
+        range.startDate,
+        range.endDate,
+      );
+      const card = await loadTeacherChangeDepartures(prisma, 1, {
         scope: null,
+        start,
+        end,
+        groupFilter: {
+          courseIds: filter.courseId,
+          teacherIds: filter.teacherIds,
+        },
       });
-      const rows = await service.getDepartedAfterTeacherChangeList(1, range);
+      const cardWhere =
+        prisma.groupTeacherHistory.findMany.mock.calls[0][0].where;
+      expect(cardWhere.group).toMatchObject({
+        courseId: { in: filter.courseId },
+        teachers: { some: { teacherId: { in: filter.teacherIds } } },
+      });
+      prisma.groupTeacherHistory.findMany.mockClear();
 
-      expect(rows).toHaveLength(summary.departedAfterTeacherChange);
-      expect(rows.map((r) => r.enrollmentId).sort()).toEqual(['e1', 'e3']);
+      const departures = await service.getDepartedAfterTeacherChangeList(1, {
+        ...filter,
+        ...range,
+      });
+      // The changes list reads the same rows, with the group they belong to.
+      prisma.groupTeacherHistory.findMany.mockResolvedValueOnce(
+        card.changes.map((c) => ({
+          ...c,
+          changeType: 'REPLACED',
+          triggeredByDismissal: false,
+          changeReasonId: null,
+          group: {
+            id: c.groupId,
+            name: 'B1-01',
+            branch: { id: 1, name: 'Bosh' },
+            course: { id: 'c1', name: 'A1' },
+          },
+          changedBy: null,
+          changeReasonRef: null,
+        })),
+      );
+      const changes = await service.getTeacherChangesList(1, {
+        ...filter,
+        ...range,
+      });
+
+      // Both dialogs filter by exactly what the card filtered by.
+      const [departedCall, changesCall] =
+        prisma.groupTeacherHistory.findMany.mock.calls;
+      expect(departedCall[0].where).toEqual(cardWhere);
+      expect(changesCall[0].where).toEqual(cardWhere);
+      expect(card.departures.length).toBeGreaterThan(0);
+      expect(departures).toHaveLength(card.departures.length);
+      expect(changes).toHaveLength(card.changes.length);
     });
 
     it('returns empty when there are no teacher changes', async () => {

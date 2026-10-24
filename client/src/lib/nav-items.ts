@@ -17,6 +17,7 @@ import {
   LifeBuoy,
   type LucideIcon,
 } from "lucide-react";
+import { msg } from "@/i18n/msg";
 import { paymentsNavItems } from "./payments-nav";
 import { reportsNavSections } from "./reports-nav";
 import { dafNavItems } from "./daf-nav";
@@ -74,22 +75,22 @@ export function isNavGateOpen(
 const reportsChildren: NavItemChild[] = reportsNavSections.flatMap((s) => s.items);
 
 export const navItems: NavItem[] = [
-  { title: "Bosh sahifa", url: "/", icon: LayoutDashboard },
+  { title: msg("Bosh sahifa"), url: "/", icon: LayoutDashboard },
   // Kunlik jadval ilgari bosh sahifaning o'zi edi. Bosh sahifa boshqaruv
   // paneliga aylangach u alohida sahifaga chiqdi — hamma rol ko'radi.
-  { title: "Jadval", url: "/schedule", icon: CalendarDays },
-  { title: "O'qituvchilar", url: "/teachers", icon: GraduationCap, permission: "teachers.view" },
-  { title: "O'quvchilar", url: "/students", icon: BookOpen, permission: "students.list" },
-  { title: "Lidlar", url: "/leads", icon: UserPlus, permission: "leads.view" },
-  { title: "Aloqa markazi", url: "/outreach", icon: PhoneCall, permission: "outreach.view" },
-  { title: "Mock imtihonlar", url: "/mock-exams", icon: ClipboardCheck, permission: "mock.view" },
-  { title: "Guruhlar", url: "/groups", icon: UsersRound, permission: "groups.view" },
-  { title: "Topshiriqlar", url: "/tasks", icon: ListTodo },
-  { title: "Media", url: "/media", icon: Images, permission: "media.view" },
+  { title: msg("Jadval"), url: "/schedule", icon: CalendarDays },
+  { title: msg("O'qituvchilar"), url: "/teachers", icon: GraduationCap, permission: "teachers.view" },
+  { title: msg("O'quvchilar"), url: "/students", icon: BookOpen, permission: "students.list" },
+  { title: msg("Lidlar"), url: "/leads", icon: UserPlus, permission: "leads.view" },
+  { title: msg("Aloqa markazi"), url: "/outreach", icon: PhoneCall, permission: "outreach.view" },
+  { title: msg("Mock imtihonlar"), url: "/mock-exams", icon: ClipboardCheck, permission: "mock.view" },
+  { title: msg("Guruhlar"), url: "/groups", icon: UsersRound, permission: "groups.view" },
+  { title: msg("Topshiriqlar"), url: "/tasks", icon: ListTodo },
+  { title: msg("Media"), url: "/media", icon: Images, permission: "media.view" },
   // DaF ilovasi nazorati — markaz bo'yicha faollik. O'qituvchi bu bo'limni
   // ko'rmaydi: u o'z guruhidagi «Ilova faolligi» tabidan foydalanadi.
   {
-    title: "DaF ilovasi",
+    title: msg("DaF ilovasi"),
     url: "/daf",
     icon: Smartphone,
     permission: "daf.activity",
@@ -98,34 +99,34 @@ export const navItems: NavItem[] = [
   // Lehrer portal — only Teachers see this. Backend `/salary/me/*`
   // endpoints scope by @CurrentUser('id') so a teacher only sees their own.
   {
-    title: "Mening oyligim",
+    title: msg("Mening oyligim"),
     url: "/profile/salary",
     icon: Wallet,
     forRoles: [4],
   },
 
   {
-    title: "Moliya",
+    title: msg("Moliya"),
     url: "/payments",
     icon: DollarSign,
     permission: ["payments.view", "debt.view", "expenses.view", "salary.view", "payments.gateway-log"],
     children: paymentsNavItems,
   },
   {
-    title: "Hisobotlar",
+    title: msg("Hisobotlar"),
     url: "/reports",
     icon: BarChart3,
-    // An Administrator sees only the Lidlar and To'lov hisobotlari; the
+    // An Administrator sees only the Lidlar and «Guruhlar bo'yicha to'lov» reports; the
     // children list filters the rest.
-    permission: ["reports.finance", "reports.payments", "reports.students", "reports.leads"],
+    permission: ["reports.finance", "reports.payments", "reports.students", "reports.leads", "kpi.view"],
     children: reportsChildren,
   },
   // The guide is open to every staff member; it filters its pages by role itself.
-  { title: "Qo'llanma", url: "/qollanma", icon: LifeBuoy, badgeKey: "qollanma-yangiliklar" },
+  { title: msg("Qo'llanma"), url: "/qollanma", icon: LifeBuoy, badgeKey: "qollanma-yangiliklar" },
   // Not a dropdown: at 12 entries it pushed the rest of the sidebar down when
   // opened. The list lives on the /settings page — its source is settings-nav.ts.
   {
-    title: "Sozlamalar",
+    title: msg("Sozlamalar"),
     url: "/settings",
     icon: Settings,
     permission: SETTINGS_PERMISSIONS,

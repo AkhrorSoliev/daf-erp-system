@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
 
 // Telegram'ning rasmiy OAuth oqimi. Tugma faqat backend funksiya yoniq deb
 // aytganda ko'rinadi — sozlama Railway env'ida bo'lmasa hech narsa chizilmaydi.
@@ -11,6 +12,7 @@ export function TelegramLoginButton({
 }: {
   variant?: "default" | "lumio";
 }) {
+  const t = useT();
   const [enabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -39,7 +41,7 @@ export function TelegramLoginButton({
       const res = await api.get("/auth/telegram/start");
       window.location.href = res.data.url;
     } catch (err) {
-      setError(getErrorMessage(err, "Telegram orqali kirishni boshlab bo'lmadi"));
+      setError(getErrorMessage(err, t("Telegram orqali kirishni boshlab bo'lmadi")));
       setLoading(false);
     }
   }
@@ -47,20 +49,20 @@ export function TelegramLoginButton({
   const isLumio = variant === "lumio";
 
   return (
-    <div className={isLumio ? "space-y-2" : "flex flex-col"}>
-      {isLumio ? (
-        <div className="flex items-center gap-3">
-          <div className="h-px flex-1 bg-line" />
-          <span className="text-sm font-semibold text-ink-500">yoki</span>
-          <div className="h-px flex-1 bg-line" />
-        </div>
-      ) : (
-        // On the Daftar sheet the word is a row of writing; hairlines beside it
-        // would read as two more rules of the paper.
-        <p className="daftar-row text-center text-sm text-muted-foreground">
-          yoki
-        </p>
-      )}
+    <div className="space-y-2">
+      <div className="flex items-center gap-3">
+        <div className={isLumio ? "h-px flex-1 bg-line" : "h-px flex-1 bg-border"} />
+        <span
+          className={
+            isLumio
+              ? "text-sm font-semibold text-ink-500"
+              : "text-sm text-muted-foreground"
+          }
+        >
+          {t("yoki")}
+        </span>
+        <div className={isLumio ? "h-px flex-1 bg-line" : "h-px flex-1 bg-border"} />
+      </div>
 
       {error ? (
         <div
@@ -81,10 +83,10 @@ export function TelegramLoginButton({
         className={
           isLumio
             ? "flex h-[54px] w-full items-center justify-center rounded-md border border-line-strong bg-surface text-base font-bold text-ink-900 disabled:opacity-50"
-            : "my-2 inline-flex h-12 w-full items-center justify-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium transition-colors hover:bg-accent disabled:opacity-50"
+            : "inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-input bg-card px-4 text-sm font-medium transition-colors hover:bg-accent disabled:opacity-50"
         }
       >
-        {loading ? "Telegram ochilmoqda..." : "Telegram orqali kirish"}
+        {loading ? t("Telegram ochilmoqda...") : t("Telegram orqali kirish")}
       </button>
     </div>
   );

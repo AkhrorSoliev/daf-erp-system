@@ -1,4 +1,5 @@
 import type { LeadStatus } from "@/hooks/use-leads-board";
+import { msg } from "@/i18n/msg";
 
 /** Server `submission-stage.ts` bilan bir xil. Bosqichni client hisoblamaydi. */
 export type SubmissionStage = "awaiting" | "contacted" | "converted" | "lost";
@@ -11,17 +12,17 @@ export const SUBMISSION_STAGES: readonly SubmissionStage[] = [
 ];
 
 export const STAGE_LABELS: Record<SubmissionStage, string> = {
-  awaiting: "Qo'ng'iroq kutmoqda",
-  contacted: "Aloqada",
-  converted: "O'quvchi bo'ldi",
-  lost: "Yo'qotildi",
+  awaiting: msg("Qo'ng'iroq kutmoqda"),
+  contacted: msg("Aloqada"),
+  converted: msg("O'quvchi bo'ldi"),
+  lost: msg("Yo'qotildi"),
 };
 
 export const STAGE_HINTS: Record<SubmissionStage, string> = {
-  awaiting: "Hali hech kim qo'ng'iroq qilmagan yangi lidlar",
-  contacted: "Qo'ng'iroq qilingan yoki sinov darsidagi lidlar",
-  converted: "O'quvchiga aylangan lidlar",
-  lost: "Yo'qotilgan yoki arxivlangan lidlar",
+  awaiting: msg("Hali hech kim qo'ng'iroq qilmagan yangi lidlar"),
+  contacted: msg("Qo'ng'iroq qilingan yoki sinov darsidagi lidlar"),
+  converted: msg("O'quvchiga aylangan lidlar"),
+  lost: msg("Yo'qotilgan yoki arxivlangan lidlar"),
 };
 
 /** `?source=` da manbasi yo'q javoblar (server `NO_SOURCE_TOKEN`). */

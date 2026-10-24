@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { MonthStepper } from "@/components/shared/month-stepper";
@@ -15,6 +16,7 @@ const FILTERS = { month: { type: "string" as const, defaultValue: "" } };
 
 /** «Marketing» (spec B1 §3): one month's spend, new students and what they paid. CEO/BD only. */
 export function MarketingClient() {
+  const t = useT();
   const { selectedBranch } = useBranchSwitcher();
   const { filters, setFilter } = useUrlFilters(FILTERS);
   const current = currentMonthKey();
@@ -32,7 +34,7 @@ export function MarketingClient() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="font-heading text-lg font-semibold tracking-tight">Marketing</h2>
+        <h2 className="font-heading text-lg font-semibold tracking-tight">{t("Marketing")}</h2>
         <MonthStepper
           value={month}
           min={REPORT_FLOOR_MONTH}
@@ -43,7 +45,7 @@ export function MarketingClient() {
       {report.isPending ? (
         <BlockSkeleton className="h-64" />
       ) : report.isError ? (
-        <BlockError title="Marketing" onRetry={() => report.refetch()} />
+        <BlockError title={t("Marketing")} onRetry={() => report.refetch()} />
       ) : (
         <MarketingReportView data={report.data} />
       )}

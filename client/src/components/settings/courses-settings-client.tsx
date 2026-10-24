@@ -38,6 +38,7 @@ import { EditCourseDrawer } from "./edit-course-drawer";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { PAYMENT_MODEL_SHORT_LABELS } from "@/lib/payment-model";
+import { useT } from "@/i18n/context";
 
 const coursesSchema = {
   search: { type: "string" as const, defaultValue: "" },
@@ -46,12 +47,17 @@ const coursesSchema = {
 };
 
 export function CoursesSettingsClient() {
+  const t = useT();
   const openAddDrawer = useEditCourse((s) => s.openAddDrawer);
   // Adding a course needs `courses.create`; the server checks the same capability
   // on POST /courses. An Administrator can see courses but not add one.
   const canAddCourse = useCan("courses.create");
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
+  const branches = useBranchSwitcher((s) => s.branches);
+  // «Barcha filiallar» — kurs qaysi filialniki ekanini ustun ko'rsatadi
+  const showBranch = !selectedBranch;
+  const colCount = showBranch ? 8 : 7;
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,11 +70,12 @@ export function CoursesSettingsClient() {
   }, 300);
 
   const fetchCourses = useCallback(async () => {
-    if (!branchLoaded || !selectedBranch) return;
+    if (!branchLoaded) return;
     setLoading(true);
     try {
+      // «Barcha filiallar» (selectedBranch null) — branch_id yuborilmaydi, server o'zining doirasini qo'llaydi
       const { data } = await api.get("/courses", {
-        params: { branch_id: selectedBranch.id, page: filters.page, pageSize: filters.pageSize },
+        params: { branch_id: selectedBranch?.id, page: filters.page, pageSize: filters.pageSize },
       });
       setCourses(data.data);
       setTotal(data.total);
@@ -123,8 +130,8 @@ export function CoursesSettingsClient() {
   return (
     <div className="space-y-4">
       <SettingsPageHeader
-        title="Kurslar"
-        description="Mavjud kurslarni boshqarish va yangi kurslar qo'shish"
+        title={t("Kurslar")}
+        description={t("Mavjud kurslarni boshqarish va yangi kurslar qo'shish")}
         action={
           canAddCourse ? (
             <Tooltip>
@@ -136,13 +143,13 @@ export function CoursesSettingsClient() {
                   disabled={!selectedBranch}
                 >
                   <Plus className="mr-1.5 h-4 w-4" />
-                  Yangi kurs
+                  {t("Yangi kurs")}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
                 {selectedBranch
-                  ? "Yangi kurs qo\u2018shish"
-                  : "Avval filial tanlang"}
+                  ? t("Yangi kurs qo'shish")
+                  : t("Avval filial tanlang")}
               </TooltipContent>
             </Tooltip>
           ) : undefined
@@ -151,7 +158,7 @@ export function CoursesSettingsClient() {
 
       <div className="flex items-center gap-3">
         <Input
-          placeholder="Kurs nomi bo'yicha qidirish..."
+          placeholder={t("Kurs nomi bo'yicha qidirish...")}
           value={searchInput}
           onChange={(e) => { setSearchInput(e.target.value); debouncedSetSearch(e.target.value); }}
           className="w-full sm:max-w-sm"
@@ -163,35 +170,38 @@ export function CoursesSettingsClient() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>Kurs nomi</TableHead>
-              <TableHead>Sikl darslari</TableHead>
-              <TableHead>Narxi</TableHead>
-              <TableHead>To&apos;lov modeli</TableHead>
-              <TableHead>Holati</TableHead>
+              <TableHead>{t("Kurs nomi")}</TableHead>
+              {showBranch && <TableHead>{t("Filial")}</TableHead>}
+              <TableHead>{t("Sikl darslari")}</TableHead>
+              <TableHead>{t("Narxi")}</TableHead>
+              <TableHead>{t("To'lov modeli")}</TableHead>
+              <TableHead>{t("Holati")}</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={colCount} className="h-24 text-center">
                   <Loader2 className="mx-auto size-6 animate-spin text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={colCount}
                   className="h-24 text-center text-muted-foreground"
                 >
                   <div className="flex flex-col items-center gap-2">
                     <BookOpen className="h-8 w-8 text-muted-foreground/50" />
-                    Kurslar topilmadi
+                    {t("Kurslar topilmadi")}
                   </div>
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((course, index) => (
+              filtered.map((course, index) => {
+                const modelShort = PAYMENT_MODEL_SHORT_LABELS[course.paymentModel];
+                return (
                 <TableRow
                   key={course.id}
                   className="relative cursor-pointer hover:bg-muted/50"
@@ -203,22 +213,27 @@ export function CoursesSettingsClient() {
                     <Link href={`/settings/courses/${course.id}`} className="absolute inset-0" />
                     {course.name}
                   </TableCell>
+                  {showBranch && (
+                    <TableCell>
+                      {branches.find((b) => b.id === course.branchId)?.name ?? "—"}
+                    </TableCell>
+                  )}
                   <TableCell>
                     {course.lessonPaymentCount
-                      ? `${course.lessonPaymentCount} ta`
+                      ? t("{n} ta", { n: course.lessonPaymentCount })
                       : "—"}
                   </TableCell>
-                  <TableCell>{formatPrice(course.price)} so&apos;m</TableCell>
+                  <TableCell>{t("{amount} so'm", { amount: formatPrice(course.price) })}</TableCell>
                   <TableCell>
                     <Badge variant="outline">
-                      {PAYMENT_MODEL_SHORT_LABELS[course.paymentModel]}
+                      {t(modelShort)}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge
                       variant={course.isActive ? "default" : "secondary"}
                     >
-                      {course.isActive ? "Faol" : "Nofaol"}
+                      {course.isActive ? t("Faol") : t("Nofaol")}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -228,7 +243,8 @@ export function CoursesSettingsClient() {
                     />
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -238,7 +254,7 @@ export function CoursesSettingsClient() {
       {totalPages > 0 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Jami: {total} ta kurs
+            {t("Jami: {n} ta kurs", { n: total })}
           </p>
           <div className="flex items-center gap-3">
             <Select
@@ -265,7 +281,7 @@ export function CoursesSettingsClient() {
                 disabled={filters.page <= 1}
                 onClick={() => setFilter("page", filters.page - 1)}
               >
-                Oldingi
+                {t("Oldingi")}
               </Button>
               <span className="px-2 text-sm text-muted-foreground">
                 {filters.page} / {totalPages}
@@ -276,7 +292,7 @@ export function CoursesSettingsClient() {
                 disabled={filters.page >= totalPages}
                 onClick={() => setFilter("page", filters.page + 1)}
               >
-                Keyingi
+                {t("Keyingi")}
               </Button>
             </div>
           </div>

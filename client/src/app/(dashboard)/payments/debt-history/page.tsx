@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { DebtFiltersProvider } from "@/components/payments/debt/debt-filters-provider";
+import { msg } from "@/i18n/msg";
 import { DebtSubpage } from "@/components/payments/debt/debt-subpage";
 import { MonthlyDebtView } from "@/components/payments/debt/monthly-debt-view";
 
@@ -8,7 +9,7 @@ export default function DebtHistoryPage() {
   return (
     <Suspense>
       <DebtFiltersProvider>
-        <DebtSubpage title="Oylar bo'yicha qarz tarixi">
+        <DebtSubpage title={msg("Oylar bo'yicha qarz tarixi")}>
           <MonthlyDebtView />
         </DebtSubpage>
       </DebtFiltersProvider>

@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
-import { Greeting, useGreeting } from "@/components/auth/daftar-greeting";
+import { Greeting, useGreeting } from "@/components/auth/staff-greeting";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import {
   ArrowClockwise,
   CaretRight,
@@ -35,7 +37,7 @@ import {
 import {
   Action,
   CloseButton,
-  DaftarSkin,
+  StaffSkin,
   Loading,
   Notice,
   NotRegisteredNotice,
@@ -54,12 +56,14 @@ type View =
 
 type Session = Extract<MiniAppSignInResult, { status: "authenticated" }>;
 
-const SIGN_IN_FAILED =
-  "Kirib bo'lmadi. Internetni tekshirib, qayta urinib ko'ring.";
+const SIGN_IN_FAILED = msg(
+  "Kirib bo'lmadi. Internetni tekshirib, qayta urinib ko'ring.",
+);
 
 /** Kirish muvaffaqiyatli bo'ldi, lekin portal uni ko'rmadi (`bouncedAfterSignIn`). */
-const SESSION_NOT_KEPT =
-  "Kirish bu oynada saqlanmadi. Telegram'ning brauzer versiyasida shunday bo'lishi mumkin — kabinetni telefon yoki kompyuterdagi Telegram ilovasidan oching.";
+const SESSION_NOT_KEPT = msg(
+  "Kirish bu oynada saqlanmadi. Telegram'ning brauzer versiyasida shunday bo'lishi mumkin — kabinetni telefon yoki kompyuterdagi Telegram ilovasidan oching.",
+);
 
 /**
  * Telegram Mini App'ning kirish nuqtasi: `student.` xostida o'quvchi kabineti
@@ -69,16 +73,16 @@ const SESSION_NOT_KEPT =
  * (parolsiz), bog'lanmagan bo'lsa — xabar. Telefon/parol formasi bu yerda yo'q:
  * Mini App ichida kirish faqat Telegram orqali.
  *
- * `daftar` — the page has put this on the Daftar sheet (the staff hosts): the
- * same states are then drawn in the sheet's look, and the sheet is the frame.
- * It changes nothing about who is signed in or how.
+ * `staff` — the page has put this in the staff sign-in shell (the staff
+ * hosts): the same states are then drawn in the cabinet's look, and the shell
+ * is the frame. It changes nothing about who is signed in or how.
  */
-export function MiniAppEntry({ daftar = false }: { daftar?: boolean }) {
+export function MiniAppEntry({ staff = false }: { staff?: boolean }) {
   const router = useRouter();
   const setAuth = useAuth((s) => s.setAuth);
   const clearSession = useAuth((s) => s.clearSession);
   const [view, setView] = useState<View>({ kind: "loading" });
-  // On the staff sheet a sign-in ends with the greeting of the sign-in pages.
+  // On a staff host a sign-in ends with the greeting of the sign-in pages.
   const { greeted, greet } = useGreeting("replace");
   const initData = useRef("");
   // Xost va `?next=` `start()` da o'qiladi — server render'da `window` yo'q.
@@ -92,7 +96,7 @@ export function MiniAppEntry({ daftar = false }: { daftar?: boolean }) {
     markMiniAppSignedOut(false);
     markMiniAppSignedIn();
     setAuth(session.user, session.accessToken, session.refreshToken);
-    if (daftar) greet(session.user, path);
+    if (staff) greet(session.user, path);
     else router.replace(path);
   }
 
@@ -116,7 +120,7 @@ export function MiniAppEntry({ daftar = false }: { daftar?: boolean }) {
       { initData: initData.current },
     );
     if (data.status === "authenticated") {
-      enter(data, staffCabinetPath(nextPage.current));
+      enter(data, staffCabinetPath(nextPage.current, data.user.roles));
     } else {
       setView({ kind: "not_registered", audience: "staff" });
     }
@@ -193,7 +197,7 @@ export function MiniAppEntry({ daftar = false }: { daftar?: boolean }) {
   );
 
   return (
-    <DaftarSkin value={daftar}>
+    <StaffSkin value={staff}>
       <Script
         src={TELEGRAM_WEB_APP_SCRIPT}
         strategy="afterInteractive"
@@ -206,7 +210,7 @@ export function MiniAppEntry({ daftar = false }: { daftar?: boolean }) {
           })
         }
       />
-      {daftar ? (
+      {staff ? (
         greeted ? (
           <Greeting user={greeted} />
         ) : (
@@ -217,7 +221,7 @@ export function MiniAppEntry({ daftar = false }: { daftar?: boolean }) {
           <div className="w-full max-w-sm">{state}</div>
         </main>
       )}
-    </DaftarSkin>
+    </StaffSkin>
   );
 }
 
@@ -232,18 +236,22 @@ function MiniAppView({
   onReenter: () => void;
   onOpenLogin: () => void;
 }) {
+  const t = useT();
   switch (view.kind) {
     case "loading":
-      return <Loading>Kabinet ochilmoqda…</Loading>;
+      return <Loading>{t("Kabinet ochilmoqda…")}</Loading>;
 
     case "outside":
       return (
         <Notice
           icon={<TelegramLogo weight="fill" />}
-          title="Bu sahifa Telegram ichida ochiladi"
-          description="Kabinetni Telegram botidagi «Kabinet» tugmasi orqali oching yoki telefon raqam va parol bilan kiring."
+          title={t("Bu sahifa Telegram ichida ochiladi")}
+          description={t(
+            "Kabinetni Telegram botidagi {button} tugmasi orqali oching yoki telefon raqam va parol bilan kiring.",
+            { button: "«Kabinet»" },
+          )}
         >
-          <Action onClick={onOpenLogin}>Kirish sahifasi</Action>
+          <Action onClick={onOpenLogin}>{t("Kirish sahifasi")}</Action>
         </Notice>
       );
 
@@ -251,11 +259,11 @@ function MiniAppView({
       return (
         <Notice
           icon={<SignOut weight="bold" />}
-          title="Hisobdan chiqdingiz"
-          description="Kabinetga qayta kirish uchun tugmani bosing — parol kerak emas."
+          title={t("Hisobdan chiqdingiz")}
+          description={t("Kabinetga qayta kirish uchun tugmani bosing — parol kerak emas.")}
         >
           <Action iconBefore={<SignIn weight="bold" />} onClick={onReenter}>
-            Qayta kirish
+            {t("Qayta kirish")}
           </Action>
           <CloseButton />
         </Notice>
@@ -265,8 +273,10 @@ function MiniAppView({
       return (
         <Notice
           icon={<User weight="bold" />}
-          title="Kim kiradi?"
-          description="Bu Telegram akkauntga bir nechta o'quvchi bog'langan. Kabinetini ochmoqchi bo'lgan o'quvchini tanlang."
+          title={t("Kim kiradi?")}
+          description={t(
+            "Bu Telegram akkauntga bir nechta o'quvchi bog'langan. Kabinetini ochmoqchi bo'lgan o'quvchini tanlang.",
+          )}
         >
           <div className="space-y-2">
             {view.students.map((student) => (
@@ -290,22 +300,31 @@ function MiniAppView({
     case "staff_account":
       return <StaffAccountNotice />;
 
-    case "error":
+    case "error": {
+      // Our own fallback texts are translated when drawn; a message the
+      // server sent is shown as it came.
+      const message =
+        view.message === SIGN_IN_FAILED
+          ? t(SIGN_IN_FAILED)
+          : view.message === SESSION_NOT_KEPT
+            ? t(SESSION_NOT_KEPT)
+            : view.message;
       return (
         <Notice
           alert
           icon={<WarningCircle weight="bold" />}
-          title="Kirib bo'lmadi"
-          description={view.message}
+          title={t("Kirib bo'lmadi")}
+          description={message}
         >
           <Action
             iconBefore={<ArrowClockwise weight="bold" />}
             onClick={view.retry}
           >
-            Qayta urinish
+            {t("Qayta urinish")}
           </Action>
           <CloseButton />
         </Notice>
       );
+    }
   }
 }

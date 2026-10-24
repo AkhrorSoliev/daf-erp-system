@@ -12,14 +12,25 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { routeLabels } from "@/lib/breadcrumb-routes";
+import { useAuth } from "@/hooks/use-auth";
 import { useBreadcrumbName } from "@/hooks/use-breadcrumb-name";
+import { useT } from "@/i18n/context";
+import { isTeacherOnly } from "@/lib/teacher-only";
 
 export function AppBreadcrumb() {
   const pathname = usePathname();
+  const t = useT();
   const { names } = useBreadcrumbName();
+  const user = useAuth((s) => s.user);
   const segments = pathname.split("/").filter(Boolean);
 
   if (segments.length === 0) return null;
+
+  // A teacher's «Bosh sahifa» is just another page of theirs, so the trail
+  // starts at the section («Guruhlar › Guruh») and a top-level page shows no
+  // trail at all: its title already says where they are.
+  const teacher = isTeacherOnly(user?.roles);
+  if (teacher && segments.length === 1) return null;
 
   // Pass-through segmentlar — o'zi ochiladigan sahifa emas, ID'li haqiqiy
   // sahifaga o'tishdagi oraliq bosqich: /students/profile/123 da "profile",
@@ -32,7 +43,10 @@ export function AppBreadcrumb() {
 
   const crumbs = filtered.map((segment, index) => {
     const url = "/" + segments.slice(0, segments.indexOf(segment) + 1).join("/");
-    const label = routeLabels[segment] ?? names[segment] ?? segment;
+    // Only a name from the route table is translated; an entity name or a raw
+    // segment is shown as it came.
+    const known = routeLabels[segment];
+    const label = known !== undefined ? t(known) : (names[segment] ?? segment);
     const isLast = index === filtered.length - 1;
 
     // Pass-through segmentdan keyingi so'nggi segment uchun to'liq URL berish
@@ -46,15 +60,17 @@ export function AppBreadcrumb() {
   return (
     <Breadcrumb>
       <BreadcrumbList>
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link href="/">Bosh sahifa</Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
+        {!teacher && (
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/">{t("Bosh sahifa")}</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+        )}
 
-        {crumbs.map((crumb) => (
+        {crumbs.map((crumb, index) => (
           <Fragment key={crumb.url}>
-            <BreadcrumbSeparator />
+            {(!teacher || index > 0) && <BreadcrumbSeparator />}
             <BreadcrumbItem>
               {crumb.isLast ? (
                 <BreadcrumbPage>{crumb.label}</BreadcrumbPage>

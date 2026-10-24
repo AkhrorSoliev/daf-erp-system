@@ -55,8 +55,34 @@ describe('archive users tab — student accounts belong to their card', () => {
     });
   });
 
+  it('never returns the password hash, session version or chat id of a user', async () => {
+    const read = new ArchiveReadService(prisma);
+    const secrets = {
+      password: true,
+      sessionVersion: true,
+      telegramChatId: true,
+    };
+
+    await read.findAll(
+      ArchiveEntityType.USERS,
+      { page: 1, pageSize: 10 } as any,
+      1001,
+    );
+    expect(prisma.user.findMany.mock.calls[0][0].omit).toEqual(secrets);
+
+    await expect(
+      read.findOne(ArchiveEntityType.USERS, 30001, 1001),
+    ).rejects.toThrow(NotFoundException);
+    expect(prisma.user.findFirst.mock.calls[0][0].omit).toEqual(secrets);
+  });
+
   it('will not restore or permanently delete a student-only account on its own', async () => {
-    const restore = new ArchiveRestoreService(prisma, {} as any, {} as any);
+    const restore = new ArchiveRestoreService(
+      prisma,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
     await expect(
       restore.restore(ArchiveEntityType.USERS, 30001, 7, 1001),
     ).rejects.toThrow(NotFoundException);

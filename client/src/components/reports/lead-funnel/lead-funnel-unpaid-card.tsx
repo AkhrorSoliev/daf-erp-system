@@ -1,6 +1,8 @@
 "use client";
 
 import { ChevronRight, WalletCards } from "lucide-react";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { formatNumber } from "@/lib/format-utils";
 import { displayDate, FUNNEL_START_DATE } from "./lead-funnel-math";
 import type { LeadFunnelResponse } from "./lead-funnel-types";
@@ -22,13 +24,16 @@ export function LeadFunnelUnpaidCard({
   unpaid,
   onOpen,
 }: LeadFunnelUnpaidCardProps) {
+  const t = useT();
+  // The labels count people, so they are plural («Faollar»), not the status
+  // badge words («Faol») that agree with a single student.
   const parts = [
-    { label: "Faol", value: unpaid.active, tone: "bg-emerald-500" },
-    { label: "Muzlatilgan", value: unpaid.frozen, tone: "bg-sky-500" },
-    { label: "Chetlatilgan", value: unpaid.expelled, tone: "bg-rose-500" },
+    { label: msg("Faollar"), value: unpaid.active, tone: "bg-emerald-500" },
+    { label: msg("Muzlatilganlar"), value: unpaid.frozen, tone: "bg-sky-500" },
+    { label: msg("Chetlatilganlar"), value: unpaid.expelled, tone: "bg-rose-500" },
     // Bitirgan, arxivlangan va h.k. — kam uchraydi, faqat bor bo'lsa ko'rinadi.
     ...(unpaid.other > 0
-      ? [{ label: "Boshqa", value: unpaid.other, tone: "bg-slate-400" }]
+      ? [{ label: msg("Boshqalar"), value: unpaid.other, tone: "bg-slate-400" }]
       : []),
   ];
 
@@ -36,13 +41,16 @@ export function LeadFunnelUnpaidCard({
     <button
       type="button"
       onClick={onOpen}
-      aria-label={`Darsga kelgan, lekin to'lamagan: ${unpaid.total} kishi — ro'yxatni ochish`}
+      aria-label={t(
+        "Darsga kelgan, lekin to'lamagan: {n} kishi — ro'yxatni ochish",
+        { n: formatNumber(unpaid.total) },
+      )}
       className="group flex w-full flex-col gap-4 rounded-xl border bg-card p-4 text-left transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <span className="flex items-start justify-between gap-3">
         <span className="flex items-center gap-2 text-sm text-muted-foreground">
           <WalletCards className="size-4" />
-          Darsga kelgan, lekin to&apos;lamagan
+          {t("Darsga kelgan, lekin to'lamagan")}
         </span>
         <ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
       </span>
@@ -52,8 +60,9 @@ export function LeadFunnelUnpaidCard({
           {formatNumber(unpaid.total)}
         </span>
         <span className="block text-xs text-muted-foreground">
-          {displayDate(FUNNEL_START_DATE)} dan beri voronkaga kirganlar ·
-          bugungi holat
+          {t("{date} dan beri voronkaga kirganlar · bugungi holat", {
+            date: displayDate(FUNNEL_START_DATE),
+          })}
         </span>
       </span>
 
@@ -81,7 +90,7 @@ export function LeadFunnelUnpaidCard({
           <span key={p.label} className="block min-w-0">
             <span className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
               <span className={`size-2 shrink-0 rounded-full ${p.tone}`} />
-              {p.label}
+              {t(p.label)}
             </span>
             <span className="block font-medium tabular-nums">
               {formatNumber(p.value)}

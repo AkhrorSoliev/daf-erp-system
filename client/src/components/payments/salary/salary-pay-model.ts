@@ -1,18 +1,29 @@
+import { interpolate } from "@/i18n/translate";
 import { formatPrice } from "@/lib/format-utils";
+import type { Translate } from "../record-payment-admission";
 import { monthShort } from "../salary-utils";
 import type { SalaryDetail } from "./salary-types";
 
 // The «Berildi» dialog's rules as pure functions (spec §5.1), so the money
 // that goes into the request body is tested without rendering anything.
+// The words take an optional last `t` (default: the Uzbek source).
 
 /** The live line under the amounts: green when cash + card close the sum, red with both numbers when not. */
-export function sliceCheck(total: number, cash: number, card: number): { ok: boolean; text: string } {
+export function sliceCheck(
+  total: number,
+  cash: number,
+  card: number,
+  t: Translate = interpolate,
+): { ok: boolean; text: string } {
   const sum = cash + card;
   return sum === total
-    ? { ok: true, text: `✓ Naqd + karta = ${formatPrice(total)} so'm` }
+    ? { ok: true, text: t("✓ Naqd + karta = {total} so'm", { total: formatPrice(total) }) }
     : {
         ok: false,
-        text: `Naqd + karta ${formatPrice(total)} so'm bo'lishi kerak, hozir ${formatPrice(sum)} so'm`,
+        text: t("Naqd + karta {total} so'm bo'lishi kerak, hozir {sum} so'm", {
+          total: formatPrice(total),
+          sum: formatPrice(sum),
+        }),
       };
 }
 
@@ -51,11 +62,15 @@ export function accountsByKind(accounts: SalaryDetail["cashAccounts"]): {
 }
 
 /** The server says whether the payee has a bot chat (the send itself is async). */
-export function payToast(notified: boolean): string {
-  return notified ? "Berildi — xodimga xabar yuborildi" : "Berildi";
+export function payToast(notified: boolean, t: Translate = interpolate): string {
+  return notified ? t("Berildi — xodimga xabar yuborildi") : t("Berildi");
 }
 
-/** «Madina — sentabr oyligi berildi». */
-export function payTitle(firstName: string, month: string): string {
-  return `${firstName} — ${monthShort(month).toLowerCase()} oyligi berildi`;
+/**
+ * «Madina — sentabr oyligi berildi».
+ * `lowerMonth`: the month name inside the sentence is lower-cased (Uzbek, Russian), not in de/en.
+ */
+export function payTitle(firstName: string, month: string, t: Translate = interpolate, lowerMonth = true): string {
+  const name = monthShort(month, t);
+  return t("{name} — {month} oyligi berildi", { name: firstName, month: lowerMonth ? name.toLowerCase() : name });
 }

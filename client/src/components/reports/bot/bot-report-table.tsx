@@ -1,94 +1,55 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { format } from "date-fns";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import api from "@/lib/api";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { PaymentsPager } from "@/components/payments/list/payments-table";
+import { useT } from "@/i18n/context";
+import { dateTime, settled, STATE_LABEL, stateTone } from "./bot-report-format";
+import { useBotList } from "./bot-report-queries";
+import { BOT_PAGE_SIZES, type listParams } from "./bot-report-url";
 
-interface GateRow {
-  id: number;
-  telegramUserId: string;
-  username: string | null;
-  firstName: string | null;
-  blockedAt: string | null;
-  joinedAt: string | null;
-  leftAt: string | null;
-}
-
-const dt = (v: string | null) =>
-  v ? format(new Date(v), "dd.MM.yyyy, HH:mm") : "—";
-
-/** Qatorning holati — sodda so'zlar bilan, texnik atamasiz. */
-function statusOf(row: GateRow) {
-  if (row.leftAt) return { label: "Chiqib ketgan", variant: "destructive" as const };
-  if (row.joinedAt) return { label: "A'zo", variant: "default" as const };
-  if (row.blockedAt) return { label: "Kutilmoqda", variant: "secondary" as const };
-  return { label: "—", variant: "outline" as const };
-}
-
-export function BotReportTable() {
-  const [rows, setRows] = useState<GateRow[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [loading, setLoading] = useState(true);
-
-  const fetchRows = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data } = await api.get("/telegram/channel-report/list", {
-        params: { page, pageSize },
-      });
-      setRows(data.data);
-      setTotal(data.total);
-    } catch {
-      setRows([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize]);
-
-  useEffect(() => {
-    void fetchRows();
-  }, [fetchRows]);
-
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+/** The month's cohort, one page; the state of each row is the server's. */
+export function BotReportTable({
+  params,
+  onPage,
+  onPageSize,
+}: {
+  params: ReturnType<typeof listParams>;
+  onPage: (page: number) => void;
+  onPageSize: (size: number) => void;
+}) {
+  const t = useT();
+  const { data, isError, isPlaceholderData, refetch } = useBotList(params);
+  // An answer kept from another month, page or page size is never drawn as the current one.
+  const fresh = settled(data, isPlaceholderData);
+  const rows = fresh?.data ?? [];
+  const total = fresh?.total ?? 0;
+  // The client's words for the server's state codes; a local list, because the scanner reads `t(variable)`, not `t(MAP[key])`.
+  const shown = rows.map((row) => ({ ...row, stateLabel: STATE_LABEL[row.state] }));
 
   return (
     <Card>
-      <CardContent className="p-4">
-        <p className="mb-3 font-medium">Foydalanuvchilar</p>
+      <CardContent className="flex flex-col gap-3 p-4">
+        <p className="font-medium">{t("Foydalanuvchilar")}</p>
 
-        {loading ? (
-          <div className="space-y-2">
+        {isError ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            <p>{t("Ro'yxatni yuklab bo'lmadi")}</p>
+            <button type="button" onClick={() => void refetch()} className="mt-2 underline">
+              {t("Qayta urinish")}
+            </button>
+          </div>
+        ) : !fresh ? (
+          <div className="flex flex-col gap-2">
             {Array.from({ length: 5 }).map((_, i) => (
               <Skeleton key={i} className="h-10" />
             ))}
           </div>
-        ) : rows.length === 0 ? (
-          <p className="text-muted-foreground py-8 text-center text-sm">
-            Hali ma&apos;lumot yo&apos;q — kanal tekshiruvi yoqilgach, bu yerda
-            ro&apos;yxat paydo bo&apos;ladi
+        ) : total === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            {t("Bu oyda bot hech kimni to'xtatmagan — boshqa oyni tanlab ko'ring")}
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -96,97 +57,49 @@ export function BotReportTable() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12 border-r">#</TableHead>
-                  <TableHead>Telegram</TableHead>
-                  <TableHead>Bot to&apos;xtatdi</TableHead>
-                  <TableHead>A&apos;zo bo&apos;ldi</TableHead>
-                  <TableHead>Chiqib ketdi</TableHead>
-                  <TableHead>Holat</TableHead>
+                  <TableHead>{t("Telegram")}</TableHead>
+                  <TableHead>{t("Bot to'xtatdi")}</TableHead>
+                  <TableHead>{t("A'zo bo'ldi")}</TableHead>
+                  <TableHead>{t("Chiqib ketdi")}</TableHead>
+                  <TableHead>{t("Holat")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((row, i) => {
-                  const status = statusOf(row);
-                  return (
-                    <TableRow key={row.id}>
-                      <TableCell className="text-muted-foreground border-r">
-                        {(page - 1) * pageSize + i + 1}
-                      </TableCell>
-                      <TableCell>
-                        {row.username ? (
-                          <span className="font-medium">@{row.username}</span>
-                        ) : (
-                          <span className="text-muted-foreground">
-                            {row.firstName ?? `ID ${row.telegramUserId}`}
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="tabular-nums">
-                        {dt(row.blockedAt)}
-                      </TableCell>
-                      <TableCell className="tabular-nums">
-                        {dt(row.joinedAt)}
-                      </TableCell>
-                      <TableCell className="tabular-nums">
-                        {dt(row.leftAt)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={status.variant}>{status.label}</Badge>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                {shown.map((row, i) => (
+                  <TableRow key={row.id}>
+                    <TableCell className="border-r text-muted-foreground">
+                      {(fresh.page - 1) * fresh.pageSize + i + 1}
+                    </TableCell>
+                    <TableCell>
+                      {row.username ? (
+                        <span className="font-medium">@{row.username}</span>
+                      ) : (
+                        <span className="text-muted-foreground">{row.firstName ?? `ID ${row.telegramUserId}`}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="tabular-nums">{dateTime(row.blockedAt)}</TableCell>
+                    <TableCell className="tabular-nums">{dateTime(row.joinedAt)}</TableCell>
+                    <TableCell className="tabular-nums">{dateTime(row.leftAt)}</TableCell>
+                    <TableCell>
+                      <Badge variant={stateTone(row.state)}>{t(row.stateLabel)}</Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>
         )}
 
         {total > 0 && (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Select
-                value={String(pageSize)}
-                onValueChange={(v) => {
-                  setPageSize(Number(v));
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger className="w-20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[10, 20, 30, 40, 50].map((n) => (
-                    <SelectItem key={n} value={String(n)}>
-                      {n}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <span className="text-muted-foreground text-sm">
-                Jami: {total} ta
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-              <span className="text-sm">
-                {page} / {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="icon"
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                <ChevronRight className="size-4" />
-              </Button>
-            </div>
-          </div>
+          <PaymentsPager
+            page={fresh?.page ?? params.page}
+            pageSize={fresh?.pageSize ?? params.pageSize}
+            total={total}
+            onPage={onPage}
+            onPageSize={onPageSize}
+            sizes={BOT_PAGE_SIZES}
+            sizeLabel={t("Sahifadagi qatorlar soni")}
+          />
         )}
       </CardContent>
     </Card>

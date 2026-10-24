@@ -11,6 +11,7 @@ import { ONBOARDING_QUERY_KEY, useStudentOnboarding } from "../lib/queries";
 import type { OnboardingStatus } from "../lib/types";
 import { PhoneStep } from "./phone-step";
 import { ProfileStep } from "./profile-step";
+import { useT } from "@/i18n/context";
 
 /**
  * The portal opens only once the student has given what ADR-0039 requires:
@@ -60,6 +61,7 @@ export function StudentOnboardingScreen({
 }: {
   status: OnboardingStatus;
 }) {
+  const t = useT();
   const queryClient = useQueryClient();
   // The total is fixed when the screen opens, so "2 / 2" still reads right
   // after the first stage is done and has left `missing`.
@@ -74,7 +76,7 @@ export function StudentOnboardingScreen({
     void queryClient.invalidateQueries({
       queryKey: ["student-portal", "profile"],
     });
-    if (next.missing.length === 0) toast.success("Rahmat! Hammasi tayyor");
+    if (next.missing.length === 0) toast.success(t("Rahmat! Hammasi tayyor"));
   }
 
   return (
@@ -82,13 +84,15 @@ export function StudentOnboardingScreen({
       <div className="w-full max-w-[440px] space-y-5">
         <header className="space-y-1 px-1">
           <p className="text-sm font-bold text-ink-500">
-            {total > 1 ? `${position}-qadam / ${total}` : "Bir qadam qoldi"}
+            {total > 1
+              ? t("{n}-qadam / {total}", { n: position, total })
+              : t("Bir qadam qoldi")}
           </p>
           <h1 className="font-display text-[27px] font-extrabold leading-tight text-ink-900">
-            Profilingizni to&apos;ldiring
+            {t("Profilingizni to'ldiring")}
           </h1>
           <p className="text-sm font-semibold text-ink-500">
-            Ilovadan foydalanishdan oldin bir necha ma&apos;lumot kerak.
+            {t("Ilovadan foydalanishdan oldin bir necha ma'lumot kerak.")}
           </p>
         </header>
 

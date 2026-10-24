@@ -1,6 +1,8 @@
-import { createElement } from "react";
+import { createElement, type ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { I18nProvider } from "@/i18n/context";
+import ru from "@/i18n/dictionaries/ru";
 import { NotificationEmpty, NotificationFailed, NotificationRowView } from "./notification-row";
 import { groupNotifications, type AppNotification } from "./notification-view";
 
@@ -100,6 +102,54 @@ describe("NotificationRowView", () => {
     const closed = view([{ ...review, resolvedAt: "2026-10-10T03:40:00.000Z" }], false);
     expect(readable(closed)).toContain("Eslatma o'zi yopildi · 08:40");
     expect(closed).not.toContain("<button");
+  });
+});
+
+describe("in Russian", () => {
+  const inRussian = (el: Parameters<typeof renderToStaticMarkup>[0]) =>
+    render(
+      createElement(
+        I18nProvider,
+        // `children` is the third argument (react/no-children-prop).
+        { initialLocale: "ru", initialDictionary: ru } as ComponentProps<typeof I18nProvider>,
+        el,
+      ),
+    );
+  const row = (items: AppNotification[], collapsible: boolean) =>
+    createElement(NotificationRowView, {
+      row: groupNotifications(items)[0],
+      now: NOW,
+      collapsible,
+      onOpen: () => {},
+      hrefOf: (n: AppNotification) => `/groups/${n.id}`,
+    });
+  const three = [alert("a1", "A1-3"), alert("a2", "A2-1"), alert("a3", "B1-2")];
+
+  it("translates a folded alert's words and buttons, and keeps the server's text and the data", () => {
+    const text = readable(inRussian(row(three, false)));
+    expect(text).toContain("Посещаемость не отмечена · групп: 3");
+    expect(text).toContain("До конца занятия осталось меньше 30 минут");
+    expect(text).toContain("Открыть");
+    expect(text).toContain("A1-3 · 09:00–10:30 · Tursunova Sardora");
+    expect(text).not.toContain("Ochish");
+  });
+
+  it("translates the page's folded line, its relative time and its toggle", () => {
+    const text = readable(inRussian(row(three, true)));
+    expect(text).toContain("A1-3, A2-1, B1-2 · 20 мин. назад");
+    expect(text).toContain("Посмотреть");
+  });
+
+  it("keeps the title and text the server sent", () => {
+    const text = readable(inRussian(row([alert("a1", "A1-3", { groupKey: null })], false)));
+    expect(text).toContain("O'qituvchi hali davomat olmadi");
+    expect(text).toContain("20 мин. назад");
+  });
+
+  it("translates the failure and the retry", () => {
+    const html = inRussian(createElement(NotificationFailed, { onRetry: () => {} }));
+    expect(html).toContain("Не удалось загрузить данные");
+    expect(html).toContain("Повторить");
   });
 });
 

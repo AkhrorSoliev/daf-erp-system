@@ -19,7 +19,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import type { EditStudentFormValues } from "@/lib/schemas/student-schema";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
+import {
+  studentFormError,
+  type EditStudentFormValues,
+} from "@/lib/schemas/student-schema";
 
 interface EditStudentAdditionalFieldsProps {
   form: UseFormReturn<EditStudentFormValues>;
@@ -29,31 +34,31 @@ const sections = [
   {
     key: "extraPhone",
     icon: Phone,
-    tooltip: "Zaxira raqam",
+    tooltip: msg("Zaxira raqam"),
     fields: ["extraPhone"] as const,
   },
   {
     key: "placeOfStudy",
     icon: GraduationCap,
-    tooltip: "O'quv joyi",
+    tooltip: msg("O'quv joyi"),
     fields: ["placeOfStudy"] as const,
   },
   {
     key: "parent",
     icon: Users,
-    tooltip: "Ota-ona ma'lumotlari",
+    tooltip: msg("Ota-ona ma'lumotlari"),
     fields: ["parentPhone", "parentName"] as const,
   },
   {
     key: "address",
     icon: MapPin,
-    tooltip: "Manzil",
+    tooltip: msg("Manzil"),
     fields: ["address"] as const,
   },
   {
     key: "passportSeries",
     icon: CreditCard,
-    tooltip: "Pasport seriyasi",
+    tooltip: msg("Pasport seriyasi"),
     fields: ["passportSeries"] as const,
   },
 ] as const;
@@ -61,6 +66,7 @@ const sections = [
 export function EditStudentAdditionalFields({
   form,
 }: EditStudentAdditionalFieldsProps) {
+  const t = useT();
   // A section whose field already holds a value opens at once: a backup number
   // is a sign-in key (ADR-0070), and an editor that hides it is wrong.
   const [visible, setVisible] = useState<Set<string>>(
@@ -106,7 +112,7 @@ export function EditStudentAdditionalFields({
       {/* Section heading */}
       <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
         <Plus className="size-3.5" />
-        Qo&apos;shimcha ma&apos;lumotlar
+        {t("Qo'shimcha ma'lumotlar")}
       </h3>
 
       {/* Dynamic fields — above icons */}
@@ -114,7 +120,7 @@ export function EditStudentAdditionalFields({
         <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
           {visible.has("extraPhone") && (
             <div className="space-y-1.5">
-              <Label>Zaxira raqam</Label>
+              <Label>{t("Zaxira raqam")}</Label>
               <Controller
                 control={form.control}
                 name="extraPhone"
@@ -127,11 +133,14 @@ export function EditStudentAdditionalFields({
                 )}
               />
               <p className="text-xs text-muted-foreground">
-                O&apos;quvchi bu raqam bilan ham tizimga kira oladi.
+                {t("O'quvchi bu raqam bilan ham tizimga kira oladi.")}
               </p>
               {form.formState.errors.extraPhone && (
                 <p className="text-xs text-destructive">
-                  {form.formState.errors.extraPhone.message}
+                  {studentFormError(
+                    t,
+                    form.formState.errors.extraPhone.message,
+                  )}
                 </p>
               )}
             </div>
@@ -139,9 +148,9 @@ export function EditStudentAdditionalFields({
 
           {visible.has("placeOfStudy") && (
             <div className="space-y-1.5">
-              <Label>O&apos;quv joyi</Label>
+              <Label>{t("O'quv joyi")}</Label>
               <Input
-                placeholder="Maktab, universitet..."
+                placeholder={t("Maktab, universitet...")}
                 {...form.register("placeOfStudy")}
               />
             </div>
@@ -150,14 +159,14 @@ export function EditStudentAdditionalFields({
           {visible.has("parent") && (
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label>Ota-ona ismi</Label>
+                <Label>{t("Ota-ona ismi")}</Label>
                 <Input
-                  placeholder="Ota-ona to'liq ismi"
+                  placeholder={t("Ota-ona to'liq ismi")}
                   {...form.register("parentName")}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Ota-ona telefoni</Label>
+                <Label>{t("Ota-ona telefoni")}</Label>
                 <Controller
                   control={form.control}
                   name="parentPhone"
@@ -171,7 +180,10 @@ export function EditStudentAdditionalFields({
                 />
                 {form.formState.errors.parentPhone && (
                   <p className="text-xs text-destructive">
-                    {form.formState.errors.parentPhone.message}
+                    {studentFormError(
+                      t,
+                      form.formState.errors.parentPhone.message,
+                    )}
                   </p>
                 )}
               </div>
@@ -180,9 +192,9 @@ export function EditStudentAdditionalFields({
 
           {visible.has("address") && (
             <div className="space-y-1.5">
-              <Label>Manzil</Label>
+              <Label>{t("Manzil")}</Label>
               <Input
-                placeholder="Yashash manzili"
+                placeholder={t("Yashash manzili")}
                 {...form.register("address")}
               />
             </div>
@@ -190,7 +202,7 @@ export function EditStudentAdditionalFields({
 
           {visible.has("passportSeries") && (
             <div className="space-y-1.5">
-              <Label>Pasport seriyasi</Label>
+              <Label>{t("Pasport seriyasi")}</Label>
               <Input
                 placeholder="AB1234567"
                 {...form.register("passportSeries")}
@@ -220,7 +232,7 @@ export function EditStudentAdditionalFields({
                   <section.icon className="size-4" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>{section.tooltip}</TooltipContent>
+              <TooltipContent>{t(section.tooltip)}</TooltipContent>
             </Tooltip>
           );
         })}

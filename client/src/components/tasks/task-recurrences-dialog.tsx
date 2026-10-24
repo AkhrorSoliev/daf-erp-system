@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2, Repeat } from "lucide-react";
 import toast from "react-hot-toast";
 import {
@@ -11,16 +11,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useTasks, type TaskRecurrenceView } from "@/hooks/use-tasks";
+import { useT } from "@/i18n/context";
 import { dayMonth, recurrenceLine } from "@/lib/task-recurrence-rules";
 import { personName } from "./task-feed-text";
 
 /** «Takrorlanuvchi» next to «Yangi topshiriq»: the rules this person may manage (spec §9.5 `GET /tasks/recurrences`). */
 export function TaskRecurrencesButton() {
+  const t = useT();
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button variant="outline" onClick={() => setOpen(true)} aria-label="Takrorlanuvchi topshiriqlar">
-        <Repeat className="size-4 sm:mr-1" /><span className="hidden sm:inline">Takrorlanuvchi</span>
+      <Button variant="outline" onClick={() => setOpen(true)} aria-label={t("Takrorlanuvchi topshiriqlar")}>
+        <Repeat className="size-4 sm:mr-1" /><span className="hidden sm:inline">{t("Takrorlanuvchi")}</span>
       </Button>
       {open && <RecurrencesDialog onClose={() => setOpen(false)} />}
     </>
@@ -28,6 +30,12 @@ export function TaskRecurrencesButton() {
 }
 
 function RecurrencesDialog({ onClose }: { onClose: () => void }) {
+  const t = useT();
+  // The fetch reads t from here: a language switch must not refetch.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
   // `null` = loading.
   const [rows, setRows] = useState<TaskRecurrenceView[] | null>(null);
   const [reads, setReads] = useState(0);
@@ -38,7 +46,12 @@ function RecurrencesDialog({ onClose }: { onClose: () => void }) {
     let alive = true;
     api.get<{ data: TaskRecurrenceView[] }>("/tasks/recurrences")
       .then(({ data }) => { if (alive) setRows(data.data); })
-      .catch((error) => { if (alive) { setRows([]); toast.error(getErrorMessage(error, "Ro'yxatni yuklashda xatolik")); } });
+      .catch((error) => {
+        if (!alive) return;
+        const t = tRef.current;
+        setRows([]);
+        toast.error(getErrorMessage(error, t("Ro'yxatni yuklashda xatolik")));
+      });
     return () => { alive = false; };
   }, [reads]);
 
@@ -50,7 +63,7 @@ function RecurrencesDialog({ onClose }: { onClose: () => void }) {
       setReads((n) => n + 1);
       void useTasks.getState().fetchBoard();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Saqlashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Saqlashda xatolik yuz berdi")));
     } finally {
       setBusyId(null);
     }
@@ -59,25 +72,25 @@ function RecurrencesDialog({ onClose }: { onClose: () => void }) {
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="flex max-h-[85dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
-        <DialogHeader className="border-b px-6 py-4"><DialogTitle>Takrorlanuvchi topshiriqlar</DialogTitle></DialogHeader>
+        <DialogHeader className="border-b px-6 py-4"><DialogTitle>{t("Takrorlanuvchi topshiriqlar")}</DialogTitle></DialogHeader>
         <div className="flex-1 space-y-2 overflow-y-auto px-6 py-4">
           {rows === null && <Loader2 className="mx-auto size-5 animate-spin text-muted-foreground" />}
           {rows?.length === 0 && (
-            <p className="text-sm text-muted-foreground">{"Takrorlanuvchi topshiriq yo'q. Topshiriq berishda «Batafsil» → «Takrorlash» ni tanlang."}</p>
+            <p className="text-sm text-muted-foreground">{t("Takrorlanuvchi topshiriq yo'q. Topshiriq berishda «Batafsil» → «Takrorlanish» ni tanlang.")}</p>
           )}
           {rows?.map((r) => (
             <div key={r.id} className="space-y-1 rounded-lg border p-3 text-sm">
               <p className="font-medium">{r.title}</p>
               <p className="text-muted-foreground">
-                {recurrenceLine(r)} · {r.active ? `keyingisi ${dayMonth(r.nextRunDate)}` : "to'xtatilgan"}
+                {recurrenceLine(r, t)} · {r.active ? t("Keyingisi: {date}", { date: dayMonth(r.nextRunDate) }) : t("Takrorlanish to'xtatilgan")}
               </p>
               <p className="text-xs text-muted-foreground">{r.assignees.map((p) => personName(p)).join(", ") || "—"}</p>
               {r.canManage && (
                 <div className="flex gap-2 pt-1">
-                  <Button size="xs" variant="outline" disabled={busyId === r.id} onClick={() => void act(r, api.patch(`/tasks/recurrences/${r.id}`, { active: !r.active }), r.active ? "Takrorlanish to'xtatildi" : "Takrorlanish qayta yoqildi")}>
-                    {r.active ? "To'xtatish" : "Davom ettirish"}
+                  <Button size="xs" variant="outline" disabled={busyId === r.id} onClick={() => void act(r, api.patch(`/tasks/recurrences/${r.id}`, { active: !r.active }), r.active ? t("Takrorlanish to'xtatildi") : t("Takrorlanish qayta yoqildi"))}>
+                    {r.active ? t("Takrorlanishni to'xtatish") : t("Davom ettirish")}
                   </Button>
-                  <Button size="xs" variant="ghost" className="text-destructive" disabled={busyId === r.id} onClick={() => setDeleting(r)}>{"O'chirish"}</Button>
+                  <Button size="xs" variant="ghost" className="text-destructive" disabled={busyId === r.id} onClick={() => setDeleting(r)}>{t("O'chirish")}</Button>
                 </div>
               )}
             </div>
@@ -87,16 +100,16 @@ function RecurrencesDialog({ onClose }: { onClose: () => void }) {
       <AlertDialog open={deleting !== null} onOpenChange={(o) => { if (!o) setDeleting(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{"Takrorlanishni o'chirasizmi?"}</AlertDialogTitle>
-            <AlertDialogDescription>{"Yangi topshiriqlar berilmaydi. Berilgan topshiriqlar o'z joyida qoladi."}</AlertDialogDescription>
+            <AlertDialogTitle>{t("Takrorlanishni o'chirasizmi?")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("Yangi topshiriqlar berilmaydi. Berilgan topshiriqlar o'z joyida qoladi.")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+            <AlertDialogCancel>{t("Bekor qilish")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              onClick={() => { if (deleting) void act(deleting, api.delete(`/tasks/recurrences/${deleting.id}`), "Takrorlanish o'chirildi"); setDeleting(null); }}
+              onClick={() => { if (deleting) void act(deleting, api.delete(`/tasks/recurrences/${deleting.id}`), t("Takrorlanish o'chirildi")); setDeleting(null); }}
             >
-              {"O'chirish"}
+              {t("O'chirish")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

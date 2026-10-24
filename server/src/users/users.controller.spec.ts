@@ -3,7 +3,13 @@ import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { RedisService } from '../redis/redis.service';
 import { AuthService } from '../auth/auth.service';
-import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
+import { ROLE_ID } from '../common/auth/role-ids';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import {
+  defaultRolesOf,
+  fakePermissions,
+  routeAccess,
+} from '../common/permissions/testing';
 
 describe('UsersController — route access', () => {
   let controller: UsersController;
@@ -14,6 +20,8 @@ describe('UsersController — route access', () => {
     create: jest.fn().mockResolvedValue({}),
     updateUser: jest.fn().mockResolvedValue({}),
     updateProfile: jest.fn().mockResolvedValue({}),
+    updateUiSkin: jest.fn().mockResolvedValue({ uiSkin: 'ormon' }),
+    updateUiLocale: jest.fn().mockResolvedValue({ uiLocale: 'ru' }),
     changePassword: jest.fn().mockResolvedValue({}),
     softDelete: jest.fn().mockResolvedValue({}),
   };
@@ -29,6 +37,8 @@ describe('UsersController — route access', () => {
       refreshToken: 'r2',
       user: { id: 7 },
     }),
+    listSessions: jest.fn().mockResolvedValue([{ id: 'sid-1' }]),
+    revokeSession: jest.fn().mockResolvedValue({ message: 'ok' }),
   };
 
   // The mocks live for the whole suite, so order checks compare LAST calls.
@@ -43,6 +53,10 @@ describe('UsersController — route access', () => {
         // OwnPasswordAttemptGuard (ADR-0031) is built with the controller.
         { provide: RedisService, useValue: {} },
         { provide: AuthService, useValue: mockAuth },
+        {
+          provide: PermissionsService,
+          useValue: fakePermissions([ROLE_ID.CEO]),
+        },
       ],
     }).compile();
 
@@ -53,7 +67,12 @@ describe('UsersController — route access', () => {
     it('is gated by the employee, teacher and group capabilities', () => {
       expect(routeAccess(UsersController, 'findAll')).toEqual({
         kind: 'can',
-        keys: ['employees.view', 'teachers.view', 'groups.manage'],
+        keys: [
+          'employees.view',
+          'teachers.view',
+          'groups.manage',
+          'salary.pay',
+        ],
       });
     });
 
@@ -63,6 +82,32 @@ describe('UsersController — route access', () => {
         'Branch Director',
         'CEO',
       ]);
+    });
+  });
+
+  // ADR-0087: an employee's salary balance goes only to a caller with salary.view.
+  describe.each([
+    ['Administrator', ROLE_ID.ADMINISTRATOR, false],
+    ['Branch Director', ROLE_ID.BRANCH_DIRECTOR, true],
+    ['CEO', ROLE_ID.CEO, true],
+  ])('employee balance for the %s', (_name, roleId, sees) => {
+    const build = () =>
+      new UsersController(
+        mockService as never,
+        mockAuth as never,
+        fakePermissions([roleId]),
+      );
+
+    it(`findAll passes includeBalance=${sees}`, async () => {
+      mockService.findAll.mockClear();
+      await build().findAll({} as never, 7, 1001, null);
+      expect(mockService.findAll).toHaveBeenCalledWith({}, 1001, null, sees);
+    });
+
+    it(`findOne passes includeBalance=${sees}`, async () => {
+      mockService.findById.mockClear();
+      await build().findOne(5, 7, 1001, null);
+      expect(mockService.findById).toHaveBeenCalledWith(5, 1001, null, sees);
     });
   });
 
@@ -158,14 +203,14 @@ describe('UsersController — route access', () => {
         sessionVersion: 5,
       });
 
-      const res = await controller.changePassword(7, {
+      const res = await controller.changePassword(7, 'sid-1', {
         oldPassword: 'eskiParol1',
         newPassword: 'yangiParol1',
       });
 
       // Signed with exactly the version the change produced; the number
       // itself never reaches the response.
-      expect(mockAuth.issueSession).toHaveBeenCalledWith(7, 5);
+      expect(mockAuth.issueSession).toHaveBeenCalledWith(7, 5, 'sid-1');
       // Issued before the change, the pair would carry the old version.
       expect(lastCall(mockService.changePassword)).toBeLessThan(
         lastCall(mockAuth.issueSession),
@@ -187,6 +232,65 @@ describe('UsersController — route access', () => {
     });
   });
 
+  describe('updateUiSkin()', () => {
+    it('is open to every staff account', () => {
+      expect(routeAccess(UsersController, 'updateUiSkin')).toEqual({
+        kind: 'anyStaff',
+      });
+    });
+
+    it("writes the CALLER's skin only, taking the id from the token", async () => {
+      const res = await controller.updateUiSkin(7, { skin: 'ormon' });
+      expect(mockService.updateUiSkin).toHaveBeenCalledWith(7, 'ormon');
+      expect(res).toEqual({ uiSkin: 'ormon' });
+    });
+  });
+
+  describe('updateUiLocale()', () => {
+    it('is open to every staff account', () => {
+      expect(routeAccess(UsersController, 'updateUiLocale')).toEqual({
+        kind: 'anyStaff',
+      });
+    });
+
+    it("writes the CALLER's language only, taking the id from the token", async () => {
+      const res = await controller.updateUiLocale(7, { locale: 'ru' });
+      expect(mockService.updateUiLocale).toHaveBeenCalledWith(7, 'ru');
+      expect(res).toEqual({ uiLocale: 'ru' });
+    });
+  });
+
+  describe('device list (ADR-0113)', () => {
+    it('is open to every signed-in account, own data only', () => {
+      expect(routeAccess(UsersController, 'listSessions')).toEqual({
+        kind: 'anyUser',
+      });
+      expect(routeAccess(UsersController, 'revokeSession')).toEqual({
+        kind: 'anyUser',
+      });
+    });
+
+    it('lists with the id, version and device taken from the token', async () => {
+      const res = await controller.listSessions(7, 3, 'sid-me');
+
+      expect(mockAuth.listSessions).toHaveBeenCalledWith(7, 3, 'sid-me');
+      expect(res).toEqual([{ id: 'sid-1' }]);
+    });
+
+    it("revokes by the caller's own id — the row id is the only thing from the request", async () => {
+      await controller.revokeSession(7, 'sid-me', 'sid-2');
+
+      expect(mockAuth.revokeSession).toHaveBeenCalledWith(7, 'sid-2', 'sid-me');
+    });
+
+    it('GET sessions is declared before GET :id, or :id would take it', () => {
+      const names = Object.getOwnPropertyNames(UsersController.prototype);
+      expect(names.indexOf('listSessions')).toBeLessThan(
+        names.indexOf('findOne'),
+      );
+    });
+  });
+
   describe('logoutOthers()', () => {
     it('is open to every signed-in account', () => {
       expect(routeAccess(UsersController, 'logoutOthers')).toEqual({
@@ -195,9 +299,9 @@ describe('UsersController — route access', () => {
     });
 
     it("acts on the caller only, from the caller's own session version", async () => {
-      const res = await controller.logoutOthers(7, 3);
+      const res = await controller.logoutOthers(7, 3, 'sid-1');
 
-      expect(mockAuth.logoutOtherSessions).toHaveBeenCalledWith(7, 3);
+      expect(mockAuth.logoutOtherSessions).toHaveBeenCalledWith(7, 3, 'sid-1');
       expect(res).toEqual({
         accessToken: 'a2',
         refreshToken: 'r2',

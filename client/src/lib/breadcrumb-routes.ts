@@ -1,85 +1,100 @@
+import { msg } from "@/i18n/msg";
+
 /**
  * Breadcrumb uchun route nomlari (O'zbek tilida)
  * Key: URL segment, Value: ko'rsatiladigan nom
  */
 export const routeLabels: Record<string, string> = {
-  "": "Bosh sahifa",
-  teachers: "O'qituvchilar",
-  students: "O'quvchilar",
-  leads: "Lidlar",
-  outreach: "Aloqa markazi",
-  "mock-exams": "Mock imtihonlar",
-  form: "Forma sozlash",
-  forms: "Formalar",
-  new: "Yangi",
-  tahrirlash: "Tahrirlash",
-  groups: "Guruhlar",
-  schedule: "Jadval",
+  "": msg("Bosh sahifa"),
+  teachers: msg("O'qituvchilar"),
+  students: msg("O'quvchilar"),
+  leads: msg("Lidlar"),
+  outreach: msg("Aloqa markazi"),
+  "mock-exams": msg("Mock imtihonlar"),
+  form: msg("Forma sozlash"),
+  forms: msg("Formalar"),
+  new: msg("Yangi"),
+  tahrirlash: msg("Tahrirlash"),
+  groups: msg("Guruhlar"),
+  schedule: msg("Jadval"),
 
-  payments: "Moliya",
-  reports: "Hisobotlar",
-  "payment-reports": "To'lov hisobotlari",
-  "student-payments": "O'quvchi to'lovi",
-  "departed-students": "Ketgan o'quvchilar",
-  graduates: "Bitiruvchilar",
-  activity: "Markaz faoliyati",
-  attendance: "Davomat statistikasi",
-  marketing: "Marketing",
-  profile: "Profil",
-  settings: "Sozlamalar",
-  general: "Umumiy sozlamalar",
-  courses: "Kurslar",
+  payments: msg("Moliya"),
+  reports: msg("Hisobotlar"),
+  "payment-reports": msg("Guruhlar bo'yicha to'lov"),
+  "departed-students": msg("Ketgan o'quvchilar"),
+  graduates: msg("Bitiruvchilar"),
+  activity: msg("Markaz faoliyati"),
+  attendance: msg("Davomat"),
+  marketing: msg("Marketing"),
+  bot: msg("Bot hisoboti"),
+  audience: msg("Auditoriya"),
+  "dars-baholari": msg("Dars baholari"),
+  "xodimlar-kpi": msg("Xodimlar KPI"),
+  profile: msg("Profil"),
+  settings: msg("Sozlamalar"),
+  general: msg("Kompaniya ma'lumotlari"),
+  courses: msg("Kurslar"),
   // /settings/payment — "To'lov" sozlamalar bo'limi (defaultModel, sababli
   // dars krediti, hisob-kitob kuni). "payments" (ko'plik) esa /payments —
   // Moliya bo'limi, alohida kalit yuqorida.
-  payment: "To'lov",
-  branches: "Filiallar",
-  employees: "Xodimlar",
-  rooms: "Xonalar",
-  holidays: "Dam olish kunlari",
-  reasons: "Sabablar",
-  daf: "DaF ilovasi",
+  payment: msg("To'lov"),
+  branches: msg("Filiallar"),
+  employees: msg("Xodimlar"),
+  rooms: msg("Xonalar"),
+  holidays: msg("Dam olish kunlari"),
+  reasons: msg("Sabablar"),
+  daf: msg("DaF ilovasi"),
   // `/daf/oquvchilar` sahifasi allaqachon bor; yorliq shu yerda turadi, chunki
   // breadcrumb jadvali bitta fayl va uni ikki marta ochish keraksiz.
-  oquvchilar: "O'quvchilar",
-  "absence-pause": "Avtomatik pauza",
-  tasks: "Topshiriqlar",
-  notifications: "Bildirishnomalar",
-  archive: "Arxiv",
-  overview: "Umumiy ma'lumotlar",
-  pending: "Kutilyotgan to'lovlar",
+  oquvchilar: msg("O'quvchilar"),
+  // /settings/rules — «O'quv qoidalari»: avtomatik pauza, DaF normasi va
+  // qatnashganlik hujjati bir sahifada. Eski /settings/absence-pause, /daf,
+  // /participation manzillari shu yerga yo'naltiriladi.
+  rules: msg("O'quv qoidalari"),
+  // /settings/permissions — «Ruxsatlar», CEO only (ADR-0087).
+  permissions: msg("Ruxsatlar"),
+  // /settings/leads-kpi — «Lidlar va KPI», CEO only (ADR-0093, ADR-0096).
+  "leads-kpi": msg("Lidlar va KPI"),
+  // /settings/telegram — guruhlar va kunlik hisobot (hisobot: CEO only, ADR-0095).
+  telegram: msg("Telegram"),
+  tasks: msg("Topshiriqlar"),
+  notifications: msg("Bildirishnomalar"),
+  archive: msg("Arxiv"),
+  overview: msg("Umumiy ma'lumotlar"),
+  pending: msg("Kutilyotgan to'lovlar"),
+  list: msg("To'lovlar"),
   // /payments/debt — qarzdorlik sahifasi (uch bo'lim). Uning eski tablari endi
   // alohida sahifalar: qarz tarixi va kechirilganlar. Muzlatilganlar puli
   // «Qaytariladigan pul» ga ko'chdi (/payments/frozen-balances u yerga yo'naltiradi).
-  debt: "Qarzdorlik",
-  "debt-history": "Qarz tarixi",
-  "debt-write-offs": "Kechirilgan qarzlar",
+  debt: msg("Qarzdorlik"),
+  "debt-history": msg("Qarz tarixi"),
+  "debt-write-offs": msg("Kechirilgan qarzlar"),
   // /payments/refunds — «Qaytariladigan pul» (spec B2b); /payments/refunds/history — uning tarixi.
-  refunds: "Qaytariladigan pul",
-  history: "Tarix",
-  expenses: "Xarajatlar",
+  refunds: msg("Qaytariladigan pul"),
+  history: msg("Tarix"),
+  expenses: msg("Xarajatlar"),
   // "Oyliklar" — the monthly payroll list (teachers + fixed-salary staff).
   // "Ish haqi" stays the term for ONE person's salary (profile tabs), so the
   // two words mark a real distinction rather than drifting vocabulary.
-  salary: "Oyliklar",
+  salary: msg("Oyliklar"),
   // /payments/salary/config — CEO Oylik belgilash sahifasi (xodimlar ro'yxati + bulk + individual).
   // /payments/salary/settings — CEO oylik davri sozlamalari sahifasi.
   // /profile/salary — Teacher portalida ustozning o'z oyligi sahifasi.
-  config: "Oylik belgilash",
-  portal: "Bosh sahifa",
-  ai: "Sun'iy intellekt",
-  search: "Qidiruv natijalari",
+  config: msg("Oylik belgilash"),
+  portal: msg("Bosh sahifa"),
+  ai: msg("Sun'iy intellekt"),
+  search: msg("Qidiruv natijalari"),
   // /media — kurs qamrovi (unit/bo'lim daraxti). /media/sections/[id] o'sha
   // daraxtdagi bitta bo'limning sahifasi; "sections" segmentiga label
   // KERAK EMAS — u "profile" kabi pass-through, `app-breadcrumb.tsx` uni
   // butunlay o'tkazib yuboradi (aks holda mavjud bo'lmagan
   // "/media/sections" ro'yxatiga havola bo'lib qolardi).
-  media: "Media",
+  media: msg("Media"),
   // /media/assets — eski quvurdan qolgan obrazlar/fayllar ro'yxati. Bu
   // "sections" kabi pass-through EMAS — o'zi to'liq ro'yxat sahifasi
   // (haqiqatan "/media/assets" mavjud), shuning uchun breadcrumbda ko'rinishi
   // kerak.
-  assets: "Media fayllari",
-  qollanma: "Qo'llanma",
-  yangiliklar: "Nima yangi",
+  assets: msg("Media fayllari"),
+  qollanma: msg("Qo'llanma"),
+  yangiliklar: msg("Nima yangi"),
 };

@@ -10,13 +10,12 @@ import { ReportsAttendanceAnalyticsService } from './reports-attendance-analytic
 import { ReportsFinancialService } from './reports-financial.service';
 import { ReportsDebtHistoryService } from './reports-debt-history.service';
 import { ReportsPaymentsService } from './reports-payments.service';
-import { ReportsTeacherPaymentsService } from './reports-teacher-payments.service';
 import { ReportsStudentPaymentsService } from './reports-student-payments.service';
-import { ReportsDepartedStudentsService } from './reports-departed-students.service';
-import { ReportsDepartedListsService } from './reports-departed-lists.service';
 import { ReportsDepartedReasonsService } from './reports-departed-reasons.service';
 import { ReportsTeacherChangesService } from './reports-teacher-changes.service';
-import { ReportsCenterActivityService } from './reports-center-activity.service';
+import { CenterActivityController } from './center-activity/center-activity.controller';
+import { CenterActivityService } from './center-activity/center-activity.service';
+import { CenterFactsLoader } from './center-activity/center-facts.loader';
 import { ReportsProfitLossService } from './reports-profit-loss.service';
 import { ReportsCashFlowService } from './reports-cash-flow.service';
 import { ReportsBalanceSheetService } from './reports-balance-sheet.service';
@@ -24,18 +23,43 @@ import { ReportsExcelService } from './reports-excel.service';
 import { ReportsExpectationService } from './reports-expectation.service';
 import { ReportsExpectationHistoryService } from './reports-expectation-history.service';
 import { ReportsStudentFlowService } from './reports-student-flow.service';
+import { GroupPaymentsController } from './group-payments/group-payments.controller';
+import { GroupPaymentsService } from './group-payments/group-payments.service';
+import { DepartedController } from './departed/departed.controller';
+import { DepartedOverviewService } from './departed/departed-overview.service';
+import { DepartedListService } from './departed/departed-list.service';
 import { ReportsProfitCompositionService } from './reports-profit-composition.service';
 import { HolidaysModule } from '../holidays/holidays.module';
 import { ExpensesModule } from '../expenses/expenses.module';
 import { SalaryModule } from '../salary/salary.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { OutreachModule } from '../outreach/outreach.module';
+import { SettingsModule } from '../settings/settings.module';
+import { AttendanceFactsLoader } from './attendance-stats/attendance-facts.loader';
+import { AttendanceStatsController } from './attendance-stats/attendance-stats.controller';
+import { AttendanceStatsService } from './attendance-stats/attendance-stats.service';
+import { AudienceController } from './audience/audience.controller';
+import { AudienceFactsLoader } from './audience/audience-facts.loader';
+import { AudienceService } from './audience/audience.service';
 
 @Module({
-  imports: [HolidaysModule, ExpensesModule, SalaryModule, PaymentsModule],
+  imports: [
+    HolidaysModule,
+    ExpensesModule,
+    SalaryModule,
+    PaymentsModule,
+    SettingsModule,
+    OutreachModule,
+  ],
   controllers: [
     ReportsController,
     ReportsLeadFunnelController,
     ReportsMarketingController,
+    GroupPaymentsController,
+    CenterActivityController,
+    AttendanceStatsController,
+    AudienceController,
+    DepartedController,
   ],
   providers: [
     ReportsService,
@@ -44,13 +68,15 @@ import { PaymentsModule } from '../payments/payments.module';
     ReportsFinancialService,
     ReportsDebtHistoryService,
     ReportsPaymentsService,
-    ReportsTeacherPaymentsService,
     ReportsStudentPaymentsService,
-    ReportsDepartedStudentsService,
-    ReportsDepartedListsService,
     ReportsDepartedReasonsService,
     ReportsTeacherChangesService,
-    ReportsCenterActivityService,
+    CenterActivityService,
+    CenterFactsLoader,
+    AttendanceStatsService,
+    AttendanceFactsLoader,
+    AudienceService,
+    AudienceFactsLoader,
     ReportsProfitLossService,
     ReportsCashFlowService,
     ReportsBalanceSheetService,
@@ -61,6 +87,9 @@ import { PaymentsModule } from '../payments/payments.module';
     ReportsLeadFunnelService,
     ReportsProfitCompositionService,
     ReportsMarketingService,
+    GroupPaymentsService,
+    DepartedOverviewService,
+    DepartedListService,
   ],
   // Exposed so the Telegram admin bot's report menu can generate the same
   // financial Excel workbook + in-chat summary the /payments panel uses.

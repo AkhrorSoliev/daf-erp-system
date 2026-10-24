@@ -25,6 +25,7 @@ import { formatNumber } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { reversalNote } from "@/lib/ledger-reversal";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/context";
 import {
   TRANSACTION_TYPE_INFO,
   type StudentTransaction,
@@ -54,10 +55,11 @@ const signed = (n: number) => (n > 0 ? `+${formatNumber(n)}` : formatNumber(n));
 /**
  * One ledger line. A cancelled row keeps its place (the balance column is a
  * running total and needs it) but is struck through and says when it was
- * cancelled; the row that cancelled it is labelled «Bekor qilish» and names
+ * cancelled; the row that cancelled it is labelled «Bekor qilish yozuvi» and names
  * the row it undid.
  */
 export function LedgerTableRow({ row: r, index }: { row: LedgerRow; index: number }) {
+  const t = useT();
   const reversal = r.reversal ?? null;
   const cancelled = reversal?.kind === "reversed";
   const undo = reversal?.kind === "undo";
@@ -75,14 +77,14 @@ export function LedgerTableRow({ row: r, index }: { row: LedgerRow; index: numbe
         <div className="flex flex-wrap items-center gap-1">
           {undo ? (
             <Badge variant="secondary" className="text-[10px]">
-              Bekor qilish
+              {t("Bekor qilish yozuvi")}
             </Badge>
           ) : (
             <Badge
               variant={typeInfo?.variant ?? "outline"}
               className={cn("text-[10px]", cancelled && "opacity-60")}
             >
-              {typeInfo?.label ?? r.type}
+              {typeInfo ? t(typeInfo.label) : r.type}
             </Badge>
           )}
           {cancelled && (
@@ -92,12 +94,13 @@ export function LedgerTableRow({ row: r, index }: { row: LedgerRow; index: numbe
                   variant="outline"
                   className="cursor-help border-dashed text-[10px] text-muted-foreground"
                 >
-                  Bekor qilingan
+                  {t("Bekor qilingan")}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent className="max-w-64">
-                Bu yozuv keyinroq bekor qilingan. Uni ro&apos;yxatdagi «Bekor
-                qilish» yozuvi qaytargan, balansda ikkalasi bir-birini yopadi.
+                {t(
+                  "Bu yozuv keyinroq bekor qilingan. Uni ro'yxatdagi «Bekor qilish yozuvi» qaytargan, balansda ikkalasi bir-birini yopadi.",
+                )}
               </TooltipContent>
             </Tooltip>
           )}
@@ -120,13 +123,13 @@ export function LedgerTableRow({ row: r, index }: { row: LedgerRow; index: numbe
       </TableCell>
       <TableCell className="max-w-80 text-xs whitespace-normal text-muted-foreground">
         {undo ? (
-          reversalNote(reversal)
+          reversalNote(reversal, { t })
         ) : (
           <>
             {r.description}
             {cancelled && (
               <span className="block text-amber-700 dark:text-amber-400">
-                {reversalNote(reversal)}
+                {reversalNote(reversal, { t })}
               </span>
             )}
           </>
@@ -149,6 +152,7 @@ export function StatementLedger({
   studentId: number;
   refreshKey: number;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<LedgerRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -168,12 +172,12 @@ export function StatementLedger({
         setTotal(res.data.total as number);
         setPage(next);
       } catch (err) {
-        toast.error(getErrorMessage(err, "Yozuvlarni yuklab bo'lmadi"));
+        toast.error(getErrorMessage(err, t("Yozuvlarni yuklab bo'lmadi")));
       } finally {
         setLoading(false);
       }
     },
-    [studentId],
+    [studentId, t],
   );
 
   useEffect(() => {
@@ -184,7 +188,7 @@ export function StatementLedger({
 
   return (
     <StatementSection
-      title="Barcha yozuvlar"
+      title={t("Barcha yozuvlar")}
       count={total}
       open={open}
       onOpenChange={setOpen}
@@ -195,11 +199,13 @@ export function StatementLedger({
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12 border-r">#</TableHead>
-                <TableHead>Sana</TableHead>
-                <TableHead>Turi</TableHead>
-                <TableHead className="text-right">Summa</TableHead>
-                <TableHead className="text-right">Keyingi balans</TableHead>
-                <TableHead>Izoh</TableHead>
+                <TableHead>{t("Sana")}</TableHead>
+                <TableHead>{t("Turi")}</TableHead>
+                <TableHead className="text-right">{t("Summa")}</TableHead>
+                <TableHead className="text-right">
+                  {t("Keyingi balans")}
+                </TableHead>
+                <TableHead>{t("Izoh")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -221,7 +227,7 @@ export function StatementLedger({
                     colSpan={6}
                     className="py-6 text-center text-sm text-muted-foreground"
                   >
-                    Hali yozuv yo&apos;q
+                    {t("Hali yozuv yo'q")}
                   </TableCell>
                 </TableRow>
               )}
@@ -231,7 +237,10 @@ export function StatementLedger({
         {rows.length > 0 && (
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              {rows.length} / {total} ta yozuv
+              {t("{shown} / {total} ta yozuv", {
+                shown: rows.length,
+                total,
+              })}
             </p>
             {rows.length < total && (
               <Button
@@ -241,7 +250,7 @@ export function StatementLedger({
                 onClick={() => void load(page + 1)}
               >
                 {loading && <Loader2 className="size-4 animate-spin" />}
-                Yana ko&apos;rsatish
+                {t("Yana ko'rsatish")}
               </Button>
             )}
           </div>

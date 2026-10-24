@@ -313,7 +313,7 @@ Oylik hisoblashda (calculateMonthlySalaries):
 |--------|----------|-------|--------|
 | `POST` | `/api/payments` | CEO, BD, Admin, Cashier | Naqd to'lov qayd qilish |
 | `POST` | `/api/payments/attach-external` | CEO, BD, Admin, Cashier | Tashqi to'lov biriktirish |
-| `POST` | `/api/payments/:id/reverse` | **CEO** | To'lovni bekor qilish |
+| `POST` | `/api/payments/:id/reverse` | **CEO** | To'lovni bekor qilish (odam chaqirsa sabab majburiy, 1–500 belgi — ADR-0088) |
 | `GET` | `/api/payments` | CEO, BD, Admin, Cashier | To'lovlar ro'yxati (REVERSED default yashirilgan) |
 | `GET` | `/api/payments/:id` | CEO, BD, Admin, Cashier | Bitta to'lov detali |
 | `GET` | `/api/payments/student/:id` | CEO, BD, Admin, Cashier | O'quvchi to'lov tarixi |
@@ -322,7 +322,11 @@ Oylik hisoblashda (calculateMonthlySalaries):
 | `GET` | `/api/payments/debt/students/:id` | CEO, BD, Admin, Cashier | O'quvchi tortmasi: qarz, oylar, oxirgi to'lov, aloqa, va'da |
 | `GET` | `/api/payments/debt/excel` | CEO, BD, Admin, Cashier | Ochiq bo'lim Excel'da |
 | `GET` | `/api/payment-promises/month` | CEO, BD, Admin, Cashier | Shu oy va'dasi va ruxsat etilgan kunlar |
-| `GET` | `/api/payments/pending-students` | CEO, BD, Admin, Cashier | To'lov kutilayotganlar (balance < 0) |
+| `GET` | `/api/payments/list/rows` | CEO, BD, Admin, Cashier | «To'lovlar» sahifasi: davr, filtrlar, qismlar (shu oy / oldindan / eski qarz), jamilar (ADR-0088) |
+| `GET` | `/api/payments/list/rows/:id` | CEO, BD, Admin, Cashier | «To'lovlar» oynasi: bitta to'lov, har qanday holatda |
+| `GET` | `/api/payments/list/summary` | CEO, BD | «To'lovlar» yig'ma kartasi (`reports.finance`) |
+| `GET` | `/api/payments/list/excel` | CEO, BD, Admin, Cashier | Filtrlangan ro'yxat Excel'da (20 000 qatorgacha) |
+| `GET` | `/api/payments/list/filter-options` | CEO, BD, Admin, Cashier | Filtr variantlari: usullar, guruhlar, ustozlar, kurslar, qabul qilganlar |
 
 ### 4.2 Transactions — Tranzaksiyalar
 

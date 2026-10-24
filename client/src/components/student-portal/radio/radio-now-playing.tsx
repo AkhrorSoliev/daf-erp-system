@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/use-t";
 import { BottomSheet } from "../lumio/bottom-sheet";
 import { Badge } from "../lumio/badge";
 import {
@@ -33,6 +34,7 @@ import { LiveBars } from "./live-bars";
  * works everywhere, so that stays.
  */
 export function RadioNowPlaying() {
+  const t = useT();
   const pathname = usePathname();
   const expanded = useRadio((s) => s.expanded);
   const setExpanded = useRadio((s) => s.setExpanded);
@@ -62,7 +64,7 @@ export function RadioNowPlaying() {
     <BottomSheet
       open={expanded}
       onOpenChange={setExpanded}
-      title="Hozir eshitilmoqda"
+      title={t("Hozir eshitilmoqda")}
     >
       <div className="flex flex-col gap-5 pb-2">
         {/* Identity block */}
@@ -91,12 +93,12 @@ export function RadioNowPlaying() {
             >
               {playing ? <LiveBars active /> : null}
               {failed
-                ? "Ulanib bo'lmadi"
+                ? t("Ulanib bo'lmadi")
                 : loading
-                  ? "Ulanmoqda..."
+                  ? t("Ulanmoqda...")
                   : playing
-                    ? "Jonli efir"
-                    : "To'xtatilgan"}
+                    ? t("Jonli efir")
+                    : t("To'xtatilgan")}
             </p>
           </div>
           <button
@@ -104,8 +106,8 @@ export function RadioNowPlaying() {
             onClick={() => toggleFavorite(station.id)}
             aria-label={
               isFavorite
-                ? "Sevimlilardan olib tashlash"
-                : "Sevimlilarga qo'shish"
+                ? t("Sevimlilardan olib tashlash")
+                : t("Sevimlilarga qo'shish")
             }
             aria-pressed={isFavorite}
             className={cn(
@@ -120,18 +122,18 @@ export function RadioNowPlaying() {
         </div>
 
         <p className="text-sm font-semibold leading-relaxed text-ink-600">
-          {station.note}
+          {t(station.note)}
         </p>
 
         {failed ? (
           <div className="rounded-card border border-danger/25 bg-danger/8 px-4 py-3">
             <p className="text-sm font-bold text-danger">
-              Efirga ulanib bo&apos;lmadi.
+              {t("Efirga ulanib bo'lmadi.")}
             </p>
             <p className="mt-1 text-sm font-semibold leading-snug text-ink-600">
-              Internet aloqasini tekshiring. Radiostansiya vaqtincha
-              o&apos;chirilgan bo&apos;lishi ham mumkin — boshqasini tanlab
-              ko&apos;ring.
+              {t(
+                "Internet aloqasini tekshiring. Radiostansiya vaqtincha o'chirilgan bo'lishi ham mumkin — boshqasini tanlab ko'ring.",
+              )}
             </p>
           </div>
         ) : null}
@@ -141,7 +143,7 @@ export function RadioNowPlaying() {
           <button
             type="button"
             onClick={() => next(-1)}
-            aria-label="Oldingi stansiya"
+            aria-label={t("Oldingi stansiya")}
             className="inline-flex size-12 items-center justify-center rounded-full text-ink-600 transition-colors hover:bg-tint hover:text-ink-900"
           >
             <SkipBack size={26} weight="fill" />
@@ -152,10 +154,10 @@ export function RadioNowPlaying() {
             onClick={failed ? retry : toggle}
             aria-label={
               failed
-                ? "Qayta ulanish"
+                ? t("Qayta ulanish")
                 : playing || loading
-                  ? "To'xtatish"
-                  : "Eshitish"
+                  ? t("To'xtatish")
+                  : t("Eshitish")
             }
             className="clay-btn inline-flex size-[68px] items-center justify-center rounded-full bg-coral-500 text-white shadow-lumio-pop transition-transform active:scale-95"
           >
@@ -173,7 +175,7 @@ export function RadioNowPlaying() {
           <button
             type="button"
             onClick={() => next(1)}
-            aria-label="Keyingi stansiya"
+            aria-label={t("Keyingi stansiya")}
             className="inline-flex size-12 items-center justify-center rounded-full text-ink-600 transition-colors hover:bg-tint hover:text-ink-900"
           >
             <SkipForward size={26} weight="fill" />
@@ -185,7 +187,7 @@ export function RadioNowPlaying() {
           <button
             type="button"
             onClick={toggleMute}
-            aria-label={muted ? "Ovozni yoqish" : "Ovozni o'chirish"}
+            aria-label={muted ? t("Ovozni yoqish") : t("Ovozni o'chirish")}
             aria-pressed={muted}
             className={cn(
               "inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-line transition-colors",
@@ -201,7 +203,7 @@ export function RadioNowPlaying() {
             )}
           </button>
           <label className="hidden flex-1 items-center lg:flex">
-            <span className="sr-only">Ovoz balandligi</span>
+            <span className="sr-only">{t("Ovoz balandligi")}</span>
             <input
               type="range"
               min={0}
@@ -217,7 +219,7 @@ export function RadioNowPlaying() {
               {station.codec} {station.bitrate}k
             </Badge>
             <Badge tone="neutral" size="sm">
-              {station.country === "AT" ? "Avstriya" : "Germaniya"}
+              {station.country === "AT" ? t("Avstriya") : t("Germaniya")}
             </Badge>
           </span>
         </div>
@@ -230,7 +232,7 @@ export function RadioNowPlaying() {
           >
             <Radio size={20} weight="bold" className="text-ink-500" />
             <span className="flex-1 font-display text-base font-bold text-ink-900">
-              Boshqa stansiya tanlash
+              {t("Boshqa stansiya tanlash")}
             </span>
             <CaretRight size={18} weight="bold" className="text-ink-400" />
           </Link>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { format } from "date-fns";
 import {
+  formatDdMmYyyy,
   tashkentDayAsLocalDate,
   tashkentDayNumber,
   tashkentDdMm,
@@ -82,5 +83,15 @@ describe("Tashkent day, clock and date", () => {
     expect([t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate(), t.getUTCHours()]).toEqual([
       2027, 0, 1, 1,
     ]);
+  });
+});
+
+describe("formatDdMmYyyy", () => {
+  it.each([
+    ["2026-10-17", "17.10.2026"],
+    ["2026-01-05", "05.01.2026"], // zero-padded day and month survive
+    ["2026-12-31", "31.12.2026"],
+  ])("%s → %s", (input, expected) => {
+    expect(formatDdMmYyyy(input)).toBe(expected);
   });
 });

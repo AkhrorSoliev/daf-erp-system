@@ -202,6 +202,18 @@ kechirildi») va bekor qilingan darslar chetlab o'tiladi. Yagona haqiqat —
 `BILLABLE` to'plami.
 `billing/lesson-billing.service.ts`
 
+**Davomat foizi** — (Keldi + Kechikdi) ÷ (Keldi + Kechikdi + Kelmadi), bir kasr;
+maxraj 0 bo'lsa «—», hech qachon 0%. «Sababli» (`EXCUSED`) va markaz bekor
+qilgan dars (`cancellationId`) hech bir foizga kirmaydi. Hisobot, uning Exceli
+va bosh sahifa shu bitta funksiyadan o'qiydi (ADR-0103).
+`reports/attendance-stats/attendance-counts.ts`
+
+**Bot to'xtatgan kohort** — tanlangan Toshkent oyida botning kanalga a'zolik
+talabi to'xtatgan odamlar (`TelegramChannelGateEvent.blockedAt` shu oyda).
+«Bot hisoboti»ning uch raqami va ro'yxati faqat shu odamlar bo'yicha; a'zo
+bo'lgani hozirgacha sanaladi, shuning uchun foiz 100% dan oshmaydi (ADR-0105).
+`telegram/gate-cohort.ts`
+
 **PlannedAbsence** — o'quvchi oldindan aytgan kelmaslik. **Attendance qatori
 EMAS** — aks holda bo'lmagan dars uchun pul yechilardi va o'qituvchi qulfi
 ishga tushardi. Yon jadval sifatida ishlaydi.
@@ -210,6 +222,12 @@ ishga tushardi. Yon jadval sifatida ishlaydi.
 **LessonCancellation / LessonReschedule** — dars bekor qilindi yoki ko'chirildi.
 Ikkalasi ham yon jadval: asosiy jadvalga tegmaydi, ustidan qoplama bo'lib turadi.
 `lesson-cancellations/` · `lesson-reschedules/`
+
+**Dars bahosi** — o'quvchining darsdan keyin Telegram'da qo'ygan 1–5 bahosi
+(va 1–3 da ixtiyoriy izoh). Bitta dars, bitta o'quvchi — bitta qator; faqat
+CEO ko'radi. Xabar yetmagan qator (`messageId` yo'q) hisobotda «yetkazilmagan».
+`server/src/lesson-ratings/`, `docs/adr/0091-dars-bahosi-faqat-ceo-telegram-darhol.md`,
+`docs/adr/0111-dars-baholari-togri-anonim.md`
 
 **Bayram kaskadi (holiday cascade)** — bayram e'lon qilinganda, unga tushgan
 darslar guruh oxiriga surib qo'yiladi. Yurish `MAX_WALK_ITERATIONS = 400` bilan

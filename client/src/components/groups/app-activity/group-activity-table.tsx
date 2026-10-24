@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { DayBars, ProgressLine } from "./activity-ui";
 import { PLATFORMA_NOMLARI, formatDavomiylik, formatKunOy, formatOxirgiFaollik, foizRangi } from "./activity-format";
+import { useT } from "@/i18n/context";
 import type { Daraja, Davr, GuruhOquvchiQatori } from "./types";
 
 function ismInitsiallari(ism: string): string {
@@ -31,6 +32,11 @@ export function GroupActivityTable({
   onSelect: (id: number) => void;
   selectedId: number | null;
 }) {
+  const t = useT();
+  const platformaNomi = (p: keyof typeof PLATFORMA_NOMLARI) => {
+    const nom = PLATFORMA_NOMLARI[p];
+    return t(nom);
+  };
   const [now] = useState(() => new Date());
 
   return (
@@ -39,21 +45,19 @@ export function GroupActivityTable({
         <TableHeader>
           <TableRow>
             <TableHead className="w-12 border-r">#</TableHead>
-            <TableHead className="min-w-44">O&apos;quvchi</TableHead>
-            <TableHead className="min-w-24 text-right">Faol vaqt</TableHead>
+            <TableHead className="min-w-44">{t("O'quvchi")}</TableHead>
+            <TableHead className="min-w-24 text-right">{t("Faol vaqt")}</TableHead>
             <TableHead className="min-w-32">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="cursor-default">Shug&apos;ullangan kunlar</span>
+                  <span className="cursor-default">{t("Shug'ullangan kunlar")}</span>
                 </TooltipTrigger>
-                <TooltipContent>
-                  Shu kuni kamida bitta mashq qildi yoki kamida 5 daqiqa radio tingladi
-                </TooltipContent>
+                <TooltipContent>{t("Shu kuni kamida bitta mashq qildi yoki kamida 5 daqiqa radio tingladi")}</TooltipContent>
               </Tooltip>
             </TableHead>
-            <TableHead className="min-w-28 text-right">To&apos;g&apos;ri javob</TableHead>
-            <TableHead className="hidden min-w-40 md:table-cell">Kurs</TableHead>
-            <TableHead className="hidden text-right lg:table-cell">Radio</TableHead>
+            <TableHead className="min-w-28 text-right">{t("To'g'ri javob")}</TableHead>
+            <TableHead className="hidden min-w-40 md:table-cell">{t("Kurs")}</TableHead>
+            <TableHead className="hidden text-right lg:table-cell">{t("Radio")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -76,7 +80,7 @@ export function GroupActivityTable({
                     <div className="min-w-0">
                       <div className="truncate font-medium">{row.ism}</div>
                       {!row.akkaunt ? (
-                        <div className="truncate text-xs text-red-600 dark:text-red-400">Akkaunt yo&apos;q</div>
+                        <div className="truncate text-xs text-red-600 dark:text-red-400">{t("Akkaunt yo'q")}</div>
                       ) : (
                         <div
                           className={cn(
@@ -84,8 +88,8 @@ export function GroupActivityTable({
                             neverSeen ? "text-red-600 dark:text-red-400" : "text-muted-foreground",
                           )}
                         >
-                          {formatOxirgiFaollik(row.oxirgiFaollik?.vaqt ?? null, now)}
-                          {row.oxirgiFaollik && ` · ${PLATFORMA_NOMLARI[row.oxirgiFaollik.platforma]}`}
+                          {formatOxirgiFaollik(row.oxirgiFaollik?.vaqt ?? null, now, t)}
+                          {row.oxirgiFaollik && ` · ${platformaNomi(row.oxirgiFaollik.platforma)}`}
                         </div>
                       )}
                     </div>
@@ -93,7 +97,7 @@ export function GroupActivityTable({
                 </TableCell>
                 <TableCell className="text-right font-medium tabular-nums">
                   {row.akkaunt && row.faolSoniya > 0 ? (
-                    formatDavomiylik(row.faolSoniya)
+                    formatDavomiylik(row.faolSoniya, t)
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}
@@ -108,7 +112,7 @@ export function GroupActivityTable({
                               {row.shugullanganKunlar}/{row.maxraj}
                             </span>
                           </TooltipTrigger>
-                          <TooltipContent>{formatKunOy(row.hisobBoshi)} dan beri</TooltipContent>
+                          <TooltipContent>{t("{date} dan beri", { date: formatKunOy(row.hisobBoshi) })}</TooltipContent>
                         </Tooltip>
                       ) : (
                         <span className="w-10 text-sm tabular-nums">
@@ -127,7 +131,7 @@ export function GroupActivityTable({
                       <span className={cn("font-medium tabular-nums", foizRangi(row.mashq.foiz))}>
                         {row.mashq.foiz}%
                       </span>
-                      <span className="text-xs text-muted-foreground">{row.mashq.savollar} savol</span>
+                      <span className="text-xs text-muted-foreground">{t("{n} savol", { n: row.mashq.savollar })}</span>
                     </div>
                   ) : (
                     <span className="text-muted-foreground">—</span>
@@ -138,11 +142,11 @@ export function GroupActivityTable({
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">{row.kurs.daraja}</Badge>
                       {row.kurs.holat === "KURS_YOQ" ? (
-                        <span className="text-xs text-muted-foreground">Kurs hali yo&apos;q</span>
+                        <span className="text-xs text-muted-foreground">{t("Kurs hali yo'q")}</span>
                       ) : (
                         <div className="min-w-0 flex-1 space-y-1">
                           <div className="text-xs tabular-nums text-muted-foreground">
-                            {row.kurs.tugatilgan}/{row.kurs.jami} dars
+                            {t("{done}/{total} dars", { done: row.kurs.tugatilgan, total: row.kurs.jami })}
                           </div>
                           <ProgressLine value={row.kurs.tugatilgan} total={row.kurs.jami} />
                         </div>
@@ -150,11 +154,9 @@ export function GroupActivityTable({
                       {row.kurs.guruhdanOrqada && (
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Badge variant="destructive" className="shrink-0 text-[10px]">
-                              Guruhdan orqada
-                            </Badge>
+                            <Badge variant="destructive" className="shrink-0 text-[10px]">{t("Guruhdan orqada")}</Badge>
                           </TooltipTrigger>
-                          <TooltipContent>O&apos;quvchi darajasi guruh darajasidan past</TooltipContent>
+                          <TooltipContent>{t("O'quvchi darajasi guruh darajasidan past")}</TooltipContent>
                         </Tooltip>
                       )}
                     </div>
@@ -164,7 +166,7 @@ export function GroupActivityTable({
                 </TableCell>
                 <TableCell className="hidden text-right tabular-nums lg:table-cell">
                   {row.akkaunt && row.radioSoniya > 0 ? (
-                    formatDavomiylik(row.radioSoniya)
+                    formatDavomiylik(row.radioSoniya, t)
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}

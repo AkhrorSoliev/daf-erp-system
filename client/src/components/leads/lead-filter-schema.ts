@@ -1,3 +1,5 @@
+import { msg } from "@/i18n/msg";
+
 /**
  * URL-persisted filter schema for the leads page, shared by the filter bar, the
  * filtered list, and the board client (which decides board-vs-list from it).
@@ -9,6 +11,8 @@ export const LEAD_FILTER_SCHEMA = {
   holati: { type: "array" as const, defaultValue: [] as string[] },
   sourceId: { type: "array" as const, defaultValue: [] as string[] },
   columnId: { type: "array" as const, defaultValue: [] as string[] },
+  // «Mas'ul» (ADR-0093): `me`, `none` and user ids; the server ORs them.
+  masul: { type: "array" as const, defaultValue: [] as string[] },
   startDate: { type: "string" as const, defaultValue: "" },
   endDate: { type: "string" as const, defaultValue: "" },
   // A stats card whose leads the list shows (`created` | `converted` | `lost`).
@@ -22,6 +26,7 @@ export interface LeadFilterValues {
   holati: string[];
   sourceId: string[];
   columnId: string[];
+  masul: string[];
   startDate: string;
   endDate: string;
   karta: string;
@@ -45,46 +50,67 @@ export interface LeadHolatiOption {
   param: { key: "status" | "called" | "hasComments"; value: string };
 }
 
-export const LEAD_HOLATI_GROUPS = ["Bosqich", "Aloqa", "Izoh"] as const;
+// Labels and group titles are msg() texts the filter bar draws with t().
+export const LEAD_HOLATI_GROUPS = [
+  msg("Lid bosqichi"),
+  msg("Aloqa"),
+  msg("Izoh"),
+];
 
 export const LEAD_HOLATI_OPTIONS: LeadHolatiOption[] = [
   {
     value: "NEW",
-    label: "Yangi",
-    group: "Bosqich",
+    label: msg("Yangi lid"),
+    group: LEAD_HOLATI_GROUPS[0],
     param: { key: "status", value: "NEW" },
   },
   {
     value: "CONVERTED",
-    label: "O'quvchiga aylangan",
-    group: "Bosqich",
+    label: msg("O'quvchiga aylangan"),
+    group: LEAD_HOLATI_GROUPS[0],
     param: { key: "status", value: "CONVERTED" },
   },
   {
     value: "called",
-    label: "Aloqaga chiqilgan",
-    group: "Aloqa",
+    label: msg("Aloqaga chiqilgan"),
+    group: LEAD_HOLATI_GROUPS[1],
     param: { key: "called", value: "true" },
   },
   {
     value: "uncalled",
-    label: "Aloqaga chiqilmagan",
-    group: "Aloqa",
+    label: msg("Aloqaga chiqilmagan"),
+    group: LEAD_HOLATI_GROUPS[1],
     param: { key: "called", value: "false" },
   },
   {
     value: "commented",
-    label: "Izoh yozilgan",
-    group: "Izoh",
+    label: msg("Izoh yozilgan"),
+    group: LEAD_HOLATI_GROUPS[2],
     param: { key: "hasComments", value: "true" },
   },
   {
     value: "uncommented",
-    label: "Izohsiz",
-    group: "Izoh",
+    label: msg("Izohsiz"),
+    group: LEAD_HOLATI_GROUPS[2],
     param: { key: "hasComments", value: "false" },
   },
 ];
+
+/**
+ * Every real filter empty, back on page 1. Written instead of wiping the URL so
+ * the strip's `?period=` and the page size survive «Tozalash» and card clicks.
+ */
+export const CLEARED_LEAD_FILTERS = {
+  search: "",
+  holati: [] as string[],
+  sourceId: [] as string[],
+  columnId: [] as string[],
+  masul: [] as string[],
+  startDate: "",
+  endDate: "",
+  karta: "",
+  page: 1,
+};
 
 /** True when at least one real filter (not just paging) is set. */
 export function leadFiltersActive(f: LeadFilterValues): boolean {
@@ -93,6 +119,7 @@ export function leadFiltersActive(f: LeadFilterValues): boolean {
     f.holati.length > 0 ||
     f.sourceId.length > 0 ||
     f.columnId.length > 0 ||
+    f.masul.length > 0 ||
     f.startDate !== "" ||
     f.endDate !== "" ||
     f.karta !== ""

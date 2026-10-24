@@ -1,8 +1,12 @@
+import { useEffect } from "react";
 import { create } from "zustand";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { registerBranchScopedStore } from "@/lib/branch-scoped-stores";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/use-t";
+import type { LeadOwner } from "@/components/leads/ownership/ownership-format";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -35,6 +39,12 @@ export interface LeadCard {
   calledAt: string | null;
   /** Number of comments left on the lead — drives the comment icon. */
   commentCount: number;
+  /** The lead's owner (ADR-0093); null while it sits in the common pool. */
+  owner: LeadOwner | null;
+  /** When the lead returns to the pool unless its owner acts (server-computed). */
+  ownerDueAt: string | null;
+  /** A live student with the same phone — the lead is tied to another profile. */
+  linkedStudent?: { id: number; firstName: string; lastName: string } | null;
 }
 
 export interface LeadBoardSection {
@@ -65,13 +75,15 @@ export interface LeadBoardColumn {
 // Display labels
 // ---------------------------------------------------------------------------
 
+// msg() texts: a translated page draws them with t(). NEW reads «Yangi lid»
+// because the dictionary's «Yangi» means creating.
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
-  NEW: "Yangi",
-  CONTACTED: "Aloqaga chiqilgan",
-  TRIAL: "Sinov darsida",
-  CONVERTED: "O'quvchiga aylangan",
-  LOST: "Yo'qotilgan",
-  ARCHIVED: "Arxivlangan",
+  NEW: msg("Yangi lid"),
+  CONTACTED: msg("Aloqaga chiqilgan"),
+  TRIAL: msg("Sinov darsida"),
+  CONVERTED: msg("O'quvchiga aylangan"),
+  LOST: msg("Yo'qotilgan"),
+  ARCHIVED: msg("Arxivlangan"),
 };
 
 // Mirror of the backend LEAD_LINKED_REASON sentinel (Lead.statusChangeReason):
@@ -81,18 +93,52 @@ export const LEAD_LINKED_REASON = "LINKED_TO_EXISTING";
 
 /**
  * Display label for a CONVERTED lead, distinguishing "linked to an existing
- * student" from a fresh conversion. Falls back to the plain converted label for
- * any other status.
+ * student" from a fresh conversion. Any other status gets its own label.
  */
 export function leadConvertedLabel(
   statusEnum: LeadStatus,
   statusChangeReason: string | null | undefined,
+  t: (source: string) => string = (source) => source,
 ): string {
-  if (statusEnum !== "CONVERTED") return LEAD_STATUS_LABELS[statusEnum];
+  if (statusEnum !== "CONVERTED") {
+    const label = LEAD_STATUS_LABELS[statusEnum];
+    return t(label);
+  }
   return statusChangeReason === LEAD_LINKED_REASON
-    ? "Mavjud o'quvchiga biriktirilgan"
-    : "O'quvchiga aylangan";
+    ? t("Mavjud o'quvchiga biriktirilgan")
+    : t("O'quvchiga aylangan");
 }
+
+// The system column every branch is born with (branches.service.ts); the server
+// refuses to rename it, so its stored name is this text.
+const NEW_LEADS_COLUMN = msg("Yangi Lidlar");
+
+/**
+ * A board column's name. The system «Yangi Lidlar» column is drawn through `t`;
+ * any other name is the staff's data and comes back as stored.
+ */
+export function leadColumnName(
+  column: { name: string; systemKey?: string | null },
+  t: (source: string) => string = (source) => source,
+): string {
+  return column.systemKey === "NEW" && column.name === NEW_LEADS_COLUMN
+    ? t(NEW_LEADS_COLUMN)
+    : column.name;
+}
+
+// The store's own toast fallbacks are msg() texts; every page root that drives
+// the store calls useLeadsBoardTranslator() to hand its `t` in (identity until
+// then, and on the server, which never runs effects).
+let translate: (source: string) => string = (source) => source;
+export function setLeadsBoardTranslator(fn: (source: string) => string): void {
+  translate = fn;
+}
+export function useLeadsBoardTranslator(): void {
+  const t = useT();
+  useEffect(() => setLeadsBoardTranslator(t), [t]);
+}
+const fail = (error: unknown, fallback: string) =>
+  toast.error(getErrorMessage(error, translate(fallback)));
 
 // ---------------------------------------------------------------------------
 // Store
@@ -106,10 +152,19 @@ interface LeadsBoardState {
   loadedSections: Set<string>;
   /** Sections whose leads are being fetched right now. */
   loadingSections: Set<string>;
+  /** Sections whose last fetch failed — drawn as an error, not as "no leads". */
+  failedSections: Set<string>;
   /** Bumps on every lead create / edit / move so the filtered list refetches. */
   revision: number;
-  fetchBoard: () => Promise<void>;
-  fetchSectionLeads: (sectionId: string) => Promise<void>;
+  /** `quiet` refetches without the board skeleton (open sections stay open). */
+  fetchBoard: (quiet?: boolean) => Promise<void>;
+  /** `force` re-reads a section that is already loaded (the owner's deadline moved). */
+  fetchSectionLeads: (sectionId: string, force?: boolean) => Promise<void>;
+  /**
+   * Re-reads the board and every loaded section, and bumps `revision` — for a
+   * change made elsewhere that shows on the cards (e.g. a lead source renamed).
+   */
+  refreshAll: () => Promise<void>;
   addSection: (section: LeadBoardSection & { columnId: string }) => void;
   addLead: (sectionId: string, lead: LeadCard) => void;
   addColumn: (column: LeadBoardColumn) => void;
@@ -205,23 +260,24 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
   loadingBoard: false,
   loadedSections: new Set(),
   loadingSections: new Set(),
+  failedSections: new Set(),
   revision: 0,
   dragSnapshot: null,
 
-  fetchBoard: async () => {
-    set({ loadingBoard: true });
+  fetchBoard: async (quiet = false) => {
+    if (!quiet) set({ loadingBoard: true });
     try {
       const { data } = await api.get<LeadBoardColumn[]>("/leads/board");
       set({ board: data, loadingBoard: false });
     } catch (error) {
       set({ loadingBoard: false });
-      toast.error(getErrorMessage(error, "Lidlar boardini yuklashda xatolik"));
+      fail(error, msg("Lidlar doskasini yuklashda xatolik"));
     }
   },
 
-  fetchSectionLeads: async (sectionId) => {
+  fetchSectionLeads: async (sectionId, force = false) => {
     const { loadedSections, loadingSections } = get();
-    if (loadedSections.has(sectionId) || loadingSections.has(sectionId)) return;
+    if ((!force && loadedSections.has(sectionId)) || loadingSections.has(sectionId)) return;
 
     set({ loadingSections: new Set(loadingSections).add(sectionId) });
     try {
@@ -231,20 +287,40 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       set((s) => {
         const loading = new Set(s.loadingSections);
         loading.delete(sectionId);
+        const failed = new Set(s.failedSections);
+        failed.delete(sectionId);
         return {
           leadsBySection: { ...s.leadsBySection, [sectionId]: data },
           loadedSections: new Set(s.loadedSections).add(sectionId),
           loadingSections: loading,
+          failedSections: failed,
         };
       });
     } catch (error) {
       set((s) => {
         const loading = new Set(s.loadingSections);
         loading.delete(sectionId);
-        return { loadingSections: loading };
+        return {
+          loadingSections: loading,
+          failedSections: new Set(s.failedSections).add(sectionId),
+        };
       });
-      toast.error(getErrorMessage(error, "Lidlarni yuklashda xatolik"));
+      fail(error, msg("Lidlarni yuklashda xatolik"));
     }
+  },
+
+  refreshAll: async () => {
+    set((s) => ({ revision: s.revision + 1 }));
+    await get().fetchBoard(true);
+    // Only sections still on the board: a removed one would answer 404.
+    const onBoard = new Set(
+      get().board.flatMap((c) => c.sections.map((sec) => sec.id)),
+    );
+    await Promise.all(
+      [...get().loadedSections]
+        .filter((id) => onBoard.has(id))
+        .map((id) => get().fetchSectionLeads(id, true)),
+    );
   },
 
   addSection: (section) => {
@@ -327,11 +403,17 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
             }
           : col,
       ),
+      // Deleting a section archives its leads: the stats, owners strip and
+      // filtered list key on `revision`.
+      revision: s.revision + 1,
     }));
   },
 
   moveColumn: async (id, direction) => {
     const { board } = get();
+    // Column order is per branch on the server; "Barcha filiallar" mixes
+    // branches, so there is no single order to write.
+    if (new Set(board.map((c) => c.branchId)).size > 1) return;
     const custom = board.filter((c) => !c.isSystem);
     const idx = custom.findIndex((c) => c.id === id);
     if (idx === -1) return;
@@ -350,9 +432,7 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       });
     } catch (error) {
       set({ board: prevBoard });
-      toast.error(
-        getErrorMessage(error, "Ustun tartibini o'zgartirishda xatolik"),
-      );
+      fail(error, msg("Ustun tartibini o'zgartirishda xatolik"));
     }
   },
 
@@ -381,9 +461,7 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       });
     } catch (error) {
       set({ board: prevBoard });
-      toast.error(
-        getErrorMessage(error, "Bo'lim tartibini o'zgartirishda xatolik"),
-      );
+      fail(error, msg("Bo'lim tartibini o'zgartirishda xatolik"));
     }
   },
 
@@ -416,7 +494,7 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       });
     } catch (error) {
       set({ board: prevBoard });
-      toast.error(getErrorMessage(error, "Bo'limni ko'chirishda xatolik"));
+      fail(error, msg("Bo'limni ko'chirishda xatolik"));
     }
   },
 
@@ -445,9 +523,7 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       });
     } catch (error) {
       set({ board: prevBoard });
-      toast.error(
-        getErrorMessage(error, "Bo'lim tartibini o'zgartirishda xatolik"),
-      );
+      fail(error, msg("Bo'lim tartibini o'zgartirishda xatolik"));
     }
   },
 
@@ -523,20 +599,22 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
         { sectionId: toSectionId },
       );
       // Replace the optimistic card with the server copy (status may sync).
+      // A collapsed source never held the card, so a loaded target gets it now.
       set((s) => {
-        if (!s.leadsBySection[toSectionId]) return {};
+        const target = s.leadsBySection[toSectionId];
+        if (!target) return {};
         return {
           leadsBySection: {
             ...s.leadsBySection,
-            [toSectionId]: s.leadsBySection[toSectionId].map((l) =>
-              l.id === leadId ? data : l,
-            ),
+            [toSectionId]: target.some((l) => l.id === leadId)
+              ? target.map((l) => (l.id === leadId ? data : l))
+              : [...target, data],
           },
         };
       });
     } catch (error) {
       set({ board: prevBoard, leadsBySection: prevLeads });
-      toast.error(getErrorMessage(error, "Lidni ko'chirishda xatolik"));
+      fail(error, msg("Lidni ko'chirishda xatolik"));
     }
   },
 
@@ -666,39 +744,52 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       get().clearDragSnapshot();
     } catch (error) {
       get().rollbackDrag();
-      toast.error(
-        getErrorMessage(error, "Lid tartibini o'zgartirishda xatolik"),
-      );
+      fail(error, msg("Lid tartibini o'zgartirishda xatolik"));
     }
   },
 
   persistLeadMove: async ({ leadId, toSectionId, toLeadIds }) => {
+    let data: LeadCard;
     try {
-      const { data } = await api.patch<LeadCard>(`/leads/${leadId}/move`, {
+      ({ data } = await api.patch<LeadCard>(`/leads/${leadId}/move`, {
         sectionId: toSectionId,
-      });
-      // Replace the optimistic card with the server copy (status may sync).
-      set((s) => {
-        if (!s.leadsBySection[toSectionId]) return {};
-        return {
-          leadsBySection: {
-            ...s.leadsBySection,
-            [toSectionId]: s.leadsBySection[toSectionId].map((l) =>
-              l.id === leadId ? data : l,
-            ),
-          },
-        };
-      });
-      // Persist the dropped position when the target list is loaded; a collapsed
-      // target keeps the server append (order is correct on next expand).
-      if (toLeadIds.length > 0) {
-        await api.patch("/leads/reorder", { sectionId: toSectionId, leadIds: toLeadIds });
-      }
-      get().clearDragSnapshot();
+      }));
     } catch (error) {
       get().rollbackDrag();
-      toast.error(getErrorMessage(error, "Lidni ko'chirishda xatolik"));
+      fail(error, msg("Lidni ko'chirishda xatolik"));
+      return;
     }
+    // Replace the optimistic card with the server copy (status may sync).
+    set((s) => {
+      const target = s.leadsBySection[toSectionId];
+      return {
+        revision: s.revision + 1,
+        ...(target && {
+          leadsBySection: {
+            ...s.leadsBySection,
+            [toSectionId]: target.map((l) => (l.id === leadId ? data : l)),
+          },
+        }),
+      };
+    });
+    // Persist the dropped position when the target list is loaded; a collapsed
+    // target keeps the server append (order is correct on next expand).
+    if (toLeadIds.length > 0) {
+      try {
+        await api.patch("/leads/reorder", {
+          sectionId: toSectionId,
+          leadIds: toLeadIds,
+        });
+      } catch (error) {
+        // The move is already saved, so a rollback would put the card back in a
+        // section it has left. Re-read the target for the server's order.
+        get().clearDragSnapshot();
+        void get().fetchSectionLeads(toSectionId, true);
+        fail(error, msg("Lid tartibini o'zgartirishda xatolik"));
+        return;
+      }
+    }
+    get().clearDragSnapshot();
   },
 
   persistSectionReorder: async (columnId, sectionIds) => {
@@ -707,9 +798,7 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       get().clearDragSnapshot();
     } catch (error) {
       get().rollbackDrag();
-      toast.error(
-        getErrorMessage(error, "Bo'lim tartibini o'zgartirishda xatolik"),
-      );
+      fail(error, msg("Bo'lim tartibini o'zgartirishda xatolik"));
     }
   },
 
@@ -718,17 +807,26 @@ export const useLeadsBoard = create<LeadsBoardState>((set, get) => ({
       await api.patch(`/lead-sections/${sectionId}/move`, {
         targetColumnId: toColumnId,
       });
-      if (toSectionIds.length > 0) {
+    } catch (error) {
+      get().rollbackDrag();
+      fail(error, msg("Bo'limni ko'chirishda xatolik"));
+      return;
+    }
+    if (toSectionIds.length > 0) {
+      try {
         await api.patch("/lead-sections/reorder", {
           columnId: toColumnId,
           sectionIds: toSectionIds,
         });
+      } catch (error) {
+        // The move is already saved; re-read the board instead of rolling back.
+        get().clearDragSnapshot();
+        void get().fetchBoard(true);
+        fail(error, msg("Bo'lim tartibini o'zgartirishda xatolik"));
+        return;
       }
-      get().clearDragSnapshot();
-    } catch (error) {
-      get().rollbackDrag();
-      toast.error(getErrorMessage(error, "Bo'limni ko'chirishda xatolik"));
     }
+    get().clearDragSnapshot();
   },
 }));
 

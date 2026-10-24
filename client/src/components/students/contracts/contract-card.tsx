@@ -19,13 +19,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatPrice } from "@/lib/format-utils";
+import { useT } from "@/i18n/context";
 import { CONTRACT_STATUS_LABEL, LINK_STATE_LABEL, canCancel, dmy } from "./contract-rules";
 import type { ContractStatus, ContractView } from "./contract-types";
 
 interface Props {
   contract: ContractView;
   isCeo: boolean;
-  /** `students.manage`: edit, sign and cancel. Without it the card only prints. */
+  /** `contracts.manage`: edit, sign and cancel. Without it the card only prints. */
   canManage: boolean;
   busy: boolean;
   onPdf: () => void;
@@ -54,8 +55,10 @@ export function ContractCard({
   onSign,
   onCancel,
 }: Props) {
+  const t = useT();
   const unsigned = canManage && c.status === "UNSIGNED";
   const cancellable = canManage && canCancel(c, isCeo);
+  const statusLabel = CONTRACT_STATUS_LABEL[c.status];
   return (
     <article className="space-y-3 rounded-lg border p-4">
       <header className="flex flex-wrap items-center gap-2">
@@ -63,7 +66,7 @@ export function ContractCard({
         <span className="font-semibold">№ {c.number}</span>
         <span className="text-sm text-muted-foreground">{dmy(c.contractDate)}</span>
         <Badge variant="outline" className={STATUS_CLASS[c.status]}>
-          {CONTRACT_STATUS_LABEL[c.status]}
+          {t(statusLabel)}
         </Badge>
         <div className="ml-auto flex items-center gap-1">
           <Button variant="outline" size="sm" onClick={onPdf} disabled={busy}>
@@ -79,20 +82,20 @@ export function ContractCard({
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" disabled={busy}>
                   <MoreHorizontal className="size-4" />
-                  <span className="sr-only">Amallar</span>
+                  <span className="sr-only">{t("Amallar")}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {unsigned && (
                   <DropdownMenuItem onClick={onEdit}>
                     <PenLine className="mr-2 size-4" />
-                    Tahrirlash
+                    {t("Tahrirlash")}
                   </DropdownMenuItem>
                 )}
                 {unsigned && (
                   <DropdownMenuItem onClick={onSign}>
                     <CheckCircle2 className="mr-2 size-4" />
-                    Qog&apos;ozda imzolandi
+                    {t("Qog'ozda imzolandi")}
                   </DropdownMenuItem>
                 )}
                 {cancellable && (
@@ -101,7 +104,7 @@ export function ContractCard({
                     className="text-destructive focus:text-destructive"
                   >
                     <Ban className="mr-2 size-4" />
-                    Bekor qilish
+                    {t("Shartnomani bekor qilish")}
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
@@ -114,34 +117,42 @@ export function ContractCard({
         {c.fields.courses.map((course) => (
           <li key={course.enrollmentId}>
             <span className="font-medium">{course.courseName}</span> · {course.groupName} ·{" "}
-            {formatPrice(course.monthlyPrice)} so&apos;m/oy
+            {t("{price} so'm/oy", { price: formatPrice(course.monthlyPrice) })}
           </li>
         ))}
       </ul>
 
       {c.links.length > 0 && (
         <ul className="space-y-0.5 text-xs text-muted-foreground">
-          {c.links.map((l) => (
-            <li key={l.enrollmentId}>
-              Hozir: {l.groupName} — {LINK_STATE_LABEL[l.status]}
-            </li>
-          ))}
+          {c.links.map((l) => {
+            const stateLabel = LINK_STATE_LABEL[l.status];
+            return (
+              <li key={l.enrollmentId}>
+                {t("Hozir: {group} — {state}", { group: l.groupName, state: t(stateLabel) })}
+              </li>
+            );
+          })}
         </ul>
       )}
 
       <p className="text-xs text-muted-foreground">
-        Buyurtmachi: {c.fields.customer.fullName}
-        {c.createdBy ? ` · Tuzdi: ${c.createdBy}` : ""}
+        {t("Buyurtmachi: {name}", { name: c.fields.customer.fullName })}
+        {c.createdBy && (
+          <>
+            {" · "}
+            {t("Tuzdi: {name}", { name: c.createdBy })}
+          </>
+        )}
       </p>
       {c.signedAt && (
         <p className="text-xs text-muted-foreground">
-          Qog&apos;ozda imzolangan: {stamp(c.signedAt)}
+          {t("Qog'ozda imzolangan: {date}", { date: stamp(c.signedAt) })}
           {c.signedBy ? ` · ${c.signedBy}` : ""}
         </p>
       )}
       {c.cancelledAt && (
         <p className="text-xs text-destructive">
-          Bekor qilingan: {stamp(c.cancelledAt)}
+          {t("Bekor qilingan: {date}", { date: stamp(c.cancelledAt) })}
           {c.cancelledBy ? ` · ${c.cancelledBy}` : ""} — {c.cancelReason}
         </p>
       )}

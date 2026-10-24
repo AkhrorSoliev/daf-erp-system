@@ -17,14 +17,15 @@ import { cn } from "@/lib/utils";
 import { formatPhone } from "@/lib/format-utils";
 import type { Student } from "@/data/student-model";
 import { useAuth } from "@/hooks/use-auth";
+import { useT } from "@/i18n/context";
 import { StudentStatusBadge } from "./student-status-badge";
 import { StudentRowActions } from "./student-row-actions";
 import { LevelBadge } from "@/components/groups/level-badge";
 
-function formatBalance(balance: number) {
+function formatBalance(balance: number, unit: string) {
   const abs = Math.abs(balance).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   const sign = balance < 0 ? "-" : "";
-  return `${sign}${abs} so'm`;
+  return `${sign}${abs} ${unit}`;
 }
 
 interface StudentsTableProps {
@@ -36,6 +37,7 @@ interface StudentsTableProps {
 }
 
 export function StudentsTable({ students, page = 1, pageSize = 10, onDeleted, onStatusChanged }: StudentsTableProps) {
+  const t = useT();
   const user = useAuth((s) => s.user);
   const isTeacher = user?.roles.every((r) => r.id === 4) ?? false;
 
@@ -43,7 +45,7 @@ export function StudentsTable({ students, page = 1, pageSize = 10, onDeleted, on
     return (
       <div className="flex h-40 flex-col items-center justify-center gap-2 rounded-md border">
         <Users className="text-muted-foreground/50 size-8" />
-        <p className="text-muted-foreground text-sm">O&apos;quvchilar topilmadi</p>
+        <p className="text-muted-foreground text-sm">{t("O'quvchilar topilmadi")}</p>
       </div>
     );
   }
@@ -106,7 +108,7 @@ export function StudentsTable({ students, page = 1, pageSize = 10, onDeleted, on
                       ))}
                     </>
                   ) : (
-                    <span className="text-muted-foreground text-xs">Guruhsiz</span>
+                    <span className="text-muted-foreground text-xs">{t("Guruhsiz")}</span>
                   )}
                 </div>
                 <span
@@ -117,7 +119,7 @@ export function StudentsTable({ students, page = 1, pageSize = 10, onDeleted, on
                       : "text-green-600 dark:text-green-400"
                   )}
                 >
-                  {formatBalance(student.balance)}
+                  {formatBalance(student.balance, t("so'm"))}
                 </span>
               </div>
             </div>
@@ -141,15 +143,13 @@ export function StudentsTable({ students, page = 1, pageSize = 10, onDeleted, on
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
               <TableHead className="w-16">ID</TableHead>
-              <TableHead className="w-10">Rasm</TableHead>
-              <TableHead className="min-w-30">Ism familiya</TableHead>
-              <TableHead className="min-w-32">
-                Telefon
-              </TableHead>
-              <TableHead className="hidden md:table-cell">Guruh</TableHead>
-              <TableHead className="hidden md:table-cell">Daraja</TableHead>
-              <TableHead className="min-w-28 text-right">Balans</TableHead>
-              <TableHead>Holat</TableHead>
+              <TableHead className="w-10">{t("Rasm")}</TableHead>
+              <TableHead className="min-w-30">{t("Ism familiya")}</TableHead>
+              <TableHead className="min-w-32">{t("Telefon")}</TableHead>
+              <TableHead className="hidden md:table-cell">{t("Guruh")}</TableHead>
+              <TableHead className="hidden md:table-cell">{t("Daraja")}</TableHead>
+              <TableHead className="min-w-28 text-right">{t("Balans")}</TableHead>
+              <TableHead>{t("Holat")}</TableHead>
               {!isTeacher && <TableHead className="w-10" />}
             </TableRow>
           </TableHeader>
@@ -229,7 +229,7 @@ export function StudentsTable({ students, page = 1, pageSize = 10, onDeleted, on
                       : "text-green-600 dark:text-green-400"
                   )}
                 >
-                  {formatBalance(student.balance)}
+                  {formatBalance(student.balance, t("so'm"))}
                 </TableCell>
                 <TableCell>
                   <StudentStatusBadge student={student} />

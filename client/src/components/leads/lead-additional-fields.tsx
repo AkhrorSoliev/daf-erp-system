@@ -10,6 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/context";
 
 interface LeadAdditionalFieldsProps {
   value: string;
@@ -31,6 +32,7 @@ export function LeadAdditionalFields({
   onChange,
   error,
 }: LeadAdditionalFieldsProps) {
+  const t = useT();
   const [opened, setOpened] = useState(false);
   const iconsRef = useRef<HTMLDivElement>(null);
 
@@ -56,12 +58,12 @@ export function LeadAdditionalFields({
     <div className="space-y-4">
       <h3 className="flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
         <Plus className="size-3.5" />
-        Qo&apos;shimcha ma&apos;lumotlar
+        {t("Qo'shimcha ma'lumotlar")}
       </h3>
 
       {visible && (
         <div className="space-y-1.5 rounded-lg border bg-muted/30 p-4">
-          <Label htmlFor="extraPhone">Zaxira raqam</Label>
+          <Label htmlFor="extraPhone">{t("Zaxira raqam")}</Label>
           <PhoneInput
             id="extraPhone"
             name="extraPhone"
@@ -77,6 +79,7 @@ export function LeadAdditionalFields({
           <TooltipTrigger asChild>
             <button
               type="button"
+              aria-label={t("Zaxira raqam")}
               onClick={toggle}
               className={cn(
                 "inline-flex size-9 items-center justify-center rounded-lg border transition-colors",
@@ -88,7 +91,7 @@ export function LeadAdditionalFields({
               <Phone className="size-4" />
             </button>
           </TooltipTrigger>
-          <TooltipContent>Zaxira raqam</TooltipContent>
+          <TooltipContent>{t("Zaxira raqam")}</TooltipContent>
         </Tooltip>
       </div>
     </div>

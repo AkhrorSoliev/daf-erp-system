@@ -16,42 +16,16 @@ export interface AccessChange {
 
 const DEPARTED =
   "Only the «Ketgan o'quvchilar» report calls it; its menu entry is CEO/BD only.";
-const ATTENDANCE =
-  'Only the «Davomat statistikasi» report calls it; its menu entry is CEO/BD only.';
 const NO_SCREEN = 'No screen calls it.';
 const OWN_SALARY =
   "The caller's own salary (`@CurrentUser('id')`); a cashier on payroll may read it like any staff member.";
 
 export const INTENTIONAL_ACCESS_CHANGES: Record<string, AccessChange> = {
-  'GET /reports/departed-students/by-reason': {
-    remove: ['Administrator'],
-    reason: DEPARTED,
-  },
-  'GET /reports/departed-students/by-status': {
-    remove: ['Administrator'],
-    reason: DEPARTED,
-  },
   'GET /reports/departed-students/departed-after-change': {
     remove: ['Administrator'],
     reason: DEPARTED,
   },
-  'GET /reports/departed-students/dynamics': {
-    remove: ['Administrator'],
-    reason: DEPARTED,
-  },
-  'GET /reports/departed-students/group-by': {
-    remove: ['Administrator'],
-    reason: DEPARTED,
-  },
   'GET /reports/departed-students/list': {
-    remove: ['Administrator'],
-    reason: DEPARTED,
-  },
-  'GET /reports/departed-students/reasons': {
-    remove: ['Administrator'],
-    reason: DEPARTED,
-  },
-  'GET /reports/departed-students/summary': {
     remove: ['Administrator'],
     reason: DEPARTED,
   },
@@ -63,35 +37,6 @@ export const INTENTIONAL_ACCESS_CHANGES: Record<string, AccessChange> = {
     remove: ['Administrator'],
     reason: DEPARTED,
   },
-  'GET /reports/departed-students/transfer-reasons': {
-    remove: ['Administrator'],
-    reason: DEPARTED,
-  },
-  'GET /reports/departed-students/transferred-list': {
-    remove: ['Administrator'],
-    reason: DEPARTED,
-  },
-  'GET /reports/attendance-analytics': {
-    remove: ['Administrator'],
-    reason: ATTENDANCE,
-  },
-  'GET /reports/attendance-by-course': {
-    remove: ['Administrator'],
-    reason: ATTENDANCE,
-  },
-  'GET /reports/attendance-by-group': {
-    remove: ['Administrator'],
-    reason: ATTENDANCE,
-  },
-  'GET /reports/teacher-performance': {
-    remove: ['Administrator'],
-    reason: ATTENDANCE,
-  },
-  'GET /reports/center-activity': {
-    remove: ['Administrator'],
-    reason:
-      'Only the «Markaz faoliyat statistikasi» report calls it; its menu entry is CEO/BD only.',
-  },
   'GET /reports/kpis': { remove: ['Administrator'], reason: NO_SCREEN },
   'GET /reports/group-analytics': {
     remove: ['Administrator'],
@@ -101,15 +46,9 @@ export const INTENTIONAL_ACCESS_CHANGES: Record<string, AccessChange> = {
     remove: ['Administrator'],
     reason: NO_SCREEN,
   },
-  'GET /reports/student-payments': {
-    remove: ['Administrator', 'Cashier'],
-    reason:
-      "Only the «O'quvchi to'lovi» report calls it; its menu entry is CEO/BD only.",
-  },
   'GET /reports/student-payments/filter-options': {
     remove: ['Administrator', 'Cashier'],
-    reason:
-      "Called by the «O'quvchi to'lovi» and «Ketgan o'quvchilar» reports only, both CEO/BD.",
+    reason: "Called by the «Ketgan o'quvchilar» report only, which is CEO/BD.",
   },
   'GET /transactions': { remove: ['Administrator'], reason: NO_SCREEN },
   'GET /transactions/teacher/:teacherId': {

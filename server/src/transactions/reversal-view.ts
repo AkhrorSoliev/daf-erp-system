@@ -53,8 +53,9 @@ const MIGRATION_MONTH = new RegExp(`^${MIGRATION_REVERSAL} — \\d{4}-(\\d{2})$`
  * `reverseTransaction` writes `Bekor qilindi: <reason>`, or the row's uuid
  * when no reason was given — nothing a reader can use. Some reasons are
  * reworded here, because the rows themselves are never rewritten: two early
- * writers left English text, and the monthly switch's «migratsiyasi — 2026-09»
- * did not say what happened to the money (CEO, 06.10.2026).
+ * writers left English text, the monthly switch's «migratsiyasi — 2026-09»
+ * did not say what happened to the money (CEO, 06.10.2026), and Payme's
+ * cancel reason is shown in Uzbek.
  */
 export function reversalReason(description: string | null): string | null {
   const text = description?.trim();
@@ -64,6 +65,7 @@ export function reversalReason(description: string | null): string | null {
     : text;
   if (reason === 'attendance status changed') return "Davomat holati o'zgardi";
   if (reason.startsWith('Backfill reversal')) return null;
+  if (reason === 'Payme CancelTransaction') return "Payme to'lovni bekor qildi";
   const migration = MIGRATION_MONTH.exec(reason);
   if (migration) {
     const month = uzMonthName(Number(migration[1]));

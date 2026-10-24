@@ -8,6 +8,8 @@ import {
   X,
   XCircle,
 } from "@phosphor-icons/react";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/use-t";
 import { cn } from "@/lib/utils";
 import { Button, Card } from "../lumio";
 import { useCheckDrill, useLernenDrill } from "./queries";
@@ -15,9 +17,9 @@ import { useClipPlayer } from "./use-clip-player";
 import type { DrillQuestion } from "./types";
 
 const KIND_PROMPT: Record<DrillQuestion["kind"], string> = {
-  AUDIO_TO_WORD: "Qaysi so'zni eshitdingiz?",
-  WORD_TO_UZ: "Tarjimani tanlang",
-  UZ_TO_WORD: "Nemischasini tanlang",
+  AUDIO_TO_WORD: msg("Qaysi so'zni eshitdingiz?"),
+  WORD_TO_UZ: msg("Tarjimani tanlang"),
+  UZ_TO_WORD: msg("Nemischasini tanlang"),
 };
 
 /** Bitta mashqda nechta savol beriladi. */
@@ -87,11 +89,13 @@ function Question({
   lessonId: number;
   onAnswered: (correct: boolean) => void;
 }) {
+  const t = useT();
   const [picked, setPicked] = React.useState<string | null>(null);
   const [startedAt] = React.useState(() => Date.now());
   const check = useCheckDrill();
   const play = useClipPlayer(question.audio);
   const result = check.data;
+  const sorov = KIND_PROMPT[question.kind];
 
   // Tinglash savolida audio darhol o'ynaydi — savol audioning O'ZI, va
   // uni bosishni kutish savolni ko'rsatmay turishga teng.
@@ -115,7 +119,7 @@ function Question({
   return (
     <div className="flex flex-1 flex-col gap-5">
       <h2 className="font-display text-[22px] font-extrabold text-ink-900">
-        {KIND_PROMPT[question.kind]}
+        {t(sorov)}
       </h2>
 
       {/* Savol kartasi — maketdagi flashcard. */}
@@ -124,7 +128,7 @@ function Question({
           <button
             type="button"
             onClick={play}
-            aria-label="Yana eshitish"
+            aria-label={t("Yana eshitish")}
             className="mx-auto flex size-16 items-center justify-center rounded-full bg-tint text-coral-500 transition-transform active:scale-95"
           >
             <SpeakerHigh size={30} weight="fill" />
@@ -166,7 +170,7 @@ function Question({
           disabled={!picked || check.isPending}
           className="mt-auto w-full"
         >
-          {check.isPending ? "Tekshirilmoqda…" : "Tekshirish"}
+          {check.isPending ? t("Tekshirilmoqda…") : t("Javobni tekshirish")}
         </Button>
       )}
     </div>
@@ -190,6 +194,7 @@ export function VocabDrill({
   onFinished: (correct: number, total: number) => void;
   onExit: () => void;
 }) {
+  const t = useT();
   const { data, isLoading } = useLernenDrill(lessonId);
   const [at, setAt] = React.useState(0);
   const [correct, setCorrect] = React.useState(0);
@@ -205,8 +210,7 @@ export function VocabDrill({
     return (
       <Card>
         <p className="font-semibold text-ink-600">
-          Bu darsda hali mashq yo&apos;q — so&apos;zlar tarjima yoki audio
-          kutmoqda.
+          {t("Bu darsda hali mashq yo'q — so'zlar tarjima yoki audio kutmoqda.")}
         </p>
       </Card>
     );
@@ -223,7 +227,7 @@ export function VocabDrill({
         <button
           type="button"
           onClick={onExit}
-          aria-label="Chiqish"
+          aria-label={t("Mashqdan chiqish")}
           className="text-ink-500"
         >
           <X size={26} weight="bold" />
@@ -243,13 +247,13 @@ export function VocabDrill({
       {dead ? (
         <Card className="space-y-4 text-center">
           <p className="font-display text-2xl font-extrabold text-ink-900">
-            Yuraklar tugadi
+            {t("Yuraklar tugadi")}
           </p>
           <p className="font-semibold text-ink-500">
-            So&apos;zlarni bir ko&apos;rib chiqing va qayta urinib ko&apos;ring.
+            {t("So'zlarni bir ko'rib chiqing va qayta urinib ko'ring.")}
           </p>
           <Button className="w-full" onClick={onExit}>
-            So&apos;zlarga qaytish
+            {t("So'zlarga qaytish")}
           </Button>
         </Card>
       ) : (
@@ -274,7 +278,7 @@ export function VocabDrill({
                 else setAt((i) => i + 1);
               }}
             >
-              {last ? "Yakunlash" : "Davom etish"}
+              {last ? t("Mashqni yakunlash") : t("Davom etish")}
             </Button>
           ) : null}
         </>

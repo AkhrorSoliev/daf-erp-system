@@ -18,9 +18,11 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useLeadsBoard } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
+import { useT } from "@/i18n/context";
 
 /** One dialog handles renaming both columns and sections. */
 export function RenameDialog() {
+  const t = useT();
   const renameTarget = useLeadsUi((s) => s.renameTarget);
   const closeRename = useLeadsUi((s) => s.closeRename);
   const applyColumnRename = useLeadsBoard((s) => s.applyColumnRename);
@@ -44,7 +46,7 @@ export function RenameDialog() {
     if (!renameTarget) return;
     const trimmed = name.trim();
     if (!trimmed) {
-      toast.error("Nomni kiriting");
+      toast.error(t("Nomni kiriting"));
       return;
     }
     setSubmitting(true);
@@ -54,17 +56,17 @@ export function RenameDialog() {
           name: trimmed,
         });
         applyColumnRename(renameTarget.id, data.name);
-        toast.success("Ustun nomi yangilandi");
+        toast.success(t("Ustun nomi yangilandi"));
       } else {
         const { data } = await api.patch(`/lead-sections/${renameTarget.id}`, {
           name: trimmed,
         });
         applySectionRename(renameTarget.columnId ?? "", renameTarget.id, data.name);
-        toast.success("Bo'lim nomi yangilandi");
+        toast.success(t("Bo'lim nomi yangilandi"));
       }
       closeRename();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Nomni yangilashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Nomni yangilashda xatolik yuz berdi")));
     } finally {
       setSubmitting(false);
     }
@@ -76,15 +78,15 @@ export function RenameDialog() {
         <DialogHeader>
           <DialogTitle>
             {isColumn
-              ? "Ustun nomini o'zgartirish"
-              : "Bo'lim nomini o'zgartirish"}
+              ? t("Ustun nomini o'zgartirish")
+              : t("Bo'lim nomini o'zgartirish")}
           </DialogTitle>
-          <DialogDescription>Yangi nomni kiriting</DialogDescription>
+          <DialogDescription>{t("Yangi nomni kiriting")}</DialogDescription>
         </DialogHeader>
 
         <form id="rename-form" onSubmit={handleSubmit} className="space-y-1.5">
           <Label htmlFor="rename-input">
-            {isColumn ? "Ustun nomi" : "Bo'lim nomi"}
+            {isColumn ? t("Ustun nomi") : t("Bo'lim nomi")}
           </Label>
           <Input
             id="rename-input"
@@ -102,11 +104,11 @@ export function RenameDialog() {
             onClick={closeRename}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button type="submit" form="rename-form" disabled={submitting}>
             {submitting && <Loader2 className="size-4 animate-spin" />}
-            Saqlash
+            {t("Saqlash")}
           </Button>
         </DialogFooter>
       </DialogContent>

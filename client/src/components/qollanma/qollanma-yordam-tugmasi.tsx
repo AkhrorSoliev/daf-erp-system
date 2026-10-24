@@ -6,6 +6,7 @@ import { CircleHelp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
+import { useT } from "@/i18n/context";
 import { sahifalar } from "@/qollanma/sahifalar";
 import { sahifalarRolUchun } from "@/qollanma/rol-filtri";
 import { sahifalarYolUchun } from "@/qollanma/yol-moslash";
@@ -15,6 +16,7 @@ import { QollanmaSheet } from "./qollanma-sheet";
 export function QollanmaYordamTugmasi() {
   const pathname = usePathname();
   const user = useAuth((s) => s.user);
+  const t = useT();
   const [ochiq, setOchiq] = useState(false);
 
   if (!user || pathname.startsWith("/qollanma")) return null;
@@ -26,11 +28,11 @@ export function QollanmaYordamTugmasi() {
     <>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon" aria-label="Shu sahifa bo'yicha qo'llanma" onClick={() => setOchiq(true)}>
+          <Button variant="ghost" size="icon" aria-label={t("Shu sahifa bo'yicha qo'llanma")} onClick={() => setOchiq(true)}>
             <CircleHelp className="size-5" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Shu sahifa bo&apos;yicha qo&apos;llanma</TooltipContent>
+        <TooltipContent>{t("Shu sahifa bo'yicha qo'llanma")}</TooltipContent>
       </Tooltip>
       <QollanmaSheet ochiq={ochiq} onOchiqChange={setOchiq} sahifa={asosiy} boshqalar={boshqalar} />
     </>

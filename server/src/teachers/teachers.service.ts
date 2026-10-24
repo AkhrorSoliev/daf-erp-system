@@ -61,7 +61,6 @@ const teacherSelect = {
   photo: true,
   gender: true,
   login: true,
-  balance: true,
   isActive: true,
   status: true,
   companyId: true,
@@ -110,6 +109,7 @@ export class TeachersService {
     query: TeacherQueryDto,
     companyId: number,
     scope: ReportBranchIds,
+    includeBalance = false,
   ) {
     const { page = 1, pageSize = 10, search } = query;
     const skip = (page - 1) * pageSize;
@@ -142,7 +142,9 @@ export class TeachersService {
         where,
         skip,
         take: pageSize,
-        select: teacherSelect,
+        select: includeBalance
+          ? { ...teacherSelect, balance: true }
+          : teacherSelect,
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.user.count({ where }),
@@ -199,7 +201,12 @@ export class TeachersService {
     };
   }
 
-  async findByIdScoped(id: number, companyId: number, scope: ReportBranchIds) {
+  async findByIdScoped(
+    id: number,
+    companyId: number,
+    scope: ReportBranchIds,
+    includeBalance = false,
+  ) {
     if (scope != null) {
       const inScope = await this.prisma.user.findFirst({
         where: {
@@ -212,10 +219,10 @@ export class TeachersService {
       });
       if (!inScope) throw new NotFoundException("O'qituvchi topilmadi");
     }
-    return this.findById(id, companyId);
+    return this.findById(id, companyId, includeBalance);
   }
 
-  async findById(id: number, companyId: number) {
+  async findById(id: number, companyId: number, includeBalance = false) {
     const user = await this.prisma.user.findFirst({
       where: {
         id,
@@ -223,7 +230,9 @@ export class TeachersService {
         deletedAt: null,
         companyId,
       },
-      select: teacherSelect,
+      select: includeBalance
+        ? { ...teacherSelect, balance: true }
+        : teacherSelect,
     });
 
     if (!user) {

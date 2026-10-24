@@ -10,6 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 import { formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { monthLabel } from "@/components/payments/salary-utils";
@@ -40,6 +41,7 @@ export function SalaryDueCard({
   scope?: "admin" | "me";
   className?: string;
 }) {
+  const t = useT();
   const { data, isLoading } = useQuery({
     queryKey: ["salary-due", scope, userId],
     queryFn: () =>
@@ -60,14 +62,12 @@ export function SalaryDueCard({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-            To&apos;lanishi kerak
-            {data?.month ? ` · ${monthLabel(data.month)}` : ""}
+            {t("To'lanishi kerak")}
+            {data?.month ? ` · ${monthLabel(data.month, t)}` : ""}
             <Info className="size-3" />
           </TooltipTrigger>
           <TooltipContent className="max-w-56">
-            Shu oy uchun to&apos;lanishi kerak bo&apos;lgan sof summa — avans
-            allaqachon ayirilgan. «Ish haqi» bo&apos;limidagi va Moliya →
-            Oyliklar sahifasidagi raqam bilan bir xil.
+            {t("Shu oy uchun to'lanishi kerak bo'lgan sof summa — avans allaqachon ayirilgan. «Ish haqi» bo'limidagi va Moliya → Oyliklar sahifasidagi raqam bilan bir xil.")}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -79,12 +79,12 @@ export function SalaryDueCard({
       ) : (
         <>
           <p className="text-lg font-bold tabular-nums text-green-600 dark:text-green-400">
-            {formatPrice(row.netToPay)} so&apos;m
+            {formatPrice(row.netToPay)} {t("so'm")}
           </p>
           {gross != null && (
             <p className="text-xs text-muted-foreground tabular-nums">
-              Ishlangan {formatPrice(gross)}
-              {row.advances > 0 ? ` · avans −${formatPrice(row.advances)}` : ""}
+              {t("Ishlangan {amount}", { amount: formatPrice(gross) })}
+              {row.advances > 0 ? ` · ${t("avans −{amount}", { amount: formatPrice(row.advances) })}` : ""}
             </p>
           )}
         </>

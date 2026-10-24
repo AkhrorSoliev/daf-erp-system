@@ -1,4 +1,6 @@
 import { format, parse } from "date-fns";
+import { msg } from "@/i18n/msg";
+import { interpolate, type Params } from "@/i18n/translate";
 import type {
   ContractCourseFields,
   ContractCustomer,
@@ -12,36 +14,43 @@ import type {
   PrefillCourse,
 } from "./contract-types";
 
+/** `t` of a page with a language; the default says the Uzbek text. */
+type Translate = (source: string, params?: Params) => string;
+
+const SAY_UZBEK: Translate = interpolate;
+
+// The labels below are `msg` texts: the components draw them with `t(label)`.
 export const CONTRACT_STATUS_LABEL: Record<ContractStatus, string> = {
-  UNSIGNED: "Imzolanmagan",
-  SIGNED: "Imzolangan",
-  CANCELLED: "Bekor qilingan",
+  UNSIGNED: msg("Imzolanmagan"),
+  SIGNED: msg("Imzolangan"),
+  CANCELLED: msg("Bekor qilingan"),
 };
 
 export const LINK_STATE_LABEL: Record<EnrollmentState, string> = {
-  ACTIVE: "o'qimoqda",
-  FROZEN: "muzlatilgan",
-  TRANSFERRED: "guruh almashgan",
-  DROPPED: "shu kurs bo'yicha bekor",
-  COMPLETED: "yakunlangan",
+  ACTIVE: msg("o'qimoqda"),
+  FROZEN: msg("muzlatilgan"),
+  TRANSFERRED: msg("guruh almashgan"),
+  DROPPED: msg("shu kurs bo'yicha bekor"),
+  COMPLETED: msg("yakunlangan"),
 };
 
 export const CUSTOMER_KINDS: CustomerKind[] = ["SELF", "PARENT", "GUARDIAN", "OTHER"];
 
 export const CUSTOMER_KIND_LABEL: Record<CustomerKind, string> = {
-  SELF: "O'quvchining o'zi",
-  PARENT: "Ota-ona",
-  GUARDIAN: "Vasiy yoki homiy",
-  OTHER: "Boshqa",
+  SELF: msg("O'quvchining o'zi"),
+  // «Ota yoki ona», not «Ota-ona»: that key already means the plural «parents» elsewhere.
+  PARENT: msg("Ota yoki ona"),
+  GUARDIAN: msg("Vasiy yoki homiy"),
+  OTHER: msg("Boshqa"),
 };
 
 export const INCLUDES: ContractInclude[] = ["DARSLIK", "MATERIALLAR", "ICHKI_TEST", "SERTIFIKAT"];
 
 export const INCLUDE_LABEL: Record<ContractInclude, string> = {
-  DARSLIK: "Darslik",
-  MATERIALLAR: "Materiallar",
-  ICHKI_TEST: "Ichki test",
-  SERTIFIKAT: "Sertifikat",
+  DARSLIK: msg("Darslik"),
+  MATERIALLAR: msg("Materiallar"),
+  ICHKI_TEST: msg("Ichki test"),
+  SERTIFIKAT: msg("Sertifikat"),
 };
 
 /** Form state: every field a string, "" = not filled. */
@@ -233,30 +242,34 @@ export function updateBody(
 }
 
 /** Why «Saqlash» is still disabled; null when the form may be sent. The server re-checks all of it. */
-export function formProblem(input: {
-  enrollmentIds?: string[];
-  needsBirthDate?: boolean;
-  birthDate?: string;
-  customer: CustomerDraft;
-  minor: boolean | null;
-  branchMissing?: string[];
-  /** Differences with the profile not settled yet (`contract-profile.ts`). */
-  unsettledProfile?: number;
-}): string | null {
+export function formProblem(
+  input: {
+    enrollmentIds?: string[];
+    needsBirthDate?: boolean;
+    birthDate?: string;
+    customer: CustomerDraft;
+    minor: boolean | null;
+    /** The branch settings the server says are empty (its own words, passed in as a value). */
+    branchMissing?: string[];
+    /** Differences with the profile not settled yet (`contract-profile.ts`). */
+    unsettledProfile?: number;
+  },
+  t: Translate = SAY_UZBEK,
+): string | null {
   if (input.branchMissing && input.branchMissing.length > 0) {
-    return `Filial sozlamasida ${input.branchMissing.join(", ")} kiritilmagan`;
+    return t("Filial sozlamasida {fields} kiritilmagan", { fields: input.branchMissing.join(", ") });
   }
-  if (input.enrollmentIds && input.enrollmentIds.length === 0) return "Kamida bitta kursni tanlang";
-  if (input.needsBirthDate && !input.birthDate) return "O'quvchining tug'ilgan sanasini kiriting";
+  if (input.enrollmentIds && input.enrollmentIds.length === 0) return t("Kamida bitta kursni tanlang");
+  if (input.needsBirthDate && !input.birthDate) return t("O'quvchining tug'ilgan sanasini kiriting");
   if (input.minor === true && input.customer.kind === "SELF") {
-    return "Voyaga yetmagan o'quvchi o'zi Buyurtmachi bo'la olmaydi";
+    return t("Voyaga yetmagan o'quvchi o'zi Buyurtmachi bo'la olmaydi");
   }
-  if (!input.customer.fullName.trim()) return "Buyurtmachining F.I.O. sini kiriting";
+  if (!input.customer.fullName.trim()) return t("Buyurtmachining F.I.O. sini kiriting");
   if (input.customer.kind === "OTHER" && !input.customer.kindOther.trim()) {
-    return "Vakillik asosini yozing";
+    return t("Vakillik asosini yozing");
   }
   if (input.unsettledProfile && input.unsettledProfile > 0) {
-    return "Profildagi ma'lumot bilan farqni hal qiling";
+    return t("Profildagi ma'lumot bilan farqni hal qiling");
   }
   return null;
 }

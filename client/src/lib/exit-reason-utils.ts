@@ -39,3 +39,13 @@ export function isExitReasonCommentMissing(
   if (!exitReasonRequiresComment(picked)) return false;
   return comment.trim().length < EXIT_REASON_COMMENT_MIN_LENGTH;
 }
+
+/**
+ * True when an exit reason reads like a move to another group («Boshqa guruhga
+ * ko'chdi»): that is a transfer, not a removal. Apostrophe variants are
+ * normalised before matching.
+ */
+export function looksLikeGroupMove(label: string): boolean {
+  const text = label.toLowerCase().replace(/['’ʻ‘`ʼ]/g, "");
+  return ["koch", "almash", "otkaz"].some((w) => text.includes(w));
+}

@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
+import { useT } from "@/i18n/context";
 import type { CommentData } from "./comment-list";
 
 interface CommentFormProps {
@@ -27,6 +28,7 @@ export function CommentForm({
   onFailed,
   focusKey,
 }: CommentFormProps) {
+  const t = useT();
   const user = useAuth((s) => s.user);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [content, setContent] = useState("");
@@ -78,7 +80,7 @@ export function CommentForm({
       onConfirmed?.(tempId, data);
     } catch (err) {
       onFailed?.(tempId);
-      toast.error(getErrorMessage(err, "Saqlashda xatolik"));
+      toast.error(getErrorMessage(err, t("Saqlashda xatolik")));
     } finally {
       setSubmitting(false);
     }
@@ -98,7 +100,7 @@ export function CommentForm({
       <div className="p-3">
         <Textarea
           ref={textareaRef}
-          placeholder="Izoh yozing..."
+          placeholder={t("Izoh yozing...")}
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onFocus={() => setFocused(true)}
@@ -120,7 +122,7 @@ export function CommentForm({
             disabled={!content.trim() || submitting}
           >
             <Send className="mr-1 size-3" />
-            {submitting ? "..." : "Yuborish"}
+            {submitting ? "..." : t("Yuborish")}
           </Button>
         </div>
       )}

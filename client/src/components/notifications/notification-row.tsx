@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import {
   actionLabel,
@@ -81,13 +82,14 @@ export function NotificationEmpty({ text }: { text: string }) {
 
 /** The bell's and the page's list whose request failed: never the empty state, a retry instead. */
 export function NotificationFailed({ onRetry }: { onRetry: () => void }) {
+  const t = useT();
   return (
     <div className="space-y-2 px-4 py-5 text-center">
       <p role="alert" className="text-sm text-muted-foreground">
-        {"Ma'lumotni yuklab bo'lmadi"}
+        {t("Ma'lumotni yuklab bo'lmadi")}
       </p>
       <Button variant="outline" size="sm" onClick={onRetry}>
-        Qayta urinish
+        {t("Qayta urinish")}
       </Button>
     </div>
   );
@@ -151,6 +153,7 @@ function SingleRow({
   onOpen: (n: AppNotification) => void;
   hrefOf: (n: AppNotification) => string | null;
 }) {
+  const t = useT();
   const done = n.resolvedAt !== null;
   const href = hrefOf(n);
   return (
@@ -178,7 +181,7 @@ function SingleRow({
         {/* A lesson alert is a block of labelled lines plus the portal link: show its one-line form. */}
         <p className="line-clamp-2 text-xs text-muted-foreground">{n.groupKey ? lessonLine(n) : n.message}</p>
         <p className="text-xs text-muted-foreground">
-          {n.resolvedAt ? resolvedLine(n.resolvedAt) : relativeTime(n.createdAt, now)}
+          {n.resolvedAt ? resolvedLine(n.resolvedAt, t) : relativeTime(n.createdAt, now, t)}
         </p>
       </div>
       {isPending(n) && href ? (
@@ -191,7 +194,7 @@ function SingleRow({
             onOpen(n);
           }}
         >
-          {actionLabel(n.type)}
+          {actionLabel(n.type, t)}
         </Button>
       ) : !n.isRead && !done ? (
         <span className="mt-2 size-2 shrink-0 rounded-full bg-blue-500" />
@@ -213,6 +216,7 @@ function GroupRow({
   hrefOf: (n: AppNotification) => string | null;
   collapsible: boolean;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(!collapsible);
   const first = row.items[0];
   const done = row.items.every((n) => n.resolvedAt !== null);
@@ -221,15 +225,15 @@ function GroupRow({
     <div className={cn("flex items-start gap-3 px-4 py-2.5", done && "opacity-60")}>
       <KindIcon n={first} done={done} />
       <div className="min-w-0 flex-1 space-y-1">
-        <p className="text-sm font-medium leading-tight">{groupTitle(row)}</p>
+        <p className="text-sm font-medium leading-tight">{groupTitle(row, t)}</p>
         <p className="text-xs text-muted-foreground">
-          {collapsible && !open && !done ? `${names} · ${relativeTime(first.createdAt, now)}` : groupHint(row)}
+          {collapsible && !open && !done ? `${names} · ${relativeTime(first.createdAt, now, t)}` : groupHint(row, t)}
         </p>
         {open && (
           <div className="space-y-1 pt-1">
             {row.items.map((n) => {
               const href = hrefOf(n);
-              const line = `${lessonLine(n)}${n.resolvedAt !== null ? " · yopildi" : ""}`;
+              const line = n.resolvedAt !== null ? `${lessonLine(n)} · ${t("yopildi")}` : lessonLine(n);
               return (
                 <div
                   key={n.id}
@@ -244,7 +248,7 @@ function GroupRow({
                   </span>
                   {isPending(n) && href ? (
                     <Button size="sm" variant="outline" className="h-6 shrink-0 px-2 text-xs" onClick={() => onOpen(n)}>
-                      Ochish
+                      {t("Ochish")}
                     </Button>
                   ) : null}
                 </div>
@@ -261,7 +265,7 @@ function GroupRow({
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
         >
-          {open ? "Yopish" : "Ko'rish"}
+          {open ? t("Yopish") : t("Ko'rish")}
         </Button>
       ) : null}
     </div>

@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { liveStudentsLine, type GroupDeletePreview } from "./group-delete-copy";
+import { useT } from "@/i18n/context";
 
 interface GroupDeleteDialogProps {
   group: { id: string; name: string };
@@ -39,6 +40,7 @@ export function GroupDeleteDialog({
   onOpenChange,
   onDeleted,
 }: GroupDeleteDialogProps) {
+  const t = useT();
   const [reason, setReason] = useState("");
   const [deleting, setDeleting] = useState(false);
 
@@ -58,7 +60,7 @@ export function GroupDeleteDialog({
   const counting = preview.isFetching;
   // Unknown after a failed request: the warning then goes without a number.
   const counts = preview.isError ? undefined : preview.data;
-  const line = counts ? liveStudentsLine(counts) : null;
+  const line = counts ? liveStudentsLine(counts, t) : null;
   const empty = !counting && counts !== undefined && line === null;
 
   const handleOpenChange = (next: boolean) => {
@@ -78,11 +80,11 @@ export function GroupDeleteDialog({
       setDeleting(false);
       setReason("");
       onOpenChange(false);
-      toast.success(data?.message ?? "Guruh o'chirildi");
+      toast.success(data?.message ?? t("Guruh o'chirildi"));
       onDeleted?.(group.id);
     } catch (error) {
       setDeleting(false);
-      toast.error(getErrorMessage(error, "O'chirishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("O'chirishda xatolik yuz berdi")));
     }
   };
 
@@ -94,11 +96,11 @@ export function GroupDeleteDialog({
       >
         <AlertDialogHeader>
           <AlertDialogTitle>
-            «{group.name}» guruhini o&apos;chirasizmi?
+            {t("«{name}» guruhini o'chirasizmi?", { name: group.name })}
           </AlertDialogTitle>
           {empty ? (
             <AlertDialogDescription>
-              Guruhda o&apos;quvchi yo&apos;q. Guruh arxivga o&apos;tkaziladi.
+              {t("Guruhda o'quvchi yo'q. Guruh arxivga o'tkaziladi.")}
             </AlertDialogDescription>
           ) : null}
         </AlertDialogHeader>
@@ -106,7 +108,7 @@ export function GroupDeleteDialog({
         {counting ? (
           <div className="flex flex-col gap-2" aria-busy="true">
             <AlertDialogDescription className="sr-only">
-              Guruhdagi o&apos;quvchilar soni yuklanmoqda
+              {t("Guruhdagi o'quvchilar soni yuklanmoqda")}
             </AlertDialogDescription>
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-4 w-full" />
@@ -122,32 +124,30 @@ export function GroupDeleteDialog({
               <div className="flex flex-col gap-1">
                 <AlertDialogDescription className="font-medium text-foreground">
                   {line ??
-                    "Guruhdagi barcha o'quvchilar, muzlatilganlar ham, guruhdan chiqariladi."}
+                    t("Guruhdagi barcha o'quvchilar, muzlatilganlar ham, guruhdan chiqariladi.")}
                 </AlertDialogDescription>
                 <p>
                   {line
-                    ? "Ular guruhdan chiqariladi, ishlatilmagan darslari puli balansiga qaytadi."
-                    : "Ishlatilmagan darslari puli balansiga qaytadi."}
+                    ? t("Ular guruhdan chiqariladi, ishlatilmagan darslari puli balansiga qaytadi.")
+                    : t("Ishlatilmagan darslari puli balansiga qaytadi.")}
                 </p>
                 <p>
-                  Guruhni arxivdan tiklasangiz ham o&apos;quvchilar qaytmaydi.
+                  {t("Guruhni arxivdan tiklasangiz ham o'quvchilar qaytmaydi.")}
                 </p>
               </div>
             </div>
             <p className="flex gap-2 text-xs leading-relaxed text-muted-foreground">
               <ArrowRightLeft className="mt-0.5 size-3.5 shrink-0" aria-hidden />
               <span>
-                O&apos;quvchilar boshqa guruhda davom etishi kerak bo&apos;lsa,
-                avval ularni o&apos;quvchi sahifasidan boshqa guruhga
-                o&apos;tkazing.
+                {t("O'quvchilar boshqa guruhda davom etishi kerak bo'lsa, avval ularni o'quvchi sahifasidan boshqa guruhga o'tkazing.")}
               </span>
             </p>
           </div>
         )}
 
         <Textarea
-          aria-label="O'chirish sababi"
-          placeholder="Sabab yozing (ixtiyoriy)..."
+          aria-label={t("O'chirish sababi")}
+          placeholder={t("Sabab yozing (ixtiyoriy)...")}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           maxLength={500}
@@ -157,7 +157,7 @@ export function GroupDeleteDialog({
         />
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={deleting}>Bekor qilish</AlertDialogCancel>
+          <AlertDialogCancel disabled={deleting}>{t("Bekor qilish")}</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
             disabled={deleting || counting}
@@ -169,7 +169,7 @@ export function GroupDeleteDialog({
             {deleting ? (
               <Loader2 data-icon="inline-start" className="animate-spin" />
             ) : null}
-            {deleting ? "O'chirilmoqda..." : "O'chirish"}
+            {deleting ? t("O'chirilmoqda...") : t("O'chirish")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

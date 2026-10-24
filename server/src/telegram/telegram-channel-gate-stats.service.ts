@@ -1,6 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DEFAULT_COMPANY_ID } from './constants';
+import { tashkentMonthRangeUtc } from '../common/date/tashkent';
+import {
+  classifyGateRow,
+  cohortFigures,
+  waitingNow,
+  withBlocked,
+} from './gate-cohort';
 
 /** Telegram foydalanuvchisining biz saqlaydigan minimal ma'lumoti. */
 export interface GateUser {
@@ -159,96 +166,62 @@ export class TelegramChannelGateStatsService {
   }
 
   /**
-   * Hisobot uchun jamlanma.
-   *
-   * Davr (`from`/`to`) HAR BIR ko'rsatkichga o'z hodisasi sanasi bo'yicha
-   * qo'llanadi: to'silganlar — `blockedAt`, a'zo bo'lganlar — `joinedAt`,
-   * chiqib ketganlar — `leftAt`. Ya'ni "iyul oyida nechchi kishi a'zo bo'ldi"
-   * degan savol to'g'ri javob oladi.
-   *
-   * `stillMemberViaGate` esa ATAYLAB davrsiz — bu joriy holat ("hozir ham a'zo
-   * bo'lib turganlar"), tarixiy davrga bog'lash mantiqsiz bo'lardi.
+   * Hisobot uchun jamlanma (ADR-0105). Kohort — tanlangan oyda bot to'xtatgan
+   * odamlar (`blockedAt` shu Toshkent oyida); uch raqam faqat shu odamlar
+   * bo'yicha, shuning uchun `joined <= blocked` va foiz 100% dan oshmaydi.
+   * `waiting` ATAYLAB oyga bog'liq emas — bugungi holat: to'xtatilgan va hali
+   * kanalda emas.
    */
-  async getSummary(range?: { from?: Date; to?: Date }) {
-    const period =
-      range?.from || range?.to
-        ? {
-            ...(range.from ? { gte: range.from } : {}),
-            // `to` — chegaradan tashqari (keyingi oy boshi).
-            ...(range.to ? { lt: range.to } : {}),
-          }
-        : undefined;
-
-    const base = { companyId: DEFAULT_COMPANY_ID };
-    const inPeriod = (field: 'blockedAt' | 'joinedAt' | 'leftAt') =>
-      period ? { [field]: period } : { [field]: { not: null } };
-
-    const [
-      blocked,
-      joinedViaGate,
-      leftAfterJoin,
-      organicJoins,
-      stillMemberViaGate,
-      waiting,
-    ] = await Promise.all([
-      // Bot to'sgan odamlar
-      this.prisma.telegramChannelGateEvent.count({
-        where: { ...base, ...inPeriod('blockedAt') },
+  async getSummary(month: string) {
+    const { gte, lt } = tashkentMonthRangeUtc(month);
+    // ponytail: reads every stopped row once (a few thousand at most) and counts
+    // in memory; move to a SQL groupBy when the table outgrows that.
+    const rows = withBlocked(
+      await this.prisma.telegramChannelGateEvent.findMany({
+        where: { companyId: DEFAULT_COMPANY_ID, blockedAt: { not: null } },
+        select: { blockedAt: true, joinedAt: true, leftAt: true },
       }),
-      // Bot tufayli a'zo bo'lganlar — ASOSIY METRIKA
-      this.prisma.telegramChannelGateEvent.count({
-        where: { ...base, blockedAt: { not: null }, ...inPeriod('joinedAt') },
-      }),
-      // Bot tufayli a'zo bo'lib, keyin chiqib ketganlar
-      this.prisma.telegramChannelGateEvent.count({
-        where: { ...base, blockedAt: { not: null }, ...inPeriod('leftAt') },
-      }),
-      // To'silmagan — o'z-o'zidan kelgan obunachilar
-      this.prisma.telegramChannelGateEvent.count({
-        where: { ...base, blockedAt: null, ...inPeriod('joinedAt') },
-      }),
-      // Joriy holat: bot tufayli kelgan va hozir ham a'zo (davrsiz)
-      this.prisma.telegramChannelGateEvent.count({
-        where: {
-          ...base,
-          blockedAt: { not: null },
-          joinedAt: { not: null },
-          leftAt: null,
-        },
-      }),
-      // To'silgan, lekin hali a'zo bo'lmagan (davrsiz — joriy holat)
-      this.prisma.telegramChannelGateEvent.count({
-        where: { ...base, blockedAt: { not: null }, joinedAt: null },
-      }),
-    ]);
-
-    return {
-      blocked,
-      joinedViaGate,
-      leftAfterJoin,
-      organicJoins,
-      stillMemberViaGate,
-      waiting,
-      // To'silganlarning necha foizi a'zo bo'ldi. Maxraj 0 bo'lsa 0 qaytadi
-      // (bo'lishda cheksizlik chiqmasligi uchun).
-      conversionRate:
-        blocked > 0 ? Math.round((joinedViaGate / blocked) * 100) : 0,
-    };
+    );
+    const cohort = rows.filter((r) => r.blockedAt >= gte && r.blockedAt < lt);
+    return { ...cohortFigures(cohort), waiting: waitingNow(rows) };
   }
 
-  /** Hisobot jadvali uchun ro'yxat (eng yangisi birinchi). */
-  async getList(params: { page: number; pageSize: number }) {
-    const { page, pageSize } = params;
-    const where = { companyId: DEFAULT_COMPANY_ID };
-    const [data, total] = await Promise.all([
-      this.prisma.telegramChannelGateEvent.findMany({
-        where,
-        orderBy: [{ blockedAt: 'desc' }, { joinedAt: 'desc' }],
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      this.prisma.telegramChannelGateEvent.count({ where }),
-    ]);
+  /**
+   * Hisobot jadvali: tanlangan oy kohorti, eng yangisi birinchi; `state` serverdan.
+   * Sahifa oraliqdan tashqarida bo'lsa oxirgi mavjud sahifaga qisiladi (bo'sh
+   * jadval emas) va javobda qisilgan `page` qaytadi.
+   */
+  async getList(params: { month: string; page: number; pageSize: number }) {
+    const { month, pageSize } = params;
+    const { gte, lt } = tashkentMonthRangeUtc(month);
+    const where = {
+      companyId: DEFAULT_COMPANY_ID,
+      blockedAt: { gte, lt },
+    };
+    const total = await this.prisma.telegramChannelGateEvent.count({ where });
+    const page = Math.min(
+      params.page,
+      Math.max(1, Math.ceil(total / pageSize)),
+    );
+    const rows = await this.prisma.telegramChannelGateEvent.findMany({
+      where,
+      orderBy: [{ blockedAt: 'desc' }, { id: 'desc' }],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        telegramUserId: true,
+        username: true,
+        firstName: true,
+        blockedAt: true,
+        joinedAt: true,
+        leftAt: true,
+      },
+    });
+    const data = withBlocked(rows).map((r) => ({
+      ...r,
+      state: classifyGateRow(r),
+    }));
     return { data, total, page, pageSize };
   }
 

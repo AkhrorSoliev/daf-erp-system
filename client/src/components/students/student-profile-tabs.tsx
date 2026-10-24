@@ -14,12 +14,15 @@ import { StudentLeadTab } from "@/components/students/student-lead-tab";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 import { getErrorMessage } from "@/lib/get-error-message";
 import type { Student } from "@/data/student-model";
 import { useCan } from "@/hooks/use-permissions";
 import { EntityTasksPanel } from "@/components/tasks/entity-tasks-panel";
 import { StudentContractsTab } from "./contracts/student-contracts-tab";
+import { StudentCertificatesTab } from "./certificates/student-certificates-tab";
 import { StudentAppActivityTab } from "./student-app-activity-tab";
+import { StudentLevelTests } from "./student-level-tests";
 import { StudentGroupCard } from "./student-group-card";
 import { PaymentStatement } from "./statement/payment-statement";
 import { LessonTrailTab } from "./lesson-trail-tab";
@@ -53,6 +56,7 @@ export function StudentProfileTabs({
   activeTab,
   onTabChange,
 }: StudentProfileTabsProps) {
+  const t = useT();
   // One flag per thing the profile offers; each is the capability the server
   // asks for on the matching route.
   const canSeeDetails = useCan("students.details");
@@ -74,6 +78,8 @@ export function StudentProfileTabs({
   const ilovaShown = useRef(false);
   const [contractsVisible, setContractsVisible] = useState(false);
   const contractsShown = useRef(false);
+  const [certificatesVisible, setCertificatesVisible] = useState(false);
+  const certificatesShown = useRef(false);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>(
     [],
   );
@@ -166,6 +172,10 @@ export function StudentProfileTabs({
         contractsShown.current = true;
         setContractsVisible(true);
       }
+      if (value === "hujjatlar" && !certificatesShown.current) {
+        certificatesShown.current = true;
+        setCertificatesVisible(true);
+      }
     },
     [],
   );
@@ -257,13 +267,13 @@ export function StudentProfileTabs({
       });
       toast.success(
         writeOff && eligibility?.eligible
-          ? "O'quvchi chiqarildi va joriy sikl qarzi hisobdan chiqarildi"
-          : "O'quvchi guruhdan chiqarildi",
+          ? t("O'quvchi chiqarildi va joriy sikl qarzi hisobdan chiqarildi")
+          : t("O'quvchi guruhdan chiqarildi"),
       );
       onEnrollmentChange?.();
     } catch (err) {
       setLocalGroups(student.groups);
-      toast.error(getErrorMessage(err, "Xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("Xatolik yuz berdi")));
     } finally {
       setRemoving(false);
       setRemoveEnrollmentId(null);
@@ -285,15 +295,16 @@ export function StudentProfileTabs({
         }}
       >
         <TabsList className="w-full justify-start overflow-x-auto">
-          <TabsTrigger value="guruhlar">Guruhlar</TabsTrigger>
-          {canSeeDetails && <TabsTrigger value="tolovlar">To&apos;lovlar</TabsTrigger>}
+          <TabsTrigger value="guruhlar">{t("Guruhlar")}</TabsTrigger>
+          {canSeeDetails && <TabsTrigger value="tolovlar">{t("To'lovlar")}</TabsTrigger>}
           {canSeeDetails && (
-            <TabsTrigger value="shartnomalar">Shartnomalar</TabsTrigger>
+            <TabsTrigger value="shartnomalar">{t("Shartnomalar")}</TabsTrigger>
           )}
-          {canSeeDetails && <TabsTrigger value="darslar">Darslar</TabsTrigger>}
-          {canSeeComments && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
+          {canSeeDetails && <TabsTrigger value="hujjatlar">{t("Hujjatlar")}</TabsTrigger>}
+          {canSeeDetails && <TabsTrigger value="darslar">{t("Darslar")}</TabsTrigger>}
+          {canSeeComments && <TabsTrigger value="izohlar">{t("Izohlar")}</TabsTrigger>}
           {canSeeDetails && (
-            <TabsTrigger value="qongiroq">Qo&apos;ng&apos;iroq tarixi</TabsTrigger>
+            <TabsTrigger value="qongiroq">{t("Qo'ng'iroq tarixi")}</TabsTrigger>
           )}
           {canSendSms && (
             <TabsTrigger value="sms">
@@ -302,17 +313,17 @@ export function StudentProfileTabs({
           )}
           {canSeeDetails && (
             <TabsTrigger value="tarix">
-              Tarix
+              {t("Tarix")}
               {historyCount
                 ? ` (${historyCount > 99 ? "99+" : historyCount})`
                 : ""}
             </TabsTrigger>
           )}
-          {canSeeDetails && <TabsTrigger value="lid">Lid tarixi</TabsTrigger>}
+          {canSeeDetails && <TabsTrigger value="lid">{t("Lid tarixi")}</TabsTrigger>}
           {canSeeDetails && (
-            <TabsTrigger value="mock-imtihonlar">Mock imtihonlar</TabsTrigger>
+            <TabsTrigger value="mock-imtihonlar">{t("Mock imtihonlar")}</TabsTrigger>
           )}
-          {canSeeDetails && <TabsTrigger value="ilova">Ilova</TabsTrigger>}
+          {canSeeDetails && <TabsTrigger value="ilova">{t("Ilova")}</TabsTrigger>}
         </TabsList>
 
         {/* Guruhlar */}
@@ -324,10 +335,12 @@ export function StudentProfileTabs({
             entityLabel={`${student.firstName} ${student.lastName}`}
           />
 
+          {canSeeDetails && <StudentLevelTests studentId={student.id} />}
+
           {isUngrouped && (
             <div className="mb-4 flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
               <AlertTriangle className="size-4 shrink-0" />
-              Talaba faol guruhga qo&apos;shilmagan!
+              {t("Talaba faol guruhga qo'shilmagan!")}
             </div>
           )}
 
@@ -352,7 +365,7 @@ export function StudentProfileTabs({
             </div>
           ) : (
             <div className="mb-6">
-              <EmptyState message="Guruhlar mavjud emas" />
+              <EmptyState message={t("Guruhlar mavjud emas")} />
             </div>
           )}
 
@@ -373,7 +386,7 @@ export function StudentProfileTabs({
               onCorrected={handlePaymentCorrected}
             />
           ) : (
-            <EmptyState message="To'lov ma'lumotlari mavjud emas" />
+            <EmptyState message={t("To'lov ma'lumotlari mavjud emas")} />
           )}
         </TabsContent>
 
@@ -394,7 +407,7 @@ export function StudentProfileTabs({
           {darslarVisible ? (
             <LessonTrailTab studentId={student.id} />
           ) : (
-            <EmptyState message="Dars ma'lumotlari mavjud emas" />
+            <EmptyState message={t("Dars ma'lumotlari mavjud emas")} />
           )}
         </TabsContent>
 
@@ -417,7 +430,7 @@ export function StudentProfileTabs({
               />
             </div>
           ) : (
-            <EmptyState message="Izohlar mavjud emas" />
+            <EmptyState message={t("Izohlar mavjud emas")} />
           )}
         </TabsContent>
 
@@ -426,7 +439,7 @@ export function StudentProfileTabs({
           {qongiroqVisible ? (
             <StudentCallHistoryTab studentId={student.id} />
           ) : (
-            <EmptyState message="Qo'ng'iroq tarixi mavjud emas" />
+            <EmptyState message={t("Qo'ng'iroq tarixi mavjud emas")} />
           )}
         </TabsContent>
 
@@ -439,7 +452,7 @@ export function StudentProfileTabs({
               telegramDisconnectedAt={student.telegramDisconnectedAt}
             />
           ) : (
-            <EmptyState message="SMS tarixi mavjud emas" />
+            <EmptyState message={t("SMS tarixi mavjud emas")} />
           )}
         </TabsContent>
 
@@ -448,7 +461,7 @@ export function StudentProfileTabs({
           {historyVisible ? (
             <EntityHistoryTable entityType="Student" entityId={student.id} />
           ) : (
-            <EmptyState message="Tarix mavjud emas" />
+            <EmptyState message={t("Tarix mavjud emas")} />
           )}
         </TabsContent>
 
@@ -466,6 +479,13 @@ export function StudentProfileTabs({
         {canSeeDetails && (
           <TabsContent value="ilova">
             {ilovaVisible && <StudentAppActivityTab studentId={student.id} />}
+          </TabsContent>
+        )}
+
+        {/* Hujjatlar — qatnashganlik hujjati */}
+        {canSeeDetails && (
+          <TabsContent value="hujjatlar">
+            {certificatesVisible && <StudentCertificatesTab studentId={student.id} />}
           </TabsContent>
         )}
       </Tabs>

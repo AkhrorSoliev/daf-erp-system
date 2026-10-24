@@ -14,6 +14,8 @@ import {
   type MultiSelectOption,
 } from "@/components/ui/multi-select-combobox";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 
 export interface StudentFilters {
@@ -36,11 +38,11 @@ const defaultFilters: StudentFilters = {
 const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
 
 const STATUS_OPTIONS: MultiSelectOption[] = [
-  { value: "active", label: "Faol" },
-  { value: "frozen", label: "Muzlatilgan" },
-  { value: "ungrouped", label: "Guruhlashtirilmagan" },
-  { value: "graduated", label: "Bitirgan" },
-  { value: "expelled", label: "Chetlatilgan" },
+  { value: "active", label: msg("Faol") },
+  { value: "frozen", label: msg("Muzlatilgan") },
+  { value: "ungrouped", label: msg("Guruhlashtirilmagan") },
+  { value: "graduated", label: msg("Bitirgan") },
+  { value: "expelled", label: msg("Chetlatilgan") },
 ];
 
 interface Teacher {
@@ -74,6 +76,7 @@ export function StudentsFilters({
   groups,
   levelCounts,
 }: StudentsFiltersProps) {
+  const t = useT();
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
 
@@ -112,13 +115,15 @@ export function StudentsFilters({
     onFilterChange({ ...filters, [key]: value });
   };
 
-  const teacherOptions: MultiSelectOption[] = teachers.map((t) => ({
-    value: String(t.id),
-    label: `${t.firstName} ${t.lastName}`,
-    avatarUrl: t.photo,
-    initials: `${t.firstName[0] ?? ""}${t.lastName[0] ?? ""}`.toUpperCase(),
-    count: t.studentCount ?? 0,
+  const teacherOptions: MultiSelectOption[] = teachers.map((teacher) => ({
+    value: String(teacher.id),
+    label: `${teacher.firstName} ${teacher.lastName}`,
+    avatarUrl: teacher.photo,
+    initials: `${teacher.firstName[0] ?? ""}${teacher.lastName[0] ?? ""}`.toUpperCase(),
+    count: teacher.studentCount ?? 0,
   }));
+
+  const statusOptions: MultiSelectOption[] = STATUS_OPTIONS.map((o) => ({ ...o, label: t(o.label) }));
 
   const levelOptions: MultiSelectOption[] = LEVELS.map((lvl) => ({
     value: lvl,
@@ -131,7 +136,7 @@ export function StudentsFilters({
       <div className="relative w-full sm:w-auto">
         <Search className="text-muted-foreground absolute left-2.5 top-1/2 size-4 -translate-y-1/2" />
         <Input
-          placeholder="Ism, telefon yoki #ID bo'yicha..."
+          placeholder={t("Ism, telefon yoki #ID bo'yicha...")}
           value={filters.fullName}
           onChange={(e) => updateFilter("fullName", e.target.value)}
           className="w-full pl-9 sm:w-64"
@@ -143,19 +148,19 @@ export function StudentsFilters({
           options={groups.map((g) => ({ value: g.id, label: g.name }))}
           selected={filters.groupId}
           onChange={(next) => updateFilter("groupId", next)}
-          placeholder="Barcha guruhlar"
-          searchPlaceholder="Guruh qidirish..."
+          placeholder={t("Barcha guruhlar")}
+          searchPlaceholder={t("Guruh qidirish...")}
           className="w-full sm:w-52"
         />
       )}
 
       {!isTeacher && (
         <MultiSelectCombobox
-          options={STATUS_OPTIONS}
+          options={statusOptions}
           selected={filters.status}
           onChange={(next) => updateFilter("status", next)}
-          placeholder="Barcha holatlar"
-          searchPlaceholder="Holat qidirish..."
+          placeholder={t("Barcha holatlar")}
+          searchPlaceholder={t("Holat qidirish...")}
           className="w-full sm:w-48"
         />
       )}
@@ -164,9 +169,9 @@ export function StudentsFilters({
         options={levelOptions}
         selected={filters.level}
         onChange={(next) => updateFilter("level", next)}
-        placeholder="Barcha darajalar"
-        searchPlaceholder="Daraja qidirish..."
-        countSuffix="o'quvchi"
+        placeholder={t("Barcha darajalar")}
+        searchPlaceholder={t("Daraja qidirish...")}
+        countSuffix={t("o'quvchi")}
         className="w-full sm:w-44"
       />
 
@@ -175,9 +180,9 @@ export function StudentsFilters({
           options={teacherOptions}
           selected={filters.teacherId}
           onChange={(next) => updateFilter("teacherId", next)}
-          placeholder="Barcha o'qituvchilar"
-          searchPlaceholder="O'qituvchi qidirish..."
-          countSuffix="o'quvchi"
+          placeholder={t("Barcha o'qituvchilar")}
+          searchPlaceholder={t("O'qituvchi qidirish...")}
+          countSuffix={t("o'quvchi")}
           className="w-full sm:w-52"
           contentClassName="w-[288px]"
         />
@@ -192,10 +197,10 @@ export function StudentsFilters({
               onClick={() => onClear ? onClear() : onFilterChange(defaultFilters)}
             >
               <X className="mr-1 size-4" />
-              Tozalash
+              {t("Tozalash")}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Barcha filtrlarni tozalash</TooltipContent>
+          <TooltipContent>{t("Barcha filtrlarni tozalash")}</TooltipContent>
         </Tooltip>
       )}
     </div>

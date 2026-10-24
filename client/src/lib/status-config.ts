@@ -1,3 +1,7 @@
+import { msg } from "@/i18n/msg";
+
+// Only the student, user (teacher), group and branch labels are `msg()`-translated; the other entities' labels are still raw Uzbek.
+
 type BadgeVariant = "default" | "secondary" | "destructive" | "outline" | "ghost";
 
 interface StatusConfig {
@@ -7,31 +11,31 @@ interface StatusConfig {
 
 // ─── Student ──────────────────────────────────────────
 const STUDENT_STATUS: Record<string, StatusConfig> = {
-  ACTIVE: { label: "Faol", variant: "default" },
-  INACTIVE: { label: "Muzlatilgan", variant: "outline" }, // legacy — FROZEN bilan bir xil
-  FROZEN: { label: "Muzlatilgan", variant: "outline" },
-  GRADUATED: { label: "Bitirgan", variant: "outline" },
-  EXPELLED: { label: "Chetlatilgan", variant: "destructive" },
-  ARCHIVED: { label: "Arxivlangan", variant: "ghost" },
+  ACTIVE: { label: msg("Faol"), variant: "default" },
+  INACTIVE: { label: msg("Muzlatilgan"), variant: "outline" }, // legacy — FROZEN bilan bir xil
+  FROZEN: { label: msg("Muzlatilgan"), variant: "outline" },
+  GRADUATED: { label: msg("Bitirgan"), variant: "outline" },
+  EXPELLED: { label: msg("Chetlatilgan"), variant: "destructive" },
+  ARCHIVED: { label: msg("Arxivlangan"), variant: "ghost" },
 };
 
 // ─── User / Teacher ──────────────────────────────────
 const USER_STATUS: Record<string, StatusConfig> = {
-  ACTIVE: { label: "Faol", variant: "default" },
-  INACTIVE: { label: "Nofaol", variant: "secondary" },
-  SUSPENDED: { label: "To'xtatilgan", variant: "destructive" },
-  TERMINATED: { label: "Ishdan bo'shatilgan", variant: "destructive" },
-  ARCHIVED: { label: "Arxivlangan", variant: "ghost" },
+  ACTIVE: { label: msg("Faol"), variant: "default" },
+  INACTIVE: { label: msg("Nofaol"), variant: "secondary" },
+  SUSPENDED: { label: msg("Vaqtincha to'xtatilgan"), variant: "destructive" },
+  TERMINATED: { label: msg("Ishdan bo'shatilgan"), variant: "destructive" },
+  ARCHIVED: { label: msg("Arxivlangan"), variant: "ghost" },
 };
 
 // ─── Group ────────────────────────────────────────────
 const GROUP_STATUS: Record<string, StatusConfig> = {
-  FORMING: { label: "Boshlanmagan", variant: "secondary" },
-  ACTIVE: { label: "Faol", variant: "default" },
-  PAUSED: { label: "Pauza", variant: "outline" },
-  COMPLETED: { label: "Tugallangan", variant: "secondary" },
-  CANCELLED: { label: "To'xtatilgan", variant: "destructive" },
-  ARCHIVED: { label: "Arxivlangan", variant: "ghost" },
+  FORMING: { label: msg("Boshlanmagan"), variant: "secondary" },
+  ACTIVE: { label: msg("Faol"), variant: "default" },
+  PAUSED: { label: msg("Pauza"), variant: "outline" },
+  COMPLETED: { label: msg("Tugallangan"), variant: "secondary" },
+  CANCELLED: { label: msg("To'xtatilgan"), variant: "destructive" },
+  ARCHIVED: { label: msg("Arxivlangan"), variant: "ghost" },
 };
 
 // ─── Course ───────────────────────────────────────────
@@ -44,10 +48,10 @@ const COURSE_STATUS: Record<string, StatusConfig> = {
 
 // ─── Branch ───────────────────────────────────────────
 const BRANCH_STATUS: Record<string, StatusConfig> = {
-  ACTIVE: { label: "Faol", variant: "default" },
-  INACTIVE: { label: "Nofaol", variant: "secondary" },
-  CLOSED: { label: "Yopilgan", variant: "destructive" },
-  ARCHIVED: { label: "Arxivlangan", variant: "ghost" },
+  ACTIVE: { label: msg("Faol"), variant: "default" },
+  INACTIVE: { label: msg("Nofaol"), variant: "secondary" },
+  CLOSED: { label: msg("Yopilgan"), variant: "destructive" },
+  ARCHIVED: { label: msg("Arxivlangan"), variant: "ghost" },
 };
 
 // ─── Room ─────────────────────────────────────────────

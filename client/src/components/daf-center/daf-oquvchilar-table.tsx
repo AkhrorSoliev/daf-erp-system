@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { useT } from "@/i18n/context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -68,6 +69,7 @@ export function DafOquvchilarTable({
   onSelect: (id: number) => void;
   selectedId: number | null;
 }) {
+  const t = useT();
   const [now] = useState(() => new Date());
   const s = { sort, dir, onSort };
 
@@ -77,25 +79,25 @@ export function DafOquvchilarTable({
         <TableHeader>
           <TableRow>
             <TableHead className="w-12 border-r">#</TableHead>
-            <SortHead kalit="ism" matn="O'quvchi" className="min-w-44" {...s} />
-            <SortHead kalit="guruh" matn="Guruh" className="min-w-36" {...s} />
-            {filialUstuni && <TableHead className="hidden lg:table-cell">Filial</TableHead>}
-            <SortHead kalit="holat" matn="Holat" className="min-w-40" {...s} />
-            <SortHead kalit="faolKun" matn="Faol kun" className="min-w-40" {...s} />
-            <SortHead kalit="vaqt" matn="Vaqt" className="min-w-24 text-right" {...s} />
+            <SortHead kalit="ism" matn={t("O'quvchi")} className="min-w-44" {...s} />
+            <SortHead kalit="guruh" matn={t("Guruh")} className="min-w-36" {...s} />
+            {filialUstuni && <TableHead className="hidden lg:table-cell">{t("Filial")}</TableHead>}
+            <SortHead kalit="holat" matn={t("Holat")} className="min-w-40" {...s} />
+            <SortHead kalit="faolKun" matn={t("Faol kun")} className="min-w-40" {...s} />
+            <SortHead kalit="vaqt" matn={t("Vaqt")} className="min-w-24 text-right" {...s} />
             <TableHead className="min-w-28 text-right">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button type="button" onClick={() => s.onSort("foiz")} className={cn("inline-flex items-center gap-1 hover:text-foreground", s.sort === "foiz" && "text-foreground")}>
-                    To&apos;g&apos;ri javob
+                    {t("To'g'ri javob")}
                     {s.sort === "foiz" ? (s.dir === "asc" ? <ArrowUp className="size-3.5" /> : <ArrowDown className="size-3.5" />) : <ArrowUpDown className="size-3.5" />}
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>Birinchi urinishda to&apos;g&apos;ri topilgan savollar — tugatilgan seanslar bo&apos;yicha.</TooltipContent>
+                <TooltipContent>{t("Birinchi urinishda to'g'ri topilgan savollar — tugatilgan seanslar bo'yicha.")}</TooltipContent>
               </Tooltip>
             </TableHead>
-            <TableHead className="hidden min-w-40 xl:table-cell">Kurs</TableHead>
-            <SortHead kalit="oxirgi" matn="Oxirgi kirish" className="min-w-32" {...s} />
+            <TableHead className="hidden min-w-40 xl:table-cell">{t("Kurs")}</TableHead>
+            <SortHead kalit="oxirgi" matn={t("Oxirgi kirish")} className="min-w-32" {...s} />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -114,7 +116,7 @@ export function DafOquvchilarTable({
                   </Avatar>
                   <div className="min-w-0">
                     <div className="truncate font-medium">{row.ism}</div>
-                    {!row.akkaunt && <div className="text-xs text-muted-foreground">Akkaunt yo&apos;q</div>}
+                    {!row.akkaunt && <div className="text-xs text-muted-foreground">{t("Akkaunt yo'q")}</div>}
                   </div>
                 </div>
               </TableCell>
@@ -140,10 +142,14 @@ export function DafOquvchilarTable({
                         <span className="w-12 cursor-default text-sm tabular-nums">{row.faolKun}/{row.maxraj}</span>
                       </TooltipTrigger>
                       <TooltipContent>
-                        {formatKunOy(row.hisobBoshi)} dan beri · yashil uchun {row.kerakliKun}, sariq uchun {row.sariqKerak} kun kerak
+                        {t("{date} dan beri · yashil uchun {green}, sariq uchun {yellow} kun kerak", {
+                          date: formatKunOy(row.hisobBoshi),
+                          green: row.kerakliKun,
+                          yellow: row.sariqKerak,
+                        })}
                       </TooltipContent>
                     </Tooltip>
-                    <DayBars kunlar={row.kunlar} className="hidden sm:flex" shugullanganMatni="Faol kun (norma)" />
+                    <DayBars kunlar={row.kunlar} className="hidden sm:flex" shugullanganMatni={t("Faol kun (norma)")} />
                   </div>
                 ) : (
                   <span className="text-muted-foreground">—</span>
@@ -152,8 +158,8 @@ export function DafOquvchilarTable({
               <TableCell className="text-right tabular-nums">
                 {row.akkaunt && row.lernenSoniya > 0 ? (
                   <div className="flex flex-col items-end">
-                    <span className="font-medium">{formatDavomiylik(row.ortachaKunlikSoniya)}</span>
-                    <span className="text-xs text-muted-foreground">kuniga</span>
+                    <span className="font-medium">{formatDavomiylik(row.ortachaKunlikSoniya, t)}</span>
+                    <span className="text-xs text-muted-foreground">{t("kuniga")}</span>
                   </div>
                 ) : (
                   <span className="text-muted-foreground">—</span>
@@ -163,7 +169,7 @@ export function DafOquvchilarTable({
                 {row.akkaunt && row.foiz !== null ? (
                   <div className="flex flex-col items-end">
                     <span className={cn("font-medium tabular-nums", foizRangi(row.foiz))}>{row.foiz}%</span>
-                    <span className="text-xs text-muted-foreground">{formatNumber(row.savollar)} savol</span>
+                    <span className="text-xs text-muted-foreground">{t("{n} savol", { n: formatNumber(row.savollar) })}</span>
                   </div>
                 ) : (
                   <span className="text-muted-foreground">—</span>
@@ -174,10 +180,10 @@ export function DafOquvchilarTable({
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">{row.kurs.daraja}</Badge>
                     {row.kurs.holat === "KURS_YOQ" ? (
-                      <span className="text-xs text-muted-foreground">Kurs hali yo&apos;q</span>
+                      <span className="text-xs text-muted-foreground">{t("Kurs hali yo'q")}</span>
                     ) : (
                       <div className="min-w-0 flex-1 space-y-1">
-                        <div className="text-xs tabular-nums text-muted-foreground">{row.kurs.tugatilgan}/{row.kurs.jami} dars</div>
+                        <div className="text-xs tabular-nums text-muted-foreground">{t("{done}/{total} dars", { done: row.kurs.tugatilgan, total: row.kurs.jami })}</div>
                         <ProgressLine value={row.kurs.tugatilgan} total={row.kurs.jami} />
                       </div>
                     )}
@@ -187,7 +193,7 @@ export function DafOquvchilarTable({
                 )}
               </TableCell>
               <TableCell className={cn("text-sm", !row.oxirgiFaollik && row.akkaunt && "text-red-600 dark:text-red-400")}>
-                {row.akkaunt ? formatOxirgiFaollik(row.oxirgiFaollik?.vaqt ?? null, now) : "—"}
+                {row.akkaunt ? formatOxirgiFaollik(row.oxirgiFaollik?.vaqt ?? null, now, t) : "—"}
               </TableCell>
             </TableRow>
           ))}

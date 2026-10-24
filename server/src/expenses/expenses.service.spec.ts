@@ -9,7 +9,10 @@ import { ExpensesService } from './expenses.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { PermissionsService } from '../common/permissions/permissions.service';
 import { ExpenseQueryDto } from './dto/expense-query.dto';
+import { tashkentMonthKey } from '../common/date/tashkent';
+import { expenseMonthWindow } from './expenses-month';
 
 describe('ExpensesService — findAll filters + summary', () => {
   let service: ExpensesService;
@@ -49,6 +52,7 @@ describe('ExpensesService — findAll filters + summary', () => {
         roles: [{ role: { name: 'CEO' } }],
       }),
     },
+    leadSource: { findFirst: jest.fn() },
     $transaction: jest.fn(),
   };
 
@@ -65,6 +69,10 @@ describe('ExpensesService — findAll filters + summary', () => {
     recordRestore: jest.fn(),
   };
 
+  // Every caller holds every key unless a test says otherwise; the
+  // category rule has its own block at the end of this file.
+  const permissions = { has: jest.fn() };
+
   const COMPANY_ID = 1;
 
   beforeEach(async () => {
@@ -77,6 +85,7 @@ describe('ExpensesService — findAll filters + summary', () => {
     prisma.expense.groupBy.mockResolvedValue([]);
     // $transaction runs the callback with the tx client.
     prisma.$transaction.mockImplementation(async (cb: any) => cb(tx));
+    permissions.has.mockResolvedValue(true);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -84,6 +93,7 @@ describe('ExpensesService — findAll filters + summary', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: TransactionsService, useValue: transactionsService },
         { provide: EntityHistoryService, useValue: entityHistoryService },
+        { provide: PermissionsService, useValue: permissions },
       ],
     }).compile();
 
@@ -162,9 +172,77 @@ describe('ExpensesService — findAll filters + summary', () => {
     });
   });
 
-  it('omits the date filter entirely when neither bound is given', async () => {
+  it('defaults to the current Tashkent month when neither oy nor a range is given', async () => {
     await service.findAll({} as ExpenseQueryDto, COMPANY_ID, null);
-    expect(whereArg().date).toBeUndefined();
+    expect(whereArg().date).toEqual(
+      expenseMonthWindow(tashkentMonthKey(new Date())),
+    );
+  });
+
+  it('reads ?oy= as the Tashkent month window, the next 1st exclusive', async () => {
+    await service.findAll(
+      { oy: '2026-09' } as ExpenseQueryDto,
+      COMPANY_ID,
+      null,
+    );
+    expect(whereArg().date).toEqual({
+      gte: new Date('2026-09-01T00:00:00.000Z'),
+      lt: new Date('2026-10-01T00:00:00.000Z'),
+    });
+  });
+
+  it('refuses oy together with the old range, before any read', async () => {
+    await expect(
+      service.findAll(
+        { oy: '2026-09', startDate: '2026-09-01' } as ExpenseQueryDto,
+        COMPANY_ID,
+        null,
+      ),
+    ).rejects.toThrow("Oy yoki sana oralig'i — ikkalasi birga emas");
+    expect(prisma.expense.findMany).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['2026-04', "Xarajatlar may 2026 dan boshlab ko'rsatiladi"],
+    ['2099-01', "Kelajak oyni tanlab bo'lmaydi"],
+  ])('refuses oy=%s with 400', async (oy, message) => {
+    await expect(
+      service.findAll({ oy } as ExpenseQueryDto, COMPANY_ID, null),
+    ).rejects.toThrow(new BadRequestException(message));
+  });
+
+  it('filters «Kim kiritgan» by one author or several', async () => {
+    await service.findAll(
+      { createdById: [10234] } as ExpenseQueryDto,
+      COMPANY_ID,
+      null,
+    );
+    expect(whereArg().createdById).toBe(10234);
+    prisma.expense.findMany.mockClear();
+    await service.findAll(
+      { createdById: [10234, 10567] } as ExpenseQueryDto,
+      COMPANY_ID,
+      null,
+    );
+    expect(whereArg().createdById).toEqual({ in: [10234, 10567] });
+  });
+
+  it('orders by date, then entry time, then id — newest first', async () => {
+    await service.findAll({} as ExpenseQueryDto, COMPANY_ID, null);
+    expect(prisma.expense.findMany.mock.calls[0][0].orderBy).toEqual([
+      { date: 'desc' },
+      { createdAt: 'desc' },
+      { id: 'desc' },
+    ]);
+  });
+
+  it('gives every row its hint', async () => {
+    prisma.expense.findMany.mockResolvedValue([
+      { id: 'e1', category: 'OTHER', description: 'Stullar' },
+      { id: 'e2', category: 'RENT', description: 'Ijara' },
+    ]);
+    const res = await service.findAll({} as ExpenseQueryDto, COMPANY_ID, null);
+    expect(res.data.map((r) => r.hint)).toEqual(['EQUIPMENT', null]);
   });
 
   it('returns a summary derived from the grouped scan over the full filtered set', async () => {
@@ -282,6 +360,11 @@ describe('ExpensesService — findAll filters + summary', () => {
       // No pagination applied to the export.
       expect(call.skip).toBeUndefined();
       expect(call.take).toBeUndefined();
+      expect(call.orderBy).toEqual([
+        { date: 'desc' },
+        { createdAt: 'desc' },
+        { id: 'desc' },
+      ]);
       expect(rows).toEqual([{ id: 'e1' }]);
     });
   });
@@ -344,6 +427,138 @@ describe('ExpensesService — findAll filters + summary', () => {
       );
       expect(checked).toContain(1);
       expect(checked).toContain(2);
+    });
+  });
+
+  describe('marketing channel (ADR-0109)', () => {
+    const SOURCE = '0b0c7c1e-6a1c-4f7e-9d0a-3f5b2f1c9a11';
+    const dto = (over: object = {}) =>
+      ({
+        category: 'MARKETING',
+        paymentMethod: 'CASH',
+        amount: 100,
+        description: 'Instagram reklama',
+        date: '2026-10-01',
+        branchId: 1,
+        ...over,
+      }) as any;
+
+    beforeEach(() => {
+      prisma.expense.create.mockResolvedValue({
+        id: 'exp-1',
+        amount: 100,
+        branchId: 1,
+        companyId: COMPANY_ID,
+      });
+      (tx as any).expense.create = prisma.expense.create;
+    });
+
+    it('saves the channel on a MARKETING expense', async () => {
+      prisma.leadSource.findFirst.mockResolvedValueOnce({ id: SOURCE });
+
+      await service.create(dto({ leadSourceId: SOURCE }), 42, COMPANY_ID);
+
+      expect(prisma.leadSource.findFirst).toHaveBeenCalledWith({
+        where: { id: SOURCE, companyId: COMPANY_ID, deletedAt: null },
+        select: { id: true },
+      });
+      expect(prisma.expense.create.mock.calls[0][0].data.leadSourceId).toBe(
+        SOURCE,
+      );
+    });
+
+    it('saves no channel when none is given', async () => {
+      await service.create(dto(), 42, COMPANY_ID);
+
+      expect(prisma.leadSource.findFirst).not.toHaveBeenCalled();
+      expect(
+        prisma.expense.create.mock.calls[0][0].data.leadSourceId,
+      ).toBeNull();
+    });
+
+    it('refuses a channel on any other category, before writing', async () => {
+      await expect(
+        service.create(
+          dto({ category: 'RENT', leadSourceId: SOURCE }),
+          42,
+          COMPANY_ID,
+        ),
+      ).rejects.toThrow('faqat marketing xarajatiga');
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('refuses a source that is not this company’s live source', async () => {
+      prisma.leadSource.findFirst.mockResolvedValueOnce(null);
+
+      await expect(
+        service.create(dto({ leadSourceId: SOURCE }), 42, COMPANY_ID),
+      ).rejects.toThrow('Manba topilmadi');
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    describe('update', () => {
+      const existing = (over: object = {}) => ({
+        id: 'exp-1',
+        category: 'MARKETING',
+        amount: 100,
+        branchId: 1,
+        companyId: COMPANY_ID,
+        deletedAt: null,
+        leadSourceId: SOURCE,
+        ...over,
+      });
+      const dataOfUpdate = () => tx.expense.update.mock.calls[0][0].data;
+
+      it('clears the channel when the form sends null', async () => {
+        prisma.expense.findFirst.mockResolvedValue(existing());
+
+        await service.update(
+          'exp-1',
+          { leadSourceId: null } as any,
+          42,
+          COMPANY_ID,
+        );
+
+        expect(dataOfUpdate().leadSourceId).toBeNull();
+      });
+
+      it('leaves the channel alone when the field is not sent', async () => {
+        prisma.expense.findFirst.mockResolvedValue(existing());
+
+        await service.update('exp-1', { amount: 100 } as any, 42, COMPANY_ID);
+
+        expect(dataOfUpdate()).not.toHaveProperty('leadSourceId');
+      });
+
+      it('drops the channel when the row stops being MARKETING', async () => {
+        prisma.expense.findFirst.mockResolvedValue(existing());
+        // A category change re-posts the ledger entry from the updated row.
+        tx.expense.update.mockResolvedValueOnce(
+          existing({ category: 'OTHER', leadSourceId: null }),
+        );
+
+        await service.update(
+          'exp-1',
+          { category: 'OTHER' } as any,
+          42,
+          COMPANY_ID,
+        );
+
+        expect(dataOfUpdate().leadSourceId).toBeNull();
+      });
+
+      it('refuses a channel given together with a non-MARKETING category', async () => {
+        prisma.expense.findFirst.mockResolvedValue(existing());
+
+        await expect(
+          service.update(
+            'exp-1',
+            { category: 'OTHER', leadSourceId: SOURCE } as any,
+            42,
+            COMPANY_ID,
+          ),
+        ).rejects.toThrow('faqat marketing xarajatiga');
+      });
     });
   });
 
@@ -764,6 +979,195 @@ describe('ExpensesService — findAll filters + summary', () => {
         ),
       ).rejects.toThrow(ForbiddenException);
       expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    /**
+     * ADR-0087 (CEO, 10.10 and 11.10.2026): an advance is cut from its
+     * recipient's salary, so it requires `salary.pay` (`expenses.manage` alone
+     * is refused); every other category requires `expenses.manage` (`salary.pay`
+     * alone is refused). The routes let both holders in only to reach this check.
+     */
+    describe('who may write which category', () => {
+      const REFUSAL = "Bu xarajatni kiritish huquqingiz yo'q";
+      const holding = (...keys: string[]) =>
+        permissions.has.mockImplementation((_userId: number, key: string) =>
+          Promise.resolve(keys.includes(key)),
+        );
+      const advance = {
+        category: ExpenseCategory.TEACHER_ADVANCE,
+        paymentMethod: ExpensePaymentMethod.CASH,
+        amount: 500_000,
+        description: 'Avans',
+        date: '2026-10-10',
+        branchId: 1,
+        relatedUserId: 10005,
+      } as any;
+      const rent = {
+        ...advance,
+        category: ExpenseCategory.RENT,
+        description: 'Ijara',
+        relatedUserId: undefined,
+      };
+      const row = (category: ExpenseCategory) => ({
+        id: 'exp-1',
+        category,
+        amount: 100,
+        branchId: 1,
+        companyId: COMPANY_ID,
+        deletedAt: null,
+        relatedUserId:
+          category === ExpenseCategory.TEACHER_ADVANCE ? 10005 : null,
+        settledBySalaryPaymentId: null,
+      });
+
+      it('lets a holder of salary.pay alone write an advance', async () => {
+        holding('salary.pay', 'salary.view');
+        prisma.$transaction.mockResolvedValueOnce({ id: 'adv-new' });
+
+        await service.create(advance, 42, COMPANY_ID);
+
+        expect(permissions.has).toHaveBeenCalledWith(42, 'salary.pay');
+        expect(prisma.$transaction).toHaveBeenCalled();
+      });
+
+      it('refuses an advance to a holder of expenses.manage without salary.pay', async () => {
+        holding('expenses.manage', 'expenses.view');
+
+        await expect(service.create(advance, 42, COMPANY_ID)).rejects.toThrow(
+          new ForbiddenException(REFUSAL),
+        );
+        expect(prisma.branch.findFirst).not.toHaveBeenCalled();
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+      });
+
+      it('refuses rent to a holder of salary.pay alone', async () => {
+        holding('salary.pay', 'salary.view');
+
+        await expect(service.create(rent, 42, COMPANY_ID)).rejects.toThrow(
+          new ForbiddenException(REFUSAL),
+        );
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+      });
+
+      it('lets a holder of expenses.manage write rent', async () => {
+        holding('expenses.manage', 'expenses.view');
+        prisma.$transaction.mockResolvedValueOnce({ id: 'exp-new' });
+
+        await service.create(rent, 42, COMPANY_ID);
+
+        expect(prisma.$transaction).toHaveBeenCalled();
+      });
+
+      it('turns rent into an advance only for a caller holding both keys', async () => {
+        prisma.expense.findFirst.mockResolvedValue(row(ExpenseCategory.RENT));
+        const toAdvance = {
+          category: ExpenseCategory.TEACHER_ADVANCE,
+          relatedUserId: 10005,
+        } as any;
+
+        holding('salary.pay', 'salary.view');
+        await expect(
+          service.update('exp-1', toAdvance, 42, COMPANY_ID),
+        ).rejects.toThrow(new ForbiddenException(REFUSAL));
+
+        holding('expenses.manage', 'expenses.view');
+        await expect(
+          service.update('exp-1', toAdvance, 42, COMPANY_ID),
+        ).rejects.toThrow(new ForbiddenException(REFUSAL));
+
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+      });
+
+      it('lets a holder of salary.pay alone change and delete an advance', async () => {
+        holding('salary.pay', 'salary.view');
+        prisma.expense.findFirst.mockResolvedValue(
+          row(ExpenseCategory.TEACHER_ADVANCE),
+        );
+        prisma.transaction.findFirst.mockResolvedValue(null);
+        prisma.$transaction
+          .mockResolvedValueOnce({ id: 'exp-1' })
+          .mockResolvedValueOnce(undefined);
+
+        await service.update(
+          'exp-1',
+          { date: '2026-10-11' } as any,
+          42,
+          COMPANY_ID,
+        );
+        await service.remove('exp-1', 42, COMPANY_ID);
+
+        expect(prisma.$transaction).toHaveBeenCalledTimes(2);
+      });
+
+      it('refuses changing and deleting an advance to a holder of expenses.manage without salary.pay', async () => {
+        holding('expenses.manage', 'expenses.view');
+        prisma.expense.findFirst.mockResolvedValue(
+          row(ExpenseCategory.TEACHER_ADVANCE),
+        );
+
+        await expect(
+          service.update(
+            'exp-1',
+            { date: '2026-10-11' } as any,
+            42,
+            COMPANY_ID,
+          ),
+        ).rejects.toThrow(new ForbiddenException(REFUSAL));
+        await expect(service.remove('exp-1', 42, COMPANY_ID)).rejects.toThrow(
+          new ForbiddenException(REFUSAL),
+        );
+        expect(prisma.transaction.findFirst).not.toHaveBeenCalled();
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+      });
+
+      it('lets a caller holding both keys turn rent into an advance', async () => {
+        holding('expenses.manage', 'salary.pay');
+        prisma.expense.findFirst.mockResolvedValue(row(ExpenseCategory.RENT));
+        prisma.transaction.findFirst.mockResolvedValue(null);
+        prisma.$transaction.mockResolvedValueOnce({ id: 'exp-1' });
+
+        await service.update(
+          'exp-1',
+          {
+            category: ExpenseCategory.TEACHER_ADVANCE,
+            relatedUserId: 10005,
+          } as any,
+          42,
+          COMPANY_ID,
+        );
+
+        expect(permissions.has).toHaveBeenCalledWith(42, 'expenses.manage');
+        expect(permissions.has).toHaveBeenCalledWith(42, 'salary.pay');
+        expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      });
+
+      it('refuses turning an advance into rent to a holder of salary.pay alone', async () => {
+        holding('salary.pay', 'salary.view');
+        prisma.expense.findFirst.mockResolvedValue(
+          row(ExpenseCategory.TEACHER_ADVANCE),
+        );
+
+        await expect(
+          service.update(
+            'exp-1',
+            { category: ExpenseCategory.RENT } as any,
+            42,
+            COMPANY_ID,
+          ),
+        ).rejects.toThrow(new ForbiddenException(REFUSAL));
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+      });
+
+      it('refuses deleting rent to a holder of salary.pay alone', async () => {
+        holding('salary.pay', 'salary.view');
+        prisma.expense.findFirst.mockResolvedValue(row(ExpenseCategory.RENT));
+
+        await expect(service.remove('exp-1', 42, COMPANY_ID)).rejects.toThrow(
+          new ForbiddenException(REFUSAL),
+        );
+        expect(prisma.transaction.findFirst).not.toHaveBeenCalled();
+        expect(prisma.$transaction).not.toHaveBeenCalled();
+      });
     });
   });
 });

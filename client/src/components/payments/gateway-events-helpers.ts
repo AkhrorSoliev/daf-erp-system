@@ -1,3 +1,6 @@
+import { msg } from "@/i18n/msg";
+import type { Translate } from "./record-payment-admission";
+
 export interface GatewayEvent {
   id: string;
   provider: "PAYME" | "CLICK" | "UZUM" | "CASH" | "TRANSFER";
@@ -40,38 +43,38 @@ export const STEP_INFO: Record<
   { label: string; description: string }
 > = {
   CheckPerformTransaction: {
-    label: "Tekshirish",
-    description: "To'lov qilish mumkinligini tekshirish (boshlanmagan)",
+    label: msg("Tekshirish"),
+    description: msg("To'lov qilish mumkinligini tekshirish (boshlanmagan)"),
   },
   CreateTransaction: {
-    label: "Boshlandi",
-    description: "Foydalanuvchi karta kiritdi, to'lov yaratildi",
+    label: msg("Boshlandi"),
+    description: msg("Foydalanuvchi karta kiritdi, to'lov yaratildi"),
   },
   PerformTransaction: {
-    label: "To'landi",
-    description: "Kartadan pul yechildi, balans to'ldirildi",
+    label: msg("To'landi"),
+    description: msg("Kartadan pul yechildi, balans to'ldirildi"),
   },
   CancelTransaction: {
-    label: "Bekor qilindi",
-    description: "To'lov bekor qilindi yoki qaytarildi",
+    label: msg("Bekor qilindi"),
+    description: msg("To'lov bekor qilindi yoki qaytarildi"),
   },
   CheckTransaction: {
-    label: "Payme holat so'radi",
-    description:
-      "Payme tizimi avtomatik ushbu to'lov holatini tekshirdi (pul harakati yo'q)",
+    label: msg("Payme holat so'radi"),
+    description: msg(
+      "Payme tizimi avtomatik ushbu to'lov holatini tekshirdi (pul harakati yo'q)"),
   },
   GetStatement: {
-    label: "Davriy ro'yxat",
-    description:
-      "Payme tizimi davriy tekshiruv uchun tranzaksiyalar ro'yxatini so'radi (pul harakati yo'q)",
+    label: msg("Davriy ro'yxat"),
+    description: msg(
+      "Payme tizimi davriy tekshiruv uchun tranzaksiyalar ro'yxatini so'radi (pul harakati yo'q)"),
   },
   Prepare: {
-    label: "Tayyorlash",
-    description: "Click to'lovni tayyorladi (kartadan pul yechishdan oldin)",
+    label: msg("Tayyorlash"),
+    description: msg("Click to'lovni tayyorladi (kartadan pul yechishdan oldin)"),
   },
   Complete: {
-    label: "Yakunlash",
-    description: "Click to'lovni yakunladi, pul yechildi",
+    label: msg("Yakunlash"),
+    description: msg("Click to'lovni yakunladi, pul yechildi"),
   },
 };
 
@@ -114,7 +117,10 @@ export function computeOutcome(e: GatewayEvent): Outcome {
   return "pending";
 }
 
-export function formatAmount(n: number | null): string {
+export function formatAmount(
+  n: number | null,
+  t: Translate = (s) => s,
+): string {
   if (n === null) return "—";
-  return n.toLocaleString("uz-UZ") + " so'm";
+  return n.toLocaleString("uz-UZ") + " " + t("so'm");
 }

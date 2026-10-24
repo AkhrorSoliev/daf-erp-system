@@ -34,7 +34,10 @@ import {
 } from "@/components/ui/select";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/context";
 import { invalidateDebt } from "./debt/debt-queries";
+import { PAYMENTS_LIST_KEYS } from "./list/payments-queries";
 import {
   capToRange,
   dateFromDay,
@@ -113,11 +116,11 @@ interface PaymentPreview {
 }
 
 const methodOptions = [
-  { value: "CASH", label: "Naqd" },
-  { value: "PAYME", label: "Payme" },
-  { value: "CLICK", label: "Click" },
-  { value: "UZUM", label: "Uzum" },
-  { value: "TRANSFER", label: "Bank o'tkazmasi" },
+  { value: "CASH", label: msg("Naqd") },
+  { value: "PAYME", label: msg("Payme") },
+  { value: "CLICK", label: msg("Click") },
+  { value: "UZUM", label: msg("Uzum") },
+  { value: "TRANSFER", label: msg("Bank o'tkazmasi") },
 ];
 
 export function RecordPaymentDialog({
@@ -127,6 +130,7 @@ export function RecordPaymentDialog({
   preSelectedStudent,
   suggestedAmount,
 }: Props) {
+  const t = useT();
   const queryClient = useQueryClient();
   const { selectedBranch } = useBranchSwitcher();
   const [studentSearch, setStudentSearch] = useState("");
@@ -207,8 +211,8 @@ export function RecordPaymentDialog({
   // the API while the cashier types a multi-digit amount.
   const [debouncedAmount, setDebouncedAmount] = useState(0);
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedAmount(rawAmount), 350);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebouncedAmount(rawAmount), 350);
+    return () => clearTimeout(timer);
   }, [rawAmount]);
 
   const previewQuery = useQuery<PaymentPreview>({
@@ -234,7 +238,7 @@ export function RecordPaymentDialog({
     range: promiseRange,
     hint: promiseHint,
     movesFrom,
-  } = paymentPromiseAsk(promiseNeeded(reach), promiseMonth);
+  } = paymentPromiseAsk(promiseNeeded(reach), promiseMonth, t);
   // Moving the month's OPEN promise starts from its own day, so saving never
   // shifts it without the cashier changing the date.
   const promiseDate = capToRange(
@@ -243,7 +247,7 @@ export function RecordPaymentDialog({
   );
 
   // Months for a monthly student, cycles for a lesson pack; null → fixed grid.
-  const quickAmounts = preview ? buildQuickAmounts(preview) : null;
+  const quickAmounts = preview ? buildQuickAmounts(preview, t) : null;
 
   const handleSubmit = async () => {
     if (!selectedStudent || rawAmount < 1000) return;
@@ -276,7 +280,9 @@ export function RecordPaymentDialog({
         });
       }
       toast.success(
-        `${formatPrice(rawAmount)} so'm to'lov qayd qilindi`
+        t("{amount} so'm to'lov qayd qilindi", {
+          amount: formatPrice(rawAmount),
+        }),
       );
       onOpenChange(false);
       resetForm();
@@ -284,11 +290,11 @@ export function RecordPaymentDialog({
       // Every debt figure (the debt page's list and drawer, the overview) moves with a payment.
       invalidateDebt(queryClient);
       queryClient.invalidateQueries({ queryKey: ["recent-payments"] });
-      queryClient.invalidateQueries({ queryKey: ["student-payments"] });
+      for (const key of PAYMENTS_LIST_KEYS) queryClient.invalidateQueries({ queryKey: [key] });
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || "To'lovni qayd qilishda xatolik";
+          ?.message || t("To'lovni qayd qilishda xatolik");
       toast.error(message);
     } finally {
       setSubmitting(false);
@@ -320,7 +326,7 @@ export function RecordPaymentDialog({
     <Dialog open={open} onOpenChange={(v) => { if (!submitting) { onOpenChange(v); if (!v) resetForm(); } }}>
       <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-md">
         <DialogHeader className="shrink-0">
-          <DialogTitle>To&apos;lov qayd qilish</DialogTitle>
+          <DialogTitle>{t("To'lov qayd qilish")}</DialogTitle>
         </DialogHeader>
 
         {/* Scroll'li tana — ma'lumot ko'paysa sarlavha va footer joyida qoladi. */}
@@ -328,9 +334,9 @@ export function RecordPaymentDialog({
           {/* Student Search */}
           {!selectedStudent ? (
             <div className="space-y-2">
-              <Label>O&apos;quvchi</Label>
+              <Label>{t("O'quvchi")}</Label>
               <Input
-                placeholder="Ism, telefon yoki ID bo'yicha..."
+                placeholder={t("Ism, telefon yoki ID bo'yicha...")}
                 value={studentSearch}
                 onChange={(e) => {
                   setStudentSearch(e.target.value);
@@ -338,7 +344,9 @@ export function RecordPaymentDialog({
                 }}
               />
               {searching && (
-                <p className="text-xs text-muted-foreground">Qidirilmoqda...</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("Qidirilmoqda...")}
+                </p>
               )}
               {students.length > 0 && (
                 <div className="border rounded-md max-h-40 overflow-auto">
@@ -362,7 +370,7 @@ export function RecordPaymentDialog({
                             : "text-red-600"
                         }
                       >
-                        {formatPrice(s.balance)} so&apos;m
+                        {formatPrice(s.balance)} {t("so'm")}
                       </span>
                     </button>
                   ))}
@@ -379,7 +387,9 @@ export function RecordPaymentDialog({
                 <p
                   className={`text-xs ${selectedStudent.balance >= 0 ? "text-green-600" : "text-red-600"}`}
                 >
-                  Balans: {formatPrice(selectedStudent.balance)} so&apos;m
+                  {t("Balans: {amount} so'm", {
+                    amount: formatPrice(selectedStudent.balance),
+                  })}
                 </p>
               </div>
               {!preSelectedStudent && (
@@ -389,7 +399,7 @@ export function RecordPaymentDialog({
                   onClick={() => setSelectedStudent(null)}
                   disabled={submitting}
                 >
-                  O&apos;zgartirish
+                  {t("O'zgartirish")}
                 </Button>
               )}
             </div>
@@ -397,7 +407,7 @@ export function RecordPaymentDialog({
 
           {/* Amount */}
           <div className="space-y-2">
-            <Label>Summa</Label>
+            <Label>{t("Summa")}</Label>
             <div className="relative">
               <Input
                 placeholder="0"
@@ -407,12 +417,12 @@ export function RecordPaymentDialog({
                 className="pr-12"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                so&apos;m
+                {t("so'm")}
               </span>
             </div>
             {suggestedAmount && suggestedAmount > 0 && (
               <p className="text-xs text-muted-foreground">
-                {suggestedAmountHintForPreview(suggestedAmount, preview)}
+                {suggestedAmountHintForPreview(suggestedAmount, preview, t)}
               </p>
             )}
 
@@ -462,13 +472,13 @@ export function RecordPaymentDialog({
           {/* Contract 3.2: how far it reaches, and the promise for the rest */}
           {selectedStudent && rawAmount >= 1000 && reach && (
             <div className="space-y-2 rounded-md border bg-muted/30 p-3 text-xs">
-              {reachLines(reach).map((line) => (
+              {reachLines(reach, t).map((line) => (
                 <p key={line}>{line}</p>
               ))}
               {needsPromise && (
                 <div className="space-y-1">
                   <Label htmlFor="promise-date" className="text-xs">
-                    Qolgan qismi qachon to&apos;lanadi?
+                    {t("Qolgan qismi qachon to'lanadi?")}
                   </Label>
                   <DatePicker
                     id="promise-date"
@@ -480,8 +490,8 @@ export function RecordPaymentDialog({
                   />
                   <p className="text-muted-foreground">
                     {movesFrom
-                      ? PROMISE_MOVE_NOTE
-                      : "To'lov va'dasi: ko'pi bilan 7 kunga, oyiga 1 marta."}
+                      ? t(PROMISE_MOVE_NOTE)
+                      : t("To'lov va'dasi: ko'pi bilan 7 kunga, oyiga 1 marta.")}
                   </p>
                 </div>
               )}
@@ -493,7 +503,7 @@ export function RecordPaymentDialog({
 
           {/* Method */}
           <div className="space-y-2">
-            <Label>To&apos;lov usuli</Label>
+            <Label>{t("To'lov usuli")}</Label>
             <Select
               value={method}
               onValueChange={(v) => {
@@ -510,7 +520,7 @@ export function RecordPaymentDialog({
               <SelectContent>
                 {methodOptions.map((o) => (
                   <SelectItem key={o.value} value={o.value}>
-                    {o.label}
+                    {t(o.label)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -523,24 +533,31 @@ export function RecordPaymentDialog({
           {isOnlineMethod && (
             <div className="rounded-md border border-dashed p-3 space-y-3">
               <div className="flex items-baseline justify-between">
-                <p className="text-sm font-medium">Tranzaksiyani biriktirish</p>
-                <p className="text-[11px] text-muted-foreground">ixtiyoriy</p>
+                <p className="text-sm font-medium">
+                  {t("Tranzaksiyani biriktirish")}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {t("ixtiyoriy")}
+                </p>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs">Tranzaksiya raqami (externalId)</Label>
+                <Label className="text-xs">
+                  {t("Tranzaksiya raqami (externalId)")}
+                </Label>
                 <Input
-                  placeholder="Payme/Click/Uzum hisobotidan"
+                  placeholder={t("Payme/Click/Uzum hisobotidan")}
                   value={externalId}
                   onChange={(e) => setExternalId(e.target.value)}
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  Agar to&apos;ldirilsa, ushbu tranzaksiya o&apos;quvchiga biriktiriladi
-                  va keyinchalik takroriy biriktirib bo&apos;lmaydi
+                  {t(
+                    "Agar to'ldirilsa, ushbu tranzaksiya o'quvchiga biriktiriladi va keyinchalik takroriy biriktirib bo'lmaydi",
+                  )}
                 </p>
               </div>
               {hasExternalId && (
                 <div className="space-y-2">
-                  <Label className="text-xs">Provayder komissiyasi</Label>
+                  <Label className="text-xs">{t("Provayder komissiyasi")}</Label>
                   <div className="relative">
                     <Input
                       placeholder="0"
@@ -555,7 +572,7 @@ export function RecordPaymentDialog({
                       className="pr-12"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                      so&apos;m
+                      {t("so'm")}
                     </span>
                   </div>
                 </div>
@@ -565,9 +582,9 @@ export function RecordPaymentDialog({
 
           {/* Note */}
           <div className="space-y-2">
-            <Label>Izoh (ixtiyoriy)</Label>
+            <Label>{t("Izoh (ixtiyoriy)")}</Label>
             <Textarea
-              placeholder="Qo'shimcha ma'lumot..."
+              placeholder={t("Qo'shimcha ma'lumot...")}
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={2}
@@ -581,7 +598,7 @@ export function RecordPaymentDialog({
             onClick={() => { onOpenChange(false); resetForm(); }}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -597,7 +614,7 @@ export function RecordPaymentDialog({
             }
           >
             {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
-            To&apos;lovni qayd qilish
+            {t("To'lovni qayd qilish")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -612,10 +629,11 @@ function PaymentPreviewCard({
   loading: boolean;
   preview: PaymentPreview | undefined;
 }) {
+  const t = useT();
   if (!preview) {
     return (
       <div className="rounded-md border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
-        {loading ? "Hisoblanmoqda…" : "Summa kiriting"}
+        {loading ? t("Hisoblanmoqda…") : t("Summa kiriting")}
       </div>
     );
   }
@@ -627,7 +645,7 @@ function PaymentPreviewCard({
       <div className="flex items-center justify-between text-sm">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Wallet className="size-4" />
-          <span>Balans</span>
+          <span>{t("Balans")}</span>
         </div>
         <div className="flex items-center gap-1.5 font-mono tabular-nums">
           <span
@@ -647,7 +665,7 @@ function PaymentPreviewCard({
           >
             {formatPrice(preview.newBalance)}
           </span>
-          <span className="text-muted-foreground">so&apos;m</span>
+          <span className="text-muted-foreground">{t("so'm")}</span>
         </div>
       </div>
 
@@ -661,11 +679,16 @@ function PaymentPreviewCard({
               {preview.primaryEnrollment.groupName}
             </span>{" "}
             · {preview.primaryEnrollment.courseName} ·{" "}
-            {formatPrice(preview.primaryEnrollment.perLessonCost)} so&apos;m/dars
+            {t("{amount} so'm/dars", {
+              amount: formatPrice(preview.primaryEnrollment.perLessonCost),
+            })}
             {preview.primaryEnrollment.currentPrepaid > 0 && (
               <>
                 {" "}
-                · oldindan {preview.primaryEnrollment.currentPrepaid} dars
+                ·{" "}
+                {t("oldindan {n} dars", {
+                  n: preview.primaryEnrollment.currentPrepaid,
+                })}
               </>
             )}
           </div>
@@ -676,7 +699,7 @@ function PaymentPreviewCard({
       {preview.breakdown.length > 0 && (
         <div className="space-y-1">
           <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Bu pul nimaga yetadi:
+            {t("Bu pul nimaga yetadi:")}
           </p>
           {preview.breakdown.map((item, idx) => (
             <div
@@ -705,7 +728,7 @@ function PaymentPreviewCard({
                 </span>
               </div>
               <span className="font-mono tabular-nums">
-                {formatPrice(item.amount)} so&apos;m
+                {formatPrice(item.amount)} {t("so'm")}
               </span>
             </div>
           ))}
@@ -714,14 +737,15 @@ function PaymentPreviewCard({
 
       {preview.scenario === "MULTI_ENROLLMENT" && preview.model !== "MONTHLY" && (
         <p className="text-[11px] text-muted-foreground italic">
-          O&apos;quvchi 2+ guruhda — qaysi sikl uchun yechilishini sistema
-          avtomatik tanlaydi.
+          {t(
+            "O'quvchi 2+ guruhda — qaysi sikl uchun yechilishini sistema avtomatik tanlaydi.",
+          )}
         </p>
       )}
 
       {balanceDelta > 0 && preview.newBalance < 0 && (
         <p className="text-[11px] text-amber-700 dark:text-amber-400">
-          ⚠ To&apos;lovdan keyin ham qarz qoladi
+          {t("⚠ To'lovdan keyin ham qarz qoladi")}
         </p>
       )}
     </div>
@@ -729,14 +753,15 @@ function PaymentPreviewCard({
 }
 
 function MonthlyContext({ monthly }: { monthly: MonthlyPreviewBlock }) {
-  const summary = monthlySummaryLine(monthly);
+  const t = useT();
+  const summary = monthlySummaryLine(monthly, t);
   return (
     <div className="space-y-1 rounded-md bg-muted/40 px-2.5 py-2 text-[11px] leading-relaxed text-muted-foreground">
       {monthly.enrollments.map((e, idx) => (
-        <p key={`${idx}-${e.groupName}`}>{monthlyEnrollmentLine(e)}</p>
+        <p key={`${idx}-${e.groupName}`}>{monthlyEnrollmentLine(e, t)}</p>
       ))}
       {summary && <p className="font-medium text-foreground">{summary}</p>}
-      <p>{MONTHLY_PAYMENT_EXPLANATION}</p>
+      <p>{t(MONTHLY_PAYMENT_EXPLANATION)}</p>
     </div>
   );
 }

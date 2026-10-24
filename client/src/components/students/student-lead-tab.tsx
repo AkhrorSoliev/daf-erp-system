@@ -10,6 +10,7 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPhone } from "@/lib/format-utils";
 import { leadConvertedLabel, type LeadStatus } from "@/hooks/use-leads-board";
+import { useT } from "@/i18n/context";
 
 interface LinkedLead {
   id: string;
@@ -48,6 +49,7 @@ function InfoRow({
 }
 
 export function StudentLeadTab({ studentId }: { studentId: number }) {
+  const t = useT();
   const [leads, setLeads] = useState<LinkedLead[]>([]);
   const [loading, setLoading] = useState(true);
   const fetched = useRef(false);
@@ -59,10 +61,10 @@ export function StudentLeadTab({ studentId }: { studentId: number }) {
       .get<LinkedLead[]>(`/leads/by-student/${studentId}`)
       .then(({ data }) => setLeads(data))
       .catch((error) => {
-        toast.error(getErrorMessage(error, "Lid tarixini yuklashda xatolik"));
+        toast.error(getErrorMessage(error, t("Lid tarixini yuklashda xatolik")));
       })
       .finally(() => setLoading(false));
-  }, [studentId]);
+  }, [studentId, t]);
 
   if (loading) {
     return (
@@ -79,7 +81,7 @@ export function StudentLeadTab({ studentId }: { studentId: number }) {
       <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-12 text-center">
         <GitBranch className="size-8 text-muted-foreground opacity-40" />
         <p className="text-sm text-muted-foreground">
-          Bu o&apos;quvchi lid orqali kelmagan
+          {t("Bu o'quvchi lid orqali kelmagan")}
         </p>
       </div>
     );
@@ -95,24 +97,24 @@ export function StudentLeadTab({ studentId }: { studentId: number }) {
                 {lead.firstName} {lead.lastName}
               </p>
               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
-                {leadConvertedLabel(lead.statusEnum, lead.statusChangeReason)}
-                {lead.deletedAt ? " · arxiv" : ""}
+                {leadConvertedLabel(lead.statusEnum, lead.statusChangeReason, t)}
+                {lead.deletedAt ? ` · ${t("arxiv")}` : ""}
               </span>
             </div>
             <div className="mt-3 grid gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
               <InfoRow
                 icon={<Phone className="size-3.5" />}
-                label="Telefon"
+                label={t("Telefon")}
                 value={formatPhone(lead.phone)}
               />
               <InfoRow
                 icon={<Tag className="size-3.5" />}
-                label="Manba"
+                label={t("Manba")}
                 value={lead.source?.name ?? "—"}
               />
               <InfoRow
                 icon={<GitBranch className="size-3.5" />}
-                label="Bo'lim"
+                label={t("Bo'lim")}
                 value={
                   lead.section
                     ? `${lead.section.column.name} · ${lead.section.name}`
@@ -121,13 +123,13 @@ export function StudentLeadTab({ studentId }: { studentId: number }) {
               />
               <InfoRow
                 icon={<UserCheck className="size-3.5" />}
-                label="Yaratilgan"
+                label={t("Yaratilgan")}
                 value={format(parseISO(lead.createdAt), "dd.MM.yyyy")}
               />
               {lead.statusChangedAt && (
                 <InfoRow
                   icon={<CalendarClock className="size-3.5" />}
-                  label="Aylantirilgan"
+                  label={t("Aylantirilgan")}
                   value={format(parseISO(lead.statusChangedAt), "dd.MM.yyyy")}
                 />
               )}

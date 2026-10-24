@@ -2,7 +2,9 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { Can } from '../common/permissions/access.decorators';
 import { TelegramService } from './telegram.service';
 import { TelegramChannelGateStatsService } from './telegram-channel-gate-stats.service';
-import { tashkentMonthRangeUtc } from '../common/date/tashkent';
+import { parseGateMonth } from './gate-cohort';
+import { DEFAULT_COMPANY_ID } from './constants';
+import { LevelTestResultsService } from '../level-test/level-test-results.service';
 
 /**
  * "Bot hisoboti" sahifasining ma'lumot manbai (`/reports/bot` frontendda).
@@ -26,16 +28,18 @@ export class TelegramChannelReportController {
   constructor(
     private readonly telegram: TelegramService,
     private readonly gateStats: TelegramChannelGateStatsService,
+    private readonly levelTests: LevelTestResultsService,
   ) {}
 
   /**
-   * Jamlanma. `month` — "YYYY-MM"; berilmasa butun davr bo'yicha hisoblanadi.
+   * Jamlanma (ADR-0105). `month` — "YYYY-MM"; berilmasa joriy Toshkent oyi.
+   * Noto'g'ri, 2026-05 dan oldingi yoki kelajak oy — 400.
    */
   @Get('summary')
   async summary(@Query('month') month?: string) {
-    const range = parseMonth(month);
+    const key = parseGateMonth(month, new Date());
     const [stats, channelMembers] = await Promise.all([
-      this.gateStats.getSummary(range),
+      this.gateStats.getSummary(key),
       this.telegram.getChannelMemberCount(),
     ]);
 
@@ -44,33 +48,33 @@ export class TelegramChannelReportController {
       channelMembers,
       gateEnabled: this.telegram.isChannelGateEnabled(),
       channel: this.telegram.getRequiredChannel(),
-      month: month ?? null,
+      month: key,
     };
+  }
+
+  /**
+   * Daraja testi statistikasi (ADR-0122): oy bo'yicha nechta boshlangan,
+   * nechtasi tugatgan, nechtasi yarmida qolgan va hokazo. Bot hisobotining
+   * o'zi kabi butun kompaniya bo'yicha (`DEFAULT_COMPANY_ID`): test filialni
+   * bilmaydigan odamni ham qamraydi.
+   */
+  @Get('level-tests')
+  async levelTestStats(@Query('month') month?: string) {
+    const key = parseGateMonth(month, new Date());
+    const stats = await this.levelTests.stats(DEFAULT_COMPANY_ID, key);
+    return { ...stats, month: key };
   }
 
   @Get('list')
   async list(
+    @Query('month') month?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ) {
     return this.gateStats.getList({
+      month: parseGateMonth(month, new Date()),
       page: Math.max(1, Number(page) || 1),
       pageSize: Math.min(50, Math.max(1, Number(pageSize) || 10)),
     });
   }
-}
-
-/**
- * "YYYY-MM" ni Toshkent oyining boshidan keyingi oy boshigacha oraliqqa
- * aylantiradi — `to` CHEGARADAN TASHQARI (`lt`), shuning uchun oyning oxirgi
- * kechasi soat 00:00 dan keyin bo'lgan hodisa keyingi oyga tushadi.
- * Noto'g'ri qiymatda `undefined` — davr filtri qo'llanmaydi (butun davr).
- */
-function parseMonth(month?: string): { from: Date; to: Date } | undefined {
-  if (!month || !/^\d{4}-\d{2}$/.test(month)) return undefined;
-  const [, m] = month.split('-').map(Number);
-  if (m < 1 || m > 12) return undefined;
-  // Toshkent oyi: `to` — keyingi oy boshlanishi, ya'ni CHEGARADAN TASHQARI.
-  const { gte, lt } = tashkentMonthRangeUtc(month);
-  return { from: gte, to: lt };
 }

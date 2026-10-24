@@ -12,6 +12,7 @@ describe('NotificationResolverService — join requests', () => {
     const service = new NotificationResolverService(
       prisma as any,
       gateway as any,
+      { getBot: () => undefined } as any,
     );
 
     await service.onJoinRequestClosed({ companyId: 1001, taskId: 't1' });
@@ -23,7 +24,7 @@ describe('NotificationResolverService — join requests', () => {
         actionRequired: true,
         resolvedAt: null,
       },
-      select: { id: true, userId: true },
+      select: expect.objectContaining({ id: true, userId: true }),
     });
     expect(gateway.sendToUser).toHaveBeenCalledWith(
       3,

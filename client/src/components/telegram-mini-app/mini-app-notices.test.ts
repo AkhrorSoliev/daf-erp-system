@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
   CloseButton,
-  DaftarSkin,
+  StaffSkin,
   Loading,
   Notice,
   NotRegisteredNotice,
@@ -46,11 +46,11 @@ describe("Mini App notices", () => {
   });
 });
 
-// The staff cabinet is drawn on the Daftar sheet of the staff sign-in pages,
-// the student cabinet in Lumio. Lumio's classes paint nothing outside `.lumio`
-// (a coral button there is white text on no background), so on the sheet not
-// one of them may be left — and off the sheet nothing may change.
-describe("Mini App notices on the Daftar sheet", () => {
+// The staff cabinet opens in the staff sign-in shell, in the cabinet's own
+// look; the student cabinet in Lumio. Lumio's classes paint nothing outside
+// `.lumio` (a coral button there is white text on no background), so in the
+// staff look not one of them may be left — and outside it nothing may change.
+describe("Mini App notices in the staff look", () => {
   const LUMIO_LOOK =
     /clay-|font-display|coral|\bink-\d|bg-sunk|bg-surface|rounded-card/;
   const error = createElement(
@@ -69,34 +69,33 @@ describe("Mini App notices on the Daftar sheet", () => {
     createElement(NotRegisteredNotice, { audience: "staff" }),
     error,
   ];
-  const draw = (node: ReactNode, daftar: boolean) =>
-    renderToStaticMarkup(createElement(DaftarSkin, { value: daftar }, node));
+  const draw = (node: ReactNode, staff: boolean) =>
+    renderToStaticMarkup(createElement(StaffSkin, { value: staff }, node));
   const words = (html: string) => html.replace(/<[^>]+>/g, "|");
 
-  it("keeps Lumio out of the sheet and says the same words", () => {
+  it("keeps Lumio out of the staff look and says the same words", () => {
     for (const leaf of everyLeaf) {
-      const onSheet = draw(leaf, true);
+      const staff = draw(leaf, true);
 
-      expect(onSheet).not.toMatch(LUMIO_LOOK);
-      expect(words(onSheet).replace(/\|+/g, "|")).toBe(
+      expect(staff).not.toMatch(LUMIO_LOOK);
+      expect(words(staff).replace(/\|+/g, "|")).toBe(
         words(draw(leaf, false)).replace(/\|+/g, "|"),
       );
     }
   });
 
-  it("stays Lumio wherever the page did not ask for the sheet", () => {
+  it("stays Lumio wherever the page did not ask for the staff look", () => {
     for (const leaf of everyLeaf) {
       expect(renderToStaticMarkup(leaf)).toBe(draw(leaf, false));
       expect(renderToStaticMarkup(leaf)).toMatch(LUMIO_LOOK);
     }
   });
 
-  it("writes a failure in red pen and announces it", () => {
-    const onSheet = draw(error, true);
+  it("colours a failure and announces it", () => {
+    const staff = draw(error, true);
 
-    expect(onSheet).toContain('role="alert"');
-    expect(onSheet).toContain("daftar-hand");
-    expect(onSheet).toContain("text-destructive");
+    expect(staff).toContain('role="alert"');
+    expect(staff).toContain("text-destructive");
     // A notice that is not a failure is not announced as one.
     expect(
       draw(createElement(NotRegisteredNotice, { audience: "staff" }), true),

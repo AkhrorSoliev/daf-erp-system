@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useT } from "@/i18n/context";
 import type {
   LessonModificationRow,
   LessonRescheduleRow,
@@ -58,31 +59,32 @@ export function LessonModificationsTable({
   onDeleteCancellation,
   busyRowKey,
 }: LessonModificationsTableProps) {
+  const t = useT();
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold">Dars o&apos;zgarishlari</h2>
+        <h2 className="text-base font-semibold">{t("Dars o'zgarishlari")}</h2>
         {canCreate && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="sm">
                 <Plus className="size-4 mr-1" />
-                Yangi o&apos;zgarish
+                {t("Yangi o'zgarish")}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel className="text-xs text-muted-foreground">
-                Qaysi turdagi o&apos;zgarish?
+                {t("Qaysi turdagi o'zgarish?")}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => onCreate("reschedule")}>
-                Boshqa kunga ko&apos;chirish
+                {t("Boshqa kunga ko'chirish")}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onCreate("override")}>
-                O&apos;rinbosar ustoz
+                {t("O'rinbosar ustoz")}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onCreate("cancellation")}>
-                Bekor qilish
+                {t("Bekor qilish")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -93,19 +95,19 @@ export function LessonModificationsTable({
         <Skeleton className="h-32 w-full" />
       ) : rows.length === 0 ? (
         <p className="text-muted-foreground text-sm py-4 text-center">
-          Hech qanday o&apos;zgarish yo&apos;q
+          {t("Hech qanday o'zgarish yo'q")}
         </p>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead className="w-32">Sana</TableHead>
-              <TableHead className="w-56">Turi</TableHead>
-              <TableHead>Tafsilot</TableHead>
-              <TableHead className="w-44">Belgilagan</TableHead>
+              <TableHead className="w-32">{t("Sana")}</TableHead>
+              <TableHead className="w-56">{t("Turi")}</TableHead>
+              <TableHead>{t("Tafsilot")}</TableHead>
+              <TableHead className="w-44">{t("Belgilagan")}</TableHead>
               {(canCreate || canDelete) && (
-                <TableHead className="w-16">Amal</TableHead>
+                <TableHead className="w-16">{t("Amal")}</TableHead>
               )}
             </TableRow>
           </TableHeader>
@@ -156,11 +158,12 @@ export function LessonModificationsTable({
 }
 
 function RowBadges({ row }: { row: LessonModificationRow }) {
+  const t = useT();
   return (
     <div className="flex flex-wrap gap-1">
       {row.cancellation && (
         <Badge variant="destructive" className="font-normal">
-          Bekor qilingan
+          {t("Bekor qilingan dars")}
         </Badge>
       )}
       {row.reschedule && (
@@ -168,7 +171,7 @@ function RowBadges({ row }: { row: LessonModificationRow }) {
           variant="outline"
           className="border-amber-500/40 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 font-normal"
         >
-          Ko&apos;chirilgan
+          {t("Ko'chirilgan")}
         </Badge>
       )}
       {row.override && (
@@ -176,7 +179,7 @@ function RowBadges({ row }: { row: LessonModificationRow }) {
           variant="outline"
           className="border-blue-500/40 bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 font-normal"
         >
-          O&apos;rinbosar
+          {t("O'rinbosar")}
         </Badge>
       )}
     </div>
@@ -184,6 +187,7 @@ function RowBadges({ row }: { row: LessonModificationRow }) {
 }
 
 function RowDetails({ row }: { row: LessonModificationRow }) {
+  const t = useT();
   const parts: string[] = [];
   if (row.reschedule) {
     const r = row.reschedule;
@@ -194,18 +198,20 @@ function RowDetails({ row }: { row: LessonModificationRow }) {
       tail.push(`${r.newLessonStartTime}–${r.newLessonEndTime}`);
     }
     parts.push(
-      `Ko'chirildi: ${fromStr} → bu kun${tail.length ? ` (${tail.join(", ")})` : ""}`,
+      tail.length
+        ? t("Ko'chirildi: {from} → bu kun ({details})", { from: fromStr, details: tail.join(", ") })
+        : t("Ko'chirildi: {from} → bu kun", { from: fromStr }),
     );
-    if (r.reason) parts.push(`Sabab: ${r.reason}`);
+    if (r.reason) parts.push(t("Sabab: {reason}", { reason: r.reason }));
   }
   if (row.override) {
     parts.push(
-      `O'rinbosar ustoz(lar): ${row.override.teacherIds.length} ta tayinlangan`,
+      t("O'rinbosar ustoz(lar): {n} ta tayinlangan", { n: row.override.teacherIds.length }),
     );
-    if (row.override.reason) parts.push(`Sabab: ${row.override.reason}`);
+    if (row.override.reason) parts.push(t("Sabab: {reason}", { reason: row.override.reason }));
   }
   if (row.cancellation) {
-    parts.push(`Sabab: ${row.cancellation.reason}`);
+    parts.push(t("Sabab: {reason}", { reason: row.cancellation.reason }));
   }
   if (parts.length === 0) {
     return <span className="text-muted-foreground">—</span>;
@@ -240,6 +246,7 @@ function RowActions({
   onDeleteOverride,
   onDeleteCancellation,
 }: RowActionsProps) {
+  const t = useT();
   const hasEditableReschedule = !!row.reschedule && canCreate;
   const hasDeletes =
     canDelete && (row.reschedule || row.override || row.cancellation);
@@ -255,14 +262,14 @@ function RowActions({
           ) : (
             <MoreHorizontal className="size-4" />
           )}
-          <span className="sr-only">Amallar</span>
+          <span className="sr-only">{t("Amallar")}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {hasEditableReschedule && (
           <DropdownMenuItem onClick={() => onEditReschedule(row.reschedule!)}>
             <Pencil className="mr-2 size-4" />
-            Ko&apos;chirishni tahrirlash
+            {t("Ko'chirishni tahrirlash")}
           </DropdownMenuItem>
         )}
         {hasEditableReschedule && hasDeletes && <DropdownMenuSeparator />}
@@ -272,7 +279,7 @@ function RowActions({
             onClick={() => onDeleteReschedule(row.reschedule!.id)}
           >
             <Trash2 className="mr-2 size-4" />
-            Ko&apos;chirishni o&apos;chirish
+            {t("Ko'chirishni o'chirish")}
           </DropdownMenuItem>
         )}
         {canDelete && row.override && (
@@ -281,7 +288,7 @@ function RowActions({
             onClick={() => onDeleteOverride(row.override!.id)}
           >
             <Trash2 className="mr-2 size-4" />
-            O&apos;rinbosarni o&apos;chirish
+            {t("O'rinbosarni o'chirish")}
           </DropdownMenuItem>
         )}
         {canDelete && row.cancellation && (
@@ -290,7 +297,7 @@ function RowActions({
             onClick={() => onDeleteCancellation(row.cancellation!.id)}
           >
             <Trash2 className="mr-2 size-4" />
-            Bekor qilishni o&apos;chirish
+            {t("Bekor qilishni o'chirish")}
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>

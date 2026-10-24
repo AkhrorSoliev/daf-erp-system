@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Loader2, Plus, Trash2 } from "lucide-react";
@@ -40,6 +40,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPrice } from "@/lib/format-utils";
@@ -87,6 +88,7 @@ interface Props {
 const TEACHER_ROLE_ID = 4;
 
 export function LessonChangesTab({ group }: Props) {
+  const t = useT();
   const queryClient = useQueryClient();
   const canCreate = useCan("lessons.change");
   const canDelete = useCan("lessons.change-delete");
@@ -181,7 +183,7 @@ export function LessonChangesTab({ group }: Props) {
       );
       refetchAll();
     } catch (err) {
-      toast.error(getErrorMessage(err, "O'chirishda xatolik"));
+      toast.error(getErrorMessage(err, t("O'chirishda xatolik")));
     } finally {
       setBusyRowKey(null);
     }
@@ -202,9 +204,10 @@ export function LessonChangesTab({ group }: Props) {
 
   const handleDeleteCancellation = (id: string) => {
     setConfirmDelete({
-      title: "Bekor qilingan dars yozuvini o'chirmoqchimisiz?",
-      description:
+      title: t("Bekor qilingan dars yozuvini o'chirmoqchimisiz?"),
+      description: t(
         "Bekor qilishda o'quvchilarga qaytarilgan dars puli ulardan qayta yechiladi; shundan beri muzlatilgan yoki guruhdan chiqqan o'quvchining puli qoladi. Davomat tiklanmaydi. Agar dars vaqti o'tib ketgan bo'lsa, u yana «Dars bo'ldimi?» savoliga qaytadi.",
+      ),
       onConfirm: () =>
         performDelete(
           `/lesson-cancellations/${id}`,
@@ -214,11 +217,21 @@ export function LessonChangesTab({ group }: Props) {
               restoredAmount?: number;
               keptStudents?: number;
             };
-            if (!r?.restoredAmount) return "Bekor qilingan dars yozuvi o'chirildi";
-            const kept = r.keptStudents
-              ? `, ${r.keptStudents} o'quvchida qoldi`
-              : "";
-            return `Bekor qilish o'chirildi: ${r.restoredStudents} o'quvchidan ${formatPrice(r.restoredAmount)} so'm qayta yechildi${kept}`;
+            if (!r?.restoredAmount) return t("Bekor qilingan dars yozuvi o'chirildi");
+            const params = {
+              n: r.restoredStudents ?? 0,
+              amount: formatPrice(r.restoredAmount),
+              kept: r.keptStudents ?? 0,
+            };
+            return r.keptStudents
+              ? t(
+                  "Bekor qilish o'chirildi: {n} o'quvchidan {amount} so'm qayta yechildi, {kept} o'quvchida qoldi",
+                  params,
+                )
+              : t(
+                  "Bekor qilish o'chirildi: {n} o'quvchidan {amount} so'm qayta yechildi",
+                  params,
+                );
           },
           findDateKeyForCancellation(id),
         ),
@@ -227,13 +240,14 @@ export function LessonChangesTab({ group }: Props) {
 
   const handleDeleteOverride = (id: string) => {
     setConfirmDelete({
-      title: "O'rinbosar ustoz qoidasini bekor qilmoqchimisiz?",
-      description:
+      title: t("O'rinbosar ustoz qoidasini bekor qilmoqchimisiz?"),
+      description: t(
         "Oddiy guruh ustozlariga qaytariladi va ularning oyligi qayta hisoblanadi.",
+      ),
       onConfirm: () =>
         performDelete(
           `/lesson-teacher-overrides/${id}`,
-          "O'rinbosar bekor qilindi",
+          t("O'rinbosar bekor qilindi"),
           findDateKeyForOverride(id),
         ),
     });
@@ -241,13 +255,14 @@ export function LessonChangesTab({ group }: Props) {
 
   const handleDeleteReschedule = (id: string) => {
     setConfirmDelete({
-      title: "Ko'chirish yozuvini o'chirmoqchimisiz?",
-      description:
+      title: t("Ko'chirish yozuvini o'chirmoqchimisiz?"),
+      description: t(
         "Diqqat: bu ikkala sanada (asl va yangi) davomatni avtomatik tiklamaydi. Agar asl dars vaqti o'tib ketgan bo'lsa, u yana «Dars bo'ldimi?» savoliga qaytadi.",
+      ),
       onConfirm: () =>
         performDelete(
           `/lesson-reschedules/${id}`,
-          "Ko'chirish yozuvi o'chirildi",
+          t("Ko'chirish yozuvi o'chirildi"),
           findDateKeyForReschedule(id),
         ),
     });
@@ -355,14 +370,14 @@ export function LessonChangesTab({ group }: Props) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+            <AlertDialogCancel>{t("Bekor qilish")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
                 void confirmDelete?.onConfirm();
               }}
             >
-              O&apos;chirish
+              {t("O'chirish")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -418,13 +433,14 @@ function CreateCancellationDialog({
   rescheduleDestinations,
   excludeDates,
 }: CancellationProps) {
+  const t = useT();
   const [date, setDate] = useState<Date | undefined>();
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
     if (!date || !reason.trim()) {
-      toast.error("Sana va sababni kiriting");
+      toast.error(t("Sana va sababni kiriting"));
       return;
     }
     setSubmitting(true);
@@ -434,13 +450,13 @@ function CreateCancellationDialog({
         date: format(date, "yyyy-MM-dd"),
         reason: reason.trim(),
       });
-      toast.success("Dars bekor qilindi");
+      toast.success(t("Dars bekor qilindi"));
       onSaved();
       onOpenChange(false);
       setDate(undefined);
       setReason("");
     } catch (err) {
-      toast.error(getErrorMessage(err, "Bekor qilishda xatolik"));
+      toast.error(getErrorMessage(err, t("Bekor qilishda xatolik")));
     } finally {
       setSubmitting(false);
     }
@@ -450,17 +466,16 @@ function CreateCancellationDialog({
     <Dialog open={open} onOpenChange={(v) => !submitting && onOpenChange(v)}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Darsni bekor qilish</DialogTitle>
+          <DialogTitle>{t("Darsni bekor qilish")}</DialogTitle>
           <DialogDescription>
-            Agar bu kuni davomat allaqachon olingan bo&apos;lsa, har bir
-            o&apos;quvchining holati &quot;uzrli sabab bilan kelmadi&quot;
-            ga o&apos;tadi va undan yechilgan pul qaytariladi (qoldiq
-            darslar hisobi 1 ga oshadi).
+            {t(
+              'Agar bu kuni davomat allaqachon olingan bo\'lsa, har bir o\'quvchining holati "uzrli sabab bilan kelmadi" ga o\'tadi va undan yechilgan pul qaytariladi (qoldiq darslar hisobi 1 ga oshadi).',
+            )}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Bekor qilinadigan dars sanasi</Label>
+            <Label>{t("Bekor qilinadigan dars sanasi")}</Label>
             <LessonDateSelect
               exactDays={group.exactDays ?? []}
               groupStartDate={group.startDate}
@@ -472,16 +487,16 @@ function CreateCancellationDialog({
               excludeDates={excludeDates}
             />
             <p className="text-xs text-muted-foreground">
-              Faqat ushbu guruh dars qiladigan sanalar ko&apos;rinadi
+              {t("Faqat ushbu guruh dars qiladigan sanalar ko'rinadi")}
             </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="cancel-reason">Sabab</Label>
+            <Label htmlFor="cancel-reason">{t("Sabab")}</Label>
             <Textarea
               id="cancel-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Ustoz kasal, bayram, va h.k."
+              placeholder={t("Ustoz kasal, bayram, va h.k.")}
               maxLength={500}
               rows={3}
               disabled={submitting}
@@ -490,11 +505,11 @@ function CreateCancellationDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button onClick={handleSubmit} disabled={submitting}>
             {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
-            Saqlash
+            {t("Saqlash")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -521,6 +536,7 @@ function CreateOverrideDialog({
   rescheduleDestinations,
   excludeDates,
 }: OverrideProps) {
+  const t = useT();
   const [date, setDate] = useState<Date | undefined>();
   const [selected, setSelected] = useState<number[]>([]);
   const [reason, setReason] = useState("");
@@ -544,19 +560,19 @@ function CreateOverrideDialog({
 
   // Initialize with group.teachers when dialog opens
   if (open && selected.length === 0 && (group.teachers ?? []).length > 0) {
-    setSelected((group.teachers ?? []).map((t) => t.id));
+    setSelected((group.teachers ?? []).map((tc) => tc.id));
   }
 
   const teachersById = new Map<number, { firstName: string; lastName: string }>();
-  for (const t of group.teachers ?? []) teachersById.set(t.id, t);
-  for (const t of allTeachers) teachersById.set(t.id, t);
+  for (const tc of group.teachers ?? []) teachersById.set(tc.id, tc);
+  for (const tc of allTeachers) teachersById.set(tc.id, tc);
 
   const teacherLabel = (id: number) => {
-    const t = teachersById.get(id);
-    return t ? `${t.firstName} ${t.lastName}` : `#${id}`;
+    const tc = teachersById.get(id);
+    return tc ? `${tc.firstName} ${tc.lastName}` : `#${id}`;
   };
 
-  const candidates = allTeachers.filter((t) => !selected.includes(t.id));
+  const candidates = allTeachers.filter((tc) => !selected.includes(tc.id));
 
   const reset = () => {
     setDate(undefined);
@@ -567,11 +583,11 @@ function CreateOverrideDialog({
 
   const handleSubmit = async () => {
     if (!date) {
-      toast.error("Sanani tanlang");
+      toast.error(t("Sanani tanlang"));
       return;
     }
     if (selected.length === 0) {
-      toast.error("Kamida 1 ta ustoz bo'lishi kerak");
+      toast.error(t("Kamida 1 ta ustoz bo'lishi kerak"));
       return;
     }
     setSubmitting(true);
@@ -580,12 +596,12 @@ function CreateOverrideDialog({
         `/lesson-teacher-overrides/${group.id}/${format(date, "yyyy-MM-dd")}`,
         { teacherIds: selected, reason: reason.trim() || undefined },
       );
-      toast.success("O'rinbosar saqlandi");
+      toast.success(t("O'rinbosar saqlandi"));
       onSaved();
       onOpenChange(false);
       reset();
     } catch (err) {
-      toast.error(getErrorMessage(err, "Saqlashda xatolik"));
+      toast.error(getErrorMessage(err, t("Saqlashda xatolik")));
     } finally {
       setSubmitting(false);
     }
@@ -603,17 +619,17 @@ function CreateOverrideDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Darsga o&apos;rinbosar ustoz tayinlash</DialogTitle>
+          <DialogTitle>{t("Darsga o'rinbosar ustoz tayinlash")}</DialogTitle>
           <DialogDescription>
-            Tanlangan kungi dars uchun ustozlarni almashtiring. Agar bu kuni
-            davomat allaqachon olingan bo&apos;lsa, oylik avtomatik qayta
-            hisoblanadi (eski ustozlardan olib tashlanib, yangilarga yoziladi).
+            {t(
+              "Tanlangan kungi dars uchun ustozlarni almashtiring. Agar bu kuni davomat allaqachon olingan bo'lsa, oylik avtomatik qayta hisoblanadi (eski ustozlardan olib tashlanib, yangilarga yoziladi).",
+            )}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Dars sanasi</Label>
+            <Label>{t("Dars sanasi")}</Label>
             <LessonDateSelect
               exactDays={group.exactDays ?? []}
               groupStartDate={group.startDate}
@@ -625,13 +641,14 @@ function CreateOverrideDialog({
               excludeDates={excludeDates}
             />
             <p className="text-xs text-muted-foreground">
-              Ushbu guruh dars qiladigan kunlar; ko&apos;chirilgan sanalar
-              ham ro&apos;yxatda chiqadi
+              {t(
+                "Ushbu guruh dars qiladigan kunlar; ko'chirilgan sanalar ham ro'yxatda chiqadi",
+              )}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label>Bu darsni o&apos;tadigan ustozlar</Label>
+            <Label>{t("Bu darsni o'tadigan ustozlar")}</Label>
             <div className="flex flex-wrap gap-1.5 min-h-[2rem] rounded-md border p-2">
               {selected.map((id) => (
                 <Badge key={id} variant="secondary" className="gap-1.5 pr-1">
@@ -655,12 +672,12 @@ function CreateOverrideDialog({
                 >
                   <SelectTrigger className="h-7 text-xs w-auto gap-1 border-dashed">
                     <Plus className="size-3" />
-                    <SelectValue placeholder="Ustoz qo'shish" />
+                    <SelectValue placeholder={t("Ustoz qo'shish")} />
                   </SelectTrigger>
                   <SelectContent>
-                    {candidates.map((t) => (
-                      <SelectItem key={t.id} value={String(t.id)}>
-                        {t.firstName} {t.lastName}
+                    {candidates.map((tc) => (
+                      <SelectItem key={tc.id} value={String(tc.id)}>
+                        {tc.firstName} {tc.lastName}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -668,18 +685,20 @@ function CreateOverrideDialog({
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Default: guruhning {group.teachers?.length ?? 0} ta standart ustozi.
-              Tanlovni o&apos;zgartirsangiz, faqat tanlanganlarga oylik yoziladi.
+              {t(
+                "Odatda: guruhning {n} ta standart ustozi. Tanlovni o'zgartirsangiz, faqat tanlanganlarga oylik yoziladi.",
+                { n: group.teachers?.length ?? 0 },
+              )}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="override-reason">Sabab (ixtiyoriy)</Label>
+            <Label htmlFor="override-reason">{t("Sabab (ixtiyoriy)")}</Label>
             <Input
               id="override-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Masalan 'Botir kasal'"
+              placeholder={t("Masalan 'Botir kasal'")}
               maxLength={500}
               disabled={submitting}
             />
@@ -692,11 +711,11 @@ function CreateOverrideDialog({
             onClick={() => onOpenChange(false)}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button onClick={handleSubmit} disabled={submitting}>
             {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
-            Saqlash
+            {t("Saqlash")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -727,6 +746,7 @@ function CreateRescheduleDialog({
   rescheduleDestinations,
   excludeDates,
 }: RescheduleProps) {
+  const t = useT();
   const isEdit = !!existing;
   const groupStartFallback = normalizeTime(group.lessonStartTime ?? "");
   const groupEndFallback = normalizeTime(group.lessonEndTime ?? "");
@@ -826,10 +846,16 @@ function CreateRescheduleDialog({
 
   // Surface the backend error so silent 400s become visible — easier to
   // diagnose validation/format issues on the room availability query.
+  // The text is read through a ref so a language switch never re-fires the toast.
+  const roomErrorText = t("Bo'sh xonalarni olishda xatolik");
+  const roomErrorTextRef = useRef(roomErrorText);
+  useEffect(() => {
+    roomErrorTextRef.current = roomErrorText;
+  }, [roomErrorText]);
   const roomQueryError = availableRoomsQuery.error;
   useEffect(() => {
     if (!roomQueryError) return;
-    const msg = getErrorMessage(roomQueryError, "Bo'sh xonalarni olishda xatolik");
+    const msg = getErrorMessage(roomQueryError, roomErrorTextRef.current);
     toast.error(msg);
     // eslint-disable-next-line no-console
     console.error("available-rooms error:", roomQueryError);
@@ -837,19 +863,19 @@ function CreateRescheduleDialog({
 
   const handleSubmit = async () => {
     if (!originalDate || !newDate) {
-      toast.error("Asl va yangi sanani tanlang");
+      toast.error(t("Asl va yangi sanani tanlang"));
       return;
     }
     if (newDate.getTime() <= originalDate.getTime()) {
-      toast.error("Yangi sana asl sanadan keyin bo'lishi kerak");
+      toast.error(t("Yangi sana asl sanadan keyin bo'lishi kerak"));
       return;
     }
     if (!newStartTime || !newEndTime) {
-      toast.error("Dars boshlanish vaqtini kiriting");
+      toast.error(t("Dars boshlanish vaqtini kiriting"));
       return;
     }
     if (!newRoomId) {
-      toast.error("Bo'sh xonani tanlang");
+      toast.error(t("Bo'sh xonani tanlang"));
       return;
     }
     setSubmitting(true);
@@ -868,7 +894,7 @@ function CreateRescheduleDialog({
           newLessonEndTime: timeChanged ? newEndTime : null,
           reason: reason.trim() || null,
         });
-        toast.success("Ko'chirilgan dars yangilandi");
+        toast.success(t("Ko'chirilgan dars yangilandi"));
       } else {
         await api.post("/lesson-reschedules", {
           groupId: group.id,
@@ -879,7 +905,7 @@ function CreateRescheduleDialog({
           newLessonEndTime: timeChanged ? newEndTime : undefined,
           reason: reason.trim() || undefined,
         });
-        toast.success("Dars boshqa kunga ko'chirildi");
+        toast.success(t("Dars boshqa kunga ko'chirildi"));
       }
       onSaved();
       onOpenChange(false);
@@ -894,7 +920,10 @@ function CreateRescheduleDialog({
       }
     } catch (err) {
       toast.error(
-        getErrorMessage(err, isEdit ? "Saqlashda xatolik" : "Ko'chirishda xatolik"),
+        getErrorMessage(
+          err,
+          isEdit ? t("Saqlashda xatolik") : t("Ko'chirishda xatolik"),
+        ),
       );
     } finally {
       setSubmitting(false);
@@ -912,20 +941,26 @@ function CreateRescheduleDialog({
         <DialogHeader>
           <DialogTitle>
             {isEdit
-              ? "Ko'chirilgan darsni tahrirlash"
-              : "Darsni boshqa kunga ko'chirish"}
+              ? t("Ko'chirilgan darsni tahrirlash")
+              : t("Darsni boshqa kunga ko'chirish")}
           </DialogTitle>
           <DialogDescription>
             {isEdit
-              ? "Asl sana o'zgartirib bo'lmaydi (audit yozuvi). Yangi sana, vaqt, xona va sababni o'zgartirishingiz mumkin."
-              : "Bu kungi dars yangi sanaga o'tkaziladi. Asl kunda davomat olingan bo'lsa, to'lov va oylik avtomatik qaytariladi."}
+              ? t(
+                  "Asl sana o'zgartirib bo'lmaydi (audit yozuvi). Yangi sana, vaqt, xona va sababni o'zgartirishingiz mumkin.",
+                )
+              : t(
+                  "Bu kungi dars yangi sanaga o'tkaziladi. Asl kunda davomat olingan bo'lsa, to'lov va oylik avtomatik qaytariladi.",
+                )}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           {/* Sanalar — 2 ustun */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Asl dars sanasi</Label>
+              <Label className="text-xs text-muted-foreground">
+                {t("Asl dars sanasi")}
+              </Label>
               {isEdit && originalDate ? (
                 <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-muted-foreground tabular-nums">
                   {format(originalDate, "dd.MM.yyyy")}
@@ -944,7 +979,9 @@ function CreateRescheduleDialog({
               )}
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Yangi dars sanasi</Label>
+              <Label className="text-xs text-muted-foreground">
+                {t("Yangi dars sanasi")}
+              </Label>
               <DatePicker
                 value={newDate}
                 onChange={setNewDate}
@@ -956,7 +993,9 @@ function CreateRescheduleDialog({
                 }
                 defaultMonth={originalDate ?? undefined}
                 placeholder={
-                  originalDate ? "Asl sanadan keyingi kun" : "Avval asl sanani tanlang"
+                  originalDate
+                    ? t("Asl sanadan keyingi kun")
+                    : t("Avval asl sanani tanlang")
                 }
               />
             </div>
@@ -965,7 +1004,7 @@ function CreateRescheduleDialog({
           {/* Boshlanish vaqti — tugash avtomatik hisoblanadi */}
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">
-              Dars boshlanish vaqti
+              {t("Dars boshlanish vaqti")}
             </Label>
             <div className="flex items-center gap-3">
               <div className="w-40">
@@ -977,10 +1016,15 @@ function CreateRescheduleDialog({
               </div>
               {newEndTime && (
                 <div className="text-sm text-muted-foreground">
-                  → tugaydi <span className="font-medium text-foreground">{newEndTime}</span>
+                  {t("→ tugaydi")}{" "}
+                  <span className="font-medium text-foreground">{newEndTime}</span>
                   <span className="ml-1 text-xs">
-                    ({Math.floor(lessonMinutes / 60)} soat
-                    {lessonMinutes % 60 ? ` ${lessonMinutes % 60} daqiqa` : ""})
+                    {lessonMinutes % 60
+                      ? t("({h} soat {m} daqiqa)", {
+                          h: Math.floor(lessonMinutes / 60),
+                          m: lessonMinutes % 60,
+                        })
+                      : t("({n} soat)", { n: Math.floor(lessonMinutes / 60) })}
                   </span>
                 </div>
               )}
@@ -989,7 +1033,7 @@ function CreateRescheduleDialog({
 
           {/* Xona — faqat bo'sh xonalar ko'rsatiladi */}
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Xona</Label>
+            <Label className="text-xs text-muted-foreground">{t("Xona")}</Label>
             <Select
               value={newRoomId}
               onValueChange={setNewRoomId}
@@ -999,28 +1043,28 @@ function CreateRescheduleDialog({
                 <SelectValue
                   placeholder={
                     !canQueryRooms
-                      ? "Avval sana va vaqtni tanlang"
+                      ? t("Avval sana va vaqtni tanlang")
                       : availableRoomsQuery.isLoading
-                        ? "Bo'sh xonalar tekshirilmoqda..."
+                        ? t("Bo'sh xonalar tekshirilmoqda...")
                         : availableRooms.length === 0
-                          ? "Bu vaqtda bo'sh xona yo'q"
-                          : "Xonani tanlang"
+                          ? t("Bu vaqtda bo'sh xona yo'q")
+                          : t("Xonani tanlang")
                   }
                 />
               </SelectTrigger>
               <SelectContent position="popper">
                 {!canQueryRooms ? (
                   <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-                    Avval yangi dars sanasi va vaqtini tanlang
+                    {t("Avval yangi dars sanasi va vaqtini tanlang")}
                   </div>
                 ) : availableRoomsQuery.isLoading ? (
                   <div className="flex items-center justify-center px-3 py-6 text-sm text-muted-foreground">
                     <Loader2 className="size-4 animate-spin mr-2" />
-                    Tekshirilmoqda...
+                    {t("Tekshirilmoqda...")}
                   </div>
                 ) : availableRooms.length === 0 ? (
                   <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-                    Bu vaqtda bo&apos;sh xona topilmadi
+                    {t("Bu vaqtda bo'sh xona topilmadi")}
                   </div>
                 ) : (
                   availableRooms.map((r) => (
@@ -1035,8 +1079,9 @@ function CreateRescheduleDialog({
               !availableRoomsQuery.isLoading &&
               availableRooms.length === 0 && (
                 <p className="text-xs text-amber-600">
-                  Tanlangan sana va vaqtda bu filialda bo&apos;sh xona yo&apos;q.
-                  Vaqtni o&apos;zgartiring yoki boshqa kunni tanlang.
+                  {t(
+                    "Tanlangan sana va vaqtda bu filialda bo'sh xona yo'q. Vaqtni o'zgartiring yoki boshqa kunni tanlang.",
+                  )}
                 </p>
               )}
           </div>
@@ -1044,13 +1089,13 @@ function CreateRescheduleDialog({
           {/* Sabab */}
           <div className="space-y-1.5">
             <Label htmlFor="reschedule-reason" className="text-xs text-muted-foreground">
-              Sabab (ixtiyoriy)
+              {t("Sabab (ixtiyoriy)")}
             </Label>
             <Input
               id="reschedule-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Masalan 'Ustoz dushanba kuni boshqa shaharda'"
+              placeholder={t("Masalan 'Ustoz dushanba kuni boshqa shaharda'")}
               maxLength={500}
               disabled={submitting}
             />
@@ -1062,11 +1107,11 @@ function CreateRescheduleDialog({
             onClick={() => onOpenChange(false)}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button onClick={handleSubmit} disabled={submitting}>
             {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
-            {isEdit ? "Saqlash" : "Ko'chirish"}
+            {isEdit ? t("Saqlash") : t("Ko'chirish")}
           </Button>
         </DialogFooter>
       </DialogContent>

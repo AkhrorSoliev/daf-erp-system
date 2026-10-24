@@ -34,6 +34,8 @@ import { useEditGroup, type GroupData } from "@/hooks/use-edit-group";
 import { useCan } from "@/hooks/use-permissions";
 import { useBranchStatus } from "@/hooks/use-branch-switcher";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 
 // Read from `statusEnum` (GroupStatus) — the legacy `status: Int` mirror is
 // not kept in sync by the seed/migrations, so falling back on it shows
@@ -45,12 +47,12 @@ const STATUS_MAP: Record<
     variant: "default" | "secondary" | "outline" | "destructive";
   }
 > = {
-  ACTIVE: { label: "Faol", variant: "default" },
-  FORMING: { label: "Boshlanmagan", variant: "secondary" },
-  PAUSED: { label: "Pauza", variant: "outline" },
-  COMPLETED: { label: "Yakunlangan", variant: "outline" },
-  CANCELLED: { label: "Bekor qilingan", variant: "destructive" },
-  ARCHIVED: { label: "Arxivlangan", variant: "outline" },
+  ACTIVE: { label: msg("Faol"), variant: "default" },
+  FORMING: { label: msg("Boshlanmagan"), variant: "secondary" },
+  PAUSED: { label: msg("Pauza"), variant: "outline" },
+  COMPLETED: { label: msg("Yakunlangan"), variant: "outline" },
+  CANCELLED: { label: msg("Bekor qilingan guruh"), variant: "destructive" },
+  ARCHIVED: { label: msg("Arxivlangan"), variant: "outline" },
 };
 
 import { formatWeekdays } from "@/lib/weekdays";
@@ -76,6 +78,7 @@ export function GroupInfoCard({
   onWriteComment,
   onStatusChanged,
 }: GroupInfoCardProps) {
+  const t = useT();
   const { openDrawer } = useEditGroup();
   const [showStatus, setShowStatus] = useState(false);
 
@@ -107,7 +110,7 @@ export function GroupInfoCard({
   const status = STATUS_MAP[statusKey] ?? STATUS_MAP.FORMING;
 
   const daysLabel =
-    group.exactDays?.length > 0 ? formatWeekdays(group.exactDays) : null;
+    group.exactDays?.length > 0 ? formatWeekdays(group.exactDays, t) : null;
 
   const timeLabel =
     group.lessonStartTime && group.lessonEndTime
@@ -120,7 +123,7 @@ export function GroupInfoCard({
       <div className="mb-4 flex flex-col items-center gap-1.5 text-center">
         <h2 className="text-lg font-bold">{group.name}</h2>
         <div className="flex items-center gap-2">
-          <Badge variant={status.variant}>{status.label}</Badge>
+          <Badge variant={status.variant}>{t(status.label)}</Badge>
         </div>
       </div>
 
@@ -128,19 +131,19 @@ export function GroupInfoCard({
 
       {/* Info rows */}
       <div className="space-y-2.5 text-sm">
-        <InfoRow label="Kurs" value={group.course.name} />
+        <InfoRow label={t("Kurs")} value={group.course.name} />
         <InfoRow
-          label="O'qituvchi"
+          label={t("O'qituvchi")}
           value={
             group.teachers.length > 0 ? (
               <span className="flex flex-wrap justify-end gap-x-1">
-                {group.teachers.map((t, idx) => (
-                  <span key={t.id}>
+                {group.teachers.map((tc, idx) => (
+                  <span key={tc.id}>
                     <Link
-                      href={`/teachers/profile/${t.id}`}
+                      href={`/teachers/profile/${tc.id}`}
                       className="hover:text-primary hover:underline"
                     >
-                      {t.firstName} {t.lastName}
+                      {tc.firstName} {tc.lastName}
                     </Link>
                     {idx < group.teachers.length - 1 && ","}
                   </span>
@@ -151,14 +154,14 @@ export function GroupInfoCard({
             )
           }
         />
-        <InfoRow label="O'quvchilar" value={`${group.studentCount} ta`} bold />
+        <InfoRow label={t("O'quvchilar")} value={t("{n} ta", { n: group.studentCount })} bold />
 
         <Separator className="my-3!" />
 
-        {daysLabel && <InfoRow label="Kunlar" value={daysLabel} />}
-        {timeLabel && <InfoRow label="Vaqt" value={timeLabel} />}
+        {daysLabel && <InfoRow label={t("Kunlar")} value={daysLabel} />}
+        {timeLabel && <InfoRow label={t("Vaqt")} value={timeLabel} />}
         <InfoRow
-          label="Xona"
+          label={t("Xona")}
           value={
             group.room
               ? `${group.room.name}${group.room.capacity ? ` (${group.room.capacity})` : ""}`
@@ -170,19 +173,19 @@ export function GroupInfoCard({
 
         {group.startDate && (
           <InfoRow
-            label="Boshlanish"
+            label={t("Boshlanish")}
             value={format(tashkentDayAsLocalDate(group.startDate), "dd.MM.yyyy")}
           />
         )}
         {group.endDate && (
           <InfoRow
-            label="Tugash"
+            label={t("Tugash")}
             value={format(tashkentDayAsLocalDate(group.endDate), "dd.MM.yyyy")}
           />
         )}
         <InfoRow
-          label="Narxi"
-          value={`${formatPrice(group.course.price)} so'm`}
+          label={t("Narxi")}
+          value={`${formatPrice(group.course.price)} ${t("so'm")}`}
         />
       </div>
 
@@ -205,7 +208,7 @@ export function GroupInfoCard({
               <div className="flex items-center gap-2">
                 <MessageSquare className="size-3.5 text-muted-foreground" />
                 <span className="text-xs font-medium text-muted-foreground">
-                  So&apos;nggi izoh
+                  {t("So'nggi izoh")}
                 </span>
               </div>
               <Tooltip>
@@ -217,11 +220,11 @@ export function GroupInfoCard({
                     onClick={onWriteComment}
                   >
                     <PenLine className="mr-1 size-3" />
-                    Izoh yozish
+                    {t("Izoh yozish")}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  Izohlar bo&apos;limiga o&apos;tib izoh yozish
+                  {t("Izohlar bo'limiga o'tib izoh yozish")}
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -234,7 +237,7 @@ export function GroupInfoCard({
                   <span className="font-medium">
                     {latestComment.author
                       ? `${latestComment.author.firstName} ${latestComment.author.lastName}`
-                      : "Tizim"}
+                      : t("Tizim (avtomatik)")}
                   </span>
                   <span>&middot;</span>
                   <span>
@@ -247,7 +250,7 @@ export function GroupInfoCard({
               </div>
             ) : (
               <p className="text-xs text-muted-foreground italic">
-                Izohlar yo&apos;q
+                {t("Izohlar yo'q")}
               </p>
             )}
           </div>
@@ -267,11 +270,11 @@ export function GroupInfoCard({
                 onClick={() => openDrawer(group)}
               >
                 <Pencil className="mr-1.5 size-3.5" />
-                Tahrirlash
+                {t("Tahrirlash")}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              Guruh ma&apos;lumotlarini tahrirlash
+              {t("Guruh ma'lumotlarini tahrirlash")}
             </TooltipContent>
           </Tooltip>
         )}
@@ -286,22 +289,22 @@ export function GroupInfoCard({
                   className={canManage ? "size-8 p-0" : "flex-1"}
                 >
                   <QrCode className="size-4" />
-                  {!canManage && <span className="ml-1.5">QR kod</span>}
+                  {!canManage && <span className="ml-1.5">{t("QR kod")}</span>}
                 </Button>
               </DialogTrigger>
             </TooltipTrigger>
             <TooltipContent>
-              QR kod — guruhga ro&apos;yxatdan o&apos;tish
+              {t("QR kod — guruhga ro'yxatdan o'tish")}
             </TooltipContent>
           </Tooltip>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>QR kod — {group.name}</DialogTitle>
+              <DialogTitle>{t("QR kod — {name}", { name: group.name })}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col items-center gap-4 py-4">
               {branchClosed ? (
                 <p className="text-muted-foreground text-center text-sm">
-                  {BRANCH_CLOSED_TO_REGISTRATION}
+                  {t(BRANCH_CLOSED_TO_REGISTRATION)}
                 </p>
               ) : isTelegramBotConfigured ? (
                 <>
@@ -317,13 +320,12 @@ export function GroupInfoCard({
                     />
                   </div>
                   <p className="text-muted-foreground text-center text-sm">
-                    Ushbu QR kodni skanerlang va &quot;{group.name}&quot;
-                    guruhiga ro&apos;yxatdan o&apos;ting
+                    {t("Ushbu QR kodni skanerlang va \"{name}\" guruhiga ro'yxatdan o'ting", { name: group.name })}
                   </p>
                 </>
               ) : (
                 <p className="text-muted-foreground text-center text-sm">
-                  {TELEGRAM_BOT_NOT_CONFIGURED}
+                  {t(TELEGRAM_BOT_NOT_CONFIGURED)}
                 </p>
               )}
             </div>
@@ -342,12 +344,13 @@ export function GroupInfoCard({
             onClick={() => setShowStatus(true)}
           >
             <RefreshCw className="mr-1.5 size-3.5" />
-            Status o&apos;zgartirish
+            {t("Status o'zgartirish")}
           </Button>
           <ChangeStatusDialog
             open={showStatus}
             onOpenChange={setShowStatus}
             entityType="groups"
+        groupPause={group.pause}
             entityId={group.id}
             entityName={group.name}
             currentStatus={statusKey}
@@ -366,6 +369,7 @@ function CopyLinkButton({
   group: GroupData;
   branchClosed: boolean;
 }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   const link = branchClosed
     ? null
@@ -392,8 +396,8 @@ function CopyLinkButton({
         </TooltipTrigger>
         <TooltipContent>
           {branchClosed
-            ? BRANCH_CLOSED_TO_REGISTRATION
-            : TELEGRAM_BOT_NOT_CONFIGURED}
+            ? t(BRANCH_CLOSED_TO_REGISTRATION)
+            : t(TELEGRAM_BOT_NOT_CONFIGURED)}
         </TooltipContent>
       </Tooltip>
     );
@@ -416,7 +420,7 @@ function CopyLinkButton({
         </Button>
       </TooltipTrigger>
       <TooltipContent>
-        {copied ? "Nusxalandi!" : "Havolani nusxalash"}
+        {copied ? t("Nusxalandi!") : t("Havolani nusxalash")}
       </TooltipContent>
     </Tooltip>
   );

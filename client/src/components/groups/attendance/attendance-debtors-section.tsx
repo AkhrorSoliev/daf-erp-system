@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/table";
 import { RecordPaymentDialog } from "@/components/payments/record-payment-dialog";
 import { formatBalance, formatPrice } from "@/lib/format-utils";
+import { useT } from "@/i18n/context";
+import type { Params } from "@/i18n/translate";
 import {
   monthCoverageText,
   type DebtorCurrentCycle,
@@ -32,8 +34,11 @@ function shortDate(date: string): string {
   return format(new Date(date + "T00:00:00"), "dd.MM");
 }
 
-function currentCycleText(cycle: DebtorCurrentCycle | null | undefined): string {
-  if (!cycle) return "Sikl boshlanmagan";
+function currentCycleText(
+  cycle: DebtorCurrentCycle | null | undefined,
+  t: (source: string, params?: Params) => string,
+): string {
+  if (!cycle) return t("Sikl boshlanmagan");
   if (cycle.firstCoveredDate) {
     const range =
       cycle.lastCoveredDate && cycle.lastCoveredDate !== cycle.firstCoveredDate
@@ -41,7 +46,7 @@ function currentCycleText(cycle: DebtorCurrentCycle | null | undefined): string 
         : shortDate(cycle.firstCoveredDate);
     return `${range} (${cycle.coveredCount}/${cycle.capacity})`;
   }
-  return `${cycle.capacity} dars — boshlanmagan`;
+  return t("{n} dars — boshlanmagan", { n: cycle.capacity });
 }
 
 interface AttendanceDebtorsSectionProps {
@@ -79,6 +84,7 @@ export function AttendanceDebtorsSection({
   suggestedAmount,
   onPaymentSuccess,
 }: AttendanceDebtorsSectionProps) {
+  const t = useT();
   const [paymentTarget, setPaymentTarget] = useState<DebtorStudent | null>(
     null,
   );
@@ -91,22 +97,17 @@ export function AttendanceDebtorsSection({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-amber-900 dark:text-amber-300">
             <AlertTriangle className="size-5" />
-            Qarzdorlar — {debtors.length} ta
+            {t("Qarzdorlar — {n} ta", { n: debtors.length })}
           </CardTitle>
           <CardDescription className="text-amber-700/80 dark:text-amber-400/80">
             {monthly ? (
-              <>
-                Bu o&apos;quvchilar oylik to&apos;lovni to&apos;liq
-                to&apos;lamagan. «Shu oy» ustuni to&apos;lov oyning nechta
-                darsiga yetishini ko&apos;rsatadi.
-              </>
+              t(
+                "Bu o'quvchilar oylik to'lovni to'liq to'lamagan. «Shu oy» ustuni to'lov oyning nechta darsiga yetishini ko'rsatadi.",
+              )
             ) : (
-              <>
-                Bu o&apos;quvchilarning balansi manfiyga tushgan. Davomat
-                olinishi davom etadi va har bir dars bahosi balansdan
-                ushlanmoqda — to&apos;lov qabul qilingach, ustozning oyligiga
-                ham hisoblanadi.
-              </>
+              t(
+                "Bu o'quvchilarning balansi manfiyga tushgan. Davomat olinishi davom etadi va har bir dars bahosi balansdan ushlanmoqda — to'lov qabul qilingach, ustozning oyligiga ham hisoblanadi.",
+              )
             )}
           </CardDescription>
         </CardHeader>
@@ -116,13 +117,13 @@ export function AttendanceDebtorsSection({
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12 border-r">#</TableHead>
-                  <TableHead>O&apos;quvchi</TableHead>
-                  <TableHead>{monthly ? "Shu oy" : "Joriy sikl"}</TableHead>
-                  <TableHead className="text-right">Balans</TableHead>
+                  <TableHead>{t("O'quvchi")}</TableHead>
+                  <TableHead>{monthly ? t("Shu oy") : t("Joriy sikl")}</TableHead>
+                  <TableHead className="text-right">{t("Balans")}</TableHead>
                   {!monthly && (
-                    <TableHead className="text-right">Yetmaydi</TableHead>
+                    <TableHead className="text-right">{t("Yetmaydi")}</TableHead>
                   )}
-                  <TableHead className="text-right">Tavsiya</TableHead>
+                  <TableHead className="text-right">{t("Tavsiya")}</TableHead>
                   <TableHead className="w-44" />
                 </TableRow>
               </TableHeader>
@@ -140,19 +141,19 @@ export function AttendanceDebtorsSection({
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {monthly
-                        ? monthCoverageText(month, d.monthCoverage)
-                        : currentCycleText(d.currentCycle)}
+                        ? monthCoverageText(month, d.monthCoverage, t)
+                        : currentCycleText(d.currentCycle, t)}
                     </TableCell>
                     <TableCell className="text-right font-mono tabular-nums text-destructive">
-                      {formatBalance(d.balance)}
+                      {formatBalance(d.balance, t("so'm"))}
                     </TableCell>
                     {!monthly && (
                       <TableCell className="text-right font-mono tabular-nums text-amber-700 dark:text-amber-400">
-                        {formatPrice(d.debtAmount)} so&apos;m
+                        {formatPrice(d.debtAmount)} {t("so'm")}
                       </TableCell>
                     )}
                     <TableCell className="text-right font-mono tabular-nums font-semibold">
-                      {formatPrice(suggestedAmount || d.debtAmount)} so&apos;m
+                      {formatPrice(suggestedAmount || d.debtAmount)} {t("so'm")}
                     </TableCell>
                     <TableCell>
                       <Button
@@ -162,7 +163,7 @@ export function AttendanceDebtorsSection({
                         className="w-full"
                       >
                         <CreditCard className="mr-1.5 size-3.5" />
-                        To&apos;lov qabul qilish
+                        {t("To'lov qabul qilish")}
                       </Button>
                     </TableCell>
                   </TableRow>

@@ -13,6 +13,7 @@ import { GroupScheduleService } from './group-schedule.service';
 import { GroupQueryDto } from './dto/group-query.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
+import { UpdateGroupPauseDto } from './dto/update-group-pause.dto';
 import { ChangeGroupStatusDto } from './dto/change-group-status.dto';
 import { DeleteGroupDto } from './dto/delete-group.dto';
 import { CurrentUser, BranchScope, BranchCeiling } from '../common/decorators';
@@ -223,6 +224,17 @@ export class GroupsController {
     @CurrentUser('companyId') companyId: number,
   ) {
     return this.groupsService.changeStatus(id, dto, userId, companyId);
+  }
+
+  @Patch(':id/pause')
+  @Can('groups.manage')
+  updatePause(
+    @Param('id') id: string,
+    @Body() dto: UpdateGroupPauseDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    return this.groupsService.updatePause(id, dto, userId, companyId);
   }
 
   @Get(':id/status-history')

@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { PriceInput } from "@/components/ui/price-input";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
 
 interface Props {
   open: boolean;
@@ -42,6 +43,7 @@ export function InitialBalanceDialog({
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const t = useT();
 
   useEffect(() => {
     if (!open) {
@@ -62,11 +64,11 @@ export function InitialBalanceDialog({
         amount: rawAmount,
         note: note.trim() || undefined,
       });
-      toast.success("Boshlang'ich balans muvaffaqiyatli kiritildi");
+      toast.success(t("Boshlang'ich balans muvaffaqiyatli kiritildi"));
       onSaved();
       onOpenChange(false);
     } catch (err) {
-      toast.error(getErrorMessage(err, "Saqlashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("Saqlashda xatolik yuz berdi")));
     } finally {
       setSubmitting(false);
     }
@@ -81,18 +83,17 @@ export function InitialBalanceDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Boshlang&apos;ich balans</DialogTitle>
+          <DialogTitle>{t("Boshlang'ich balans")}</DialogTitle>
           <DialogDescription>
-            {studentName} uchun joriy qoldiq balansni kiriting. Bu
-            ma&apos;lumot bir martagina kiritiladi va keyinchalik
-            o&apos;zgartirilmaydi — har dars uchun yechilgan summa shu balansdan
-            hisoblanadi.
+            {t("{name} uchun joriy qoldiq balansni kiriting. Bu ma'lumot bir martagina kiritiladi va keyinchalik o'zgartirilmaydi — har dars uchun yechilgan summa shu balansdan hisoblanadi.", {
+              name: studentName,
+            })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="initial-balance-amount">Summa</Label>
+            <Label htmlFor="initial-balance-amount">{t("Summa")}</Label>
             <PriceInput
               id="initial-balance-amount"
               value={amount}
@@ -104,14 +105,14 @@ export function InitialBalanceDialog({
 
           <div className="space-y-2">
             <Label htmlFor="initial-balance-note">
-              Izoh{" "}
-              <span className="text-muted-foreground text-xs">(ixtiyoriy)</span>
+              {t("Izoh")}{" "}
+              <span className="text-muted-foreground text-xs">{t("(ixtiyoriy)")}</span>
             </Label>
             <Input
               id="initial-balance-note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Eski tizimdan o'tkazildi"
+              placeholder={t("Eski tizimdan o'tkazildi")}
               maxLength={500}
               disabled={submitting}
             />
@@ -124,11 +125,11 @@ export function InitialBalanceDialog({
             onClick={() => onOpenChange(false)}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button onClick={handleSubmit} disabled={submitting || amount === ""}>
             {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
-            Saqlash
+            {t("Saqlash")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -2,6 +2,7 @@
 
 import { Fragment, useState } from "react";
 import { ChevronRight } from "lucide-react";
+import { useT } from "@/i18n/context";
 import {
   Table,
   TableBody,
@@ -41,6 +42,7 @@ export function StatementMonthsTable({
   lessonDays: Record<string, LessonDay[]>;
   sharpNote: Segment[] | null;
 }) {
+  const t = useT();
   const [open, setOpen] = useState<string | null>(null);
 
   return (
@@ -48,11 +50,11 @@ export function StatementMonthsTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="min-w-40">Oy</TableHead>
-            <TableHead>Darslar</TableHead>
-            <TableHead className="text-right">Narxi</TableHead>
-            <TableHead className="text-right">To&apos;langan</TableHead>
-            <TableHead className="text-right">Qarz</TableHead>
+            <TableHead className="min-w-40">{t("Oy")}</TableHead>
+            <TableHead>{t("Darslar")}</TableHead>
+            <TableHead className="text-right">{t("Narxi")}</TableHead>
+            <TableHead className="text-right">{t("To'langan")}</TableHead>
+            <TableHead className="text-right">{t("Qarz")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -154,7 +156,7 @@ export function StatementMonthsTable({
           {total && (
             <TableRow className="border-t-2 font-semibold hover:bg-transparent">
               <TableCell colSpan={2}>
-                Jami
+                {t("Jami")}
                 {total.details.map((line, n) => (
                   <p
                     key={n}
@@ -198,6 +200,7 @@ export function LessonDayChips({
   days: LessonDay[];
   showGroup: boolean;
 }) {
+  const t = useT();
   return (
     <ul className="flex flex-wrap gap-1.5 whitespace-normal">
       {days.map((d) => {
@@ -212,7 +215,7 @@ export function LessonDayChips({
           >
             <span className="font-mono tabular-nums">{dayMonth(d.day)}</span>
             {showGroup && <span className="opacity-70">{d.group}</span>}
-            <span>· {s.label}</span>
+            <span>· {t(s.label)}</span>
           </li>
         );
       })}

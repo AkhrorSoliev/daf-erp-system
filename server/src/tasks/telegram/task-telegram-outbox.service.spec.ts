@@ -182,6 +182,25 @@ describe('TaskTelegramOutbox.drain', () => {
     });
   });
 
+  it('an opening notice held for a task that has since closed is dropped; a closing one goes', async () => {
+    const stale = setup([row()]); // payload { kind: 'ASSIGNED' }
+    (loadTaskView as jest.Mock).mockResolvedValue(view({ status: 'DONE' }));
+    await stale.outbox.drain(NOW);
+    expect(stale.sender.send).not.toHaveBeenCalled();
+    expect(updateOf(stale.prisma).data).toEqual({
+      sentAt: NOW,
+      lastError: 'task closed',
+    });
+
+    const done = setup([row({ payload: { kind: 'DONE', by: 'X' } })]);
+    (loadTaskView as jest.Mock).mockResolvedValue(view({ status: 'DONE' }));
+    await done.outbox.drain(NOW);
+    expect(done.sender.send).toHaveBeenCalledWith(expect.anything(), 40, {
+      kind: 'DONE',
+      by: 'X',
+    });
+  });
+
   it('a task that is gone, or a person with no chat, closes the row for good', async () => {
     const gone = setup([row()]);
     (loadTaskView as jest.Mock).mockResolvedValue(null);

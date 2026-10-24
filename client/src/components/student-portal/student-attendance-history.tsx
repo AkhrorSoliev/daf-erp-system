@@ -23,28 +23,30 @@ import {
 import type { AttendanceGroup, AttendanceStats } from "./lib/types";
 import { loadState } from "./lib/load-state";
 import { LoadFailed } from "./load-failed";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/context";
 
 const STATUS = {
   PRESENT: {
-    label: "Keldi",
+    label: msg("Keldi"),
     icon: Check,
     tone: "success" as const,
     color: "var(--success)",
   },
   ABSENT: {
-    label: "Kelmadi",
+    label: msg("Kelmadi"),
     icon: X,
     tone: "danger" as const,
     color: "var(--danger)",
   },
   LATE: {
-    label: "Kechikdi",
+    label: msg("Kechikdi"),
     icon: Clock,
     tone: "warning" as const,
     color: "var(--warning)",
   },
   EXCUSED: {
-    label: "Sababli",
+    label: msg("Sababli"),
     icon: ShieldCheck,
     tone: "sky" as const,
     color: "var(--ink-400)",
@@ -63,13 +65,13 @@ function formatDate(dateStr: string) {
 }
 
 const DAY_NAMES: Record<number, string> = {
-  0: "Yak",
-  1: "Du",
-  2: "Se",
-  3: "Cho",
-  4: "Pay",
-  5: "Ju",
-  6: "Sha",
+  0: msg("Yak"),
+  1: msg("Du"),
+  2: msg("Se"),
+  3: msg("Cho"),
+  4: msg("Pay"),
+  5: msg("Ju"),
+  6: msg("Sha"),
 };
 
 function StatCell({
@@ -92,6 +94,7 @@ function StatCell({
 }
 
 export function StudentAttendanceHistory() {
+  const t = useT();
   const history = useQuery<AttendanceGroup[]>({
     queryKey: ["student-portal", "attendance-history"],
     queryFn: () =>
@@ -107,7 +110,7 @@ export function StudentAttendanceHistory() {
 
   return (
     <Screen narrow>
-      <StackHeader title="Davomat" backHref="/portal" />
+      <StackHeader title={t("Davomat")} backHref="/portal" />
 
       {state === "loading" ? (
         <LoadingCards count={2} />
@@ -118,8 +121,8 @@ export function StudentAttendanceHistory() {
       ) : !data || data.length === 0 ? (
         <EmptyState
           icon={<CloudSlash weight="bold" />}
-          title="Davomat ma'lumotlari yo'q"
-          description="Darslar boshlanganda davomatingiz shu yerda ko'rinadi."
+          title={t("Davomat ma'lumotlari yo'q")}
+          description={t("Darslar boshlanganda davomatingiz shu yerda ko'rinadi.")}
         />
       ) : (
         <>
@@ -130,27 +133,27 @@ export function StudentAttendanceHistory() {
                 <ProgressRing
                   value={stats.percentage}
                   className={percentColor(stats.percentage)}
-                  sublabel="davomat"
+                  sublabel={t("davomat")}
                 />
                 <div className="grid flex-1 grid-cols-2 gap-3">
                   <StatCell
                     value={stats.present}
-                    label="Keldi"
+                    label={t("Keldi")}
                     color="var(--success)"
                   />
                   <StatCell
                     value={stats.late}
-                    label="Kechikdi"
+                    label={t("Kechikdi")}
                     color="var(--warning)"
                   />
                   <StatCell
                     value={stats.absent}
-                    label="Kelmadi"
+                    label={t("Kelmadi")}
                     color="var(--danger)"
                   />
                   <StatCell
                     value={stats.excused}
-                    label="Sababli"
+                    label={t("Sababli")}
                     color="var(--ink-500)"
                   />
                 </div>
@@ -209,7 +212,7 @@ export function StudentAttendanceHistory() {
 
                   {group.records.length === 0 ? (
                     <p className="px-4 py-5 text-center text-xs font-semibold text-ink-500">
-                      Hali davomat yozilmagan
+                      {t("Hali davomat yozilmagan")}
                     </p>
                   ) : (
                     <div className="divide-y divide-line">
@@ -228,12 +231,12 @@ export function StudentAttendanceHistory() {
                                 {formatDate(record.date)}
                               </span>
                               <span className="ml-1.5 text-xs font-semibold text-ink-500">
-                                {dayName}
+                                {t(dayName)}
                               </span>
                             </div>
                             <Badge tone={cfg.tone} size="sm">
                               <Icon size={13} weight="bold" />
-                              {cfg.label}
+                              {t(cfg.label)}
                             </Badge>
                           </div>
                         );

@@ -6,6 +6,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { Books, CheckCircle, X } from "@phosphor-icons/react";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/use-t";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { Button, EmptyState, LoadingCards, ProgressBar } from "../../lumio";
 import { RadioSessionToggle } from "../../radio/radio-session-toggle";
@@ -15,7 +17,6 @@ import {
   sozHisobiniEskirt,
   useAbschluss,
   useErsatz,
-  useFortschritt,
   useJuftTekshir,
   useLernenLesson,
   usePruefen,
@@ -59,11 +60,6 @@ import { NatijaEkrani } from "./natija-ekrani";
 import type { SinovHolati } from "./sinov-natijasi";
 import { SuhbatPleyer } from "./suhbat-pleyer";
 import { TranskriptBlok } from "./transkript-blok";
-import {
-  fortschrittSurati,
-  keyingiBoshlangichSurati,
-  type FortschrittSurati,
-} from "./seans-boshlangich";
 
 /**
  * `manba: "takrorlash"`da `lessonId` UMUMAN QABUL QILINMAYDI — takrorlash
@@ -79,6 +75,9 @@ import {
  * `lessonId` `"dars"`da MAJBURIY, `"takrorlash"`da esa umuman berilmaydi
  * (ortiqcha maydon sifatida rad etiladi).
  */
+// A `msg()` text, so the coverage test sees it; drawn with `t` where it is toasted.
+const NATIJA_SAQLANMADI = msg("Natija saqlanmadi. Internetni tekshiring");
+
 export type SeansEkraniProps =
   { manba?: "dars"; lessonId: number } | { manba: "takrorlash" };
 
@@ -96,6 +95,7 @@ export type SeansEkraniProps =
  */
 export function SeansEkrani(props: SeansEkraniProps) {
   const router = useRouter();
+  const t = useT();
   const qc = useQueryClient();
 
   // Diskriminatsiya BIR MARTA, shu yerda: `props.manba` to'g'ridan-to'g'ri
@@ -126,7 +126,6 @@ export function SeansEkrani(props: SeansEkraniProps) {
   const ersatzSorov = useErsatz();
   const abschluss = useAbschluss();
   const wiederholungAbschluss = useWiederholungAbschluss();
-  const fortschritt = useFortschritt();
   // The bottom bar is `fixed`; it needs the rail's width to stay clear of it.
   const sidebarMode = useSidebar((s) => s.mode);
 
@@ -178,40 +177,14 @@ export function SeansEkrani(props: SeansEkraniProps) {
   const [savolBoshi, setSavolBoshi] = React.useState(() => Date.now());
   const [seansBoshi, setSeansBoshi] = React.useState(() => Date.now());
 
-  // Natija ekranidagi ball/seriya/o'rin FARQ ko'rsatadi — buning uchun
-  // seans BOSHLANGANDAGI surat kerak, va u `keyingiBoshlangichSurati`
-  // (sof mantiq, sinalgan `seans-boshlangich.test.ts`da) orqali hisoblanadi.
-  const boshlangichFortschritt = React.useRef<FortschrittSurati | null>(null);
-
-  // Seans faqat serverdan savollar kelganda BIR MARTA boshlanadi — har
-  // qayta chizilishda `boshla` chaqirilsa, o'quvchining joriy o'rni
-  // yo'qolib, seans qaytadan boshidan tushardi.
-  //
-  // Boshlanish IKKALASINI ham kutadi — `seans.data` VA `fortschritt`ning
-  // "hal bo'lganini" (`data` keldi YOKI so'rov xatoga uchradi). Sabab:
-  // server har javobni DARHOL ballaydi, shuning uchun sekin ulanishda
-  // `fortschritt` hali yuklanayotgan paytda birinchi savolga javob
-  // berilsa, boshlang'ich surat o'sha ballni ALLAQACHON o'z ichiga olib,
-  // seans oxiridagi farqni kamsitib ko'rsatardi (Task 9 review,
-  // Important). Lekin FAQAT `fortschritt.data`ga emas — so'rov XATOGA
-  // uchrasa `data` hech qachon kelmaydi va mashq abadiy shu yerda osilib
-  // qolardi; ball dekor, muvaffaqiyatsiz yon so'rov mashqni to'smasligi
-  // kerak (xuddi `YolTepasi`dagi kabi). Xato yo'lida boshlang'ich `null`
-  // qoladi — bu allaqachon to'g'ri darajada tushiriladi: `yutuqlarBormi`
-  // `natija-ekrani.tsx`da `false` bo'lib, karta shunchaki ko'rinmaydi.
+  // The session starts once, when the questions arrive.
   const boshlandiMi = React.useRef(false);
   React.useEffect(() => {
     if (boshlandiMi.current) return;
     if (!seans.data || seans.data.length === 0) return;
-    if (!fortschritt.data && !fortschritt.isError) return;
     boshlandiMi.current = true;
-    boshlangichFortschritt.current = keyingiBoshlangichSurati(
-      boshlangichFortschritt.current,
-      fortschrittSurati(fortschritt.data),
-      false,
-    );
     setHolat(boshla(seans.data));
-  }, [seans.data, fortschritt.data, fortschritt.isError]);
+  }, [seans.data]);
 
   const frage = holat ? joriy(holat) : null;
   // The next question's pictures load while this one is answered.
@@ -373,7 +346,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
           setJuftlar(
             (prev) => juftJavobKeldi(prev, chapIdx, ongIdx, false).juftlar,
           );
-          toast.error(getErrorMessage(err, "Yuborib bo'lmadi. Qayta bosing"));
+          toast.error(getErrorMessage(err, t("Yuborib bo'lmadi. Qayta bosing")));
         },
       },
     );
@@ -477,14 +450,6 @@ export function SeansEkrani(props: SeansEkraniProps) {
     yozildi.current = true;
     tugashDavomiyligi.current = Date.now() - seansBoshi;
 
-    // Natija ekranidagi ball/seriya/o'rin `fortschritt` YANGILANGANIDAN
-    // keyingina to'g'ri ko'rinadi. Dars seansida buni `abschluss`ning
-    // muvaffaqiyati ALLAQACHON qiladi (pastda, `invalidateQueries`
-    // orqali) — lekin takrorlash `abschluss` UMUMAN yubormaydi, shuning
-    // uchun yangilash bu yerda ikkala holat uchun ham so'raladi, o'sha
-    // chaqiruvga osilib qolmay.
-    void fortschritt.refetch();
-
     // Takrorlash so'rovi (`useWiederholung`) `staleTime: Infinity` bilan
     // abadiy keshda turadi va `abschluss` UMUMAN yubormaydi (pastda),
     // shuning uchun uning `onSuccess`idagi invalidatsiya takrorlash
@@ -518,7 +483,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
         {
           onError: (err) =>
             toast.error(
-              getErrorMessage(err, "Natija saqlanmadi. Internetni tekshiring"),
+              getErrorMessage(err, t(NATIJA_SAQLANMADI)),
             ),
         },
       );
@@ -541,7 +506,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
       // faqat xato holatida tost chiqadi.
       onError: (err) =>
         toast.error(
-          getErrorMessage(err, "Natija saqlanmadi. Internetni tekshiring"),
+          getErrorMessage(err, t(NATIJA_SAQLANMADI)),
         ),
     });
     // Qasddan tushirilgan bog'liqliklar (har biri xavfsiz):
@@ -549,12 +514,11 @@ export function SeansEkrani(props: SeansEkraniProps) {
     //   ulanadi, render sayin o'zgarmaydi.
     // - `wiederholungAbschluss` — xuddi `abschluss` bilan bir xil sabab:
     //   uning `.mutate`si ham react-query'ning barqaror ulanishi.
-    // - `fortschritt` — xuddi shunday, `.refetch`i barqaror; ro'yxatga
-    //   qo'shilsa har `fortschritt.data` yangilanishida bu butun effekt
-    //   qayta ishga tushib, `abschluss.mutate`ni ikkinchi marta chaqirardi.
     // - `qc` — `useQueryClient()` bitta Providerdan olingan barqaror
     //   obyekt, komponent umri davomida o'zgarmaydi.
     // - `tugadimi` — sof, modul darajasidagi import, hech qachon o'zgarmaydi.
+    // - `t` — only the error toast's fallback text; a language switch must
+    //   never re-run this effect (it would send `abschluss` again).
     // - `darsLessonId`, `darsMi` — shu ekran o'rnatilgan davomida
     //   o'zgarmaydigan propslardan hisoblanadi (marshrut/chaqiruvchi
     //   belgilaydi, hayot davomida barqaror).
@@ -569,49 +533,17 @@ export function SeansEkrani(props: SeansEkraniProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [holat]);
 
-  // Qayta o'tishda seans YANGI so'rov bilan yangilanadi — Leitner
-  // jadvali orqali qaytgan so'zlar birinchi safargidan farq qilishi
-  // mumkin, shuning uchun eski `seans.data` emas, `refetch` natijasi
-  // ishlatiladi. `fortschritt` ham XUDDI SHUNDAY: ambient `fortschritt.data`
-  // keshiga emas, shu yerda KUTILGAN `refetch()` natijasiga ishoniladi.
-  //
-  // Bu ATAYLAB shunday — avvalgi versiya ambient keshni o'qirdi va faqat
-  // IZOHDA "tugash effektida allaqachon refetch qilingan" deb DA'VO
-  // qilardi, biroq buni hech narsa MAJBURLAMAGAN edi: tugash effektidagi
-  // `fortschritt.refetch()` KUTILMAYDI, "Qayta o'tish" tugmasi esa darhol
-  // bosiladigan. Sekin ulanishda o'quvchi o'sha `refetch` tugashidan OLDIN
-  // bossa, ambient kesh hali BIRINCHI SEANSDAN OLDINGI qiymatni ko'rsatib
-  // turardi — va aynan o'sha eski qiymat retry uchun boshlang'ich sifatida
-  // qulflanib qolardi, natijada ko'rsatilgan farq birinchi seans + retry'ni
-  // BIRGA qamrab olardi (Task 9 review, round 2). Shu sabab bu yerda
-  // `fortschritt.refetch()` ham `seans.refetch()` kabi so'raladi va
-  // KUTILADI — ambient `fortschritt.data`ga umuman qo'l tegilmaydi.
+  // Qayta o'tishda seans YANGI so'rov bilan yangilanadi — Leitner orqali
+  // qaytgan so'zlar birinchi safargidan farq qilishi mumkin.
   const qaytaOtish = async () => {
-    const [seansNatija, fortschrittNatija] = await Promise.all([
-      seans.refetch(),
-      // Ball dekor — muvaffaqiyatsiz yon so'rov qayta o'tishni TO'SMASLIGI
-      // kerak. Xato bo'lsa `null`ga tushadi, pastdagi `fortschrittSurati`
-      // buni tabiiy ravishda "boshlang'ich noma'lum" holatiga aylantiradi
-      // — natija ekranida esa bu allaqachon to'g'ri darajada tushiriladi
-      // (yutuqlar kartasi shunchaki ko'rinmaydi).
-      fortschritt.refetch().catch(() => null),
-    ]);
-    const { data } = seansNatija;
+    const { data } = await seans.refetch();
     if (!data) return;
     yozildi.current = false;
     // Oldingi urinishning natijasi (masalan «Hali o'tmadingiz») yangi
     // urinishning natija ekraniga o'tib qolmasin.
     abschluss.reset();
+    wiederholungAbschluss.reset();
     tugashDavomiyligi.current = null;
-    // Yangi urinish uchun yangi "boshlang'ich" nuqta — `qaytaOtishMi: true`
-    // orqali `keyingiBoshlangichSurati` OLDINGI boshlang'ichni e'tiborsiz
-    // qoldirib, YUQORIDA ENDIGINA KUTILGAN `fortschrittNatija`ni ishlatadi
-    // (ambient `fortschritt.data` emas — sabab yuqorida).
-    boshlangichFortschritt.current = keyingiBoshlangichSurati(
-      boshlangichFortschritt.current,
-      fortschrittSurati(fortschrittNatija?.data),
-      true,
-    );
     setHolat(boshla(data));
     setNatija(null);
     setTanlangan(null);
@@ -739,13 +671,13 @@ export function SeansEkrani(props: SeansEkraniProps) {
         <div className="mx-auto w-full max-w-2xl px-4 pt-10">
           <EmptyState
             icon={<Books size={28} weight="bold" />}
-            title="Bu dars topilmadi"
+            title={t("Bu dars topilmadi")}
             action={
               <Button
                 variant="secondary"
                 onClick={() => router.push("/portal/lernen")}
               >
-                Orqaga
+                {t("Orqaga")}
               </Button>
             }
           />
@@ -756,10 +688,10 @@ export function SeansEkrani(props: SeansEkraniProps) {
       <div className="mx-auto w-full max-w-2xl px-4 pt-10">
         <EmptyState
           icon={<Books size={28} weight="bold" />}
-          title="Mashqni ochib bo'lmadi"
+          title={t("Mashqni ochib bo'lmadi")}
           action={
             <Button variant="secondary" onClick={() => void seans.refetch()}>
-              Qayta urinish
+              {t("Qayta urinish")}
             </Button>
           }
         />
@@ -781,14 +713,14 @@ export function SeansEkrani(props: SeansEkraniProps) {
       <div className="mx-auto w-full max-w-2xl px-4 pt-10">
         <EmptyState
           icon={<CheckCircle size={28} weight="bold" />}
-          title="Bugun takrorlanadigan so'z yo'q"
-          description="Barcha so'zlaringiz hali muddatidan oldin — ertaga qayting."
+          title={t("Bugun takrorlanadigan so'z yo'q")}
+          description={t("Barcha so'zlaringiz hali muddatidan oldin — ertaga qayting.")}
           action={
             <Button
               variant="secondary"
               onClick={() => router.push("/portal/lernen")}
             >
-              Yo&apos;lga qaytish
+              {t("Yo'lga qaytish")}
             </Button>
           }
         />
@@ -810,7 +742,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
     abschluss.mutate(oxirgiYakun.current, {
       onError: (err) =>
         toast.error(
-          getErrorMessage(err, "Natija saqlanmadi. Internetni tekshiring"),
+          getErrorMessage(err, t(NATIJA_SAQLANMADI)),
         ),
     });
   };
@@ -850,9 +782,10 @@ export function SeansEkrani(props: SeansEkraniProps) {
         xatolar={holat.xatolar}
         unitId={unitId}
         onQayta={qaytaOtish}
-        gesamtBoshida={boshlangichFortschritt.current?.gesamt ?? null}
-        serieBoshida={boshlangichFortschritt.current?.serie ?? null}
-        orinBoshida={boshlangichFortschritt.current?.wochePlatzGruppe ?? null}
+        natija={
+          (darsMi ? abschluss.data?.natija : wiederholungAbschluss.data?.natija) ??
+          null
+        }
         sinov={sinovHolati}
         onNatijaQaytaYubor={natijaniQaytaYubor}
       />
@@ -874,6 +807,8 @@ export function SeansEkrani(props: SeansEkraniProps) {
   // "Tekshirish" yo'q. Pastdagi tugma va natija paneli shu bayroqqa
   // qarab boshqa ko'rinishda chiziladi.
   const juftlashRejimi = frage.format === "PAAR" || frage.format === "ZUORDNEN";
+  // The instruction is the client's own text (`msg()` in `koersatma.ts`).
+  const korsatma = koersatma(frage.format);
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col px-4 pb-40 pt-4">
@@ -881,7 +816,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
       <header className="flex items-center gap-3">
         <button
           type="button"
-          aria-label="Seansdan chiqish"
+          aria-label={t("Seansdan chiqish")}
           onClick={() => router.push(chiqishHref)}
           className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-ink-500 hover:bg-tint"
         >
@@ -904,7 +839,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
       {/* O'rta: ko'rsatma, savol, yordam, javob */}
       <main className="flex flex-1 flex-col justify-center gap-4 py-6">
         <p className="text-sm font-semibold uppercase tracking-wide text-ink-400">
-          {koersatma(frage.format)}
+          {t(korsatma)}
         </p>
         {/* `AUDIO_WORT`/`WORT_TIPPEN`/`SATZ_HOEREN`da `prompt` ATAYLAB bo'sh
             (server Task 3) — so'z yoki gapning o'zi javob, tugma savol
@@ -928,14 +863,14 @@ export function SeansEkrani(props: SeansEkraniProps) {
         {frage.bildUrl && frage.format !== "DIALOG_LUECKE" ? <SavolRasmi url={frage.bildUrl} /> : null}
         {/* `UHR_LESEN` / `UHR_TIPPEN`: the clock is the question. */}
         {frage.uhrzeit ? (
-          <Uhr zeit={frage.uhrzeit} className="mx-auto w-full max-w-56 text-ink-900" />
+          <Uhr zeit={frage.uhrzeit} label={t("Soat rasmi")} className="mx-auto w-full max-w-56 text-ink-900" />
         ) : null}
         {frage.format === "DIALOG_LUECKE" ? (
           // Butun suhbat ekranda — savol matni o'rniga (dizayn D7 / brief §5):
           // server `prompt`ni tayyor satr qilib yuboradi, mijoz uni faqat
           // chiroyli chizadi.
           <>
-            {frage.bildUrl ? <SuhbatRasmi url={frage.bildUrl} alt={frage.titel ?? "Suhbat rasmi"} /> : null}
+            {frage.bildUrl ? <SuhbatRasmi url={frage.bildUrl} alt={frage.titel ?? t("Suhbat rasmi")} /> : null}
             <DialogBlok matn={frage.prompt} />
           </>
         ) : frage.prompt ? (
@@ -1033,7 +968,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
             juftlashRejimi ? (
               natija.isCorrect ? (
                 <div className="rounded-2xl bg-success/10 px-4 py-3">
-                  <p className="font-bold text-success">To'g'ri!</p>
+                  <p className="font-bold text-success">{t("To'g'ri!")}</p>
                 </div>
               ) : (
                 // Jonli juftlashda bu panel `hammasiTogri` chin bo'lgandan
@@ -1051,8 +986,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
                 // yuqorida, taxtaning o'zida turibdi.
                 <div className="rounded-2xl bg-tint px-4 py-3">
                   <p className="text-sm font-semibold text-ink-700">
-                    Hammasi to&apos;g&apos;ri! Ammo bu savolda birinchi
-                    urinishda xato bo&apos;lgani uchun u keyinroq yana qaytadi.
+                    {t(
+                      "Hammasi to'g'ri! Ammo bu savolda birinchi urinishda xato bo'lgani uchun u keyinroq yana qaytadi.",
+                    )}
                   </p>
                 </div>
               )
@@ -1061,7 +997,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
             )
           ) : yuborishXato ? (
             <p className="text-sm font-semibold text-danger">
-              Yuborib bo&apos;lmadi. Qayta urinib ko&apos;ring
+              {t("Yuborib bo'lmadi. Qayta urinib ko'ring")}
             </p>
           ) : null}
           {juftlashRejimi ? (
@@ -1073,7 +1009,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
               onClick={() => void keyingi()}
               disabled={!natija || ersatzSorov.isPending}
             >
-              Keyingi
+              {t("Keyingi")}
             </Button>
           ) : (
             <Button
@@ -1084,10 +1020,10 @@ export function SeansEkrani(props: SeansEkraniProps) {
               }
             >
               {natija
-                ? "Keyingi"
+                ? t("Keyingi")
                 : pruefen.isPending
-                  ? "Tekshirilmoqda…"
-                  : "Tekshirish"}
+                  ? t("Tekshirilmoqda…")
+                  : t("Javobni tekshirish")}
             </Button>
           )}
         </div>

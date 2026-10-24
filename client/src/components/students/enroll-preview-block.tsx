@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatBalance, formatPrice } from "@/lib/format-utils";
 import { monthShort } from "@/components/payments/salary-utils";
+import { useT } from "@/i18n/context";
 // The dialog's enroll call sends the picked day through the same helper, so
 // the preview quotes the very day that gets enrolled.
 import { toApiDateStr } from "@/components/groups/edit-group-form-utils";
@@ -64,6 +65,7 @@ export function EnrollPreviewBlock({
   startDate: Date | undefined;
   onStartDateChange: (date: Date | undefined) => void;
 }) {
+  const t = useT();
   const day = startDate ? toApiDateStr(startDate) : null;
   const { data: preview, isLoading, isError } = useQuery<EnrollPreview>({
     queryKey: ["enroll-preview", studentId, groupId, day],
@@ -84,15 +86,15 @@ export function EnrollPreviewBlock({
     <div className="space-y-3 rounded-md border bg-muted/30 p-3 text-sm">
       <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
         <CalendarIcon className="size-3.5" />
-        Boshlanish sanasi (qaysi darsdan)
+        {t("Boshlanish sanasi (qaysi darsdan)")}
       </div>
       <DatePicker
         value={startDate}
         onChange={onStartDateChange}
-        placeholder="Bugundan boshlab"
+        placeholder={t("Bugundan boshlab")}
       />
       {isLoading && (
-        <p className="text-xs text-muted-foreground">Hisoblanmoqda…</p>
+        <p className="text-xs text-muted-foreground">{t("Hisoblanmoqda…")}</p>
       )}
       {/* A failed refetch keeps the last good answer in `preview`; on an error
           there are no money lines, whatever is cached. */}
@@ -102,6 +104,7 @@ export function EnrollPreviewBlock({
 }
 
 function PreviewLines({ preview }: { preview: EnrollPreview }) {
+  const t = useT();
   const {
     paymentModel,
     coursePrice,
@@ -117,24 +120,34 @@ function PreviewLines({ preview }: { preview: EnrollPreview }) {
       {paymentModel === "MONTHLY" ? (
         <>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Oylik narx:</span>
+            <span className="text-muted-foreground">{t("Oylik narx:")}</span>
             <span className="font-mono tabular-nums font-semibold">
-              {formatPrice(coursePrice)} so&apos;m
+              {formatPrice(coursePrice)} {t("so'm")}
             </span>
           </div>
           {firstMonth ? (
             <div className="flex justify-between">
               <span className="text-muted-foreground">
-                {`${monthShort(firstMonth.period)} uchun (${firstMonth.coveredLessons}/${firstMonth.plannedLessons} dars)`}
-                {discountPercent > 0 && ` · chegirma ${discountPercent}%`}:
+                {discountPercent > 0
+                  ? t("{month} uchun ({covered}/{planned} dars) · chegirma {percent}%:", {
+                      month: monthShort(firstMonth.period, t),
+                      covered: firstMonth.coveredLessons,
+                      planned: firstMonth.plannedLessons,
+                      percent: discountPercent,
+                    })
+                  : t("{month} uchun ({covered}/{planned} dars):", {
+                      month: monthShort(firstMonth.period, t),
+                      covered: firstMonth.coveredLessons,
+                      planned: firstMonth.plannedLessons,
+                    })}
               </span>
               <span className="font-mono tabular-nums font-semibold">
-                {formatPrice(firstMonth.amount)} so&apos;m
+                {formatPrice(firstMonth.amount)} {t("so'm")}
               </span>
             </div>
           ) : (
             <p className="text-muted-foreground">
-              Hisob guruh darslari boshlanganda yoziladi
+              {t("Hisob guruh darslari boshlanganda yoziladi")}
             </p>
           )}
         </>
@@ -142,39 +155,39 @@ function PreviewLines({ preview }: { preview: EnrollPreview }) {
         <>
           <div className="flex justify-between">
             <span className="text-muted-foreground">
-              {`Kurs narxi (${lessonPaymentCount} dars):`}
+              {t("Kurs narxi ({n} dars):", { n: lessonPaymentCount ?? 0 })}
             </span>
             <span className="font-mono tabular-nums font-semibold">
-              {formatPrice(coursePrice)} so&apos;m
+              {formatPrice(coursePrice)} {t("so'm")}
             </span>
           </div>
           {discountPercent > 0 && (
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Chegirma:</span>
+              <span className="text-muted-foreground">{t("Chegirma:")}</span>
               <span className="font-mono tabular-nums">{discountPercent}%</span>
             </div>
           )}
         </>
       )}
       <div className="flex justify-between">
-        <span className="text-muted-foreground">O&apos;quvchi balansi:</span>
+        <span className="text-muted-foreground">{t("O'quvchi balansi:")}</span>
         <span
           className={`font-mono tabular-nums ${balance < 0 ? "text-destructive" : ""}`}
         >
-          {formatBalance(balance)}
+          {formatBalance(balance, t("so'm"))}
         </span>
       </div>
       {/* 0 (not a transfer): no line. */}
       {transferRelease > 0 && (
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Eski guruhdan qaytadi:</span>
+          <span className="text-muted-foreground">{t("Eski guruhdan qaytadi:")}</span>
           <span className="font-mono tabular-nums">
-            {formatPrice(transferRelease)} so&apos;m
+            {formatPrice(transferRelease)} {t("so'm")}
           </span>
         </div>
       )}
       <div className="flex justify-between border-t pt-1.5 font-semibold">
-        <span>To&apos;lash kerak (taxminan):</span>
+        <span>{t("To'lash kerak (taxminan):")}</span>
         <span
           className={`font-mono tabular-nums ${
             payable > 0
@@ -182,7 +195,7 @@ function PreviewLines({ preview }: { preview: EnrollPreview }) {
               : "text-emerald-700 dark:text-emerald-400"
           }`}
         >
-          {payable > 0 ? `${formatPrice(payable)} so'm` : "Yetarli"}
+          {payable > 0 ? `${formatPrice(payable)} ${t("so'm")}` : t("Yetarli")}
         </span>
       </div>
     </div>

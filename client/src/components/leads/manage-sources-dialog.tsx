@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Check, Loader2, Megaphone, Pencil, Plus, Trash2, X } from "lucide-react";
 import toast from "react-hot-toast";
 import {
@@ -24,6 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useLeadsBoard } from "@/hooks/use-leads-board";
+import { useT } from "@/i18n/context";
 
 interface LeadSource {
   id: string;
@@ -36,8 +38,19 @@ interface ManageSourcesDialogProps {
 }
 
 export function ManageSourcesDialog({ open, onClose }: ManageSourcesDialogProps) {
+  const t = useT();
+  // The fetch reads t from here: a language switch must not refetch.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
+  const refreshBoard = useLeadsBoard((s) => s.refreshAll);
   const [sources, setSources] = useState<LeadSource[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  // Cards carry the source name, so any change re-reads the board on close.
+  const changed = useRef(false);
 
   const [newName, setNewName] = useState("");
   const [adding, setAdding] = useState(false);
@@ -52,34 +65,46 @@ export function ManageSourcesDialog({ open, onClose }: ManageSourcesDialogProps)
   useEffect(() => {
     if (!open) return;
     setLoading(true);
+    setFailed(false);
     setEditingId(null);
     setNewName("");
     api
       .get<LeadSource[]>("/lead-sources")
       .then(({ data }) => setSources(data))
-      .catch((error) =>
-        toast.error(getErrorMessage(error, "Manbalarni yuklashda xatolik")),
-      )
+      .catch((error) => {
+        const t = tRef.current;
+        setFailed(true);
+        toast.error(getErrorMessage(error, t("Manbalarni yuklashda xatolik")));
+      })
       .finally(() => setLoading(false));
-  }, [open]);
+  }, [open, reloadKey]);
 
   const busy = adding || savingEdit || deleting;
+
+  function handleClose() {
+    if (changed.current) {
+      changed.current = false;
+      void refreshBoard();
+    }
+    onClose();
+  }
 
   async function handleAdd(e: FormEvent) {
     e.preventDefault();
     const name = newName.trim();
     if (!name) {
-      toast.error("Manba nomini kiriting");
+      toast.error(t("Manba nomini kiriting"));
       return;
     }
     setAdding(true);
     try {
       const { data } = await api.post<LeadSource>("/lead-sources", { name });
       setSources((prev) => [...prev, data]);
+      changed.current = true;
       setNewName("");
-      toast.success("Manba qo'shildi");
+      toast.success(t("Manba qo'shildi"));
     } catch (error) {
-      toast.error(getErrorMessage(error, "Manba qo'shishda xatolik"));
+      toast.error(getErrorMessage(error, t("Manba qo'shishda xatolik")));
     } finally {
       setAdding(false);
     }
@@ -89,7 +114,7 @@ export function ManageSourcesDialog({ open, onClose }: ManageSourcesDialogProps)
     if (!editingId) return;
     const name = editValue.trim();
     if (!name) {
-      toast.error("Manba nomini kiriting");
+      toast.error(t("Manba nomini kiriting"));
       return;
     }
     setSavingEdit(true);
@@ -99,10 +124,11 @@ export function ManageSourcesDialog({ open, onClose }: ManageSourcesDialogProps)
         { name },
       );
       setSources((prev) => prev.map((s) => (s.id === data.id ? data : s)));
+      changed.current = true;
       setEditingId(null);
-      toast.success("Manba yangilandi");
+      toast.success(t("Manba yangilandi"));
     } catch (error) {
-      toast.error(getErrorMessage(error, "Manbani yangilashda xatolik"));
+      toast.error(getErrorMessage(error, t("Manbani yangilashda xatolik")));
     } finally {
       setSavingEdit(false);
     }
@@ -114,10 +140,11 @@ export function ManageSourcesDialog({ open, onClose }: ManageSourcesDialogProps)
     try {
       await api.delete(`/lead-sources/${deleteTarget.id}`);
       setSources((prev) => prev.filter((s) => s.id !== deleteTarget.id));
-      toast.success("Manba o'chirildi");
+      changed.current = true;
+      toast.success(t("Manba o'chirildi"));
       setDeleteTarget(null);
     } catch (error) {
-      toast.error(getErrorMessage(error, "Manbani o'chirishda xatolik"));
+      toast.error(getErrorMessage(error, t("Manbani o'chirishda xatolik")));
     } finally {
       setDeleting(false);
     }
@@ -125,12 +152,12 @@ export function ManageSourcesDialog({ open, onClose }: ManageSourcesDialogProps)
 
   return (
     <>
-      <Dialog open={open} onOpenChange={(o) => !o && !busy && onClose()}>
+      <Dialog open={open} onOpenChange={(o) => !o && !busy && handleClose()}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Lid manbalari</DialogTitle>
+            <DialogTitle>{t("Lid manbalari")}</DialogTitle>
             <DialogDescription>
-              Lidlar qayerdan kelishini belgilaydigan manbalar ro&apos;yxati
+              {t("Lidlar qayerdan kelishini belgilaydigan manbalar ro'yxati")}
             </DialogDescription>
           </DialogHeader>
 
@@ -138,7 +165,7 @@ export function ManageSourcesDialog({ open, onClose }: ManageSourcesDialogProps)
             <Input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="Yangi manba nomi (masalan: Instagram)"
+              placeholder={t("Yangi manba nomi (masalan: Instagram)")}
               maxLength={100}
             />
             <Button type="submit" disabled={adding} className="shrink-0">
@@ -147,7 +174,7 @@ export function ManageSourcesDialog({ open, onClose }: ManageSourcesDialogProps)
               ) : (
                 <Plus className="size-4" />
               )}
-              Qo&apos;shish
+              {t("Qo'shish")}
             </Button>
           </form>
 
@@ -158,11 +185,24 @@ export function ManageSourcesDialog({ open, onClose }: ManageSourcesDialogProps)
                   <Skeleton key={i} className="h-8 w-full" />
                 ))}
               </div>
+            ) : failed ? (
+              <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
+                <p className="text-sm text-muted-foreground">
+                  {t("Yuklab bo'lmadi")}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setReloadKey((k) => k + 1)}
+                >
+                  {t("Qayta urinish")}
+                </Button>
+              </div>
             ) : sources.length === 0 ? (
               <div className="flex flex-col items-center gap-1 px-4 py-8 text-center">
                 <Megaphone className="size-7 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
-                  Hali manba yo&apos;q — birinchi manbani qo&apos;shing
+                  {t("Hali manba yo'q — birinchi manbani qo'shing")}
                 </p>
               </div>
             ) : (
@@ -192,7 +232,7 @@ export function ManageSourcesDialog({ open, onClose }: ManageSourcesDialogProps)
                           ) : (
                             <Check className="size-4" />
                           )}
-                          <span className="sr-only">Saqlash</span>
+                          <span className="sr-only">{t("Saqlash")}</span>
                         </Button>
                         <Button
                           size="icon"
@@ -202,7 +242,7 @@ export function ManageSourcesDialog({ open, onClose }: ManageSourcesDialogProps)
                           disabled={savingEdit}
                         >
                           <X className="size-4" />
-                          <span className="sr-only">Bekor qilish</span>
+                          <span className="sr-only">{t("Bekor qilish")}</span>
                         </Button>
                       </>
                     ) : (
@@ -220,7 +260,7 @@ export function ManageSourcesDialog({ open, onClose }: ManageSourcesDialogProps)
                           }}
                         >
                           <Pencil className="size-4" />
-                          <span className="sr-only">Tahrirlash</span>
+                          <span className="sr-only">{t("Manbani tahrirlash")}</span>
                         </Button>
                         <Button
                           size="icon"
@@ -229,7 +269,7 @@ export function ManageSourcesDialog({ open, onClose }: ManageSourcesDialogProps)
                           onClick={() => setDeleteTarget(source)}
                         >
                           <Trash2 className="size-4" />
-                          <span className="sr-only">O&apos;chirish</span>
+                          <span className="sr-only">{t("O'chirish")}</span>
                         </Button>
                       </>
                     )}
@@ -247,15 +287,17 @@ export function ManageSourcesDialog({ open, onClose }: ManageSourcesDialogProps)
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Manbani o&apos;chirish</AlertDialogTitle>
+            <AlertDialogTitle>{t("Manbani o'chirish")}</AlertDialogTitle>
             <AlertDialogDescription>
-              &laquo;{deleteTarget?.name}&raquo; manbasi o&apos;chiriladi. U endi
-              yangi lid qo&apos;shishda tanlanmaydi.
+              {t(
+                "«{name}» manbasi o'chiriladi. U endi yangi lid qo'shishda tanlanmaydi.",
+                { name: deleteTarget?.name ?? "" },
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>
-              Bekor qilish
+              {t("Bekor qilish")}
             </AlertDialogCancel>
             <Button
               type="button"
@@ -264,7 +306,7 @@ export function ManageSourcesDialog({ open, onClose }: ManageSourcesDialogProps)
               variant="destructive"
             >
               {deleting && <Loader2 className="mr-2 size-4 animate-spin" />}
-              O&apos;chirish
+              {t("O'chirish")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

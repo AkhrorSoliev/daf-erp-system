@@ -18,12 +18,19 @@ import {
   localDateStr,
 } from "./birth-date";
 import { StepError } from "./phone-step";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
+import {
+  GENDER_REQUIRED,
+  SAVE_FAILED,
+  portalFormError,
+} from "../lib/form-error";
 
 type Gender = "MALE" | "FEMALE";
 
 const GENDERS: { value: Gender; label: string; icon: React.ReactNode }[] = [
-  { value: "MALE", label: "Erkak", icon: <GenderMale weight="bold" /> },
-  { value: "FEMALE", label: "Ayol", icon: <GenderFemale weight="bold" /> },
+  { value: "MALE", label: msg("Erkak"), icon: <GenderMale weight="bold" /> },
+  { value: "FEMALE", label: msg("Ayol"), icon: <GenderFemale weight="bold" /> },
 ];
 
 // Gender and birth date in one step, asking only for what the card lacks. The
@@ -40,7 +47,12 @@ export function ProfileStep({
   const [gender, setGender] = useState<Gender | null>(null);
   const [birthDate, setBirthDate] = useState("");
   const [busy, setBusy] = useState(false);
+  const t = useT();
+  // Gender or server error, drawn through `portalFormError`.
   const [error, setError] = useState("");
+  // After a refused submit the birth-date problem is worked out at draw time,
+  // so it follows the page language (and clears once the date is fixed).
+  const [birthTried, setBirthTried] = useState(false);
   const today = localDateStr();
   const bounds = birthDateBounds(today);
   const age =
@@ -51,17 +63,17 @@ export function ProfileStep({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (needGender && !gender) {
-      setError("Jinsingizni tanlang");
+      setBirthTried(false);
+      setError(GENDER_REQUIRED);
       return;
     }
-    if (needBirthDate) {
-      const problem = birthDateProblem(birthDate, today);
-      if (problem) {
-        setError(problem);
-        return;
-      }
+    if (needBirthDate && birthDateProblem(birthDate, today)) {
+      setError("");
+      setBirthTried(true);
+      return;
     }
     setError("");
+    setBirthTried(false);
     setBusy(true);
     try {
       const res = await api.patch<OnboardingStatus>(
@@ -73,11 +85,15 @@ export function ProfileStep({
       );
       onDone(res.data);
     } catch (err) {
-      setError(getErrorMessage(err, "Saqlashda xatolik yuz berdi"));
+      setError(getErrorMessage(err, SAVE_FAILED));
     } finally {
       setBusy(false);
     }
   }
+
+  const birthError =
+    birthTried && needBirthDate ? birthDateProblem(birthDate, today, t) : null;
+  const shownError = birthError ?? (error ? portalFormError(t, error) : "");
 
   return (
     <form onSubmit={submit} className="space-y-5">
@@ -89,10 +105,10 @@ export function ProfileStep({
         />
         <div className="min-w-0">
           <h2 className="font-display text-xl font-extrabold text-ink-900">
-            O&apos;zingiz haqingizda
+            {t("O'zingiz haqingizda")}
           </h2>
           <p className="mt-1 text-sm font-semibold text-ink-500">
-            Bu ma&apos;lumotlar faqat o&apos;quv markazi uchun.
+            {t("Bu ma'lumotlar faqat o'quv markazi uchun.")}
           </p>
         </div>
       </div>
@@ -100,7 +116,7 @@ export function ProfileStep({
       {needGender ? (
         <fieldset className="space-y-1.5">
           <legend className="mb-1.5 block px-1 text-sm font-bold text-ink-700">
-            Jinsingiz
+            {t("Jinsingiz")}
           </legend>
           <div className="grid grid-cols-2 gap-3">
             {GENDERS.map((g) => {
@@ -119,7 +135,7 @@ export function ProfileStep({
                   )}
                 >
                   <span className="text-xl">{g.icon}</span>
-                  {g.label}
+                  {t(g.label)}
                 </button>
               );
             })}
@@ -128,7 +144,7 @@ export function ProfileStep({
       ) : null}
 
       {needBirthDate ? (
-        <Field label="Tug'ilgan sanangiz">
+        <Field label={t("Tug'ilgan sanangiz")}>
           <Input
             type="date"
             value={birthDate}
@@ -139,15 +155,15 @@ export function ProfileStep({
           />
           {age !== null ? (
             <span className="block px-1 text-sm font-bold text-ink-500">
-              Yoshingiz: {age}
+              {t("Yoshingiz: {age}", { age })}
             </span>
           ) : null}
         </Field>
       ) : null}
 
-      {error ? <StepError message={error} /> : null}
+      {shownError ? <StepError message={shownError} /> : null}
       <Button type="submit" block size="lg" loading={busy}>
-        Saqlash
+        {t("Saqlash")}
       </Button>
     </form>
   );

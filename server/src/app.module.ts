@@ -14,6 +14,7 @@ import { CoursesModule } from './courses/courses.module';
 import { TeachersModule } from './teachers/teachers.module';
 import { StudentsModule } from './students/students.module';
 import { DafModule } from './daf/daf.module';
+import { EslatmaModule } from './daf/eslatma/eslatma.module';
 import { AppActivityModule } from './app-activity/app-activity.module';
 import { GroupsModule } from './groups/groups.module';
 import { HolidaysModule } from './holidays/holidays.module';
@@ -28,6 +29,8 @@ import { EntityHistoryModule } from './common/entity-history';
 import { StudentOriginModule } from './common/student-origin';
 import { CommentsModule } from './comments/comments.module';
 import { TasksModule } from './tasks/tasks.module';
+import { LessonRatingsModule } from './lesson-ratings/lesson-ratings.module';
+import { TelegramReportModule } from './telegram-report/telegram-report.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SmsModule } from './sms/sms.module';
 import { AttendanceModule } from './attendance/attendance.module';
@@ -38,6 +41,7 @@ import { StudentExitReasonsModule } from './student-exit-reasons/student-exit-re
 import { GroupTeacherChangeReasonsModule } from './group-teacher-change-reasons/group-teacher-change-reasons.module';
 import { EnrollmentTransferReasonsModule } from './enrollment-transfer-reasons/enrollment-transfer-reasons.module';
 import { LeadsModule } from './leads/leads.module';
+import { MetaLeadAdsModule } from './meta-lead-ads/meta-lead-ads.module';
 import { CustomFormsModule } from './custom-forms/custom-forms.module';
 import { MockExamsModule } from './mock-exams/mock-exams.module';
 import { TransactionsModule } from './transactions/transactions.module';
@@ -59,10 +63,13 @@ import { OutreachModule } from './outreach/outreach.module';
 import { AbsencePauseModule } from './absence-pause/absence-pause.module';
 import { PlannedAbsencesModule } from './planned-absences/planned-absences.module';
 import { PaymentPromisesModule } from './payment-promises/payment-promises.module';
+import { KpiModule } from './kpi/kpi.module';
+import { ParticipationCertificatesModule } from './participation-certificates/participation-certificates.module';
 import { SettingsModule } from './settings/settings.module';
 import { CallLogsModule } from './call-logs/call-logs.module';
 import { StatementsModule } from './statements/statements.module';
 import { ContractDocumentsModule } from './contract-documents/contract-documents.module';
+import { LevelTestModule } from './level-test/level-test.module';
 import { JwtAuthGuard, BranchScopeGuard } from './common/guards';
 import { PermissionGuard } from './common/permissions/permission.guard';
 import { PermissionsModule } from './common/permissions/permissions.module';
@@ -98,6 +105,7 @@ import { validateEnv } from './config/env.validation';
     TeachersModule,
     StudentsModule,
     DafModule,
+    EslatmaModule,
     AppActivityModule,
     GroupsModule,
     HolidaysModule,
@@ -112,6 +120,8 @@ import { validateEnv } from './config/env.validation';
     StudentOriginModule,
     CommentsModule,
     TasksModule,
+    LessonRatingsModule,
+    TelegramReportModule,
     NotificationsModule,
     SmsModule,
     AttendanceModule,
@@ -122,6 +132,7 @@ import { validateEnv } from './config/env.validation';
     GroupTeacherChangeReasonsModule,
     EnrollmentTransferReasonsModule,
     LeadsModule,
+    MetaLeadAdsModule,
     CustomFormsModule,
     MockExamsModule,
     TransactionsModule,
@@ -144,9 +155,12 @@ import { validateEnv } from './config/env.validation';
     AbsencePauseModule,
     PlannedAbsencesModule,
     PaymentPromisesModule,
+    KpiModule,
+    ParticipationCertificatesModule,
     CallLogsModule,
     StatementsModule,
     ContractDocumentsModule,
+    LevelTestModule,
   ],
   providers: [
     {

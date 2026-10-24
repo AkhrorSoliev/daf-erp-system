@@ -32,4 +32,26 @@ describe("smsErrorText", () => {
   it("falls back when there is no reason", () => {
     expect(smsErrorText(null)).toBe("Xabar yuborilmadi: Telegram xatosi");
   });
+
+  // A marker `t` shows which texts are handed over for translation.
+  const mark = (source: string) => `T(${source})`;
+
+  it("hands the client words, and only those, to the translator", () => {
+    expect(smsErrorText("403: Forbidden: bot was blocked by the user", mark)).toBe(
+      "T(O'quvchi botni bloklagan — xabar yetib bormadi)",
+    );
+    expect(smsErrorText("429: Too Many Requests", mark)).toBe(
+      "T(Telegram band — birozdan keyin qayta yuboring)",
+    );
+    expect(smsErrorText(null, mark)).toBe("T(Xabar yuborilmadi: Telegram xatosi)");
+    expect(smsErrorText("request to https://x failed", mark)).toBe(
+      "T(Xabar yuborilmadi: Telegram xatosi)",
+    );
+  });
+
+  it("never translates the server's own reasons", () => {
+    expect(smsErrorText("Telegram bot ishlamayapti", mark)).toBe(
+      "Telegram bot ishlamayapti",
+    );
+  });
 });

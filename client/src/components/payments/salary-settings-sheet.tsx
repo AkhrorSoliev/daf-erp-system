@@ -18,6 +18,7 @@ import {
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { useAuth } from "@/hooks/use-auth";
+import { useT } from "@/i18n/context";
 import { SalaryConfigRowSheet } from "./salary-config-row-sheet";
 import { SalaryConfigBulkDialog } from "./salary-config-bulk-dialog";
 import { SalaryStaffConfigList } from "./salary-staff-config-list";
@@ -106,6 +107,7 @@ export function SalarySettingsSheet({
   onChanged,
   access,
 }: Props) {
+  const t = useT();
   const selfId = useAuth((s) => s.user?.id) ?? -1;
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -145,11 +147,11 @@ export function SalarySettingsSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
         <SheetHeader className="border-b px-6 py-4">
-          <SheetTitle>Stavkalar</SheetTitle>
+          <SheetTitle>{t("Stavkalar")}</SheetTitle>
           <SheetDescription>
             {access.canManageCompanyPayroll
-              ? "Ustoz va xodim stavkalari. Jadval shu sozlamalar asosida hisoblanadi."
-              : "Filialingiz ustozlarining stavkalari. Xodimlar oyligini CEO belgilaydi."}
+              ? t("Ustoz va xodim stavkalari. Jadval shu sozlamalar asosida hisoblanadi.")
+              : t("Filialingiz ustozlarining stavkalari. Xodimlar oyligini CEO belgilaydi.")}
           </SheetDescription>
         </SheetHeader>
 
@@ -161,7 +163,7 @@ export function SalarySettingsSheet({
             <div className="relative">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Ism yoki ID bo'yicha..."
+                placeholder={t("Ism yoki ID bo'yicha...")}
                 className="pl-9"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -170,15 +172,15 @@ export function SalarySettingsSheet({
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold">Ustoz stavkalari</h3>
+                <h3 className="text-sm font-semibold">{t("Ustoz stavkalari")}</h3>
                 {selected.size > 0 && (
                   <div className="flex items-center gap-1.5">
                     <Button size="sm" onClick={() => setBulkType("percent")}>
-                      Foiz qo&apos;yish
+                      {t("Foiz qo'yish")}
                     </Button>
                     {access.canManageCompanyPayroll && (
                       <Button size="sm" onClick={() => setBulkType("monthly")}>
-                        Oylik qo&apos;yish
+                        {t("Oylik qo'yish")}
                       </Button>
                     )}
                     <Button
@@ -186,7 +188,7 @@ export function SalarySettingsSheet({
                       variant="ghost"
                       className="size-8"
                       onClick={() => setSelected(new Set())}
-                      aria-label="Tanlovni tozalash"
+                      aria-label={t("Tanlovni tozalash")}
                     >
                       <X className="size-4" />
                     </Button>
@@ -203,7 +205,7 @@ export function SalarySettingsSheet({
                   ))
                 ) : rows.length === 0 ? (
                   <p className="p-6 text-center text-sm text-muted-foreground">
-                    O&apos;qituvchi topilmadi.
+                    {t("O'qituvchi topilmadi.")}
                   </p>
                 ) : (
                   rows.map((row) => {
@@ -245,23 +247,26 @@ export function SalarySettingsSheet({
                                 variant="outline"
                                 className="border-amber-300 text-xs font-normal text-amber-700 dark:text-amber-400"
                               >
-                                Belgilanmagan
+                                {t("Stavka belgilanmagan")}
                               </Badge>
                             ) : (
-                              row.configs.slice(0, 3).map((c) => (
-                                <Badge
-                                  key={c.id}
-                                  variant={c.groupId ? "default" : "secondary"}
-                                  className="text-xs font-normal"
-                                >
-                                  {c.groupId
-                                    ? `${c.group?.name}: `
-                                    : `${SALARY_TYPE_LABELS[c.salaryType] ?? c.salaryType}: `}
-                                  {c.salaryType === "PERCENTAGE"
-                                    ? `${c.value}%`
-                                    : `${formatPrice(c.value)} so'm`}
-                                </Badge>
-                              ))
+                              row.configs.slice(0, 3).map((c) => {
+                                const typeLabel = SALARY_TYPE_LABELS[c.salaryType];
+                                return (
+                                  <Badge
+                                    key={c.id}
+                                    variant={c.groupId ? "default" : "secondary"}
+                                    className="text-xs font-normal"
+                                  >
+                                    {c.groupId
+                                      ? `${c.group?.name}: `
+                                      : `${typeLabel ? t(typeLabel) : c.salaryType}: `}
+                                    {c.salaryType === "PERCENTAGE"
+                                      ? `${c.value}%`
+                                      : t("{amount} so'm", { amount: formatPrice(c.value) })}
+                                  </Badge>
+                                );
+                              })
                             )}
                             {row.configs.length > 3 && (
                               <Badge variant="outline" className="text-xs">
@@ -278,15 +283,15 @@ export function SalarySettingsSheet({
                             onClick={() =>
                               setEditing(toEditTarget(row.user, row.user.roles))
                             }
-                            aria-label="Stavkani tahrirlash"
+                            aria-label={t("Stavkani tahrirlash")}
                           >
                             <Pencil className="size-3.5" />
                           </Button>
                         ) : (
                           <span className="shrink-0 text-xs text-muted-foreground">
                             {lockedForInactive
-                              ? "Faol emas"
-                              : "Oyligini CEO belgilaydi"}
+                              ? t("Hisobi faol emas")
+                              : t("Oyligini CEO belgilaydi")}
                           </span>
                         )}
                       </div>
@@ -303,12 +308,11 @@ export function SalarySettingsSheet({
             {access.canManageCompanyPayroll && (
               <div className="space-y-3">
                 <div>
-                  <h3 className="text-sm font-semibold">Xodimlar stavkalari</h3>
+                  <h3 className="text-sm font-semibold">{t("Xodimlar stavkalari")}</h3>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    Administrator, kassir, filial direktori — oyligi darsga
-                    bog&apos;liq emas, qattiq summa. Stavka belgilangandan keyin
-                    xodim jadvaldagi &laquo;Xodimlar oyligi&raquo;
-                    bo&apos;limida chiqadi.
+                    {t(
+                      "Administrator, kassir, filial direktori — oyligi darsga bog'liq emas, qattiq summa. Stavka belgilangandan keyin xodim jadvaldagi «Xodimlar oyligi» bo'limida chiqadi.",
+                    )}
                   </p>
                 </div>
                 <SalaryStaffConfigList

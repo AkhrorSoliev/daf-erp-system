@@ -19,9 +19,12 @@ import {
 } from "@/components/ui/table";
 import api from "@/lib/api";
 import { useUrlFilters } from "@/hooks/use-url-filters";
-import type {
-  TodayAbsenteesResponse,
-  TodayAbsenteeItem,
+import { formatNumber } from "@/lib/format-utils";
+import { useT } from "@/i18n/context";
+import {
+  CALL_OUTCOME_INFO,
+  type TodayAbsenteesResponse,
+  type TodayAbsenteeItem,
 } from "./outreach-types";
 import type { LogCallPrefill } from "./log-call-dialog";
 import { TablePagination } from "./table-pagination";
@@ -42,6 +45,7 @@ export function TodayAbsenteesTab({
   isActive,
   onLogCall,
 }: TodayAbsenteesTabProps) {
+  const t = useT();
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const { filters, setFilter, setFilters } = useUrlFilters(FILTER_SCHEMA);
   const page = filters.ab_page;
@@ -101,7 +105,7 @@ export function TodayAbsenteesTab({
           />
         </div>
         <span className="text-sm text-muted-foreground">
-          {isLoading ? "Yuklanmoqda…" : `Jami: ${total} ta`}
+          {isLoading ? t("Yuklanmoqda…") : t("Jami: {n} ta", { n: formatNumber(total) })}
         </span>
       </div>
 
@@ -109,8 +113,7 @@ export function TodayAbsenteesTab({
         <SkeletonRows />
       ) : total === 0 ? (
         <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-          {format(selectedDate, "dd.MM.yyyy")} sanasida darsga kelmagan
-          o&apos;quvchi yo&apos;q
+          {t("{date} sanasida darsga kelmagan o'quvchi yo'q", { date: format(selectedDate, "dd.MM.yyyy") })}
         </div>
       ) : (
         <>
@@ -119,14 +122,15 @@ export function TodayAbsenteesTab({
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12 border-r">#</TableHead>
-                  <TableHead>O&apos;quvchi</TableHead>
-                  <TableHead>Telefon</TableHead>
-                  <TableHead>Guruh</TableHead>
-                  <TableHead>Kurs</TableHead>
-                  <TableHead>Dars vaqti</TableHead>
-                  <TableHead>O&apos;qituvchi</TableHead>
-                  <TableHead>Izoh</TableHead>
-                  <TableHead className="w-60">Amal</TableHead>
+                  <TableHead>{t("O'quvchi")}</TableHead>
+                  <TableHead>{t("Telefon")}</TableHead>
+                  <TableHead>{t("Guruh")}</TableHead>
+                  <TableHead>{t("Kurs")}</TableHead>
+                  <TableHead>{t("Dars vaqti")}</TableHead>
+                  <TableHead>{t("O'qituvchi")}</TableHead>
+                  <TableHead>{t("Izoh")}</TableHead>
+                  <TableHead>{t("Natija")}</TableHead>
+                  <TableHead className="w-60">{t("Amal")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -163,6 +167,8 @@ function Row({
   index: number;
   onLogCall: (prefill: LogCallPrefill | null) => void;
 }) {
+  const t = useT();
+  const outcome = row.callOutcome ? CALL_OUTCOME_INFO[row.callOutcome] : null;
   return (
     <TableRow>
       <TableCell className="border-r text-muted-foreground">{index + 1}</TableCell>
@@ -203,10 +209,17 @@ function Row({
         {row.note || "—"}
       </TableCell>
       <TableCell>
+        {outcome ? (
+          <Badge className={outcome.className}>{t(outcome.label)}</Badge>
+        ) : (
+          "—"
+        )}
+      </TableCell>
+      <TableCell>
         <div className="flex items-center gap-2">
           {row.calledToday && (
             <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
-              Bog&apos;lanildi
+              {t("Bog'lanildi")}
             </Badge>
           )}
           <Button
@@ -222,7 +235,7 @@ function Row({
             }
           >
             <PhoneCall className="mr-1 size-3.5" />
-            Natija kiritish
+            {t("Natija kiritish")}
           </Button>
         </div>
       </TableCell>

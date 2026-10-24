@@ -5,6 +5,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PriceInput } from "@/components/ui/price-input";
+import { useT } from "@/i18n/context";
 import { INCLUDES, INCLUDE_LABEL, dateValue, dayString, type CourseDraft } from "./contract-rules";
 
 interface Props {
@@ -24,6 +25,7 @@ export function ContractCourseExtras({
   value,
   onChange,
 }: Props) {
+  const t = useT();
   const set = <K extends keyof CourseDraft>(key: K, v: CourseDraft[K]) =>
     onChange({ ...value, [key]: v });
   const from = dateValue(value.discountFrom);
@@ -37,7 +39,7 @@ export function ContractCourseExtras({
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor={`${idPrefix}-first`}>Dastlabki to&apos;lov</Label>
+          <Label htmlFor={`${idPrefix}-first`}>{t("Dastlabki to'lov")}</Label>
           <PriceInput
             id={`${idPrefix}-first`}
             value={value.firstPaymentAmount}
@@ -45,7 +47,7 @@ export function ContractCourseExtras({
           />
         </div>
         <div className="space-y-1.5">
-          <Label>To&apos;lov sanasi</Label>
+          <Label>{t("To'lov sanasi")}</Label>
           <DatePicker
             value={dateValue(value.firstPaymentDate)}
             onChange={(d) => set("firstPaymentDate", dayString(d))}
@@ -54,7 +56,9 @@ export function ContractCourseExtras({
         {discountPercent > 0 && (
           <>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor={`${idPrefix}-reason`}>Chegirma sababi ({discountPercent} %)</Label>
+              <Label htmlFor={`${idPrefix}-reason`}>
+                {t("Chegirma sababi ({percent} %)", { percent: discountPercent })}
+              </Label>
               <Input
                 id={`${idPrefix}-reason`}
                 value={value.discountReason}
@@ -63,7 +67,7 @@ export function ContractCourseExtras({
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Chegirma boshlanishi</Label>
+              <Label>{t("Chegirma boshlanishi")}</Label>
               <DatePicker
                 value={from}
                 onChange={(d) => set("discountFrom", dayString(d))}
@@ -72,7 +76,7 @@ export function ContractCourseExtras({
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Chegirma tugashi</Label>
+              <Label>{t("Chegirma tugashi")}</Label>
               <DatePicker
                 value={to}
                 onChange={(d) => set("discountTo", dayString(d))}
@@ -84,10 +88,11 @@ export function ContractCourseExtras({
         )}
       </div>
       <div className="space-y-1.5">
-        <Label>Kurs ichiga kiradigan narsa</Label>
+        <Label>{t("Kurs ichiga kiradigan narsa")}</Label>
         <div className="flex flex-wrap gap-4">
           {INCLUDES.map((item) => {
             const id = `${idPrefix}-${item}`;
+            const includeLabel = INCLUDE_LABEL[item];
             return (
               <label key={item} htmlFor={id} className="flex items-center gap-2 text-sm">
                 <Checkbox
@@ -102,7 +107,7 @@ export function ContractCourseExtras({
                     )
                   }
                 />
-                {INCLUDE_LABEL[item]}
+                {t(includeLabel)}
               </label>
             );
           })}
@@ -110,8 +115,9 @@ export function ContractCourseExtras({
       </div>
       {discountPercent > 0 && (
         <p className="text-xs text-muted-foreground">
-          Chegirma muddati tugaganda tizim chegirmani o&apos;zi olib tashlamaydi — profildagi
-          chegirmani qo&apos;lda o&apos;zgartiring.
+          {t(
+            "Chegirma muddati tugaganda tizim chegirmani o'zi olib tashlamaydi — profildagi chegirmani qo'lda o'zgartiring.",
+          )}
         </p>
       )}
     </section>

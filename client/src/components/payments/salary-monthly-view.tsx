@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { monthLabel } from "./salary-utils";
 import type { SalarySettingsAccess } from "./salary-settings-access";
@@ -43,6 +44,7 @@ interface Props {
  * The month picker, «Stavkalar» and «+ Avans berish» live in the page header.
  */
 export function SalaryMonthlyView({ month, onOpenRow, canClose, settingsAccess, onOpenSettings }: Props) {
+  const t = useT();
   const { filters, setFilters } = useUrlFilters(filtersSchema);
   const [searchInput, setSearchInput] = useState(filters.search);
   const [settleOpen, setSettleOpen] = useState(false);
@@ -65,18 +67,19 @@ export function SalaryMonthlyView({ month, onOpenRow, canClose, settingsAccess, 
   });
   const unpaidCount = settlePreview?.rows.length ?? 0;
 
-  const people = useMemo(() => (data ? mergePeople(data) : []), [data]);
+  // `t` only words the rows; nothing is fetched here.
+  const people = useMemo(() => (data ? mergePeople(data, t) : []), [data, t]);
   const kim = asKim(filters.kim);
-  const segment = segmentLabels(data);
-  const monthHasNoData = !!data && data.data.length > 0 && data.data.every((t) => !t.hasLessonData);
+  const segment = segmentLabels(data, t);
+  const monthHasNoData = !!data && data.data.length > 0 && data.data.every((row) => !row.hasLessonData);
 
   // A failed request is not "nobody this month" — never fall into the empty state.
   if (isError && !data) {
     return (
       <div className="flex flex-col items-center gap-3 py-10 text-sm text-muted-foreground">
-        Ma&apos;lumotni yuklab bo&apos;lmadi.
+        {t("Ma'lumotni yuklab bo'lmadi")}
         <Button variant="outline" size="sm" onClick={() => refetch()}>
-          Qayta urinish
+          {t("Qayta urinish")}
         </Button>
       </div>
     );
@@ -107,7 +110,7 @@ export function SalaryMonthlyView({ month, onOpenRow, canClose, settingsAccess, 
         <div className="relative min-w-0 flex-1">
           <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Ism yoki ID"
+            placeholder={t("Ism yoki ID")}
             className="pl-9"
             value={searchInput}
             onChange={(e) => {
@@ -136,8 +139,10 @@ export function SalaryMonthlyView({ month, onOpenRow, canClose, settingsAccess, 
         <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
           <Info className="mt-0.5 size-4 shrink-0" />
           <span>
-            {monthLabel(shownMonth)} — bu oy qo&apos;lda kiritilgan, har bir dars bo&apos;yicha ma&apos;lumot yo&apos;q.
-            Faqat kiritilgan summa va avans ko&apos;rsatilgan.
+            {t(
+              "{month} — bu oy qo'lda kiritilgan, har bir dars bo'yicha ma'lumot yo'q. Faqat kiritilgan summa va avans ko'rsatilgan.",
+              { month: monthLabel(shownMonth, t) },
+            )}
           </span>
         </div>
       )}
@@ -151,8 +156,9 @@ export function SalaryMonthlyView({ month, onOpenRow, canClose, settingsAccess, 
       />
 
       <p className="text-xs text-muted-foreground">
-        Jadvalda «O&apos;quvchilar to&apos;lagan / Markaz qo&apos;shdi» ustunlari yo&apos;q — ular xodim oynasida.
-        «Avans» — aynan shu oylikdan ushlanadigan summa. Hisoblash davri doim kalendar oyi (1-sanadan).
+        {t(
+          "Jadvalda «O'quvchilar to'lagan / Markaz qo'shdi» ustunlari yo'q — ular xodim oynasida. «Avans» — aynan shu oylikdan ushlanadigan summa. Hisoblash davri doim kalendar oyi (1-sanadan).",
+        )}
       </p>
 
       {canClose && (

@@ -16,6 +16,7 @@ import {
 import { PhoneInput } from "@/components/ui/phone-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
+import { useT } from "@/i18n/context";
 import type { FormFieldShape } from "@/lib/schemas/custom-form-schema";
 
 interface Props {
@@ -27,17 +28,23 @@ interface Props {
 // Live preview of the public form. Mirrors PublicFormRenderer visually but
 // has no submit / no validation — it's purely for the admin to see what
 // submitters will see.
+// Only the builder's own chrome (the caption and the empty-field fallbacks)
+// follows the page language; what the public form itself shows («Tanlang»,
+// «Yuborish») stays Uzbek, because the public form is Uzbek.
 export function FormPreview({ title, description, fields }: Props) {
+  const t = useT();
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Eye className="size-3.5" />
-        <span>Ochiq ko&apos;rinish — formani to&apos;ldiruvchi shu sahifani ko&apos;radi</span>
+        <span>
+          {t("Ochiq ko'rinish — formani to'ldiruvchi shu sahifani ko'radi")}
+        </span>
       </div>
       <div className="rounded-lg border bg-muted/30 p-4 sm:p-5">
         <div className="rounded-md border bg-background p-5 shadow-sm sm:p-6">
           <h2 className="text-lg font-semibold break-words">
-            {title || "Forma sarlavhasi"}
+            {title || t("Forma sarlavhasi")}
           </h2>
           {description && (
             <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
@@ -48,7 +55,7 @@ export function FormPreview({ title, description, fields }: Props) {
           <div className="mt-5 space-y-4">
             {fields.length === 0 ? (
               <p className="rounded-md border border-dashed px-3 py-6 text-center text-xs text-muted-foreground">
-                Maydon qo&apos;shilmagan
+                {t("Maydon qo'shilmagan")}
               </p>
             ) : (
               fields.map((field) => <PreviewField key={field.id} field={field} />)
@@ -66,13 +73,14 @@ export function FormPreview({ title, description, fields }: Props) {
 }
 
 function PreviewField({ field }: { field: FormFieldShape }) {
+  const t = useT();
   const [localValue, setLocalValue] = useState<unknown>(
     field.type === "checkbox" ? false : "",
   );
 
   const labelEl = (
     <Label className="text-sm font-medium">
-      {field.label || "Maydon nomi"}
+      {field.label || t("Maydon nomi")}
       {field.required && <span className="ml-0.5 text-destructive">*</span>}
     </Label>
   );
@@ -123,7 +131,7 @@ function PreviewField({ field }: { field: FormFieldShape }) {
               ))
             ) : (
               <div className="px-3 py-2 text-xs text-muted-foreground">
-                Variantlar qo&apos;shilmagan
+                {t("Variantlar qo'shilmagan")}
               </div>
             )}
           </SelectContent>
@@ -157,7 +165,7 @@ function PreviewField({ field }: { field: FormFieldShape }) {
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Variantlar qo&apos;shilmagan
+            {t("Variantlar qo'shilmagan")}
           </p>
         )}
       </div>
@@ -173,7 +181,7 @@ function PreviewField({ field }: { field: FormFieldShape }) {
           className="mt-0.5"
         />
         <span>
-          {field.label || "Maydon nomi"}
+          {field.label || t("Maydon nomi")}
           {field.required && (
             <span className="ml-0.5 text-destructive">*</span>
           )}

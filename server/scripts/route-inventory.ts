@@ -40,10 +40,18 @@ export type RouteAccess =
   | { kind: 'anyStaff' }
   | { kind: 'student' }
   | { kind: 'can'; keys: string[] }
+  /** `@CeoOnly()`: the CEO by database role, never a capability. */
+  | { kind: 'ceo' }
   /** No marker at all: PermissionGuard refuses it, and the manifest reports it. */
   | { kind: 'none' };
 
-const ACCESS_DECORATORS = ['AnyUser', 'AnyStaff', 'StudentOnly', 'Can'];
+const ACCESS_DECORATORS = [
+  'AnyUser',
+  'AnyStaff',
+  'StudentOnly',
+  'CeoOnly',
+  'Can',
+];
 
 export interface DiscoveredRoute {
   /** `GET /payments/:id` — the manifest key. */
@@ -144,6 +152,8 @@ function accessOf(decorators: readonly ts.Decorator[]): {
       return { access: { kind: 'anyStaff' }, markers };
     case 'StudentOnly':
       return { access: { kind: 'student' }, markers };
+    case 'CeoOnly':
+      return { access: { kind: 'ceo' }, markers };
     case 'Can':
     default:
       return { access: { kind: 'can', keys }, markers };

@@ -7,6 +7,7 @@ import { DafAnswerStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { tryResolveStudentBranchId } from '../common/finance/resolve-branch';
 import { DafDrillService } from './lesson/daf-drill.service';
+import { recordAttempt } from './shared/attempt-writer';
 import { currentGroupId } from './shared/student-scope';
 
 export interface AttemptResult {
@@ -59,17 +60,15 @@ export class DafAttemptService {
     );
     const groupId = await currentGroupId(this.prisma, ctx.studentId);
 
-    await this.prisma.dafAttempt.create({
-      data: {
-        studentId: ctx.studentId,
-        lexemeId: r.lexemeId,
-        isCorrect: r.isCorrect,
-        given: input.given,
-        durationMs: input.durationMs ?? null,
-        companyId: ctx.companyId,
-        branchId,
-        groupId,
-      },
+    await recordAttempt(this.prisma, {
+      studentId: ctx.studentId,
+      lexemeId: r.lexemeId,
+      isCorrect: r.isCorrect,
+      given: input.given,
+      durationMs: input.durationMs ?? null,
+      companyId: ctx.companyId,
+      branchId,
+      groupId,
     });
 
     return { isCorrect: r.isCorrect, answer: r.answer };
@@ -114,19 +113,17 @@ export class DafAttemptService {
     );
     const groupId = await currentGroupId(this.prisma, ctx.studentId);
 
-    await this.prisma.dafAttempt.create({
-      data: {
-        studentId: ctx.studentId,
-        exerciseId: exercise.id,
-        isCorrect,
-        // Xato javob ham saqlanadi: o'qituvchiga eng kerakli signal aynan
-        // shu — guruh qaysi mashqda qoqilyapti.
-        given: input.given,
-        durationMs: input.durationMs ?? null,
-        companyId: ctx.companyId,
-        branchId,
-        groupId,
-      },
+    await recordAttempt(this.prisma, {
+      studentId: ctx.studentId,
+      exerciseId: exercise.id,
+      isCorrect,
+      // Xato javob ham saqlanadi: o'qituvchiga eng kerakli signal aynan
+      // shu — guruh qaysi mashqda qoqilyapti.
+      given: input.given,
+      durationMs: input.durationMs ?? null,
+      companyId: ctx.companyId,
+      branchId,
+      groupId,
     });
 
     return { isCorrect, correctAnswers: answers };

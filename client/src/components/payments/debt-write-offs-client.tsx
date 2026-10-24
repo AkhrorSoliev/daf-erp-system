@@ -54,6 +54,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { formatBalance, formatNumber } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
@@ -102,6 +103,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 const REVERSE_REASON_MIN = 5;
 
 export function DebtWriteOffsClient() {
+  const t = useT();
   const canUndo = useCan("money.undo");
   const { selectedBranch } = useBranchSwitcher();
   const queryClient = useQueryClient();
@@ -160,12 +162,12 @@ export function DebtWriteOffsClient() {
       await api.post(`/billing/debt-write-offs/${reverseTarget.id}/reverse`, {
         reason: reverseReason.trim(),
       });
-      toast.success("Kechirish qaytarib olindi — o'quvchi yana qarzdor");
+      toast.success(t("Kechirish qaytarib olindi — o'quvchi yana qarzdor"));
       setReverseTarget(null);
       setReverseReason("");
       queryClient.invalidateQueries({ queryKey: ["debt-write-offs"] });
     } catch (err) {
-      toast.error(getErrorMessage(err, "Qaytarib olishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("Qaytarib olishda xatolik yuz berdi")));
     } finally {
       setReversing(false);
     }
@@ -187,7 +189,7 @@ export function DebtWriteOffsClient() {
             setFrom(d);
             resetFilterPage();
           }}
-          placeholder="Qaysi kundan"
+          placeholder={t("Qaysi kundan")}
           className="w-40"
           maxDate={to ?? undefined}
           defaultMonth={to ?? undefined}
@@ -199,7 +201,7 @@ export function DebtWriteOffsClient() {
             setTo(d);
             resetFilterPage();
           }}
-          placeholder="Qaysi kungacha"
+          placeholder={t("Qaysi kungacha")}
           className="w-40"
           minDate={from ?? undefined}
           defaultMonth={from ?? undefined}
@@ -217,8 +219,8 @@ export function DebtWriteOffsClient() {
           {/* "Faqat amaldagilar" did not say what it was about. A write-off can
               be undone by the CEO; this chooses whether those undone rows show. */}
           <SelectContent>
-            <SelectItem value="active">Qaytarib olinganlarsiz</SelectItem>
-            <SelectItem value="all">Qaytarib olinganlari bilan</SelectItem>
+            <SelectItem value="active">{t("Qaytarib olinganlarsiz")}</SelectItem>
+            <SelectItem value="all">{t("Qaytarib olinganlari bilan")}</SelectItem>
           </SelectContent>
         </Select>
         {/* No "Sahifa hajmi:" label — the project's filter bars carry meaning
@@ -231,13 +233,13 @@ export function DebtWriteOffsClient() {
               setPage(1);
             }}
           >
-            <SelectTrigger className="w-28" aria-label="Sahifadagi qatorlar">
+            <SelectTrigger className="w-28" aria-label={t("Sahifadagi qatorlar soni")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {PAGE_SIZE_OPTIONS.map((n) => (
                 <SelectItem key={n} value={String(n)}>
-                  {n} qator
+                  {t("{n} qator", { n })}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -260,7 +262,7 @@ export function DebtWriteOffsClient() {
       {totalRows > 0 && (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
-            Jami: {formatNumber(totalRows)} ta yozuv
+            {t("Jami: {n} ta yozuv", { n: formatNumber(totalRows) })}
           </span>
           <div className="flex items-center gap-2">
             <Button
@@ -269,7 +271,7 @@ export function DebtWriteOffsClient() {
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
             >
-              Oldingi
+              {t("Oldingi")}
             </Button>
             <span className="text-xs">
               {page} / {Math.max(1, Math.ceil(totalRows / pageSize))}
@@ -280,7 +282,7 @@ export function DebtWriteOffsClient() {
               disabled={page * pageSize >= totalRows}
               onClick={() => setPage((p) => p + 1)}
             >
-              Keyingi
+              {t("Keyingi")}
             </Button>
           </div>
         </div>
@@ -308,6 +310,7 @@ function SummaryCard({
   totalAmount: number;
   totalRows: number;
 }) {
+  const t = useT();
   return (
     <div className="flex items-center justify-between rounded-lg border bg-amber-50/40 p-4 dark:bg-amber-950/20">
       <div className="flex items-center gap-3">
@@ -317,14 +320,14 @@ function SummaryCard({
         <div>
           {/* Was "TANLANGAN DAVRDA HISOBDAN CHIQARILGAN JAMI" in small caps —
               six words of bookkeeping to label one number. */}
-          <p className="text-xs text-muted-foreground">Kechirilgan qarz</p>
+          <p className="text-xs text-muted-foreground">{t("Kechirilgan qarz")}</p>
           <p className="font-heading text-2xl font-semibold text-amber-700 dark:text-amber-300">
-            {formatBalance(totalAmount)}
+            {formatBalance(totalAmount, t("so'm"))}
           </p>
         </div>
       </div>
       <div className="text-right">
-        <p className="text-xs text-muted-foreground">Nechta marta</p>
+        <p className="text-xs text-muted-foreground">{t("Nechta marta")}</p>
         <p className="text-2xl font-medium tabular-nums">
           {formatNumber(totalRows)}
         </p>
@@ -348,6 +351,7 @@ function DebtWriteOffsTable({
   canUndo: boolean;
   onReverseClick: (row: DebtWriteOffRow) => void;
 }) {
+  const t = useT();
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -361,7 +365,7 @@ function DebtWriteOffsTable({
   if (rows.length === 0) {
     return (
       <div className="rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">
-        Tanlangan filtrlar bo&apos;yicha hisobdan chiqarishlar topilmadi
+        {t("Tanlangan filtrlar bo'yicha hisobdan chiqarishlar topilmadi")}
       </div>
     );
   }
@@ -371,15 +375,15 @@ function DebtWriteOffsTable({
       <TableHeader>
         <TableRow>
           <TableHead className="w-12 border-r">#</TableHead>
-          <TableHead>Sana</TableHead>
-          <TableHead>O&apos;quvchi</TableHead>
+          <TableHead>{t("Sana")}</TableHead>
+          <TableHead>{t("O'quvchi")}</TableHead>
           {/* Was "Sikl", printed as "#3 • 5 ABS". The cycle number is internal
               bookkeeping and "ABS" is a database word; what the reader needs
               to know is why the student was written off — they stopped coming. */}
-          <TableHead>Kelmagan darslar</TableHead>
-          <TableHead className="text-right">Kechirilgan</TableHead>
-          <TableHead>Sabab</TableHead>
-          <TableHead>Kim kechirdi</TableHead>
+          <TableHead>{t("Kelmagan darslar")}</TableHead>
+          <TableHead className="text-right">{t("Kechirilgan")}</TableHead>
+          <TableHead>{t("Sabab")}</TableHead>
+          <TableHead>{t("Kim kechirdi")}</TableHead>
           <TableHead className="w-12" />
         </TableRow>
       </TableHeader>
@@ -412,8 +416,8 @@ function DebtWriteOffsTable({
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">
                 {row.metadata?.cycleAbsentCount != null ? (
-                  <span title={`${row.metadata.cycleNumber ?? "?"}-tsikl`}>
-                    {row.metadata.cycleAbsentCount} ta
+                  <span title={t("{n}-tsikl", { n: row.metadata.cycleNumber ?? "?" })}>
+                    {t("{n} ta", { n: row.metadata.cycleAbsentCount })}
                   </span>
                 ) : (
                   "—"
@@ -422,7 +426,7 @@ function DebtWriteOffsTable({
               <TableCell
                 className={`text-right tabular-nums font-medium ${isReversed ? "line-through" : "text-amber-700 dark:text-amber-300"}`}
               >
-                {formatBalance(row.amount)}
+                {formatBalance(row.amount, t("so'm"))}
               </TableCell>
               <TableCell className="max-w-[260px] text-sm">
                 <p className="line-clamp-2 text-muted-foreground">
@@ -431,14 +435,14 @@ function DebtWriteOffsTable({
                 {isReversed && (
                   <Badge variant="outline" className="mt-1">
                     <RotateCcw className="mr-1 size-3" />
-                    Qaytarib olingan
+                    {t("Qaytarib olingan")}
                   </Badge>
                 )}
               </TableCell>
               <TableCell className="whitespace-nowrap text-sm">
                 {row.performedBy
                   ? `${row.performedBy.firstName} ${row.performedBy.lastName}`
-                  : "Tizim"}
+                  : t("Tizim (avtomatik)")}
               </TableCell>
               <TableCell>
                 {canUndoWriteOff(canUndo, row) ? (
@@ -448,11 +452,11 @@ function DebtWriteOffsTable({
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon-xs">
                             <MoreHorizontal className="size-4" />
-                            <span className="sr-only">Amallar</span>
+                            <span className="sr-only">{t("Amallar")}</span>
                           </Button>
                         </DropdownMenuTrigger>
                       </TooltipTrigger>
-                      <TooltipContent>Amallar</TooltipContent>
+                      <TooltipContent>{t("Amallar")}</TooltipContent>
                     </Tooltip>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
@@ -460,7 +464,7 @@ function DebtWriteOffsTable({
                         className="text-destructive focus:text-destructive"
                       >
                         <RotateCcw className="mr-2 size-4" />
-                        Kechirishni qaytarib olish
+                        {t("Kechirishni qaytarib olish")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -489,6 +493,7 @@ function ReverseDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const t = useT();
   const canConfirm = reason.trim().length >= REVERSE_REASON_MIN && !reversing;
   return (
     <AlertDialog
@@ -499,7 +504,7 @@ function ReverseDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Kechirishni qaytarib olish</AlertDialogTitle>
+          <AlertDialogTitle>{t("Kechirishni qaytarib olish")}</AlertDialogTitle>
           <AlertDialogDescription>
             {target ? (
               <>
@@ -509,12 +514,10 @@ function ReverseDialog({
                 {/* Was "append-only ledger qoidalariga muvofiq teskari yozuv
                     sifatida qayd etiladi" — the storage design, in a dialog
                     whose reader needs to know one thing: the debt comes back. */}
-                yana {formatBalance(target.amount)} qarzdor bo&apos;ladi.
-                Kechirish bekor bo&apos;ladi, lekin ro&apos;yxatdan
-                o&apos;chmaydi — kim va nega qaytarib olgani yozib qoladi.
+                {t("yana {amount} qarzdor bo'ladi. Kechirish bekor bo'ladi, lekin ro'yxatdan o'chmaydi — kim va nega qaytarib olgani yozib qoladi.", { amount: formatBalance(target.amount, t("so'm")) })}
               </>
             ) : (
-              "Kechirishni qaytarib olasizmi?"
+              t("Kechirishni qaytarib olasizmi?")
             )}
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -524,11 +527,11 @@ function ReverseDialog({
             htmlFor="reverse-reason"
             className="text-xs text-muted-foreground"
           >
-            Nega qaytarib olinyapti? (majburiy, kamida 5 belgi)
+            {t("Nega qaytarib olinyapti? (majburiy, kamida 5 belgi)")}
           </Label>
           <Textarea
             id="reverse-reason"
-            placeholder="Masalan: Xato qilindi, qarz haqiqiy edi..."
+            placeholder={t("Masalan: Xato qilindi, qarz haqiqiy edi...")}
             value={reason}
             onChange={(e) => onReasonChange(e.target.value)}
             rows={3}
@@ -539,7 +542,7 @@ function ReverseDialog({
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={reversing}>
-            Yopish
+            {t("Yopish")}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
@@ -549,12 +552,12 @@ function ReverseDialog({
             {reversing ? (
               <>
                 <Loader2 className="mr-2 size-4 animate-spin" />
-                Bajarilmoqda...
+                {t("Bajarilmoqda...")}
               </>
             ) : (
               <>
                 <Eraser className="mr-2 size-4" />
-                Qaytarib olish
+                {t("Qaytarib olish")}
               </>
             )}
           </AlertDialogAction>

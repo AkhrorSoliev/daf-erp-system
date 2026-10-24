@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { NotificationResolverService } from './notification-resolver.service';
 import { NotificationsGateway } from './notifications.gateway';
 import { PrismaService } from '../prisma/prisma.service';
+import { TelegramService } from '../telegram/telegram.service';
 
 const OPEN = { actionRequired: true, resolvedAt: null };
 
@@ -29,6 +30,7 @@ describe('NotificationResolverService (past lesson alerts)', () => {
         NotificationResolverService,
         { provide: PrismaService, useValue: prisma },
         { provide: NotificationsGateway, useValue: gateway },
+        { provide: TelegramService, useValue: { getBot: () => undefined } },
       ],
     }).compile();
     resolver = mod.get(NotificationResolverService);

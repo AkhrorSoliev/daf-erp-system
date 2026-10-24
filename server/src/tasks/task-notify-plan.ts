@@ -18,8 +18,9 @@ import {
  * The Telegram message one person gets about an event (spec 2026-10-07 §6.1):
  * the kind picks the first line, `by` / `from` / `text` / `reason` the line
  * under the title. Names are resolved when the event happens, so a notice
- * held for the morning still says who did it. REMINDER, OVERDUE and CARD are
- * not planned from events: the outbox and the bot's «Topshiriqlarim» use them.
+ * held for the morning still says who did it. REMINDER and OVERDUE are not
+ * planned from events: the outbox uses them. A card the bot sends or redraws
+ * is `renderLiveCard`, not a notice (ADR-0089).
  */
 export type TgNotice =
   | { kind: 'ASSIGNED' }
@@ -29,12 +30,11 @@ export type TgNotice =
   | { kind: 'REVIEW'; by: string }
   | { kind: 'ACCEPTED'; by: string }
   | { kind: 'RETURNED'; by: string; reason: string }
-  | { kind: 'COMMENT'; by: string; text: string }
+  | { kind: 'COMMENT'; by: string; text: string; attachment?: 'FILE' | 'VOICE' }
   | { kind: 'DONE'; by: string }
   | { kind: 'CANCELLED'; by: string }
   | { kind: 'REMINDER' }
-  | { kind: 'OVERDUE' }
-  | { kind: 'CARD'; headline?: string };
+  | { kind: 'OVERDUE' };
 
 export interface Notice {
   userId: number;
@@ -270,16 +270,27 @@ function planFor(event: string, payload: unknown, names: Names): Notice[] {
       const p = payload as TaskCommentedPayload;
       const by = who(names, p.actorId);
       const watching = new Set(watchers(p.task));
+      const title =
+        p.attachment === 'VOICE'
+          ? 'Ovozli xabar'
+          : p.attachment === 'FILE'
+            ? 'Yangi fayl'
+            : 'Yangi izoh';
       return mk(
         everyone(p.task).filter((u) => u !== p.actorId),
         'TASK_UPDATED',
-        'Yangi izoh',
+        title,
         `${by}: «${clip(p.text, 80)}» — ${clip(p.task.title, 50)}`,
         false,
         (u) =>
           watching.has(u)
             ? null
-            : { kind: 'COMMENT', by, text: clip(p.text, 300) },
+            : {
+                kind: 'COMMENT',
+                by,
+                text: clip(p.text, 300),
+                ...(p.attachment && { attachment: p.attachment }),
+              },
       );
     }
     case TASK_EVENTS.CANCELLED: {

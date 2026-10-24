@@ -15,11 +15,17 @@ import { AttendanceStats } from "./attendance/attendance-stats";
 import { AttendanceDotsTab } from "./attendance/attendance-dots-tab";
 import { LessonChangesTab } from "./lesson-changes-tab";
 import { GroupAppActivityTab } from "./app-activity/group-app-activity-tab";
+import { GroupMusobaqaTab } from "./musobaqa/group-musobaqa-tab";
 import { EditStudentDrawer } from "@/components/students/edit-student-drawer";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { useCan } from "@/hooks/use-permissions";
 import { EntityTasksPanel } from "@/components/tasks/entity-tasks-panel";
+import { useAuth } from "@/hooks/use-auth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
+import { isTeacherOnly } from "@/lib/teacher-only";
+import { cn } from "@/lib/utils";
 
 function EmptyState({ message }: { message: string }) {
   return (
@@ -38,9 +44,13 @@ interface GroupDetailTabsProps {
 }
 
 export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange, commentFocusKey }: GroupDetailTabsProps) {
+  const t = useT();
   const canChangeLessons = useCan("lessons.change");
   const canSeeHistory = useCan("groups.manage");
   const canSeeComments = useCan(["comments.write", "groups.manage"]);
+  const isMobile = useIsMobile();
+  const user = useAuth((s) => s.user);
+  const barTabs = isMobile && isTeacherOnly(user?.roles);
 
   const [students, setStudents] = useState<GroupStudent[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
@@ -59,6 +69,8 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
   const cancellationsShown = useRef(false);
   const [ilovaVisible, setIlovaVisible] = useState(false);
   const ilovaShown = useRef(false);
+  const [musobaqaVisible, setMusobaqaVisible] = useState(false);
+  const musobaqaShown = useRef(false);
   const [optimisticComments, setOptimisticComments] = useState<CommentData[]>([]);
 
   const handleOptimisticAdd = useCallback((comment: CommentData) => {
@@ -116,6 +128,9 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
     } else if (tab === "ilova" && !ilovaShown.current) {
       ilovaShown.current = true;
       setIlovaVisible(true);
+    } else if (tab === "musobaqa" && !musobaqaShown.current) {
+      musobaqaShown.current = true;
+      setMusobaqaVisible(true);
     }
   }, [activeTab, fetchStudents]);
 
@@ -150,6 +165,10 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
       ilovaShown.current = true;
       setIlovaVisible(true);
     }
+    if (value === "musobaqa" && !musobaqaShown.current) {
+      musobaqaShown.current = true;
+      setMusobaqaVisible(true);
+    }
   };
 
   const handleStudentSaved = useCallback(() => {
@@ -165,19 +184,26 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
       className="w-full"
       onValueChange={handleTabChange}
     >
-      <TabsList className="w-full justify-start overflow-x-auto">
-        <TabsTrigger value="davomat">Davomat</TabsTrigger>
-        <TabsTrigger value="darslar">Darslar</TabsTrigger>
-        <TabsTrigger value="oquvchilar">O&apos;quvchilar</TabsTrigger>
-        <TabsTrigger value="ilova">Ilova faolligi</TabsTrigger>
-        <TabsTrigger value="materiallar">Materiallar</TabsTrigger>
-        <TabsTrigger value="imtihonlar">Imtihonlar</TabsTrigger>
-        {canChangeLessons && (
-          <TabsTrigger value="bekor-qilingan">Dars o&apos;zgarishlari</TabsTrigger>
+      <TabsList
+        className={cn(
+          "w-full justify-start overflow-x-auto",
+          // A teacher on a phone changes tab from the bottom bar instead.
+          barTabs && "hidden",
         )}
-        {canSeeHistory && <TabsTrigger value="tarix">Tarix</TabsTrigger>}
-        {canSeeComments && <TabsTrigger value="izohlar">Izohlar</TabsTrigger>}
-        <TabsTrigger value="statistika">Statistika</TabsTrigger>
+      >
+        <TabsTrigger value="davomat">{t("Davomat")}</TabsTrigger>
+        <TabsTrigger value="darslar">{t("Darslar")}</TabsTrigger>
+        <TabsTrigger value="oquvchilar">{t("O'quvchilar")}</TabsTrigger>
+        <TabsTrigger value="ilova">{t("Ilova faolligi")}</TabsTrigger>
+        <TabsTrigger value="musobaqa">{t("Musobaqa")}</TabsTrigger>
+        <TabsTrigger value="materiallar">{t("Materiallar")}</TabsTrigger>
+        <TabsTrigger value="imtihonlar">{t("Imtihonlar")}</TabsTrigger>
+        {canChangeLessons && (
+          <TabsTrigger value="bekor-qilingan">{t("Dars o'zgarishlari")}</TabsTrigger>
+        )}
+        {canSeeHistory && <TabsTrigger value="tarix">{t("Tarix")}</TabsTrigger>}
+        {canSeeComments && <TabsTrigger value="izohlar">{t("Izohlar")}</TabsTrigger>}
+        <TabsTrigger value="statistika">{t("Statistika")}</TabsTrigger>
       </TabsList>
 
       {/* Davomat */}
@@ -191,7 +217,7 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
         {attendanceVisible ? (
           <AttendanceTab group={group} />
         ) : (
-          <EmptyState message="Davomat ma'lumotlari mavjud emas" />
+          <EmptyState message={t("Davomat ma'lumotlari mavjud emas")} />
         )}
       </TabsContent>
 
@@ -200,7 +226,7 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
         {dotsVisible ? (
           <AttendanceDotsTab group={group} />
         ) : (
-          <EmptyState message="Darslar ma'lumotlari mavjud emas" />
+          <EmptyState message={t("Darslar ma'lumotlari mavjud emas")} />
         )}
       </TabsContent>
 
@@ -223,14 +249,19 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
         {ilovaVisible && <GroupAppActivityTab groupId={group.id} />}
       </TabsContent>
 
+      {/* Musobaqa */}
+      <TabsContent value="musobaqa">
+        {musobaqaVisible && <GroupMusobaqaTab groupId={group.id} />}
+      </TabsContent>
+
       {/* Materiallar */}
       <TabsContent value="materiallar">
-        <EmptyState message="Materiallar mavjud emas" />
+        <EmptyState message={t("Materiallar mavjud emas")} />
       </TabsContent>
 
       {/* Imtihonlar */}
       <TabsContent value="imtihonlar">
-        <EmptyState message="Imtihonlar mavjud emas" />
+        <EmptyState message={t("Imtihonlar mavjud emas")} />
       </TabsContent>
 
       {/* Dars o'zgarishlari — bekor qilish + o'rinbosar ustoz (CEO/BD/Admin) */}
@@ -239,7 +270,7 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
           {cancellationsVisible ? (
             <LessonChangesTab group={group} />
           ) : (
-            <EmptyState message="Dars o'zgarishlari ma'lumotlari mavjud emas" />
+            <EmptyState message={t("Dars o'zgarishlari ma'lumotlari mavjud emas")} />
           )}
         </TabsContent>
       )}
@@ -250,16 +281,16 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
           {historyVisible ? (
             <div className="space-y-6">
               <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Davomat tarixi</h3>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">{t("Davomat tarixi")}</h3>
                 <EntityHistoryTable entityType="GroupAttendance" entityId={group.id} />
               </div>
               <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Guruh o&apos;zgarishlari</h3>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">{t("Guruh o'zgarishlari")}</h3>
                 <EntityHistoryTable entityType="Group" entityId={group.id} />
               </div>
             </div>
           ) : (
-            <EmptyState message="Tarix mavjud emas" />
+            <EmptyState message={t("Tarix mavjud emas")} />
           )}
         </TabsContent>
       )}
@@ -285,7 +316,7 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
               />
             </div>
           ) : (
-            <EmptyState message="Izohlar mavjud emas" />
+            <EmptyState message={t("Izohlar mavjud emas")} />
           )}
         </TabsContent>
       )}
@@ -295,7 +326,7 @@ export function GroupDetailTabs({ group, onCommentChange, activeTab, onTabChange
         {statsVisible ? (
           <AttendanceStats group={group} />
         ) : (
-          <EmptyState message="Statistika mavjud emas" />
+          <EmptyState message={t("Statistika mavjud emas")} />
         )}
       </TabsContent>
     </Tabs>

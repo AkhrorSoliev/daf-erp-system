@@ -97,6 +97,22 @@ export class SettingsService {
   }
 
   /**
+   * When the company-level row of `key` was last written; null = never.
+   * `KpiSettingsService` writes `kpi.enabled` only when the switch flips, so
+   * for that key this is the moment of the flip (ADR-0096).
+   */
+  async lastWrittenAt(
+    companyId: number,
+    key: SettingKey,
+  ): Promise<Date | null> {
+    const row = await this.prisma.setting.findFirst({
+      where: { companyId, branchId: null, key },
+      select: { updatedAt: true },
+    });
+    return row?.updatedAt ?? null;
+  }
+
+  /**
    * Har bir sozlama kaliti uchun — qaysi filiallarda o'ZIGA XOS (kompaniya
    * darajasidan farqli) qiymat saqlangan.
    *
@@ -156,16 +172,61 @@ export class SettingsService {
       );
     }
     const value = def.parse(rawValue);
-    const resolvedBranchId = branchId ?? null;
+    await this.writeRow(
+      this.prisma,
+      companyId,
+      branchId ?? null,
+      key,
+      value,
+      updatedById,
+    );
 
-    const existing = await this.prisma.setting.findFirst({
-      where: { companyId, branchId: resolvedBranchId, key },
+    await invalidateCompanySettingsCache(this.redis, companyId);
+
+    return value;
+  }
+
+  /**
+   * Several company-level keys in one transaction: all written or none
+   * (ADR-0096 — a KPI rule's mode and value never apart). Every value is
+   * parsed before anything is written.
+   */
+  async setMany(
+    companyId: number,
+    entries: ReadonlyArray<readonly [SettingKey, unknown]>,
+    updatedById: number | undefined,
+  ): Promise<void> {
+    const parsed = entries.map(
+      ([key, raw]) => [key, getSettingDefinition(key).parse(raw)] as const,
+    );
+    await this.prisma.$transaction(async (tx) => {
+      for (const [key, value] of parsed) {
+        await this.writeRow(tx, companyId, null, key, value, updatedById, tx);
+      }
     });
+    await invalidateCompanySettingsCache(this.redis, companyId);
+  }
 
+  /**
+   * One row, `findFirst` + update/create (see `set` for why not `upsert`),
+   * with its history row. `tx` is passed on to the history only when the
+   * write runs inside a transaction.
+   */
+  private async writeRow(
+    db: Prisma.TransactionClient,
+    companyId: number,
+    branchId: number | null,
+    key: SettingKey,
+    value: unknown,
+    updatedById: number | undefined,
+    tx?: Prisma.TransactionClient,
+  ): Promise<void> {
+    const existing = await db.setting.findFirst({
+      where: { companyId, branchId, key },
+    });
     const jsonValue = value as Prisma.InputJsonValue;
-
     if (existing) {
-      const updated = await this.prisma.setting.update({
+      const updated = await db.setting.update({
         where: { id: existing.id },
         data: { value: jsonValue, updatedById },
       });
@@ -184,16 +245,11 @@ export class SettingsService {
         },
         changedById: updatedById,
         companyId,
+        ...(tx && { tx }),
       });
     } else {
-      const created = await this.prisma.setting.create({
-        data: {
-          companyId,
-          branchId: resolvedBranchId,
-          key,
-          value: jsonValue,
-          updatedById,
-        },
+      const created = await db.setting.create({
+        data: { companyId, branchId, key, value: jsonValue, updatedById },
       });
       await this.entityHistoryService.recordCreate({
         entityType: 'Setting',
@@ -205,11 +261,8 @@ export class SettingsService {
         },
         changedById: updatedById,
         companyId,
+        ...(tx && { tx }),
       });
     }
-
-    await invalidateCompanySettingsCache(this.redis, companyId);
-
-    return value;
   }
 }

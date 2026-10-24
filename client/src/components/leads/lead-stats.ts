@@ -2,6 +2,13 @@
  * Pure pieces of the stats strip above the leads board (spec 2026-10-08).
  * The figures themselves come from `GET /leads/stats`; nothing is counted here.
  */
+import { msg } from "@/i18n/msg";
+import {
+  CLEARED_LEAD_FILTERS,
+  leadFiltersActive,
+  type LeadFilterValues,
+} from "./lead-filter-schema";
+
 export type LeadStatsPeriod = "week" | "month" | "last-month";
 
 export interface LeadStats {
@@ -16,9 +23,9 @@ export interface LeadStats {
 
 export const LEAD_STATS_PERIODS: { value: LeadStatsPeriod; label: string }[] =
   [
-    { value: "week", label: "Bu hafta" },
-    { value: "month", label: "Shu oy" },
-    { value: "last-month", label: "O'tgan oy" },
+    { value: "week", label: msg("Bu hafta") },
+    { value: "month", label: msg("Shu oy") },
+    { value: "last-month", label: msg("O'tgan oy") },
   ];
 
 /** `?period=` in the URL; the default month is left out of it. */
@@ -48,11 +55,11 @@ export function topSourcesLine(sources: LeadStats["flow"]["topSources"]) {
 export type StatCard = "onBoard" | "uncalled" | "created" | "converted" | "lost";
 
 export const STAT_CARD_LABELS: Record<StatCard, string> = {
-  onBoard: "Doskada",
-  uncalled: "Qo'ng'iroq qilinmagan",
-  created: "Yangi lidlar",
-  converted: "O'quvchi bo'ldi",
-  lost: "Yo'qotildi",
+  onBoard: msg("Doskada"),
+  uncalled: msg("Qo'ng'iroq qilinmagan"),
+  created: msg("Yangi lidlar"),
+  converted: msg("O'quvchi bo'ldi"),
+  lost: msg("Yo'qotildi"),
 };
 
 /**
@@ -63,13 +70,19 @@ export const STAT_CARD_LABELS: Record<StatCard, string> = {
  */
 export function cardFilters(card: StatCard) {
   return {
-    search: "",
+    ...CLEARED_LEAD_FILTERS,
     holati: card === "uncalled" ? UNCALLED_HOLATI : [],
-    sourceId: [],
-    columnId: [],
-    startDate: "",
-    endDate: "",
     karta: card === "created" || card === "converted" || card === "lost" ? card : "",
-    page: 1,
   };
+}
+
+/** The «Qo'ng'iroq qilinmagan» list is open: exactly the uncalled card's filters. */
+export function uncalledCardActive(f: LeadFilterValues): boolean {
+  const expected = cardFilters("uncalled");
+  return (
+    f.karta === "" &&
+    f.holati.length === expected.holati.length &&
+    expected.holati.every((h) => f.holati.includes(h)) &&
+    !leadFiltersActive({ ...f, holati: [] })
+  );
 }

@@ -30,6 +30,7 @@ import api from "@/lib/api";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useAuth } from "@/hooks/use-auth";
+import { useT } from "@/i18n/context";
 import { useCan } from "@/hooks/use-permissions";
 import { TelegramAnnounceDialog } from "./telegram-announce-dialog";
 
@@ -59,6 +60,7 @@ interface ApprovedGroup {
 }
 
 export function TelegramGroupsClient() {
+  const t = useT();
   const queryClient = useQueryClient();
   const user = useAuth((s) => s.user);
   // The «Barcha filiallar» flag is the CEO by identity; the announcement and the
@@ -99,12 +101,12 @@ export function TelegramGroupsClient() {
         })
         .then((r) => r.data),
     onSuccess: () => {
-      toast.success("Guruh tasdiqlandi — bot guruhda e'lon yuboradi");
+      toast.success(t("Guruh tasdiqlandi — bot guruhda e'lon yuboradi"));
       queryClient.invalidateQueries({ queryKey: ["telegram-groups"] });
       setConfirmAction(null);
     },
     onError: (err) => {
-      toast.error(getErrorMessage(err, "Tasdiqlashda xatolik"));
+      toast.error(getErrorMessage(err, t("Tasdiqlashda xatolik")));
     },
   });
 
@@ -112,12 +114,12 @@ export function TelegramGroupsClient() {
     mutationFn: (id: string) =>
       api.post(`/telegram-groups/${id}/reject`, {}).then((r) => r.data),
     onSuccess: () => {
-      toast.success("Guruh rad etildi");
+      toast.success(t("Guruh rad etildi"));
       queryClient.invalidateQueries({ queryKey: ["telegram-groups", "pending"] });
       setConfirmAction(null);
     },
     onError: (err) => {
-      toast.error(getErrorMessage(err, "Rad etishda xatolik"));
+      toast.error(getErrorMessage(err, t("Rad etishda xatolik")));
     },
   });
 
@@ -125,12 +127,12 @@ export function TelegramGroupsClient() {
     mutationFn: (id: string) =>
       api.delete(`/telegram-groups/${id}`).then((r) => r.data),
     onSuccess: () => {
-      toast.success("Guruh tizimdan uzildi");
+      toast.success(t("Guruh tizimdan uzildi"));
       queryClient.invalidateQueries({ queryKey: ["telegram-groups", "approved"] });
       setConfirmAction(null);
     },
     onError: (err) => {
-      toast.error(getErrorMessage(err, "Uzishda xatolik"));
+      toast.error(getErrorMessage(err, t("Uzishda xatolik")));
     },
   });
 
@@ -145,21 +147,30 @@ export function TelegramGroupsClient() {
   const confirmText = confirmAction
     ? {
         approve: {
-          title: "Guruhni tasdiqlash",
-          description: `"${confirmAction.group.title}" guruhi sizning kompaniyangizga bog'lanadi. Bot guruhda tasdiqlash xabarini yuboradi va barcha komandalar shu yerda ishlay boshlaydi.`,
-          actionLabel: "Tasdiqlash",
+          title: t("Guruhni tasdiqlash"),
+          description: t(
+            "\"{name}\" guruhi sizning kompaniyangizga bog'lanadi. Bot guruhda tasdiqlash xabarini yuboradi va barcha komandalar shu yerda ishlay boshlaydi.",
+            { name: confirmAction.group.title },
+          ),
+          actionLabel: t("Tasdiqlash"),
           destructive: false,
         },
         reject: {
-          title: "Guruhni rad etish",
-          description: `"${confirmAction.group.title}" guruhi rad etiladi va ro'yxatdan o'chiriladi. Botni qaytadan qo'shsangiz, yana paydo bo'ladi.`,
-          actionLabel: "Rad etish",
+          title: t("Guruhni rad etish"),
+          description: t(
+            "\"{name}\" guruhi rad etiladi va ro'yxatdan o'chiriladi. Botni qaytadan qo'shsangiz, yana paydo bo'ladi.",
+            { name: confirmAction.group.title },
+          ),
+          actionLabel: t("Rad etish"),
           destructive: true,
         },
         unlink: {
-          title: "Botni uzish",
-          description: `Bot "${confirmAction.group.title}" guruhidan tizim darajasida uzildi. Guruh bazada arxivlanadi, lekin bot guruhda qoladi — uni qo'lda chiqarib yuborishingiz mumkin.`,
-          actionLabel: "Uzish",
+          title: t("Botni uzish"),
+          description: t(
+            "Bot \"{name}\" guruhidan tizim darajasida uzildi. Guruh bazada arxivlanadi, lekin bot guruhda qoladi — uni qo'lda chiqarib yuborishingiz mumkin.",
+            { name: confirmAction.group.title },
+          ),
+          actionLabel: t("Uzish"),
           destructive: true,
         },
       }[confirmAction.kind]
@@ -189,13 +200,13 @@ export function TelegramGroupsClient() {
     onSuccess: (_d, vars) => {
       toast.success(
         vars.receivesAllBranches
-          ? "Guruh barcha filiallarni kuzatadi"
-          : "Guruh filialga bog'landi",
+          ? t("Guruh barcha filiallarni kuzatadi")
+          : t("Guruh filialga bog'landi"),
       );
       queryClient.invalidateQueries({ queryKey: ["telegram-groups", "approved"] });
     },
     onError: (e) =>
-      toast.error(getErrorMessage(e, "Guruh sozlamasini o'zgartirib bo'lmadi")),
+      toast.error(getErrorMessage(e, t("Guruh sozlamasini o'zgartirib bo'lmadi"))),
   });
 
   const anyPending =
@@ -209,11 +220,12 @@ export function TelegramGroupsClient() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="font-heading text-lg font-semibold tracking-tight">
-            Telegram guruhlar
+            {t("Telegram guruhlar")}
           </h2>
           <p className="text-sm text-muted-foreground">
-            Botni Telegram guruhga qo&apos;shing — guruh shu yerda &quot;Tasdiqlash kutilayotgan&quot;
-            ro&apos;yxatda paydo bo&apos;ladi. Tasdiqlangach komandalar guruh ichida ishlay boshlaydi.
+            {t(
+              "Botni Telegram guruhga qo'shing — guruh shu yerda \"Tasdiqlash kutilayotgan\" ro'yxatda paydo bo'ladi. Tasdiqlangach komandalar guruh ichida ishlay boshlaydi.",
+            )}
           </p>
         </div>
         {canAnnounce && <TelegramAnnounceDialog />}
@@ -221,9 +233,9 @@ export function TelegramGroupsClient() {
 
       <section className="space-y-3">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold">Tasdiqlash kutilayotgan</h3>
+          <h3 className="text-sm font-semibold">{t("Tasdiqlash kutilayotgan")}</h3>
           {pendingQuery.data && (
-            <Badge variant="secondary">{pendingQuery.data.length} ta</Badge>
+            <Badge variant="secondary">{t("{n} ta", { n: pendingQuery.data.length })}</Badge>
           )}
         </div>
 
@@ -235,18 +247,19 @@ export function TelegramGroupsClient() {
           </div>
         ) : !pendingQuery.data?.length ? (
           <p className="text-sm text-muted-foreground py-8 text-center border rounded">
-            Tasdiqlash kutilayotgan guruh yo&apos;q. Botni Telegram guruhingizga qo&apos;shing —
-            bu yerda paydo bo&apos;ladi.
+            {t(
+              "Tasdiqlash kutilayotgan guruh yo'q. Botni Telegram guruhingizga qo'shing — bu yerda paydo bo'ladi.",
+            )}
           </p>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12 border-r">#</TableHead>
-                <TableHead>Guruh nomi</TableHead>
-                <TableHead>Chat raqami</TableHead>
-                <TableHead>Qo&apos;shilgan vaqt</TableHead>
-                <TableHead className="text-right">Amal</TableHead>
+                <TableHead>{t("Guruh nomi")}</TableHead>
+                <TableHead>{t("Chat raqami")}</TableHead>
+                <TableHead>{t("Qo'shilgan vaqt")}</TableHead>
+                <TableHead className="text-right">{t("Amal")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -273,7 +286,7 @@ export function TelegramGroupsClient() {
                         disabled={anyPending}
                       >
                         <Check className="size-4 mr-1" />
-                        Tasdiqlash
+                        {t("Tasdiqlash")}
                       </Button>
                       <Button
                         size="sm"
@@ -282,7 +295,7 @@ export function TelegramGroupsClient() {
                         disabled={anyPending}
                       >
                         <X className="size-4 mr-1" />
-                        Rad etish
+                        {t("Rad etish")}
                       </Button>
                     </div>
                   </TableCell>
@@ -295,9 +308,9 @@ export function TelegramGroupsClient() {
 
       <section className="space-y-3">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold">Tasdiqlangan guruhlar</h3>
+          <h3 className="text-sm font-semibold">{t("Tasdiqlangan guruhlar")}</h3>
           {approvedQuery.data && (
-            <Badge variant="secondary">{approvedQuery.data.length} ta</Badge>
+            <Badge variant="secondary">{t("{n} ta", { n: approvedQuery.data.length })}</Badge>
           )}
         </div>
 
@@ -309,18 +322,18 @@ export function TelegramGroupsClient() {
           </div>
         ) : !approvedQuery.data?.length ? (
           <p className="text-sm text-muted-foreground py-8 text-center border rounded">
-            Hali tasdiqlangan guruh yo&apos;q
+            {t("Hali tasdiqlangan guruh yo'q")}
           </p>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12 border-r">#</TableHead>
-                <TableHead>Guruh nomi</TableHead>
-                <TableHead>Filial</TableHead>
-                <TableHead>Tasdiqlovchi</TableHead>
-                <TableHead>Tasdiqlangan</TableHead>
-                {showActions && <TableHead className="text-right">Amal</TableHead>}
+                <TableHead>{t("Guruh nomi")}</TableHead>
+                <TableHead>{t("Filial")}</TableHead>
+                <TableHead>{t("Tasdiqlovchi")}</TableHead>
+                <TableHead>{t("Tasdiqlangan")}</TableHead>
+                {showActions && <TableHead className="text-right">{t("Amal")}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -334,17 +347,17 @@ export function TelegramGroupsClient() {
                       <MessageSquare className="size-4 text-muted-foreground" />
                       <span className="font-medium">{g.title}</span>
                       {!g.isActive && (
-                        <Badge variant="destructive">to&apos;xtatilgan</Badge>
+                        <Badge variant="destructive">{t("to'xtatilgan")}</Badge>
                       )}
                     </div>
                   </TableCell>
                   <TableCell className="text-sm">
                     {g.receivesAllBranches ? (
-                      <Badge variant="secondary">Barcha filiallar</Badge>
+                      <Badge variant="secondary">{t("Barcha filiallar")}</Badge>
                     ) : g.branch ? (
                       g.branch.name
                     ) : (
-                      <Badge variant="destructive">belgilanmagan</Badge>
+                      <Badge variant="destructive">{t("filial belgilanmagan")}</Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-sm">
@@ -373,13 +386,13 @@ export function TelegramGroupsClient() {
                             disabled={anyPending}
                             title={
                               g.receivesAllBranches
-                                ? "Faqat tanlangan filialga bog'lash"
-                                : "Barcha filiallarni kuzatadigan qilish"
+                                ? t("Faqat tanlangan filialga bog'lash")
+                                : t("Barcha filiallarni kuzatadigan qilish")
                             }
                           >
                             {g.receivesAllBranches
-                              ? "Filialga bog'lash"
-                              : "Barcha filiallar"}
+                              ? t("Filialga bog'lash")
+                              : t("Barcha filiallar")}
                           </Button>
                         )}
                         {canAnnounce && (
@@ -390,7 +403,7 @@ export function TelegramGroupsClient() {
                             disabled={anyPending}
                           >
                             <Trash2 className="size-4 mr-1" />
-                            Uzish
+                            {t("Uzish")}
                           </Button>
                         )}
                       </div>
@@ -415,7 +428,7 @@ export function TelegramGroupsClient() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={anyPending}>Bekor qilish</AlertDialogCancel>
+            <AlertDialogCancel disabled={anyPending}>{t("Bekor qilish")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirm}
               disabled={anyPending}

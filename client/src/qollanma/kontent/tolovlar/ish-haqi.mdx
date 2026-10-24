@@ -2,7 +2,7 @@
 
 «Ish haqi» — ustozlar va xodimlarning tanlangan oydagi oyligi: kim qancha ishladi, qancha avans ushlanadi, qancha beriladi va oylik qaysi bosqichda. Shu yerda oylik tasdiqlanadi, berilgani belgilanadi va avans beriladi. Sahifani CEO va filial direktori ko'radi; raqamlar yuqori paneldagi filial tanlagichi bo'yicha.
 
-Tepada: «Ish haqi», oy tanlagich, «Stavkalar» (ustoz va xodim stavkalari oynasi) va «+ Avans berish». Ostida uchta tab: «Oyliklar», «Avanslar · X mln» va «Markaz qoplagani · X mln». Tabdagi summa yuklanayotganda va 0 bo'lsa ko'rinmaydi.
+Tepada: «Ish haqi», oy tanlagich, «Stavkalar» (ustoz va xodim stavkalari oynasi) va «+ Avans berish». Ostida uchta tab: «Oyliklar», «Avanslar · X so'm» va «Markaz qoplagani · X so'm». Tabdagi summa to'liq yoziladi (masalan, 4 124 000 so'm), yuklanayotganda va 0 bo'lsa ko'rinmaydi.
 
 Hisoblash davri doim kalendar oyi (1-sanadan oyning oxirigacha) va o'zgartirilmaydi.
 
@@ -143,6 +143,16 @@ Ismlar va raqamlar soxta.
 4. CEO Madinaning oynasida «Tasdiqlash» ni bosdi.
 5. 05.11 direktor pulni berib, «Berildi» → sana 05.11, naqd 2 000 000, karta 1 200 000 ni kiritdi. Madinaga bot xabari bordi, holat «berildi 05.11».
 
+## Xodim oyligini qo'lda to'g'rilash
+
+Ustoz bo'lmagan xodimning (administrator, kassir) oyligini tizim stavka bo'yicha kunlarga proporsional hisoblaydi. Oy o'rtasidan kelgan yoki ketgan xodimning kelishilgan summasi bundan farq qilishi mumkin. Xodim oynasidagi «Oylik hisobi» blokida tizim hisobi turadi, uning ostida «To'g'rilash» tugmasi bor.
+
+1. «To'g'rilash» ni bosing.
+2. Oyning oylik summasini (avansgacha) va sababini yozing. Oyna hisobdan farqni shu zahoti ko'rsatadi.
+3. «Saqlash» ni bosing. Jadvaldagi «Ishladi» yonida «qo'lda» belgisi paydo bo'ladi, xodim oynasida esa qo'lda summa va sabab, tizim hisobi chizilgan holda turadi.
+
+Stavka va uning tarixi o'zgarmaydi. Qo'lda summa hisobotlarda, Excelda va Telegram xabarida shu oyning oyligi sifatida ko'rinadi. Oylik allaqachon hisoblangan bo'lsa, u yangi summaga qayta hisoblanadi, endi sig'adigan avans ham ushlanadi. Oylik tasdiqlangan yoki berilgan bo'lsa, avval to'lovni bekor qilish kerak. «Hisobga qaytarish» oyni yana tizim hisobiga qaytaradi.
+
 ## Kim qila oladi
 
 «Ha» — ekranda tugma bor va tizim amalni qabul qiladi. «—» — ekranda yo'q yoki tizim rad etadi. Filial direktori faqat o'z filialini ko'radi; CEO — filial tanlagichida tanlanganini. Administrator, kassir va ustozga sahifa ko'rinmaydi.
@@ -156,6 +166,7 @@ Ismlar va raqamlar soxta.
 | «Tasdiqlash» | Ha | — |
 | «Berildi» | Ha | Ha (o'z filiali xodimiga) |
 | «Oylik berilganini tasdiqlash» (oy bo'yicha) | Ha | — |
+| Xodim oyligini qo'lda to'g'rilash | Ha | — |
 
 ## Tizimda qayerda
 

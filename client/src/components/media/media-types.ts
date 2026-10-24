@@ -1,3 +1,5 @@
+import { msg } from "@/i18n/msg";
+
 export interface PersonaStimme {
   engine: string;
   voice: string;
@@ -42,28 +44,28 @@ export interface MediaOverview {
   vorhanden: boolean;
 }
 
-/** Bo'lim nomlari — server kalitlaridan sahifadagi matnga bitta xarita. */
+/** Bo'lim nomlari — server kalitlaridan sahifadagi matnga bitta xarita. Draw with `t(…)`. */
 export const BEREICH_LABEL: Record<string, string> = {
-  persona: "Obrazlar",
-  einheit: "Bo'limlar",
-  sendung: "Ko'rsatuvlar",
-  sonstiges: "Boshqa",
+  persona: msg("Obrazlar"),
+  einheit: msg("Bo'limlar"),
+  sendung: msg("Ko'rsatuvlar"),
+  sonstiges: msg("Boshqa"),
 };
 
+// Draw with `t(…)`; a kind not listed here (PDF) prints its code.
 export const KIND_LABEL: Record<string, string> = {
-  AUDIO: "audio",
-  IMAGE: "rasm",
-  VIDEO: "video",
-  PDF: "PDF",
+  AUDIO: msg("audio"),
+  IMAGE: msg("rasm"),
+  VIDEO: msg("video"),
 };
 
-/** Yosh guruhi — kartadagi belgi va filtr uchun bitta manba. */
+/** Yosh guruhi — kartadagi belgi va filtr uchun bitta manba. `label` is a `msg()` text. */
 export function yoshGuruhi(alter: number): { key: string; label: string } {
-  if (alter <= 12) return { key: "bola", label: "Bola" };
-  if (alter <= 19) return { key: "osmir", label: "O'smir" };
-  if (alter <= 35) return { key: "yosh", label: "Yosh" };
-  if (alter <= 60) return { key: "orta", label: "O'rta yosh" };
-  return { key: "qariya", label: "Qariya" };
+  if (alter <= 12) return { key: "bola", label: msg("Bola") };
+  if (alter <= 19) return { key: "osmir", label: msg("O'smir") };
+  if (alter <= 35) return { key: "yosh", label: msg("Yosh") };
+  if (alter <= 60) return { key: "orta", label: msg("O'rta yosh") };
+  return { key: "qariya", label: msg("Qariya") };
 }
 
 export function hajm(bytes: number): string {

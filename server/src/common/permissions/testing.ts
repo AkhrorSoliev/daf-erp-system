@@ -3,7 +3,8 @@ import type { Type } from '@nestjs/common';
 import { ROLE_NAME_BY_ID } from '../auth/role-ids';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { ACCESS_KEY, RouteAccessMeta } from './access.decorators';
-import { PermissionKey, defaultKeysForRoles } from './permission-catalog';
+import { RoleOverride, effectiveForRoles } from './effective-permissions';
+import { PermissionKey } from './permission-catalog';
 import type { CallerAccess, PermissionsService } from './permissions.service';
 import { AccessLike, AccessSummary, accessSummary } from './route-access';
 
@@ -40,20 +41,29 @@ export function defaultRolesOf(
 }
 
 /**
- * A `PermissionsService` stand-in for unit specs: every caller holds
- * `roleIds`, with the catalog's default capabilities. Plain functions, no
- * `jest.fn`: this file is compiled with the application, where Jest's
- * globals do not exist.
+ * A `PermissionsService` stand-in for unit specs: the caller holds `roleIds`
+ * with the catalog defaults plus `opts.overrides` (the CEO's changes). With
+ * `opts.userId` set, only that user holds them and any other user holds
+ * nothing — so a spec can prove a check reads the right caller. Plain
+ * functions, no `jest.fn`: this file is compiled with the application, where
+ * Jest's globals do not exist.
  */
-export function fakePermissions(roleIds: number[]): PermissionsService {
+export function fakePermissions(
+  roleIds: number[],
+  opts?: { userId?: number; overrides?: RoleOverride[] },
+): PermissionsService {
   const access: CallerAccess = {
     roleIds,
     roleNames: roleIds.map((id) => ROLE_NAME_BY_ID[id]),
-    keys: defaultKeysForRoles(roleIds),
+    keys: effectiveForRoles(roleIds, opts?.overrides ?? []),
   };
+  const nobody: CallerAccess = { roleIds: [], roleNames: [], keys: new Set() };
+  const accessOf = (userId: number): CallerAccess =>
+    opts?.userId === undefined || userId === opts.userId ? access : nobody;
   return {
-    forUser: () => Promise.resolve(access),
-    has: (_userId: number, key: PermissionKey) =>
-      Promise.resolve(access.keys.has(key)),
+    forUser: (userId: number) => Promise.resolve(accessOf(userId)),
+    has: (userId: number, key: PermissionKey) =>
+      Promise.resolve(accessOf(userId).keys.has(key)),
+    invalidateAll: () => undefined,
   } as unknown as PermissionsService;
 }

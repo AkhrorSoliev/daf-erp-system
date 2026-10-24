@@ -1,5 +1,10 @@
 import { formatNumber } from "@/lib/format-utils";
 import { monthShort } from "@/components/payments/salary-utils";
+import { msg } from "@/i18n/msg";
+import { interpolate, type Params } from "@/i18n/translate";
+
+/** `t` of a page with a language; the default says the Uzbek text. */
+export type Translate = (source: string, params?: Params) => string;
 
 /**
  * What a departure does to the month's charge (contract 6.2, ADR-0043): the
@@ -96,20 +101,35 @@ export interface DeparturePreview {
 
 export type MonthlyRow = DeparturePreviewEnrollment & { month: DepartureMonth };
 
+// The texts below are drawn with `t(…)` by the block.
 export const POLICY_TITLES: Record<DeparturePolicy, string> = {
-  STUDENT_CANCELLED: "O'quvchi o'zi to'xtatdi",
-  LEVEL_COMPLETED: "Darajani tugatdi",
-  CENTER_INITIATIVE: "Markaz tashabbusi",
-  QUALITY_CLAIM: "Sifat bo'yicha shikoyat",
+  STUDENT_CANCELLED: msg("O'quvchi o'zi to'xtatdi"),
+  LEVEL_COMPLETED: msg("Darajani tugatdi"),
+  CENTER_INITIATIVE: msg("Markaz tashabbusi"),
+  QUALITY_CLAIM: msg("Sifat bo'yicha shikoyat"),
 };
 
-export const LOCKED_POLICY_NOTE =
-  "Markaz tashabbusi yoki sifat shikoyatini faqat direktor yoki CEO tanlaydi";
+/** The option's title in the page's language. */
+export function policyTitle(
+  policy: DeparturePolicy,
+  t: Translate = interpolate,
+): string {
+  const title = POLICY_TITLES[policy];
+  return t(title);
+}
 
-export const CONTRACT_NOTE =
-  "Shartnoma 6.2 · 01.10.2026 dan chiqqanlarga qo'llanadi";
+export const LOCKED_POLICY_NOTE = msg(
+  "Markaz tashabbusi yoki sifat shikoyatini faqat direktor yoki CEO tanlaydi",
+);
 
-const som = (n: number) => `${formatNumber(n)} so'm`;
+export const CONTRACT_NOTE = msg(
+  "Shartnoma 6.2 · 01.10.2026 dan chiqqanlarga qo'llanadi",
+);
+
+const som = (n: number, t: Translate) => `${formatNumber(n)} ${t("so'm")}`;
+
+/** «oktabr» → «Oktabr»: a month name opens a sentence (the Russian one is written in lower case). */
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** The enrollments whose month the departure settles; none → no block. */
 export function monthlyRows(
@@ -121,14 +141,25 @@ export function monthlyRows(
 }
 
 /** "Oktabr: 13 dars, 1 040 000 so'm. Bugun 14.10, o'tgani:" + "6 ta (46%)". */
-export function factsLine(month: DepartureMonth): {
+export function factsLine(
+  month: DepartureMonth,
+  t: Translate = interpolate,
+): {
   lead: string;
   held: string;
 } {
   const [, mm, dd] = month.departureDay.split("-");
   return {
-    lead: `${monthShort(month.period)}: ${month.covered} dars, ${som(month.chargedAmount)}. Bugun ${dd}.${mm}, o'tgani:`,
-    held: `${month.held} ta (${month.heldPercent}%)`,
+    lead: t("{month}: {covered} dars, {amount}. Bugun {date}, o'tgani:", {
+      month: capitalize(monthShort(month.period, t)),
+      covered: month.covered,
+      amount: som(month.chargedAmount, t),
+      date: `${dd}.${mm}`,
+    }),
+    held: t("{held} ta ({percent}%)", {
+      held: month.held,
+      percent: month.heldPercent,
+    }),
   };
 }
 
@@ -147,22 +178,39 @@ export function lessonChips(
 export function policyHint(
   policy: DeparturePolicy,
   month: DepartureMonth,
+  t: Translate = interpolate,
 ): string {
   if (month.trialLesson) {
-    return "Sinov darsi (3.5) — oyning to'liq puli qaytadi";
+    return t("Sinov darsi (3.5) — oyning to'liq puli qaytadi");
   }
   if (policy === "LEVEL_COMPLETED") {
-    return "Sertifikat oldi yoki keyingi darajaga o'tadi — o'tilmagan darslar puli qaytadi";
+    return t(
+      "Sertifikat oldi yoki keyingi darajaga o'tadi — o'tilmagan darslar puli qaytadi",
+    );
   }
-  if (policy === "CENTER_INITIATIVE") return "O'tilmagan darslar puli qaytadi";
-  if (policy === "QUALITY_CLAIM") return "Oyning to'liq puli qaytadi";
+  if (policy === "CENTER_INITIATIVE") {
+    return t("O'tilmagan darslar puli qaytadi");
+  }
+  if (policy === "QUALITY_CLAIM") return t("Oyning to'liq puli qaytadi");
   if (!month.contractApplies) {
-    return "Shartnoma 6.2 hali kuchga kirmagan — o'tilmagan darslar puli qaytadi";
+    return t(
+      "Shartnoma 6.2 hali kuchga kirmagan — o'tilmagan darslar puli qaytadi",
+    );
   }
-  const share = `${month.covered} darsdan ${month.held} tasi o'tgan`;
+  const figures = {
+    covered: month.covered,
+    held: month.held,
+    threshold: month.threshold,
+  };
   return month.held * 100 > month.threshold * month.covered
-    ? `${share} (${month.threshold}% dan ko'p) — pul qaytmaydi`
-    : `${share} (${month.threshold}% dan ko'p emas) — o'tilmagan darslar puli qaytadi`;
+    ? t(
+        "{covered} darsdan {held} tasi o'tgan ({threshold}% dan ko'p) — pul qaytmaydi",
+        figures,
+      )
+    : t(
+        "{covered} darsdan {held} tasi o'tgan ({threshold}% dan ko'p emas) — o'tilmagan darslar puli qaytadi",
+        figures,
+      );
 }
 
 export interface Consequence {
@@ -172,21 +220,37 @@ export interface Consequence {
   line: string;
 }
 
-const CASH_NOTE = "Naqd pulni keyin «Pul qaytarish» orqali berasiz.";
+const CASH_NOTE = msg("Naqd pulni keyin «Pul qaytarish» orqali berasiz.");
+const NO_TEACHER_PAY = msg("Ustozga bu oyning darslari uchun haq yozilmaydi.");
 
-function balanceLine(before: number, after: number): string {
+function balanceLine(before: number, after: number, t: Translate): string {
   if (before >= 0) {
-    return `Balans: ${formatNumber(before)} → ${som(after)}. ${CASH_NOTE}`;
+    const balance = t("Balans: {before} → {after}.", {
+      before: formatNumber(before),
+      after: som(after, t),
+    });
+    return `${balance} ${t(CASH_NOTE)}`;
   }
-  if (after < 0) return `Qarz: ${formatNumber(-before)} → ${som(-after)}.`;
-  if (after === 0) return `Qarz: ${formatNumber(-before)} → 0 so'm.`;
-  return `Qarz yopiladi, balansda ${som(after)} qoladi. ${CASH_NOTE}`;
+  if (after < 0) {
+    return t("Qarz: {before} → {after}.", {
+      before: formatNumber(-before),
+      after: som(-after, t),
+    });
+  }
+  if (after === 0) {
+    return t("Qarz: {before} → 0 so'm.", { before: formatNumber(-before) });
+  }
+  const closed = t("Qarz yopiladi, balansda {after} qoladi.", {
+    after: som(after, t),
+  });
+  return `${closed} ${t(CASH_NOTE)}`;
 }
 
 /** The box under the options: what confirming with `policy` would do. */
 export function departureConsequence(
   preview: DeparturePreview | undefined,
   policy: DeparturePolicy,
+  t: Translate = interpolate,
 ): Consequence | null {
   const rows = monthlyRows(preview);
   if (!preview || rows.length === 0) return null;
@@ -203,29 +267,41 @@ export function departureConsequence(
   if (amount === 0 && trial) {
     return {
       tone: "neutral",
-      head: "Sinov darsi (3.5): qaytadigan pul yo'q",
-      line: "Ustozga bu oyning darslari uchun haq yozilmaydi.",
+      head: t("Sinov darsi (3.5): qaytadigan pul yo'q"),
+      line: t(NO_TEACHER_PAY),
     };
   }
 
   if (amount > 0) {
-    const head = trial
-      ? `Sinov darsi (3.5): oyning puli to'liq qaytadi — ${som(amount)}`
-      : policy === "QUALITY_CLAIM"
-        ? `Oyning to'liq puli qaytadi: ${som(amount)}`
-        : rows.every((r) => r.month.held === 0)
-          ? `Hali dars o'tmagan: ${lessons} dars puli to'liq qaytadi, ${som(amount)}`
-          : `${lessons} ta o'tilmagan dars puli qaytadi: ${som(amount)}`;
+    const money = som(amount, t);
+    let head: string;
+    if (trial) {
+      head = t("Sinov darsi (3.5): oyning puli to'liq qaytadi — {amount}", {
+        amount: money,
+      });
+    } else if (policy === "QUALITY_CLAIM") {
+      head = t("Oyning to'liq puli qaytadi: {amount}", { amount: money });
+    } else if (rows.every((r) => r.month.held === 0)) {
+      head = t("Hali dars o'tmagan: {lessons} dars puli to'liq qaytadi, {amount}", {
+        lessons,
+        amount: money,
+      });
+    } else {
+      head = t("{lessons} ta o'tilmagan dars puli qaytadi: {amount}", {
+        lessons,
+        amount: money,
+      });
+    }
     // Contract 3.5 (CEO, 28.09.2026): a trial lesson is paid by nobody.
-    const teacher = trial
-      ? " Ustozga bu oyning darslari uchun haq yozilmaydi."
-      : policy === "QUALITY_CLAIM"
-        ? " Ustoz oyligi kamaymaydi, farqni markaz qoplaydi."
-        : "";
+    let teacher = "";
+    if (trial) teacher = ` ${t(NO_TEACHER_PAY)}`;
+    else if (policy === "QUALITY_CLAIM") {
+      teacher = ` ${t("Ustoz oyligi kamaymaydi, farqni markaz qoplaydi.")}`;
+    }
     return {
       tone: "success",
       head,
-      line: balanceLine(preview.balance, preview.balance + amount) + teacher,
+      line: balanceLine(preview.balance, preview.balance + amount, t) + teacher,
     };
   }
 
@@ -233,19 +309,22 @@ export function departureConsequence(
   if (kept) {
     const balance =
       preview.balance < 0
-        ? `Qarz o'zgarmaydi: ${som(-preview.balance)}.`
-        : "Balans o'zgarmaydi.";
+        ? t("Qarz o'zgarmaydi: {debt}.", { debt: som(-preview.balance, t) })
+        : t("Balans o'zgarmaydi.");
+    const passed = t("Oy darslarining {percent}% o'tgan.", {
+      percent: kept.month.heldPercent,
+    });
     return {
       tone: "warning",
-      head: "Pul qaytmaydi",
-      line: `Oy darslarining ${kept.month.heldPercent}% o'tgan. ${balance}`,
+      head: t("Pul qaytmaydi"),
+      line: `${passed} ${balance}`,
     };
   }
 
   return {
     tone: "neutral",
-    head: "Qaytadigan dars yo'q",
-    line: "Oyning hamma darslari o'tgan.",
+    head: t("Qaytadigan dars yo'q"),
+    line: t("Oyning hamma darslari o'tgan."),
   };
 }
 
@@ -264,4 +343,49 @@ export function departurePolicyPayload(
   return policy !== DEFAULT_DEPARTURE_POLICY && offered.includes(policy)
     ? { departurePolicy: policy }
     : {};
+}
+
+export interface WithheldWarning {
+  tone: "warning" | "danger";
+  title: string;
+  body: string;
+}
+
+/**
+ * Removal only: contract 6.2 keeps the month's money when the student leaves
+ * after more than 40% of the lessons. An admin who moves a student to another
+ * group through «Chiqarish» loses it by mistake — the transfer returns it.
+ * Says so before the click; blocks nothing.
+ */
+export function withheldWarning(
+  preview: DeparturePreview | undefined,
+  { looksLikeMove = false }: { looksLikeMove?: boolean } = {},
+  t: Translate = interpolate,
+): WithheldWarning | null {
+  const withheld = monthlyRows(preview).filter(
+    (r) => r.month.outcomes.STUDENT_CANCELLED.withheld,
+  );
+  if (withheld.length === 0) return null;
+  const { heldPercent, threshold } = withheld[0].month;
+  const amount = withheld.reduce(
+    (s, r) => s + r.month.outcomes.CENTER_INITIATIVE.amount,
+    0,
+  );
+  const title =
+    amount > 0
+      ? t("Oy to'lovi qaytarilmaydi — {amount} ushlab qolinadi", {
+          amount: som(amount, t),
+        })
+      : t("Oy to'lovi qaytarilmaydi");
+  const body = t(
+    "Oyning {percent}% i o'tgan (shartnoma 6.2: {threshold}% dan ko'p). O'quvchi boshqa guruhga o'tayotgan bo'lsa, bu oynani yopib, profildagi «Guruhni o'zgartirish» dan foydalaning: u o'tmagan darslarning pulini balansga qaytaradi. «Chiqarish» faqat o'quvchi haqiqatan ketganda.",
+    { percent: heldPercent, threshold },
+  );
+  return looksLikeMove
+    ? {
+        tone: "danger",
+        title,
+        body: `${t("Siz «ko'chdi» sababini tanladingiz — bu chiqarish emas, almashtirish.")} ${body}`,
+      }
+    : { tone: "warning", title, body };
 }

@@ -11,6 +11,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/context";
 
 export interface EmployeeOption {
   id: number;
@@ -21,21 +23,23 @@ export interface EmployeeOption {
 }
 
 const roleLabels: Record<number, string> = {
-  1: "Direktor",
-  2: "Filial direktori",
-  3: "Administrator",
-  4: "O'qituvchi",
-  5: "Kassir",
+  1: msg("Direktor"),
+  2: msg("Filial direktori"),
+  3: msg("Administrator"),
+  4: msg("O'qituvchi"),
+  5: msg("Kassir"),
 };
 
 export function employeeRoleLabel(
   roles: { id: number; name: string }[],
+  t: (source: string) => string = (source) => source,
 ): string {
   if (!roles?.length) return "";
   // Prefer the teaching role when present — the category is "Ustozga avans".
   const teacher = roles.find((r) => r.id === 4);
   const primary = teacher ?? roles[0];
-  return roleLabels[primary.id] ?? primary.name;
+  const known = roleLabels[primary.id];
+  return known ? t(known) : primary.name;
 }
 
 // Show the search box only when the list is long enough to warrant it.
@@ -55,6 +59,7 @@ export function EmployeeAdvanceSelect({
   employees,
   loading = false,
 }: EmployeeAdvanceSelectProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -84,7 +89,7 @@ export function EmployeeAdvanceSelect({
         className="w-full justify-start font-normal text-muted-foreground"
       >
         <Loader2 className="mr-2 size-4 animate-spin" />
-        Yuklanmoqda...
+        {t("Yuklanmoqda...")}
       </Button>
     );
   }
@@ -125,7 +130,7 @@ export function EmployeeAdvanceSelect({
             </span>
           ) : (
             <span className="text-muted-foreground">
-              Avans oluvchi xodimni tanlang
+              {t("Avans oluvchi xodimni tanlang")}
             </span>
           )}
           <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
@@ -140,7 +145,7 @@ export function EmployeeAdvanceSelect({
             <div className="relative">
               <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
               <Input
-                placeholder="Ism bo'yicha qidirish..."
+                placeholder={t("Ism bo'yicha qidirish...")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-8"
@@ -154,7 +159,7 @@ export function EmployeeAdvanceSelect({
             const fullName = `${e.firstName} ${e.lastName}`;
             const initials =
               `${e.firstName[0] ?? ""}${e.lastName[0] ?? ""}`.toUpperCase();
-            const role = employeeRoleLabel(e.roles);
+            const role = employeeRoleLabel(e.roles, t);
             return (
               <button
                 key={e.id}
@@ -184,7 +189,7 @@ export function EmployeeAdvanceSelect({
           })}
           {filtered.length === 0 && (
             <p className="px-2 py-1.5 text-sm text-muted-foreground">
-              Xodim topilmadi
+              {t("Xodim topilmadi")}
             </p>
           )}
         </div>

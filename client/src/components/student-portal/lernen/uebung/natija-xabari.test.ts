@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { javobPaneliMatni, orinXabari, xatoYorligi } from "./natija-xabari";
+import { javobPaneliMatni, natijaQatorlari, orinXabari, xatoYorligi } from "./natija-xabari";
 
 describe("javobPaneliMatni", () => {
   it("a slip counts as correct and shows the right spelling", () => {
@@ -18,7 +18,7 @@ describe("javobPaneliMatni", () => {
 
   it("a wrong answer shows the right one", () => {
     expect(javobPaneliMatni({ isCorrect: false, richtig: "Bahnhof" })).toEqual({
-      sarlavha: "Xato",
+      sarlavha: "Noto'g'ri",
       izoh: null,
       soz: "Bahnhof",
     });
@@ -122,5 +122,107 @@ describe("xatoYorligi — soat formatlari", () => {
     expect(
       javobPaneliMatni({ isCorrect: false, richtig: "03:30", loesungWort: "halb vier" }).soz,
     ).toBe("halb vier");
+  });
+});
+
+describe("natijaQatorlari", () => {
+  const base = {
+    punkte: 50,
+    serie: 4,
+    serieYangi: true,
+    orin: { gruppe: { oldin: 3, hozir: 1 }, zentrum: { oldin: 9, hozir: 7 } },
+  };
+
+  it("no answer from the server draws nothing", () => {
+    expect(natijaQatorlari(null)).toEqual({
+      ball: null,
+      serie: null,
+      orin: null,
+      maqsad: null,
+      nishonlar: [],
+    });
+  });
+
+  it("points, the streak on the first practice of the day, the group rank", () => {
+    expect(natijaQatorlari(base)).toEqual({
+      ball: 50,
+      serie: 4,
+      orin: "Guruhda 1-o'rin — 2 pog'ona ko'tarildingiz",
+      maqsad: null,
+      nishonlar: [],
+    });
+  });
+
+  it("0 points and a later session show neither line", () => {
+    const r = natijaQatorlari({ ...base, punkte: 0, serieYangi: false });
+    expect(r.ball).toBeNull();
+    expect(r.serie).toBeNull();
+  });
+
+  it("an unchanged rank is not repeated", () => {
+    const r = natijaQatorlari({ ...base, orin: { gruppe: { oldin: 2, hozir: 2 }, zentrum: { oldin: 5, hozir: 5 } } });
+    expect(r.orin).toBeNull();
+  });
+
+  it("no group: the centre rank speaks", () => {
+    const r = natijaQatorlari({ ...base, orin: { gruppe: null, zentrum: { oldin: 9, hozir: 12 } } });
+    expect(r.orin).toBe("Markazda 12-o'rin — 3 pog'ona tushdingiz");
+  });
+
+  it("maqsad faqat shu seansda bajarilganda", () => {
+    const yangi = { ball: 80, hozir: 130, bajarildi: true, yangiBajarildi: true };
+    expect(natijaQatorlari({ ...base, maqsad: yangi }).maqsad).toBe(
+      "Kunlik maqsad bajarildi — 130 / 80",
+    );
+    expect(
+      natijaQatorlari({ ...base, maqsad: { ...yangi, yangiBajarildi: false } }).maqsad,
+    ).toBeNull();
+    expect(
+      natijaQatorlari({
+        ...base,
+        maqsad: { ball: 80, hozir: 30, bajarildi: false, yangiBajarildi: false },
+      }).maqsad,
+    ).toBeNull();
+  });
+
+  it("har yangi nishon — alohida qator", () => {
+    expect(
+      natijaQatorlari({ ...base, yangiNishonlar: ["SERIE_14", "WOERTER_50"] }).nishonlar,
+    ).toEqual(["Yangi nishon: 14 kun ketma-ket", "Yangi nishon: 50 ta so'z"]);
+  });
+});
+
+// A marking `t`: every text it receives comes back in brackets, filled in.
+const tr = (s: string, p?: Record<string, string | number>) =>
+  `[${s.replace(/\{(\w+)\}/g, (_, k: string) => String(p?.[k]))}]`;
+
+describe("the page's t", () => {
+  it("translates the client's words, never the exercise data", () => {
+    expect(javobPaneliMatni({ isCorrect: false, richtig: "der Bahnhof" }, tr)).toEqual({
+      sarlavha: "[Noto'g'ri]",
+      izoh: null,
+      soz: "der Bahnhof",
+    });
+    expect(
+      javobPaneliMatni({ isCorrect: true, richtig: "Bahnhof", tippfehler: true }, tr),
+    ).toEqual({ sarlavha: "[To'g'ri!]", izoh: "[Imlosiga e'tibor bering:]", soz: "Bahnhof" });
+    expect(xatoYorligi("AUDIO_WORT", "", tr)).toBe("[Eshitish savoli]");
+    expect(xatoYorligi("LUECKE", "Ich ___ Student.", tr)).toBe("Ich ___ Student.");
+    expect(orinXabari(null, 4, "Markazda", tr)).toBe("[Markazda 4-o'rin]");
+    expect(orinXabari(3, 5, "Guruhda", tr)).toBe("[Guruhda 5-o'rin — 2 pog'ona tushdingiz]");
+    const r = natijaQatorlari(
+      {
+        punkte: 10,
+        serie: 2,
+        serieYangi: false,
+        orin: { gruppe: null, zentrum: { oldin: 5, hozir: 3 } },
+        maqsad: { ball: 80, hozir: 85, bajarildi: true, yangiBajarildi: true },
+        yangiNishonlar: ["SERIE_7"],
+      },
+      tr,
+    );
+    expect(r.orin).toBe("[Markazda 3-o'rin — 2 pog'ona ko'tarildingiz]");
+    expect(r.maqsad).toBe("[Kunlik maqsad bajarildi — 85 / 80]");
+    expect(r.nishonlar).toEqual(["[Yangi nishon: [7 kun ketma-ket]]"]);
   });
 });

@@ -3,12 +3,14 @@
 import { useSyncExternalStore } from "react";
 import { SidebarMenuBadge } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
+import { useT } from "@/i18n/context";
 import { tashkentNow } from "@/lib/tashkent-time";
 import { yangiliklar } from "@/qollanma/yangiliklar";
 import { oqilmaganSoni, yangiliklarRolUchun } from "@/qollanma/yangiliklar-holati";
 import { oxirgiKorilganniOqi, yangiliklarObunasi } from "@/qollanma/yangiliklar-xotira";
 
 export function QollanmaYangilikBelgisi() {
+  const t = useT();
   const user = useAuth((s) => s.user);
   const oxirgi = useSyncExternalStore(
     yangiliklarObunasi,
@@ -31,7 +33,7 @@ export function QollanmaYangilikBelgisi() {
         aria-hidden
         className="pointer-events-none absolute right-1.5 top-1.5 hidden size-2 rounded-full bg-primary group-data-[collapsible=icon]:block"
       />
-      <span className="sr-only">{son} ta yangi o&apos;zgarish</span>
+      <span className="sr-only">{t("{n} ta yangi o'zgarish", { n: son })}</span>
     </>
   );
 }

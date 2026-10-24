@@ -25,6 +25,8 @@ import type { DepartureChoice } from "@/components/students/departure-money";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { formatNumber } from "@/lib/format-utils";
+import { useT } from "@/i18n/context";
 import type { DebtWriteOffEligibility } from "@/components/students/debt-write-off-types";
 import type { RemovalQueueItem, RemovalQueueResponse } from "./outreach-types";
 import type { LogCallPrefill } from "./log-call-dialog";
@@ -49,6 +51,7 @@ const FILTER_SCHEMA = {
 } as const;
 
 export function RemovalQueueTab({ isActive, onLogCall }: RemovalQueueTabProps) {
+  const t = useT();
   const queryClient = useQueryClient();
   const [target, setTarget] = useState<RemoveTarget | null>(null);
   const [reasonId, setReasonId] = useState<string | null>(null);
@@ -157,8 +160,8 @@ export function RemovalQueueTab({ isActive, onLogCall }: RemovalQueueTabProps) {
       );
       toast.success(
         writeOff && eligibility?.eligible
-          ? "O'quvchi chiqarildi va qarz hisobdan chiqarildi"
-          : "O'quvchi guruhdan chiqarildi",
+          ? t("O'quvchi chiqarildi va qarz hisobdan chiqarildi")
+          : t("O'quvchi guruhdan chiqarildi"),
       );
       // Invalidate all 3 list queries + the stats widget — the removed student
       // likely appears in the today-absentees list too (since 3-strike implies
@@ -172,7 +175,7 @@ export function RemovalQueueTab({ isActive, onLogCall }: RemovalQueueTabProps) {
       queryClient.invalidateQueries({ queryKey: ["outreach", "stats"] });
       resetForm();
     } catch (error) {
-      toast.error(getErrorMessage(error, "Chiqarishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(error, t("Chiqarishda xatolik yuz berdi")));
     } finally {
       setRemoving(false);
     }
@@ -204,8 +207,7 @@ export function RemovalQueueTab({ isActive, onLogCall }: RemovalQueueTabProps) {
     <>
       {total === 0 ? (
         <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-          Ketma-ket 3 va undan ko&apos;p marta darsga kelmagan o&apos;quvchi
-          yo&apos;q
+          {t("Ketma-ket 3 va undan ko'p marta darsga kelmagan o'quvchi yo'q")}
         </div>
       ) : (
         <div className="space-y-3">
@@ -214,15 +216,15 @@ export function RemovalQueueTab({ isActive, onLogCall }: RemovalQueueTabProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12 border-r">#</TableHead>
-                  <TableHead>O&apos;quvchi</TableHead>
-                  <TableHead>Telefon</TableHead>
-                  <TableHead>Ota-ona telefoni</TableHead>
-                  <TableHead>Guruh / kurs</TableHead>
-                  <TableHead>O&apos;qituvchi</TableHead>
-                  <TableHead>Ketma-ket kelmagan</TableHead>
-                  <TableHead>Pauzagacha</TableHead>
-                  <TableHead>Oxirgi marta kelgan</TableHead>
-                  <TableHead className="w-72">Amal</TableHead>
+                  <TableHead>{t("O'quvchi")}</TableHead>
+                  <TableHead>{t("Telefon")}</TableHead>
+                  <TableHead>{t("Ota-ona telefoni")}</TableHead>
+                  <TableHead>{t("Guruh / kurs")}</TableHead>
+                  <TableHead>{t("O'qituvchi")}</TableHead>
+                  <TableHead>{t("Ketma-ket kelmagan")}</TableHead>
+                  <TableHead>{t("Pauzagacha")}</TableHead>
+                  <TableHead>{t("Oxirgi marta kelgan")}</TableHead>
+                  <TableHead className="w-72">{t("Amal")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -305,6 +307,7 @@ function Row({
   onCall: () => void;
   onRemove: () => void;
 }) {
+  const t = useT();
   return (
     <TableRow>
       <TableCell className="border-r text-muted-foreground">
@@ -354,13 +357,13 @@ function Row({
         />
       </TableCell>
       <TableCell className="text-sm text-muted-foreground">
-        {row.lastPresentDate ? formatDate(row.lastPresentDate) : "Hech qachon"}
+        {row.lastPresentDate ? formatDate(row.lastPresentDate) : t("Hech qachon")}
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-1">
           {row.calledToday && (
             <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
-              Bog&apos;lanildi
+              {t("Bog'lanildi")}
             </Badge>
           )}
           <Button
@@ -369,11 +372,11 @@ function Row({
             onClick={onCall}
           >
             <PhoneCall className="mr-1 size-3.5" />
-            Natija kiritish
+            {t("Natija kiritish")}
           </Button>
           <Button size="sm" variant="destructive" onClick={onRemove}>
             <UserMinus className="mr-1 size-3.5" />
-            Chiqarish
+            {t("Chiqarish")}
           </Button>
         </div>
       </TableCell>
@@ -398,17 +401,18 @@ function PauseCountdown({
   pauseThreshold: number;
   warnedAt: string | null;
 }) {
+  const t = useT();
   const left = pauseThreshold - streak;
   return (
     <div className="flex flex-wrap items-center gap-1">
       {left <= 0 ? (
-        <Badge variant="destructive">Pauza yoqasida</Badge>
+        <Badge variant="destructive">{t("Pauza yoqasida")}</Badge>
       ) : (
-        <span className="text-sm text-muted-foreground">{left} ta dars</span>
+        <span className="text-sm text-muted-foreground">{t("{n} ta dars", { n: formatNumber(left) })}</span>
       )}
       {warnedAt && (
         <Badge variant="outline" className="text-xs">
-          Ogohlantirildi {formatDate(warnedAt)}
+          {t("Ogohlantirildi {date}", { date: formatDate(warnedAt) })}
         </Badge>
       )}
     </div>
@@ -416,12 +420,13 @@ function PauseCountdown({
 }
 
 function StreakBadge({ count }: { count: number }) {
+  const t = useT();
   let className = "bg-amber-100 text-amber-800";
   if (count >= 5) className = "bg-red-100 text-red-800";
   else if (count >= 4) className = "bg-orange-100 text-orange-800";
   return (
     <Badge className={`${className} hover:${className}`} variant="outline">
-      {count} marta
+      {t("{n} marta", { n: formatNumber(count) })}
     </Badge>
   );
 }

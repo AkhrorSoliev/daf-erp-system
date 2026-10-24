@@ -1,6 +1,7 @@
-import { formatNumber, formatPrice } from "@/lib/format-utils";
+import { interpolate } from "@/i18n/translate";
 import { tashkentDdMm } from "@/lib/tashkent-time";
 import { dayMonth, monthRange } from "../overview/overview-math";
+import type { Translate } from "../record-payment-admission";
 import { monthShort, staffRoleText } from "../salary-utils";
 import type {
   MonthlyResponse,
@@ -12,7 +13,8 @@ import type {
 
 // The «Ish haqi» table and summary as pure functions of the server's answer.
 // Every figure is the server's; this file only adds the legs it sent
-// (ADR-0006) and chooses the words.
+// (ADR-0006) and chooses the words. The words take an optional last `t`
+// (default: the Uzbek source), so the tests read the Uzbek text.
 
 export type PersonKind = "teacher" | "staff";
 export type Tone = "muted" | "amber" | "blue" | "green";
@@ -30,34 +32,38 @@ export interface PersonRow {
   advances: number;
   net: number;
   payment: RowPayment | null;
+  /** A staff member whose pay the CEO set by hand (ADR-0112). */
+  manual?: boolean;
 }
 
 const fullName = (u: { firstName: string; lastName: string }) => `${u.firstName} ${u.lastName}`;
 
 /** «qat'iy oylik», plus the days when the salary was on for only part of the period. */
-export function staffFrom(row: StaffRow): string {
+export function staffFrom(row: StaffRow, t: Translate = interpolate): string {
   const c = row.coverage;
   // `activeDays: 0` is a row that exists only for its payment, not a 0-day salary.
   return c && c.activeDays > 0 && c.activeDays < c.cycleDays
-    ? `qat'iy oylik · ${c.activeDays}/${c.cycleDays} kun`
-    : "qat'iy oylik";
+    ? t("qat'iy oylik · {days}/{total} kun", { days: c.activeDays, total: c.cycleDays })
+    : t("qat'iy oylik");
 }
 
 /** Teachers first, in the server's order, then the staff. */
-export function mergePeople(data: MonthlyResponse): PersonRow[] {
+export function mergePeople(data: MonthlyResponse, t: Translate = interpolate): PersonRow[] {
   return [
     ...data.data.map(
-      (t): PersonRow => ({
+      (row): PersonRow => ({
         kind: "teacher",
-        userId: t.user.id,
-        name: fullName(t.user),
-        role: "Ustoz",
-        isActive: t.user.isActive,
-        from: t.hasLessonData ? `${t.groupCount} guruh · ${t.studentCount} o'quvchi` : "—",
-        worked: t.fullDeserved,
-        advances: t.advances,
-        net: t.netToPay,
-        payment: t.payment,
+        userId: row.user.id,
+        name: fullName(row.user),
+        role: t("Ustoz"),
+        isActive: row.user.isActive,
+        from: row.hasLessonData
+          ? t("{groups} guruh · {students} o'quvchi", { groups: row.groupCount, students: row.studentCount })
+          : "—",
+        worked: row.fullDeserved,
+        advances: row.advances,
+        net: row.netToPay,
+        payment: row.payment,
       }),
     ),
     ...data.staff.map(
@@ -65,13 +71,14 @@ export function mergePeople(data: MonthlyResponse): PersonRow[] {
         kind: "staff",
         userId: s.user.id,
         name: fullName(s.user),
-        role: staffRoleText(s.user.position),
+        role: staffRoleText(s.user.position, t),
         isActive: s.user.isActive,
-        from: staffFrom(s),
+        from: staffFrom(s, t),
         worked: s.monthly,
         advances: s.advances,
         net: s.netToPay,
         payment: s.payment,
+        manual: !!s.adjustment,
       }),
     ),
   ];
@@ -84,33 +91,43 @@ export function filterPeople(rows: PersonRow[], kim: "all" | "teachers" | "staff
 }
 
 /** The segment above the table; the counts wait for an answer, so a waiting request never reads «· 0». */
-export function segmentLabels(data: MonthlyResponse | undefined): Record<"all" | "teachers" | "staff", string> {
-  if (!data) return { all: "Hammasi", teachers: "Ustozlar", staff: "Xodimlar" };
+export function segmentLabels(
+  data: MonthlyResponse | undefined,
+  t: Translate = interpolate,
+): Record<"all" | "teachers" | "staff", string> {
+  if (!data) return { all: t("Hammasi"), teachers: t("Ustozlar"), staff: t("Xodimlar") };
   return {
-    all: `Hammasi · ${data.data.length + data.staff.length}`,
-    teachers: `Ustozlar · ${data.data.length}`,
-    staff: `Xodimlar · ${data.staff.length}`,
+    all: `${t("Hammasi")} · ${data.data.length + data.staff.length}`,
+    teachers: `${t("Ustozlar")} · ${data.data.length}`,
+    staff: `${t("Xodimlar")} · ${data.staff.length}`,
   };
 }
 
 /** The pill beside «{Oy} oyliklari». */
-export function monthStatePill(state: MonthState, month: string): { text: string; tone: Tone } {
+export function monthStatePill(
+  state: MonthState,
+  month: string,
+  t: Translate = interpolate,
+): { text: string; tone: Tone } {
   switch (state.kind) {
     case "OPEN":
       return {
-        text: `Oy davom etmoqda · ${dayMonth(monthRange(month).endDate)} dan keyin hisoblanadi`,
+        text: t("Oy davom etmoqda · {date} dan keyin hisoblanadi", { date: dayMonth(monthRange(month).endDate) }),
         tone: "muted",
       };
     case "NOT_CALCULATED":
-      return { text: "Hisoblanmagan", tone: "muted" };
+      return { text: t("Hisoblanmagan"), tone: "muted" };
     case "CALCULATED":
-      return { text: "Hisoblandi · tasdiqlash kutilmoqda", tone: "amber" };
+      return { text: t("Hisoblandi · tasdiqlash kutilmoqda"), tone: "amber" };
     case "APPROVED":
-      return { text: "Tasdiqlandi · berish kutilmoqda", tone: "blue" };
+      return { text: t("Tasdiqlandi · berish kutilmoqda"), tone: "blue" };
     case "PARTLY_PAID":
-      return { text: `Qisman berildi · ${state.paidCount} / ${state.payableCount}`, tone: "blue" };
+      return {
+        text: t("Qisman berildi · {paid} / {total}", { paid: state.paidCount, total: state.payableCount }),
+        tone: "blue",
+      };
     case "PAID":
-      return { text: "Berildi", tone: "green" };
+      return { text: t("Berildi"), tone: "green" };
   }
 }
 
@@ -118,21 +135,22 @@ export function monthStatePill(state: MonthState, month: string): { text: string
 export function rowStatus(
   payment: RowPayment | null,
   state: MonthStateKind,
+  t: Translate = interpolate,
 ): { text: string; tone: Tone } {
-  if (state === "OPEN") return { text: "oy davom etmoqda", tone: "muted" };
+  if (state === "OPEN") return { text: t("oy davom etmoqda"), tone: "muted" };
   switch (payment?.status) {
     case "CALCULATED":
-      return { text: "hisoblandi", tone: "amber" };
+      return { text: t("hisoblandi"), tone: "amber" };
     case "APPROVED":
-      return { text: "tasdiqlandi", tone: "blue" };
+      return { text: t("tasdiqlandi"), tone: "blue" };
     case "PAID":
       return {
-        text: payment.paidAt ? `berildi ${tashkentDdMm(payment.paidAt)}` : "berildi",
+        text: payment.paidAt ? t("berildi {date}", { date: tashkentDdMm(payment.paidAt) }) : t("berildi"),
         tone: "green",
       };
     default:
       // No payment, or a cancelled one: nothing was calculated for this person.
-      return { text: "hisoblanmagan", tone: "muted" };
+      return { text: t("hisoblanmagan"), tone: "muted" };
   }
 }
 
@@ -151,7 +169,7 @@ export function summaryNumbers(data: MonthlyResponse): {
   teacherCount: number;
   staffCount: number;
 } {
-  const noLessonData = data.data.length > 0 && data.data.every((t) => !t.hasLessonData);
+  const noLessonData = data.data.length > 0 && data.data.every((row) => !row.hasLessonData);
   const teachersWorked = noLessonData ? null : data.totals.fullDeserved;
   const staffWorked = data.staffTotals.monthly;
   return {
@@ -167,31 +185,35 @@ export function summaryNumbers(data: MonthlyResponse): {
 }
 
 /** Title and sub-line of the third figure; `sub: null` means «N ustoz · M xodim». */
-export function netLabel(state: MonthState): { label: string; sub: string | null } {
-  if (state.kind === "OPEN") return { label: "Oy oxirida beriladi", sub: null };
+export function netLabel(state: MonthState, t: Translate = interpolate): { label: string; sub: string | null } {
+  if (state.kind === "OPEN") return { label: t("Oy oxirida beriladi"), sub: null };
   if (state.kind === "PARTLY_PAID") {
     return {
-      label: "Beriladi",
-      sub: `${state.paidCount} kishiga berildi · ${state.payableCount - state.paidCount} kishi qoldi`,
+      label: t("Beriladi"),
+      sub: t("{paid} kishiga berildi · {left} kishi qoldi", {
+        paid: state.paidCount,
+        left: state.payableCount - state.paidCount,
+      }),
     };
   }
-  return { label: "Beriladi", sub: null };
-}
-
-/** «shundan markaz qo'shdi — X»: only for a month with lesson data in which the center put money in. */
-export function centerLine(data: MonthlyResponse): { amount: number; note: string } | null {
-  if (data.totals.centerFunded <= 0 || !data.data.some((t) => t.hasLessonData)) return null;
-  return {
-    amount: data.totals.centerFunded,
-    note: `o'quvchilar ${monthShort(data.month).toLowerCase()} to'lovini hali to'lamagan; to'lagan sari kamayadi`,
-  };
+  return { label: t("Beriladi"), sub: null };
 }
 
 /**
- * Short money for the summary and the tab labels: 10 500 000 → «10,5 mln»; a
- * sum under 100 000 would round to «0 mln», so it is written in full. Tables use `formatPrice`.
+ * «shundan markaz qo'shdi — X»: only for a month with lesson data in which the center put money in.
+ * `lowerMonth`: the month name inside the sentence is lower-cased (Uzbek, Russian), not in de/en.
  */
-export function mln(value: number): string {
-  if (value < 100_000) return `${formatPrice(value)} so'm`;
-  return `${formatNumber(value / 1_000_000, { maximumFractionDigits: 1 })} mln`;
+export function centerLine(
+  data: MonthlyResponse,
+  t: Translate = interpolate,
+  lowerMonth = true,
+): { amount: number; note: string } | null {
+  if (data.totals.centerFunded <= 0 || !data.data.some((row) => row.hasLessonData)) return null;
+  const month = monthShort(data.month, t);
+  return {
+    amount: data.totals.centerFunded,
+    note: t("o'quvchilar {month} to'lovini hali to'lamagan; to'lagan sari kamayadi", {
+      month: lowerMonth ? month.toLowerCase() : month,
+    }),
+  };
 }

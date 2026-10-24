@@ -1,13 +1,14 @@
-import { SettingsMenu } from "@/components/settings/settings-menu";
+import { Suspense } from "react";
+import { SettingsIndexHeader, SettingsMenu } from "@/components/settings/settings-menu";
 
 export default function SettingsPage() {
   return (
-    <>
-      <div>
-        <h1 className="font-heading text-xl font-bold tracking-tight sm:text-2xl">Sozlamalar</h1>
-        <p className="text-sm text-muted-foreground">Tizim sozlamalari va boshqaruv</p>
-      </div>
-      <SettingsMenu />
-    </>
+    <div className="max-w-5xl space-y-6">
+      <SettingsIndexHeader />
+      {/* Qidiruv URL'dagi ?q= ni o'qiydi: useSearchParams Suspense chegarasini talab qiladi. */}
+      <Suspense>
+        <SettingsMenu />
+      </Suspense>
+    </div>
   );
 }

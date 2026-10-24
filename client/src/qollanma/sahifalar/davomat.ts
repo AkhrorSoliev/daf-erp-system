@@ -95,7 +95,7 @@ export const davomat: QollanmaSahifa[] = [
       "davomatni kech kiritish",
       "javob bermoqda",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-17",
   },
   {
     bolim: "davomat",
@@ -134,7 +134,7 @@ export const davomat: QollanmaSahifa[] = [
       "Yoqilgan bo'lsa, tizim ketma-ket 3 ta (boshlang'ich qiymat) sababsiz dars qoldirgan o'quvchini ertasi ertalab 07:30 da «Muzlatilgan» qiladi, guruhdan chiqarmaydi; undan oldin 20:30 da o'quvchiga Telegramda xabar boradi. Sozlamani faqat CEO yoqadi, boshida o'chiq; kunlik chegara oshsa hech kim to'xtatilmaydi.",
     rollar: [1, 2, 3],
     adr: ["0023", "0054", "0066"],
-    yollar: ["/outreach", "/settings/absence-pause"],
+    yollar: ["/outreach", "/settings/rules"],
     kalitSozlar: [
       "avtomatik pauza",
       "pauza",
@@ -160,7 +160,7 @@ export const davomat: QollanmaSahifa[] = [
       "07:30",
       "telegram uzilgan",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-18",
   },
   {
     bolim: "davomat",

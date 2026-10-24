@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/table";
 import { UnmarkedLessonPrompt } from "@/components/attendance/unmarked/unmarked-lesson-prompt";
 import { useAuth } from "@/hooks/use-auth";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { answerState, type UnmarkedLessonInfo } from "@/lib/unmarked-lesson";
 
 interface Teacher {
@@ -55,7 +57,7 @@ function timeToMinutes(time: string): number {
   return h * 60 + m;
 }
 
-function getLessonStatus(
+export function getLessonStatus(
   startTime: string,
   endTime: string,
   now: string
@@ -81,30 +83,30 @@ interface DashboardDailyScheduleProps {
   onAnswered?: () => void;
 }
 
-const attendanceBadge: Record<
+export const attendanceBadge: Record<
   AttendanceStatus,
   { label: string; className: string; icon: typeof CheckCircle2 }
 > = {
   TAKEN: {
-    label: "Davomat olindi",
+    label: msg("Davomat olindi"),
     className:
       "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400",
     icon: CheckCircle2,
   },
   NOT_TAKEN: {
-    label: "Davomat olinmagan",
+    label: msg("Davomat olinmagan"),
     className:
       "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
     icon: AlertCircle,
   },
   MISSED: {
-    label: "O'tkazib yuborilgan",
+    label: msg("O'tkazib yuborilgan"),
     className:
       "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400",
     icon: AlertCircle,
   },
   PENDING: {
-    label: "Kutilmoqda",
+    label: msg("Kutilmoqda"),
     className: "bg-muted text-muted-foreground",
     icon: Clock,
   },
@@ -116,6 +118,7 @@ export function DashboardDailySchedule({
   date,
   onAnswered,
 }: DashboardDailyScheduleProps) {
+  const t = useT();
   const user = useAuth((s) => s.user);
   const [now, setNow] = useState(() => {
     const d = new Date();
@@ -139,9 +142,9 @@ export function DashboardDailySchedule({
     return (
       <div className="p-8 text-center">
         <CalendarX className="size-8 text-muted-foreground mx-auto mb-3" />
-        <p className="text-sm font-medium">Darslar yo&apos;q</p>
+        <p className="text-sm font-medium">{t("Darslar yo'q")}</p>
         <p className="text-xs text-muted-foreground mt-1">
-          Tanlangan kun uchun hech qanday dars rejalashtirilmagan
+          {t("Tanlangan kun uchun hech qanday dars rejalashtirilmagan")}
         </p>
       </div>
     );
@@ -153,14 +156,14 @@ export function DashboardDailySchedule({
         <TableHeader>
           <TableRow>
             <TableHead className="w-10 border-r">#</TableHead>
-            <TableHead className="w-25">Vaqt</TableHead>
-            <TableHead>Guruh</TableHead>
-            <TableHead className="hidden sm:table-cell">Kurs</TableHead>
-            <TableHead>Ustoz</TableHead>
-            <TableHead className="hidden sm:table-cell">Xona</TableHead>
-            <TableHead className="w-20 text-center">Keldi</TableHead>
-            <TableHead className="w-44 text-center">Davomat</TableHead>
-            <TableHead className="w-24 text-center">Holat</TableHead>
+            <TableHead className="w-25">{t("Vaqt")}</TableHead>
+            <TableHead>{t("Guruh")}</TableHead>
+            <TableHead className="hidden sm:table-cell">{t("Kurs")}</TableHead>
+            <TableHead>{t("Ustoz")}</TableHead>
+            <TableHead className="hidden sm:table-cell">{t("Xona")}</TableHead>
+            <TableHead className="w-20 text-center">{t("Keldi")}</TableHead>
+            <TableHead className="w-44 text-center">{t("Davomat")}</TableHead>
+            <TableHead className="w-24 text-center">{t("Holat")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -207,7 +210,7 @@ export function DashboardDailySchedule({
                 <TableCell className="text-xs">
                   {lesson.teachers.length > 0
                     ? lesson.teachers
-                        .map((t) => `${t.firstName} ${t.lastName[0]}.`)
+                        .map((teacher) => `${teacher.firstName} ${teacher.lastName[0]}.`)
                         .join(", ")
                     : "—"}
                 </TableCell>
@@ -225,8 +228,10 @@ export function DashboardDailySchedule({
                       </span>
                     </TooltipTrigger>
                     <TooltipContent>
-                      {lesson.presentCount} ta keldi / {lesson.studentCount}{" "}
-                      ta jami
+                      {t("{present} ta keldi / {total} ta jami", {
+                        present: lesson.presentCount,
+                        total: lesson.studentCount,
+                      })}
                     </TooltipContent>
                   </Tooltip>
                 </TableCell>
@@ -255,16 +260,16 @@ export function DashboardDailySchedule({
                             className={`inline-flex items-center gap-1 rounded-full text-[11px] font-medium px-2 py-0.5 ${cfg.className}`}
                           >
                             <Icon className="size-3" />
-                            {cfg.label}
+                            {t(cfg.label)}
                           </span>
                         </TooltipTrigger>
                         <TooltipContent>
                           {att === "NOT_TAKEN" &&
-                            "Dars davom etmoqda, ustoz hali davomat olmagan"}
+                            t("Dars davom etmoqda, ustoz hali davomat olmagan")}
                           {att === "MISSED" &&
-                            "Dars tugagan, lekin davomat olinmagan"}
-                          {att === "TAKEN" && "Davomat muvaffaqiyatli olingan"}
-                          {att === "PENDING" && "Dars hali boshlanmagan"}
+                            t("Dars tugagan, lekin davomat olinmagan")}
+                          {att === "TAKEN" && t("Davomat muvaffaqiyatli olingan")}
+                          {att === "PENDING" && t("Dars hali boshlanmagan")}
                         </TooltipContent>
                       </Tooltip>
                     );
@@ -273,7 +278,7 @@ export function DashboardDailySchedule({
                 <TableCell className="text-center">
                   {status === "past" && (
                     <span className="inline-block rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[11px] font-medium px-2 py-0.5">
-                      Tugagan
+                      {t("Tugagan")}
                     </span>
                   )}
                   {status === "current" && (
@@ -282,12 +287,12 @@ export function DashboardDailySchedule({
                         <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" />
                         <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
                       </span>
-                      Davom etmoqda
+                      {t("Davom etmoqda")}
                     </span>
                   )}
                   {status === "upcoming" && (
                     <span className="inline-block rounded-full bg-muted text-muted-foreground text-[11px] font-medium px-2 py-0.5">
-                      Kutilmoqda
+                      {t("Kutilmoqda")}
                     </span>
                   )}
                   {status === null && (

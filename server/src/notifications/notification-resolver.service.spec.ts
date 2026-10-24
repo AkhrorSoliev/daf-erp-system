@@ -4,6 +4,7 @@ import { NotificationResolverService } from './notification-resolver.service';
 import { NotificationsGateway } from './notifications.gateway';
 import { PrismaService } from '../prisma/prisma.service';
 import type { TaskEventTask } from '../tasks/task-events';
+import { TelegramService } from '../telegram/telegram.service';
 
 const LESSON_KEYS = (day: string) => [
   `LESSON_STARTED:${day}`,
@@ -25,20 +26,41 @@ const task = (status: TaskEventTask['status']): TaskEventTask => ({
 });
 
 const OPEN = { actionRequired: true, resolvedAt: null };
+const SELECT = {
+  id: true,
+  userId: true,
+  type: true,
+  title: true,
+  message: true,
+  telegramChatId: true,
+  telegramMessageId: true,
+};
+
+/** An open row as `findMany` returns it; no Telegram copy unless given. */
+const row = (id: string, userId: number, over: object = {}) => ({
+  id,
+  userId,
+  type: 'ATTENDANCE_ADMIN_ALERT',
+  title: "O'qituvchi hali davomat olmadi",
+  message: 'head\n\n👥 Guruh: A1\n\ntail',
+  telegramChatId: null,
+  telegramMessageId: null,
+  ...over,
+});
 
 describe('NotificationResolverService', () => {
   let resolver: NotificationResolverService;
   let prisma: any;
   let gateway: { sendToUser: jest.Mock };
+  let editMessageText: jest.Mock;
+  let telegram: { getBot: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
       notification: {
-        findMany: jest.fn().mockResolvedValue([
-          { id: 'n1', userId: 7 },
-          { id: 'n2', userId: 7 },
-          { id: 'n3', userId: 8 },
-        ]),
+        findMany: jest
+          .fn()
+          .mockResolvedValue([row('n1', 7), row('n2', 7), row('n3', 8)]),
         updateMany: jest.fn().mockResolvedValue({ count: 3 }),
       },
       unmarkedLesson: { findUnique: jest.fn().mockResolvedValue(null) },
@@ -48,11 +70,16 @@ describe('NotificationResolverService', () => {
       },
     };
     gateway = { sendToUser: jest.fn() };
+    editMessageText = jest.fn().mockResolvedValue(true);
+    telegram = {
+      getBot: jest.fn().mockReturnValue({ telegram: { editMessageText } }),
+    };
     const mod = await Test.createTestingModule({
       providers: [
         NotificationResolverService,
         { provide: PrismaService, useValue: prisma },
         { provide: NotificationsGateway, useValue: gateway },
+        { provide: TelegramService, useValue: telegram },
       ],
     }).compile();
     resolver = mod.get(NotificationResolverService);
@@ -81,7 +108,7 @@ describe('NotificationResolverService', () => {
         groupKey: { in: LESSON_KEYS('2026-10-10') },
         ...OPEN,
       },
-      select: { id: true, userId: true },
+      select: SELECT,
     });
     const update = prisma.notification.updateMany.mock.calls[0][0];
     expect(update.where).toEqual({
@@ -278,7 +305,7 @@ describe('NotificationResolverService', () => {
         },
         ...OPEN,
       },
-      select: { id: true, userId: true },
+      select: SELECT,
     });
     expect(gateway.sendToUser).toHaveBeenCalledTimes(2);
     expect(gateway.sendToUser).toHaveBeenCalledWith(8, {
@@ -369,5 +396,132 @@ describe('NotificationResolverService', () => {
       resolver.resolve({ companyId: 1, taskId: 't1' }),
     ).resolves.toBe(0);
     expect(gateway.sendToUser).not.toHaveBeenCalled();
+  });
+
+  // ADR-0090: the Telegram copy of a lesson alert says why and when it closed.
+  describe('the Telegram copy of a lesson alert', () => {
+    const copy = { telegramChatId: '555', telegramMessageId: 42 };
+    const lesson = { companyId: 1, groupId: 'g1', date: '2026-10-10' };
+
+    it('edits the stored message with the outcome, the details and the old title', async () => {
+      jest.useFakeTimers({ now: new Date('2026-10-10T05:47:00Z') });
+      prisma.notification.findMany.mockResolvedValue([row('n1', 7, copy)]);
+      prisma.notification.updateMany.mockResolvedValue({ count: 1 });
+
+      await resolver.onAttendanceCompleted(lesson);
+
+      expect(editMessageText).toHaveBeenCalledTimes(1);
+      expect(editMessageText).toHaveBeenCalledWith(
+        '555',
+        42,
+        undefined,
+        '<b>✅ Davomat olindi · 10:47</b>\n' +
+          '<blockquote>👥 Guruh: A1</blockquote>\n' +
+          "<i>Avvalgi xabar: O'qituvchi hali davomat olmadi</i>",
+        { parse_mode: 'HTML' },
+      );
+    });
+
+    it.each([
+      ['onLessonCancelled', lesson, '❌ Dars bekor qilindi'],
+      [
+        'onLessonMoved',
+        { companyId: 1, groupId: 'g1', originalDate: '2026-10-10' },
+        "🔀 Dars ko'chirildi",
+      ],
+      ['onLessonHeld', lesson, "✅ «Bo'ldi» deb belgilandi"],
+      ['onLessonNotHeld', lesson, "❌ «Bo'lmadi» deb belgilandi"],
+      ['onLessonClosed', lesson, '☑️ Savol yopildi'],
+      [
+        'onGroupDeleted',
+        { companyId: 1, groupId: 'g1' },
+        "🗑 Guruh o'chirildi",
+      ],
+    ])('%s passes its outcome', async (handler, payload, head) => {
+      prisma.notification.findMany.mockResolvedValue([row('n1', 7, copy)]);
+      prisma.notification.updateMany.mockResolvedValue({ count: 1 });
+
+      await (resolver as any)[handler](payload);
+
+      expect(editMessageText.mock.calls[0][3]).toContain(`<b>${head}`);
+    });
+
+    it('the 03:00 sweep closes with EXPIRED', async () => {
+      prisma.$queryRaw = jest
+        .fn()
+        .mockResolvedValue([{ id: 'n1', companyId: 1 }]);
+      prisma.notification.findMany.mockResolvedValue([row('n1', 7, copy)]);
+      prisma.notification.updateMany.mockResolvedValue({ count: 1 });
+
+      await resolver.closePastLessonAlerts();
+
+      expect(editMessageText.mock.calls[0][3]).toMatch(/^<b>☑️ Yopildi<\/b>/);
+    });
+
+    it('edits nothing when the row has no stored message', async () => {
+      await resolver.onAttendanceCompleted(lesson);
+      expect(editMessageText).not.toHaveBeenCalled();
+    });
+
+    it('edits nothing without an outcome (task and payment rows)', async () => {
+      prisma.notification.findMany.mockResolvedValue([
+        row('n1', 7, { ...copy, type: 'TASK_ASSIGNED' }),
+      ]);
+      await resolver.onTaskStatus({ task: task('DONE') });
+      expect(editMessageText).not.toHaveBeenCalled();
+    });
+
+    it('edits nothing for a row that is not a lesson alert', async () => {
+      prisma.notification.findMany.mockResolvedValue([
+        row('n1', 7, { ...copy, type: 'TASK_ASSIGNED' }),
+      ]);
+      await resolver.onAttendanceCompleted(lesson);
+      expect(editMessageText).not.toHaveBeenCalled();
+    });
+
+    it('edits nothing when the write changed no row', async () => {
+      prisma.notification.findMany.mockResolvedValue([row('n1', 7, copy)]);
+      prisma.notification.updateMany.mockResolvedValue({ count: 0 });
+      await resolver.onAttendanceCompleted(lesson);
+      expect(editMessageText).not.toHaveBeenCalled();
+    });
+
+    it('a failed edit is logged and the count is still returned; the next copy is still edited', async () => {
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      prisma.notification.findMany.mockResolvedValue([
+        row('n1', 7, copy),
+        row('n2', 8, { telegramChatId: '556', telegramMessageId: 43 }),
+      ]);
+      prisma.notification.updateMany.mockResolvedValue({ count: 2 });
+      editMessageText
+        .mockRejectedValueOnce(new Error('400: Bad Request: chat not found'))
+        .mockResolvedValueOnce(true);
+
+      await expect(
+        resolver.resolve({ companyId: 1, taskId: 't1' }, 'TAKEN'),
+      ).resolves.toBe(2);
+
+      expect(editMessageText).toHaveBeenCalledTimes(2);
+      expect(warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('"message is not modified" is not worth a line in the log', async () => {
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      prisma.notification.findMany.mockResolvedValue([row('n1', 7, copy)]);
+      editMessageText.mockRejectedValue(
+        new Error('400: Bad Request: message is not modified'),
+      );
+      await resolver.resolve({ companyId: 1, taskId: 't1' }, 'TAKEN');
+      expect(warn).not.toHaveBeenCalled();
+    });
+
+    it('edits nothing while the bot is off', async () => {
+      telegram.getBot.mockReturnValue(undefined);
+      prisma.notification.findMany.mockResolvedValue([row('n1', 7, copy)]);
+      await expect(
+        resolver.resolve({ companyId: 1, taskId: 't1' }, 'TAKEN'),
+      ).resolves.toBe(3);
+      expect(editMessageText).not.toHaveBeenCalled();
+    });
   });
 });

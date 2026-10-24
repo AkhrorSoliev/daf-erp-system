@@ -69,7 +69,22 @@
     "scripts/lib/comment-task-apply.ts",
     "scripts/notification-cleanup.ts",
     "scripts/lib/notification-cleanup.ts",
-    "scripts/lib/notification-cleanup.spec.ts"
+    "scripts/lib/notification-cleanup.spec.ts",
+    "scripts/link-payment-corrections.ts",
+    "scripts/lib/apply-expect-args.ts",
+    "scripts/lib/apply-expect-args.spec.ts",
+    "scripts/lib/payment-correction-links.ts",
+    "scripts/lib/payment-correction-links.spec.ts",
+    "scripts/backfill-payment-receipt-codes.ts",
+    "scripts/lib/receipt-code-plan.ts",
+    "scripts/lib/receipt-code-plan.spec.ts",
+    "scripts/kpi-backfill.ts",
+    "scripts/daf-badges-backfill.ts",
+    "scripts/lib/daf-badges-backfill-plan.ts",
+    "scripts/lib/daf-badges-backfill-plan.spec.ts",
+    "scripts/daf-eslatma-sinov.ts",
+    "scripts/lib/daf-eslatma-sinov.ts",
+    "scripts/lib/daf-eslatma-sinov.spec.ts"
   ],
   "exclude": ["node_modules", "dist", "src/generated"]
 }

@@ -11,6 +11,7 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useT } from "@/i18n/context";
 import { LeadFunnelChart } from "./lead-funnel-chart";
 import {
   buildFunnelRows,
@@ -30,6 +31,7 @@ function toPickerDate(s: string): Date {
 }
 
 export function LeadFunnelClient() {
+  const t = useT();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
@@ -101,10 +103,10 @@ export function LeadFunnelClient() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-heading text-xl font-bold tracking-tight">
-            Lidlar hisoboti
+            {t("Lidlar hisoboti")}
           </h2>
           <p className="text-sm text-muted-foreground">
-            Markazga kelgan odam to&apos;lovgacha qaysi bosqichda tushib qolmoqda
+            {t("Markazga kelgan odam to'lovgacha qaysi bosqichda tushib qolmoqda")}
           </p>
         </div>
 
@@ -113,7 +115,7 @@ export function LeadFunnelClient() {
             id="lead-funnel-start"
             value={start}
             onChange={(d) => setBound("startDate", d)}
-            placeholder="Boshi"
+            placeholder={t("Boshi")}
             className="h-9 w-[140px]"
             minDate={floor}
             maxDate={end}
@@ -124,7 +126,7 @@ export function LeadFunnelClient() {
             id="lead-funnel-end"
             value={end}
             onChange={(d) => setBound("endDate", d)}
-            placeholder="Oxiri"
+            placeholder={t("Oxiri")}
             className="h-9 w-[140px]"
             minDate={start}
             defaultMonth={start}
@@ -135,8 +137,8 @@ export function LeadFunnelClient() {
               size="icon"
               className="h-9 w-9 shrink-0"
               onClick={() => writeRange(null)}
-              aria-label="Joriy oyga qaytish"
-              title="Joriy oyga qaytish"
+              aria-label={t("Joriy oyga qaytish")}
+              title={t("Joriy oyga qaytish")}
             >
               <RotateCcw className="size-4" />
             </Button>
@@ -147,20 +149,20 @@ export function LeadFunnelClient() {
       {isError ? (
         <div className="flex flex-col items-center gap-3 rounded-xl border bg-card px-4 py-12 text-center">
           <p className="text-sm text-muted-foreground">
-            Voronkani yuklab bo&apos;lmadi.
+            {t("Voronkani yuklab bo'lmadi.")}
           </p>
           <Button variant="outline" size="sm" onClick={() => void refetch()}>
-            Qayta urinish
+            {t("Qayta urinish")}
           </Button>
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-5">
           <section className="rounded-xl border bg-card p-4 sm:p-5 lg:col-span-3">
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-              <h3 className="font-semibold">Lid voronkasi</h3>
+              <h3 className="font-semibold">{t("Lid voronkasi")}</h3>
               {data && (
                 <p className="text-sm text-muted-foreground">
-                  Liddan to&apos;lovgacha:{" "}
+                  {t("Liddan to'lovgacha")}:{" "}
                   <span className="font-semibold text-foreground tabular-nums">
                     {formatPercent(conversion)}
                   </span>
@@ -180,10 +182,11 @@ export function LeadFunnelClient() {
               </div>
             ) : data.stages.lead === 0 ? (
               <p className="py-12 text-center text-sm text-muted-foreground">
-                Tanlangan davrda lid yo&apos;q — davrni kengaytirib ko&apos;ring.
+                {t("Tanlangan davrda lid yo'q — davrni kengaytirib ko'ring.")}
               </p>
             ) : (
               <LeadFunnelChart
+                t={t}
                 rows={rows}
                 leadSplit={data.leadSplit}
                 onStageClick={setOpenStage}
@@ -191,8 +194,7 @@ export function LeadFunnelClient() {
             )}
 
             <p className="mt-4 text-xs text-muted-foreground">
-              Bosqichni bosing — o&apos;sha bosqichdagi odamlar ro&apos;yxati
-              ochiladi.
+              {t("Bosqichni bosing — o'sha bosqichdagi odamlar ro'yxati ochiladi.")}
             </p>
           </section>
 
@@ -227,23 +229,31 @@ function FunnelNotes({
   range: { startDate: string; endDate: string };
   total: number | undefined;
 }) {
+  const t = useT();
   const notes = [
-    "Davrda kelgan lidlar olinadi va keyingi qadamlari davrdan keyin bo'lsa ham kuzatiladi. Bir odamning bir nechta lidi bitta hisoblanadi.",
+    t(
+      "Davrda kelgan lidlar olinadi va keyingi qadamlari davrdan keyin bo'lsa ham kuzatiladi. Bir odamning bir nechta lidi bitta hisoblanadi.",
+    ),
   ];
   if (rangeIncludesToday(range)) {
     notes.push(
-      "Davr hali tugamagan: yaqinda kelganlar keyingi bosqichlarga ulgurmagan, shuning uchun foizlar keyinroq oshadi.",
+      t(
+        "Davr hali tugamagan: yaqinda kelganlar keyingi bosqichlarga ulgurmagan, shuning uchun foizlar keyinroq oshadi.",
+      ),
     );
   }
   notes.push(
-    `Voronka ${displayDate(FUNNEL_START_DATE)} dan boshlab sanaydi — shu kundan har bir yangi o'quvchi lid yozuvi qoldiradi. Undan oldingi sanani tanlab bo'lmaydi.`,
+    t(
+      "Voronka {date} dan boshlab sanaydi — shu kundan har bir yangi o'quvchi lid yozuvi qoldiradi. Undan oldingi sanani tanlab bo'lmaydi.",
+      { date: displayDate(FUNNEL_START_DATE) },
+    ),
   );
 
   return (
     <aside className="rounded-xl border bg-muted/30 p-4 text-sm">
       <p className="mb-2 flex items-center gap-2 font-medium">
         <Info className="size-4 text-muted-foreground" />
-        Qanday o&apos;qiladi
+        {t("Qanday o'qiladi")}
       </p>
       <ul className="list-disc space-y-1.5 pl-5 text-muted-foreground">
         {notes.map((n) => (
@@ -252,7 +262,7 @@ function FunnelNotes({
       </ul>
       {total !== undefined && total > 0 && (
         <p className="mt-3 text-xs text-muted-foreground tabular-nums">
-          Jami {formatNumber(total)} kishi kuzatildi.
+          {t("Jami {n} kishi kuzatildi.", { n: formatNumber(total) })}
         </p>
       )}
     </aside>

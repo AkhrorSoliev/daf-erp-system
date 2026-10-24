@@ -1,10 +1,31 @@
+import type { Prisma } from '@prisma/client';
 import { FortschrittService } from './fortschritt.service';
+import { KunQatori, zentrumQueryRaw } from './zentrum-sql.fake-spec';
+import { wochenStartTag } from '../uebung/punkte';
+import { tashkentDateStr } from '../../common/date/tashkent';
 
-function fakePrisma() {
+/**
+ * `week` — the centre's week (one row each, dated this Monday); `extra` —
+ * further day rows. Both are read by the `$queryRaw` fake.
+ */
+function fakePrisma(
+  week: { studentId: number; points: number }[] = [],
+  extra: KunQatori[] = [],
+  dailyGoal: string | null = null,
+  eslatma = { eslatmalar: true, telegramUlangan: false },
+) {
+  const montag = wochenStartTag(new Date());
   return {
-    dafAttempt: {
-      aggregate: jest.fn(async () => ({ _sum: { points: 0 } })),
-      findMany: jest.fn(async () => []),
+    $queryRaw: zentrumQueryRaw(
+      () => [
+        ...week.map((w) => ({ ...w, companyId: 1, day: montag, attempts: 1 })),
+        ...extra,
+      ],
+      () => dailyGoal,
+      () => eslatma,
+    ),
+    dafStudentDay: {
+      // Only the group table still uses groupBy.
       groupBy: jest.fn(async () => []),
     },
     enrollment: {
@@ -14,17 +35,36 @@ function fakePrisma() {
     student: { findMany: jest.fn(async () => []) },
     // Fix 5: Takrorlash tugmasi shu songa qarab faol/xira bo'ladi.
     dafLexemeState: { count: jest.fn(async () => 0) },
+    // `bosh`: an open lesson exists unless a test says otherwise.
+    dafLesson: { findFirst: jest.fn(async () => ({ id: 1 })) },
   } as any;
 }
 
 describe('uebersicht', () => {
   it('umumiy balldan darajani chiqaradi', async () => {
-    const prisma = fakePrisma();
-    prisma.dafAttempt.aggregate = jest.fn(async () => ({
-      _sum: { points: 1_600 },
-    }));
+    // Earlier weeks count in the total, not in this week.
+    const prisma = fakePrisma(
+      [],
+      [
+        {
+          studentId: 55,
+          companyId: 1,
+          day: '2026-01-05',
+          points: 1_000,
+          attempts: 3,
+        },
+        {
+          studentId: 55,
+          companyId: 1,
+          day: '2026-02-02',
+          points: 600,
+          attempts: 2,
+        },
+      ],
+    );
     const f = await new FortschrittService(prisma).uebersicht(55, 1);
     expect(f.gesamt).toBe(1_600);
+    expect(f.wochePunkte).toBe(0);
     expect(f.stufe.de).toBe('Kenner');
     // `stufe.ab` — HOZIRGI darajaning pastki chegarasi, `naechsteStufe.ab`dan
     // FARQLI: mijoz chiziqni "shu daraja ichida qancha bosib o'tildi" deb
@@ -63,23 +103,76 @@ describe('uebersicht', () => {
   );
 
   it("guruhi yo'q o'quvchining guruh o'rni null, markaz o'rni bor", async () => {
-    const prisma = fakePrisma();
+    const prisma = fakePrisma([{ studentId: 55, points: 40 }]);
     prisma.enrollment.findFirst = jest.fn(async () => null);
-    prisma.dafAttempt.groupBy = jest.fn(async () => [
-      { studentId: 55, _sum: { points: 40 } },
-    ]);
     const f = await new FortschrittService(prisma).uebersicht(55, 1);
     expect(f.wochePlatzGruppe).toBeNull();
     expect(f.wochePlatzZentrum).toBe(1);
+    expect(f.wochePunkte).toBe(40);
+  });
+
+  describe('maqsad (S2)', () => {
+    const bugun = (points: number): KunQatori => ({
+      studentId: 55,
+      companyId: 1,
+      day: tashkentDateStr(new Date()),
+      points,
+      attempts: 1,
+    });
+
+    it("sozlama yo'q — O'RTA, bugungi ball bugungi qatorlardan", async () => {
+      const prisma = fakePrisma(
+        [],
+        [bugun(30), { ...bugun(0), day: '2026-01-05', points: 500 }],
+      );
+      const f = await new FortschrittService(prisma).uebersicht(55, 1);
+      expect(f.maqsad).toEqual({
+        daraja: 'ORTA',
+        ball: 80,
+        hozir: 30,
+        bajarildi: false,
+        bosh: false,
+      });
+    });
+
+    it('tanlangan daraja o`qiladi', async () => {
+      const prisma = fakePrisma([], [bugun(160)], 'JIDDIY');
+      const f = await new FortschrittService(prisma).uebersicht(55, 1);
+      expect(f.maqsad).toMatchObject({
+        daraja: 'JIDDIY',
+        ball: 160,
+        bajarildi: true,
+      });
+    });
+
+    it("qo'shimcha so'rov yo'q: bitta SQL, sozlama alohida o'qilmaydi", async () => {
+      const prisma = fakePrisma([], [bugun(10)], 'YENGIL');
+      prisma.dafLexemeState.count = jest.fn(async () => 3);
+      await new FortschrittService(prisma).uebersicht(55, 1);
+      expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+      expect(prisma.dafLesson.findFirst).not.toHaveBeenCalled();
+      expect(prisma.dafStudentSetting).toBeUndefined();
+    });
+
+    it("so'z ham, ochiq dars ham yo'q — bosh, 0 ballda ham bajarildi", async () => {
+      const prisma = fakePrisma();
+      prisma.dafLesson.findFirst = jest.fn(async () => null);
+      const f = await new FortschrittService(prisma).uebersicht(55, 1);
+      expect(f.maqsad).toMatchObject({ hozir: 0, bajarildi: true, bosh: true });
+    });
+
+    it("so'z yo'q, lekin ochiq dars bor — bosh emas", async () => {
+      const f = await new FortschrittService(fakePrisma()).uebersicht(55, 1);
+      expect(f.maqsad).toMatchObject({ bajarildi: false, bosh: false });
+    });
   });
 });
 
 describe('reyting', () => {
   it('ballga qarab kamayish tartibida saralaydi va o`rin qo`yadi', async () => {
-    const prisma = fakePrisma();
-    prisma.dafAttempt.groupBy = jest.fn(async () => [
-      { studentId: 7, _sum: { points: 300 } },
-      { studentId: 55, _sum: { points: 900 } },
+    const prisma = fakePrisma([
+      { studentId: 7, points: 300 },
+      { studentId: 55, points: 900 },
     ]);
     prisma.student.findMany = jest.fn(async () => [
       { id: 7, firstName: 'Malika', lastName: 'Sodiqova' },
@@ -101,24 +194,23 @@ describe('reyting', () => {
       { studentId: 55 },
       { studentId: 7 },
     ]);
-    prisma.dafAttempt.groupBy = jest.fn(async () => []);
+    prisma.dafStudentDay.groupBy = jest.fn(async () => []);
     const r = await new FortschrittService(prisma).reyting(55, 1, 'gruppe');
     expect(r).toHaveLength(2);
     expect(r.every((z) => z.punkte === 0)).toBe(true);
   });
 
   it('teng ballda tartib BARQAROR (studentId bo`yicha)', async () => {
-    const prisma = fakePrisma();
-    prisma.dafAttempt.groupBy = jest.fn(async () => [
-      { studentId: 9, _sum: { points: 100 } },
-      { studentId: 4, _sum: { points: 100 } },
+    const prisma = fakePrisma([
+      { studentId: 9, points: 100 },
+      { studentId: 4, points: 100 },
     ]);
     prisma.student.findMany = jest.fn(async () => [
       { id: 4, firstName: 'A', lastName: 'A' },
       { id: 9, firstName: 'B', lastName: 'B' },
     ]);
     const r = await new FortschrittService(prisma).reyting(55, 1, 'zentrum');
-    // So'ragan o'quvchi (55) bu hafta mashq qilmagan — `groupBy`da yo'q,
+    // So'ragan o'quvchi (55) bu hafta mashq qilmagan — haftalik ro'yxatda yo'q,
     // lekin Fix 2 talabiga ko'ra O'Z QATORI baribir 0 ball bilan
     // qo'shiladi (eng pastda, chunki 0 < 100). Bu test 4/9 orasidagi
     // BARQAROR tartibni tekshiradi; 55ning qo'shilishi shunchaki shu
@@ -136,9 +228,50 @@ describe('reyting', () => {
   it('markaz jadvali FILIALGA cheklanmaydi', async () => {
     const prisma = fakePrisma();
     await new FortschrittService(prisma).reyting(55, 1, 'zentrum');
-    const where = prisma.dafAttempt.groupBy.mock.calls[0][0].where;
-    expect(where).not.toHaveProperty('branchId');
-    expect(where.companyId).toBe(1);
+    const sql = prisma.$queryRaw.mock.calls[0][0];
+    expect(sql.strings.join('?')).not.toMatch(/branch/i);
+    expect(sql.values[0]).toBe(1); // companyId
+  });
+
+  it(
+    "markaz jadvali TOP 50 + o'z qatori HAQIQIY o'rni bilan (qayta " +
+      'raqamlanmaydi)',
+    async () => {
+      // 60 o'quvchi 600, 590, … 10 ball; so'ragan o'quvchi (55) 35 ball —
+      // 58-o'rin. Jadvalda 50 + 1 qator, o'zi 51 emas, 58 deb ko'rinadi.
+      const week = Array.from({ length: 60 }, (_, i) => ({
+        studentId: 100 + i,
+        points: 600 - i * 10,
+      }));
+      const prisma = fakePrisma([...week, { studentId: 55, points: 35 }]);
+      const service = new FortschrittService(prisma);
+      const r = await service.reyting(55, 1, 'zentrum');
+      expect(r).toHaveLength(51);
+      expect(r[49].platz).toBe(50);
+      expect(r[50]).toMatchObject({ studentId: 55, platz: 58, selbst: true });
+      // Chegara so'rovning OXIRGI qiymati sifatida 50 bilan boradi.
+      const sql = prisma.$queryRaw.mock.calls[0][0];
+      expect(sql.values[sql.values.length - 1]).toBe(50);
+      const f = await service.uebersicht(55, 1);
+      expect(f.wochePlatzZentrum).toBe(58);
+    },
+  );
+
+  it("qatori yo'q o'quvchi teng nol ballilar orasiga id tartibida kiradi", async () => {
+    // 4 va 9 — qatori bor, 0 ball; 5 — qatori yo'q. Tartib: 7, 4, 5, 9:
+    // 9 uchinchi emas, to'rtinchi o'rinda.
+    const prisma = fakePrisma([
+      { studentId: 7, points: 100 },
+      { studentId: 9, points: 0 },
+      { studentId: 4, points: 0 },
+    ]);
+    const r = await new FortschrittService(prisma).reyting(5, 1, 'zentrum');
+    expect(r.map((z) => [z.studentId, z.platz])).toEqual([
+      [7, 1],
+      [4, 2],
+      [5, 3],
+      [9, 4],
+    ]);
   });
 
   it(
@@ -162,7 +295,7 @@ describe('reyting', () => {
         { studentId: 55 },
         { studentId: 7 },
       ]);
-      prisma.dafAttempt.groupBy = jest.fn(async () => [
+      prisma.dafStudentDay.groupBy = jest.fn(async () => [
         { studentId: 7, _sum: { points: 100 } },
       ]);
 
@@ -181,8 +314,8 @@ describe('reyting', () => {
       "keladi — bu hafta mashq qilmagan o'quvchi ham qatorda ko'rinadi " +
       '(Fix 2: chip va Markaz jadvali bir xil javob berishi shart)',
     async () => {
-      // O'quvchi (55) bu hafta hech narsa qilmagan — `groupBy` uni umuman
-      // qaytarmaydi. Ikkita boshqa o'quvchi ball yig'gan. Tuzatishdan
+      // O'quvchi (55) bu hafta hech narsa qilmagan — haftalik ro'yxat uni
+      // umuman qaytarmaydi. Ikkita boshqa o'quvchi ball yig'gan. Tuzatishdan
       // oldingi kodda `zentrumReytingi` faqat `groupBy` natijasidan
       // quriladi va o'z qatorini FAQAT topilganda qo'shadi — mashq
       // qilmagan o'quvchi u yerda yo'q, shuning uchun jadvalda umuman
@@ -190,10 +323,9 @@ describe('reyting', () => {
       // unga baribir o'rin beradi — dushanba ertalab chip "1-o'rin" deb,
       // Markaz tabi esa "hech kim ball yig'magan" deb ikkalasi bir
       // vaqtda ikki xil javob berardi.
-      const prisma = fakePrisma();
-      prisma.dafAttempt.groupBy = jest.fn(async () => [
-        { studentId: 7, _sum: { points: 500 } },
-        { studentId: 9, _sum: { points: 100 } },
+      const prisma = fakePrisma([
+        { studentId: 7, points: 500 },
+        { studentId: 9, points: 100 },
       ]);
 
       const service = new FortschrittService(prisma);
@@ -206,4 +338,53 @@ describe('reyting', () => {
       expect(f.wochePlatzZentrum).toBe(3);
     },
   );
+});
+
+describe('eslatmalar (S4)', () => {
+  it("sozlama qatori yo'q — yoqilgan; karta botga ulanmagan", async () => {
+    const f = await new FortschrittService(fakePrisma()).uebersicht(55, 1);
+    expect(f.eslatmalar).toBe(true);
+    expect(f.telegramUlangan).toBe(false);
+  });
+
+  it("o'chirilgan va ulangan holat o'qiladi — qo'shimcha so'rov yo'q", async () => {
+    const prisma = fakePrisma([], [], null, {
+      eslatmalar: false,
+      telegramUlangan: true,
+    });
+    prisma.dafLexemeState.count = jest.fn(async () => 3);
+    const f = await new FortschrittService(prisma).uebersicht(55, 1);
+    expect(f.eslatmalar).toBe(false);
+    expect(f.telegramUlangan).toBe(true);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+  });
+
+  it("SQL: sozlama CTE ga ustun, ulanish shu so'rovda, oxirgi ikki qiymat o'zgarmadi", async () => {
+    const prisma = fakePrisma();
+    await new FortschrittService(prisma).uebersicht(55, 1);
+    const sql = prisma.$queryRaw.mock.calls[0][0] as Prisma.Sql;
+    const matn = sql.strings.join('?');
+    expect(matn).toContain('"remindersEnabled" AS e');
+    expect(matn).toContain(
+      'COALESCE((SELECT e FROM sozlama), true) AS eslatmalar',
+    );
+    expect(matn).toContain('"telegramDisconnectedAt" IS NULL');
+    expect(sql.values.slice(-2)).toEqual([0, tashkentDateStr(new Date())]);
+  });
+
+  it('eslatmalarniOzgartir — yagona yozuvchi orqali', async () => {
+    const prisma = fakePrisma();
+    prisma.dafStudentSetting = {
+      upsert: jest.fn(async () => ({ remindersEnabled: false })),
+    };
+    expect(
+      await new FortschrittService(prisma).eslatmalarniOzgartir(55, 1, false),
+    ).toEqual({ eslatmalar: false });
+    expect(prisma.dafStudentSetting.upsert).toHaveBeenCalledWith({
+      where: { studentId: 55 },
+      create: { studentId: 55, companyId: 1, remindersEnabled: false },
+      update: { remindersEnabled: false },
+      select: { remindersEnabled: true },
+    });
+  });
 });

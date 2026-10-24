@@ -2,6 +2,7 @@
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatPrice } from "@/lib/format-utils";
+import { useT } from "@/i18n/context";
 import { LINK_STATE_LABEL } from "./contract-rules";
 import type { PrefillCourse } from "./contract-types";
 
@@ -12,10 +13,11 @@ interface Props {
 }
 
 export function ContractCoursesPicker({ courses, value, onChange }: Props) {
+  const t = useT();
   if (courses.length === 0) {
     return (
       <p className="rounded-md border px-4 py-3 text-sm text-muted-foreground">
-        O&apos;quvchining faol oylik kursi yo&apos;q — shartnoma tuzib bo&apos;lmaydi.
+        {t("O'quvchining faol oylik kursi yo'q — shartnoma tuzib bo'lmaydi.")}
       </p>
     );
   }
@@ -23,15 +25,17 @@ export function ContractCoursesPicker({ courses, value, onChange }: Props) {
     onChange(on ? [...value, id] : value.filter((x) => x !== id));
   return (
     <section className="space-y-2">
-      <h3 className="text-sm font-semibold">Kurslar</h3>
+      <h3 className="text-sm font-semibold">{t("Kurslar")}</h3>
       <p className="text-xs text-muted-foreground">
-        Bitta kurs belgilansa — shu kurs uchun alohida shartnoma. Bir nechtasi belgilansa —
-        hammasi bitta shartnomada.
+        {t(
+          "Bitta kurs belgilansa — shu kurs uchun alohida shartnoma. Bir nechtasi belgilansa — hammasi bitta shartnomada.",
+        )}
       </p>
       <ul className="divide-y rounded-md border">
         {courses.map((c) => {
           const taken = c.contractNumber !== null;
           const id = `contract-course-${c.enrollmentId}`;
+          const stateLabel = LINK_STATE_LABEL[c.status];
           return (
             <li key={c.enrollmentId} className="flex items-center gap-3 px-3 py-2">
               <Checkbox
@@ -44,11 +48,13 @@ export function ContractCoursesPicker({ courses, value, onChange }: Props) {
                 <span className="font-medium">{c.courseName}</span> · {c.groupName}
                 <span className="text-muted-foreground">
                   {" "}
-                  · {formatPrice(c.monthlyPrice)} so&apos;m/oy · {LINK_STATE_LABEL[c.status]}
+                  · {t("{price} so'm/oy", { price: formatPrice(c.monthlyPrice) })} · {t(stateLabel)}
                 </span>
               </label>
               {taken && (
-                <span className="text-xs text-muted-foreground">№ {c.contractNumber} da bor</span>
+                <span className="text-xs text-muted-foreground">
+                  {t("№ {number} da bor", { number: c.contractNumber ?? "" })}
+                </span>
               )}
             </li>
           );

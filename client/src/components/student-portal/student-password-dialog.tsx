@@ -14,6 +14,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button, Input, Field } from "./lumio";
+import { useT } from "@/i18n/context";
 
 export interface StudentPasswordDialogProps {
   open: boolean;
@@ -27,6 +28,7 @@ export function StudentPasswordDialog({
   open,
   onOpenChange,
 }: StudentPasswordDialogProps) {
+  const t = useT();
   const [loading, setLoading] = useState(false);
   const setAuth = useAuth((s) => s.setAuth);
   const [oldPassword, setOldPassword] = useState("");
@@ -56,11 +58,11 @@ export function StudentPasswordDialog({
         setAuth(session.user, session.accessToken, session.refreshToken);
       }
       toast.success(
-        "Parol o'zgartirildi. Boshqa qurilmalardagi kirishlar tugatildi",
+        t("Parol o'zgartirildi. Boshqa qurilmalardagi kirishlar tugatildi"),
       );
       handleOpenChange(false);
     } catch (err) {
-      toast.error(getErrorMessage(err, "Parolni o'zgartirishda xatolik"));
+      toast.error(getErrorMessage(err, t("Parolni o'zgartirishda xatolik")));
     } finally {
       setLoading(false);
     }
@@ -71,25 +73,25 @@ export function StudentPasswordDialog({
       <DialogContent className="lumio sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="font-display text-xl font-extrabold">
-            Parolni o&apos;zgartirish
+            {t("Parolni o'zgartirish")}
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Field label="Joriy parol">
+          <Field label={t("Joriy parol")}>
             <Input
               type="password"
               value={oldPassword}
               onChange={(e) => setOldPassword(e.target.value)}
-              placeholder="Joriy parolingiz"
+              placeholder={t("Joriy parolingiz")}
               required
             />
           </Field>
-          <Field label="Yangi parol">
+          <Field label={t("Yangi parol")}>
             <Input
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Kamida 6 ta belgi"
+              placeholder={t("Kamida 6 ta belgi")}
               minLength={6}
               required
             />
@@ -101,10 +103,10 @@ export function StudentPasswordDialog({
               onClick={() => handleOpenChange(false)}
               disabled={loading}
             >
-              Bekor qilish
+              {t("Bekor qilish")}
             </Button>
             <Button type="submit" loading={loading}>
-              Saqlash
+              {t("Saqlash")}
             </Button>
           </DialogFooter>
         </form>

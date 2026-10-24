@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useT } from "@/i18n/context";
 import { bolimlar, bolimTopish } from "@/qollanma/bolimlar";
 import { sahifalar, sahifaYoli } from "@/qollanma/sahifalar";
 import { bolimlarRolUchun, sahifalarRolUchun } from "@/qollanma/rol-filtri";
@@ -16,6 +17,7 @@ import { SahifaKartalari } from "./qollanma-sahifa-kartalari";
 const QIDIRUV_SXEMASI = { q: { type: "string", defaultValue: "" } } as const;
 
 export function QollanmaBoshSahifa() {
+  const t = useT();
   const user = useAuth((s) => s.user);
   const { filters, setFilter } = useUrlFilters(QIDIRUV_SXEMASI);
   // Yozilgan, lekin hali URL'ga yetib bormagan matn (`null` — maydon URL'ni ko'rsatadi).
@@ -43,8 +45,8 @@ export function QollanmaBoshSahifa() {
   return (
     <div className="space-y-8 pb-16">
       <header>
-        <h1 className="font-heading text-2xl font-semibold sm:text-3xl">Qo&apos;llanma</h1>
-        <p className="mt-1 text-muted-foreground">Tizim qoidalari va ish tartibi — oddiy tilda.</p>
+        <h1 className="font-heading text-2xl font-semibold sm:text-3xl">{t("Qo'llanma")}</h1>
+        <p className="mt-1 text-muted-foreground">{t("Tizim qoidalari va ish tartibi — oddiy tilda.")}</p>
       </header>
 
       <div className="relative max-w-xl">
@@ -53,9 +55,9 @@ export function QollanmaBoshSahifa() {
           type="search"
           value={matn}
           onChange={(e) => ozgardi(e.target.value)}
-          placeholder="Qo'llanmadan qidirish..."
+          placeholder={t("Qo'llanmadan qidirish...")}
           className="pl-9"
-          aria-label="Qo'llanmadan qidirish"
+          aria-label={t("Qo'llanmadan qidirish")}
         />
       </div>
 
@@ -67,7 +69,7 @@ export function QollanmaBoshSahifa() {
         </div>
       ) : matn.trim() ? (
         natijalar.length === 0 ? (
-          <p className="text-muted-foreground">Hech narsa topilmadi — boshqa so&apos;z bilan qidirib ko&apos;ring.</p>
+          <p className="text-muted-foreground">{t("Hech narsa topilmadi — boshqa so'z bilan qidirib ko'ring.")}</p>
         ) : (
           <ul className="space-y-3">
             {natijalar.map((s) => (

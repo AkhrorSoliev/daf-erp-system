@@ -20,6 +20,14 @@ import { StatusHistoryService } from '../common/status';
 import { EntityHistoryService } from '../common/entity-history';
 import { ArchiveEntityType } from './dto/archive-query.dto';
 import {
+  LeadOwnershipService,
+  type OwnershipChange,
+} from '../leads/ownership/lead-ownership.service';
+import {
+  RELEASED_OWNER,
+  restoreRelease,
+} from '../leads/ownership/restore-release';
+import {
   STUDENT_ONLY_ACCOUNT,
   signInAccountChange,
 } from '../common/auth/student-account';
@@ -55,6 +63,7 @@ export class ArchiveRestoreService {
     private prisma: PrismaService,
     private statusHistoryService: StatusHistoryService,
     private entityHistoryService: EntityHistoryService,
+    private ownership: LeadOwnershipService,
   ) {}
 
   async restore(
@@ -79,12 +88,24 @@ export class ArchiveRestoreService {
     }
 
     const statusField = getStatusField(entityType);
-    const defaultStatus = ENTITY_DEFAULT_STATUS[entityType];
+    // ADR-0096: a converted lead comes back CONVERTED with its owner and its
+    // conversion time — its KPI is credited to that owner from that moment
+    // (the same rule as `restoreRelease`).
+    const keepsConversion =
+      entityType === ArchiveEntityType.LEADS &&
+      record.convertedStudentId != null;
+    const defaultStatus = keepsConversion
+      ? LeadStatus.CONVERTED
+      : ENTITY_DEFAULT_STATUS[entityType];
     const historyEntityType = ENTITY_TYPE_MAP[entityType];
+
+    // ADR-0093: leads that come back owned are released to the common pool;
+    // their listeners hear it after the commit.
+    let released: OwnershipChange[] = [];
 
     // Agar deletionBatchId bo'lsa, barcha bog'liq yozuvlarni ham tiklaymiz
     if (record.deletionBatchId) {
-      await this.restoreBatch(record.deletionBatchId, userId);
+      released = await this.restoreBatch(record.deletionBatchId, userId);
     } else {
       if (entityType === ArchiveEntityType.STUDENTS) {
         await this.assertNumberFreeForRestore(record);
@@ -112,9 +133,16 @@ export class ArchiveRestoreService {
         deletedAt: null,
         deletedById: null,
         deletionBatchId: null,
-        statusChangedAt: new Date(),
-        statusChangedById: userId,
-        statusChangeReason: 'Arxivdan tiklandi',
+        // A converted lead keeps the moment and the marker of its conversion;
+        // a stale lost-reason goes and the legacy status string follows
+        // (as LeadsArchiveService does).
+        ...(keepsConversion
+          ? { lostReason: null, status: 'converted' }
+          : {
+              statusChangedAt: new Date(),
+              statusChangedById: userId,
+              statusChangeReason: 'Arxivdan tiklandi',
+            }),
       };
       restoreData[statusField] = defaultStatus;
 
@@ -158,6 +186,8 @@ export class ArchiveRestoreService {
             });
           }
         });
+      } else if (entityType === ArchiveEntityType.LEADS) {
+        released = await this.restoreLead(record, restoreData, userId);
       } else {
         await delegate.update({
           where: { id: parsedId },
@@ -165,6 +195,7 @@ export class ArchiveRestoreService {
         });
       }
     }
+    for (const change of released) this.ownership.emit(change);
 
     if (historyEntityType) {
       await this.entityHistoryService.recordRestore({
@@ -177,6 +208,47 @@ export class ArchiveRestoreService {
     }
 
     return { message: `${entityType} muvaffaqiyatli tiklandi` };
+  }
+
+  /**
+   * One archived lead (ADR-0093): it returns to the pool, so an owner is
+   * cleared and the release is logged in the same transaction as the restore.
+   * `restoreData.statusEnum` is what the lead becomes: NEW, or CONVERTED for a
+   * converted lead (ADR-0096), which `restoreRelease` leaves owned. A lead
+   * with no owner is a plain update.
+   */
+  private async restoreLead(
+    lead: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      ownerId: number | null;
+      branchId: number | null;
+      companyId: number;
+    },
+    restoreData: { statusEnum: LeadStatus },
+    userId: number,
+  ): Promise<OwnershipChange[]> {
+    const release = restoreRelease(lead, restoreData.statusEnum, {
+      branchId: lead.branchId,
+      companyId: lead.companyId,
+      actorId: userId,
+    });
+    if (!release) {
+      await this.prisma.lead.update({
+        where: { id: lead.id },
+        data: restoreData,
+      });
+      return [];
+    }
+    await this.prisma.$transaction(async (tx) => {
+      await tx.lead.update({
+        where: { id: lead.id },
+        data: { ...restoreData, ...RELEASED_OWNER },
+      });
+      await this.ownership.recordChange(tx, release);
+    });
+    return [release];
   }
 
   /**
@@ -259,7 +331,10 @@ export class ArchiveRestoreService {
     });
   }
 
-  private async restoreBatch(batchId: string, userId?: number) {
+  private async restoreBatch(
+    batchId: string,
+    userId?: number,
+  ): Promise<OwnershipChange[]> {
     const now = new Date();
     const restoreBase = {
       deletedAt: null,
@@ -270,7 +345,7 @@ export class ArchiveRestoreService {
       statusChangeReason: 'Arxivdan tiklandi (batch)',
     };
 
-    await this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx) => {
       // Capture enrollment IDs before update to write state log entries
       const restoredEnrollments = await tx.enrollment.findMany({
         where: { deletionBatchId: batchId },
@@ -320,10 +395,45 @@ export class ArchiveRestoreService {
         where: { deletionBatchId: batchId },
         data: { ...restoreBase, status: StudentStatus.ACTIVE, isActive: true },
       });
+      // ADR-0096: the batch's converted leads keep CONVERTED, their owner and
+      // their conversion time; only the others come back NEW and unowned.
+      await tx.lead.updateMany({
+        where: { deletionBatchId: batchId, convertedStudentId: { not: null } },
+        data: {
+          deletedAt: null,
+          deletedById: null,
+          deletionBatchId: null,
+          statusEnum: LeadStatus.CONVERTED,
+        },
+      });
+      // The other leads of the batch come back as NEW, so every owned one is
+      // released to the pool (ADR-0093); the owners are read before the write.
+      const ownedLeads = await tx.lead.findMany({
+        where: { deletionBatchId: batchId, ownerId: { not: null } },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          ownerId: true,
+          branchId: true,
+          companyId: true,
+        },
+      });
       await tx.lead.updateMany({
         where: { deletionBatchId: batchId },
-        data: { ...restoreBase, statusEnum: LeadStatus.NEW },
+        data: { ...restoreBase, statusEnum: LeadStatus.NEW, ...RELEASED_OWNER },
       });
+      const released: OwnershipChange[] = [];
+      for (const lead of ownedLeads) {
+        const change = restoreRelease(lead, LeadStatus.NEW, {
+          branchId: lead.branchId,
+          companyId: lead.companyId,
+          actorId: userId ?? null,
+        });
+        if (!change) continue;
+        await this.ownership.recordChange(tx, change);
+        released.push(change);
+      }
       await tx.user.updateMany({
         where: { deletionBatchId: batchId },
         data: { ...restoreBase, status: UserStatus.ACTIVE, isActive: true },
@@ -332,6 +442,7 @@ export class ArchiveRestoreService {
         where: { deletionBatchId: batchId },
         data: { ...restoreBase, status: HolidayStatus.ACTIVE },
       });
+      return released;
     });
   }
 }

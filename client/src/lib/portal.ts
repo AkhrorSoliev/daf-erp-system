@@ -1,3 +1,5 @@
+import { msg } from "@/i18n/msg";
+
 export type PortalType =
   | "admin"
   | "lehrer"
@@ -6,18 +8,18 @@ export type PortalType =
   | "form";
 
 interface PortalConfig {
-  /** The heading of the portal's sign-in sheet (`DaftarSheet`). */
+  /** The heading of the portal's sign-in page (`StaffSignInShell`). */
   title: string;
   allowedRoleIds: number[];
 }
 
 const portalConfigs: Record<PortalType, PortalConfig> = {
   admin: {
-    title: "Boshqaruv",
+    title: msg("Boshqaruv"),
     allowedRoleIds: [1, 2, 3, 5], // CEO, Branch Director, Administrator, Cashier
   },
   lehrer: {
-    title: "O'qituvchi",
+    title: msg("O'qituvchi"),
     allowedRoleIds: [4], // Teacher
   },
   student: {
@@ -49,16 +51,6 @@ export function getPortalType(host: string): PortalType {
 
 export function getPortalConfig(portal: PortalType): PortalConfig {
   return portalConfigs[portal];
-}
-
-/**
- * Scope classes of the staff sign-in theme (`.daftar` in globals.css): squared
- * paper and navy ink by default, ruled paper and green ink on the teacher
- * portal. One source for the page shell and for content Radix portals to
- * <body>, which no class on the page reaches.
- */
-export function daftarScope(portal: PortalType): string {
-  return portal === "lehrer" ? "daftar daftar-lines" : "daftar";
 }
 
 // True for portals that have no login wall — every path is public.

@@ -36,4 +36,16 @@ describe("extraPhoneRowState", () => {
       note: "Bu raqam bilan ham tizimga kira olasiz. Parolni tiklash kodi faqat asosiy raqamga boradi.",
     });
   });
+
+  it("passes its own words through the page's t, never the number", () => {
+    const t = (source: string) => `[${source}]`;
+    expect(extraPhoneRowState({ phone: null, editable: false }, t)).toEqual({
+      value: "[Qo'shilmagan]",
+      actions: [],
+      note: "[Zaxira raqamni administrator qo'shadi.]",
+    });
+    expect(
+      extraPhoneRowState({ phone: "935554433", editable: true }, t)?.value,
+    ).toBe("+998 93 555 44 33");
+  });
 });

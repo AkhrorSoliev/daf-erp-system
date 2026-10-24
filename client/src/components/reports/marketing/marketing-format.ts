@@ -1,6 +1,8 @@
 import { formatNumber } from "@/lib/format-utils";
-import { monthShort } from "@/components/payments/salary-utils";
+import { interpolate } from "@/i18n/translate";
+import type { Translate } from "@/components/notifications/notification-view";
 import { som } from "@/components/payments/overview/overview-math";
+import { capitalize, monthLocative } from "@/components/reports/departed-students/departed-format";
 
 /** One month of `GET /reports/marketing` (ADR-0067 definitions; null = not computed). */
 export interface MarketingMonth {
@@ -13,12 +15,33 @@ export interface MarketingMonth {
   transition: boolean;
 }
 
+/** One lead source of the month (ADR-0109): every figure is the server's; null prints «—». */
+export interface SourceRow {
+  /** null = leads with no source written. */
+  source: string | null;
+  spend: number;
+  leads: number;
+  /** People of these leads who paid. */
+  students: number;
+  /** «Aylanish», 0–100, one decimal. */
+  rate: number;
+  /** Cost of one student: spend ÷ students. */
+  cac: number | null;
+  /** What those students have paid so far. */
+  paid: number;
+  roi: number | null;
+}
+
 export interface MarketingReport extends MarketingMonth {
   ltv: { value: number; avgMonths: number; monthlyCharge: number } | null;
   /** The asked month first, back to 2026-05. */
   months: MarketingMonth[];
-  /** Lead sources of the month; null before 10.09.2026. `rate` — «Aylanish», 0–100, the server's. */
-  sources: { source: string | null; leads: number; students: number; rate: number }[] | null;
+  /** Lead sources of the month; null before 10.09.2026. */
+  sources: SourceRow[] | null;
+  /** «Hammasi»: the whole month's spend against all the sources' people. Null with `sources`. */
+  sourcesTotal: Omit<SourceRow, "source"> | null;
+  /** Spend that names no source: in «Hammasi», in no source row. Null with `sources`. */
+  unassignedSpend: number | null;
 }
 
 /** "13" from 10 up, "3,4" below it. */
@@ -34,12 +57,18 @@ export function formatRoi(roi: number | null): string {
 }
 
 /** The «Marketing samarasi» sentence (spec B1 §3.3). */
-export function roiSentence(r: MarketingMonth): string {
-  if (r.transition) return "May–iyun — tizimga o'tish oylari, hisoblanmaydi.";
-  const name = monthShort(r.month);
-  if (r.spend === 0 || r.roi == null) return `${name}da marketingga sarf yozilmagan.`;
-  const head = `${name}da qo'shilgan ${formatNumber(r.newStudents)} o'quvchi hozirgacha ${som(r.cohortPaid)} to'ladi`;
-  return r.roi >= 1
-    ? `${head} — marketingga sarflangan ${som(r.spend)} dan ${roiNumber(r.roi)} barobar ko'p.`
-    : `${head} — sarfning ${Math.round(r.roi * 100)}% i.`;
+export function roiSentence(r: MarketingMonth, t: Translate = interpolate): string {
+  if (r.transition) return t("May–iyun — tizimga o'tish oylari, hisoblanmaydi.");
+  const period = monthLocative(r.month, t);
+  if (r.spend === 0 || r.roi == null) return capitalize(t("{period} marketingga sarf yozilmagan.", { period }));
+  const parts = { period, n: formatNumber(r.newStudents), paid: som(r.cohortPaid, t) };
+  return capitalize(
+    r.roi >= 1
+      ? t("{period} qo'shilgan {n} o'quvchi hozirgacha {paid} to'ladi — marketingga sarflangan {spend} dan {times} barobar ko'p.", {
+          ...parts,
+          spend: som(r.spend, t),
+          times: roiNumber(r.roi),
+        })
+      : t("{period} qo'shilgan {n} o'quvchi hozirgacha {paid} to'ladi — sarfning {pct} i.", { ...parts, pct: `${Math.round(r.roi * 100)}%` }),
+  );
 }

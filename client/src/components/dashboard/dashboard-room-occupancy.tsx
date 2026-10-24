@@ -15,8 +15,16 @@ import {
   type UnmarkedDialog,
 } from "@/components/attendance/unmarked/unmarked-lesson-prompt";
 import { useAuth } from "@/hooks/use-auth";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { answerState } from "@/lib/unmarked-lesson";
 import type { AttendanceStatus, DashboardLesson } from "./dashboard-daily-schedule";
+import {
+  isPlacedPlanned,
+  PlannedGridCard,
+  plannedAsLesson,
+  type PlannedLesson,
+} from "./dashboard-planned-groups";
 
 const SLOT_HEIGHT_PX = 44;
 const SLOT_MIN = 30;
@@ -25,10 +33,10 @@ const TIME_COL_W = 64;
 const ROOM_COL_MIN_W = 156;
 
 const attendanceLabel: Record<AttendanceStatus, string> = {
-  TAKEN: "Davomat olindi",
-  NOT_TAKEN: "Davomat olinmagan",
-  MISSED: "O'tkazib yuborilgan",
-  PENDING: "Kutilmoqda",
+  TAKEN: msg("Davomat olindi"),
+  NOT_TAKEN: msg("Davomat olinmagan"),
+  MISSED: msg("O'tkazib yuborilgan"),
+  PENDING: msg("Kutilmoqda"),
 };
 
 const attendanceBadgeClass: Record<AttendanceStatus, string> = {
@@ -59,6 +67,8 @@ interface DashboardRoomOccupancyProps {
   isToday?: boolean;
   date: string;
   onAnswered?: () => void;
+  /** Ochilishi rejalashtirilgan guruhlar — punktirli kartada, dars hisobiga kirmaydi. */
+  planned?: PlannedLesson[];
 }
 
 function timeToMin(time: string): number {
@@ -170,7 +180,9 @@ export function DashboardRoomOccupancy({
   isToday = true,
   date,
   onAnswered,
+  planned,
 }: DashboardRoomOccupancyProps) {
+  const t = useT();
   const dayStart = timeToMin(workingHours.start);
   const dayEnd = timeToMin(workingHours.end);
   const slots = useMemo(
@@ -189,16 +201,26 @@ export function DashboardRoomOccupancy({
     return rooms.filter((r) => busyIds.has(r.id));
   }, [rooms, lessons, isTeacher]);
 
+  // Rejadagi guruh ham xonada o'z o'rnini oladi (qatorlarga bo'linishi uchun
+  // oddiy dars bilan birga hisoblanadi), lekin boshqacha chiziladi.
+  const plannedById = useMemo(() => {
+    const map = new Map<string, PlannedLesson>();
+    for (const p of planned ?? []) if (isPlacedPlanned(p)) map.set(p.groupId, p);
+    return map;
+  }, [planned]);
+
   const lessonsByRoom = useMemo(() => {
     const map = new Map<string, DashboardLesson[]>();
-    for (const lesson of lessons) {
-      if (!lesson.roomId) continue;
+    const add = (lesson: DashboardLesson) => {
+      if (!lesson.roomId) return;
       const arr = map.get(lesson.roomId) ?? [];
       arr.push(lesson);
       map.set(lesson.roomId, arr);
-    }
+    };
+    for (const lesson of lessons) add(lesson);
+    for (const p of plannedById.values()) add(plannedAsLesson(p));
     return map;
-  }, [lessons]);
+  }, [lessons, plannedById]);
 
   const [now, setNow] = useState(() => {
     const d = new Date();
@@ -225,12 +247,12 @@ export function DashboardRoomOccupancy({
       <div className="rounded-lg border bg-muted/20 p-8 text-center">
         <CalendarX className="size-8 text-muted-foreground mx-auto mb-3" />
         <p className="text-sm font-medium">
-          {isTeacher ? "Darslaringiz yo'q" : "Filialda faol xona yo'q"}
+          {isTeacher ? t("Darslaringiz yo'q") : t("Filialda faol xona yo'q")}
         </p>
         <p className="text-xs text-muted-foreground mt-1">
           {isTeacher
-            ? "Tanlangan kunda siz uchun dars rejalashtirilmagan"
-            : "Avval xonalar qo'shing yoki ularni faollashtiring"}
+            ? t("Tanlangan kunda siz uchun dars rejalashtirilmagan")
+            : t("Avval xonalar qo'shing yoki ularni faollashtiring")}
         </p>
       </div>
     );
@@ -249,7 +271,7 @@ export function DashboardRoomOccupancy({
             style={{ gridTemplateColumns }}
           >
             <div className="sticky left-0 z-20 bg-muted/40 border-r px-2 py-2 text-[11px] font-semibold text-muted-foreground text-center">
-              Vaqt
+              {t("Vaqt")}
             </div>
             {visibleRooms.map((room) => (
               <div
@@ -313,18 +335,34 @@ export function DashboardRoomOccupancy({
                     ))}
 
                     {/* Lesson segments */}
-                    {segments.map((segment, idx) => (
-                      <LessonSegmentCard
-                        key={`${segment.lesson.groupId}-${segment.startMin}-${idx}`}
-                        segment={segment}
-                        dayStart={dayStart}
-                        dayEnd={dayEnd}
-                        isToday={isToday}
-                        nowMin={nowMin}
-                        date={date}
-                        onAnswered={onAnswered}
-                      />
-                    ))}
+                    {segments.map((segment, idx) => {
+                      const plannedLesson = plannedById.get(
+                        segment.lesson.groupId,
+                      );
+                      if (plannedLesson) {
+                        return (
+                          <PlannedSegment
+                            key={`planned-${plannedLesson.groupId}-${idx}`}
+                            segment={segment}
+                            dayStart={dayStart}
+                            dayEnd={dayEnd}
+                            planned={plannedLesson}
+                          />
+                        );
+                      }
+                      return (
+                        <LessonSegmentCard
+                          key={`${segment.lesson.groupId}-${segment.startMin}-${idx}`}
+                          segment={segment}
+                          dayStart={dayStart}
+                          dayEnd={dayEnd}
+                          isToday={isToday}
+                          nowMin={nowMin}
+                          date={date}
+                          onAnswered={onAnswered}
+                        />
+                      );
+                    })}
                   </div>
                 );
               })}
@@ -351,12 +389,43 @@ export function DashboardRoomOccupancy({
           {lessons.length === 0 && (
             <div className="border-t bg-muted/20 px-3 py-2 text-center text-xs text-muted-foreground">
               {isToday
-                ? "Bugun dars rejalashtirilmagan"
-                : "Tanlangan kunda dars rejalashtirilmagan"}
+                ? t("Bugun dars rejalashtirilmagan")
+                : t("Tanlangan kunda dars rejalashtirilmagan")}
             </div>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function PlannedSegment({
+  segment,
+  dayStart,
+  dayEnd,
+  planned,
+}: {
+  segment: LayoutSegment;
+  dayStart: number;
+  dayEnd: number;
+  planned: PlannedLesson;
+}) {
+  const visStart = Math.max(segment.startMin, dayStart);
+  const visEnd = Math.min(segment.endMin, dayEnd);
+  if (visStart >= visEnd) return null;
+  const height = (visEnd - visStart) * PX_PER_MIN;
+  const widthPct = 100 / segment.segmentLanes;
+  return (
+    <div
+      className="absolute z-10"
+      style={{
+        top: (visStart - dayStart) * PX_PER_MIN,
+        height,
+        left: `calc(${segment.lane * widthPct}% + 2px)`,
+        width: `calc(${widthPct}% - 4px)`,
+      }}
+    >
+      <PlannedGridCard p={planned} height={height} />
     </div>
   );
 }
@@ -382,6 +451,7 @@ function LessonSegmentCard({
 }: LessonSegmentCardProps) {
   const { lesson, lane, segmentLanes, startMin, endMin } = segment;
 
+  const t = useT();
   const user = useAuth((s) => s.user);
   const info = lesson.unmarked ?? null;
   const prompt = info ? answerState(info, user) : null;
@@ -429,6 +499,8 @@ function LessonSegmentCard({
 
   const att = lesson.attendanceStatus;
   const AttIcon = att ? attendanceIcon[att] : null;
+  // The label is a `msg()` text; `t` takes it by name, not as an index lookup.
+  const attLabel = att ? attendanceLabel[att] : "";
   const borderOverride =
     att === "NOT_TAKEN"
       ? "!border-red-400 dark:!border-red-600"
@@ -483,7 +555,7 @@ function LessonSegmentCard({
             {att && AttIcon && (
               <span
                 className={`absolute top-1 right-1 z-10 inline-flex items-center justify-center rounded-full size-4 ${attendanceBadgeClass[att]}`}
-                aria-label={attendanceLabel[att]}
+                aria-label={t(attLabel)}
               >
                 <AttIcon className="size-3" />
               </span>
@@ -547,14 +619,18 @@ function LessonSegmentCard({
             </p>
             {lesson.teachers.length > 0 && (
               <p className="text-xs">
-                Ustoz:{" "}
-                {lesson.teachers
-                  .map((t) => `${t.firstName} ${t.lastName}`)
-                  .join(", ")}
+                {t("Ustoz: {names}", {
+                  names: lesson.teachers
+                    .map((teacher) => `${teacher.firstName} ${teacher.lastName}`)
+                    .join(", "),
+                })}
               </p>
             )}
             <p className="text-xs">
-              Keldi: {lesson.presentCount}/{lesson.studentCount} ta
+              {t("Keldi: {present}/{total} ta", {
+                present: lesson.presentCount,
+                total: lesson.studentCount,
+              })}
             </p>
             {att && (
               <p
@@ -568,7 +644,7 @@ function LessonSegmentCard({
                         : "text-muted-foreground"
                 }`}
               >
-                Holat: {attendanceLabel[att]}
+                {t("Holat: {status}", { status: t(attLabel) })}
               </p>
             )}
           </div>
@@ -583,7 +659,7 @@ function LessonSegmentCard({
                 type="button"
                 className="absolute bottom-1 left-1 z-20 rounded-full bg-orange-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white shadow hover:bg-orange-600"
               >
-                Dars bo&apos;ldimi?
+                {t("Dars bo'ldimi?")}
               </button>
             </PopoverTrigger>
             <PopoverContent align="start" className="flex w-auto flex-col items-start gap-1.5 p-3">

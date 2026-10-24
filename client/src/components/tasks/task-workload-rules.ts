@@ -1,4 +1,4 @@
-import { ROLE_LABEL, ROLE_ORDER } from "./task-labels";
+import { ROLE_LABEL, ROLE_ORDER, uzbek, type Translate } from "./task-labels";
 
 /** `GET /tasks/workload`: rows already sorted by overdue, then open. */
 export interface WorkloadRow {
@@ -14,9 +14,10 @@ export function onTimeTile(totals: Pick<WorkloadTotals, "onTime" | "withDue">): 
 }
 
 /** «Ustoz · Farg'ona»: the person's highest role (as the assignee picker lists them) and their branches. */
-export function personLine(u: Pick<WorkloadRow["user"], "roleNames" | "branchNames">): string {
+export function personLine(u: Pick<WorkloadRow["user"], "roleNames" | "branchNames">, t: Translate = uzbek): string {
   const top = ROLE_ORDER.find((r) => u.roleNames.includes(r));
-  return [top ? ROLE_LABEL[top] : "", u.branchNames.join(", ")].filter(Boolean).join(" · ");
+  const role = top ? ROLE_LABEL[top] : "";
+  return [role ? t(role) : "", u.branchNames.join(", ")].filter(Boolean).join(" · ");
 }
 
 /** Where a row leads: «Barchasi» narrowed to that person (the table reads `assignee` once on mount). */

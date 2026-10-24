@@ -45,7 +45,7 @@ export const KADRLAR = [
   },
   {
     nom: "tolovlar/tolov-qayd-qilish",
-    url: "/payments/pending",
+    url: "/payments/overview",
     tayyorla: async (page) => {
       await page.getByRole("button", { name: "To'lov qayd qilish" }).first().click();
     },
@@ -65,6 +65,13 @@ export const KADRLAR = [
     url: (s) => `/groups/${s.oylikGuruhId}`,
     kutish: "role=tab[name=\"Davomat\"]",
     belgilar: [],
+    kesish: null,
+  },
+  {
+    nom: "xarajatlar/xarajatlar-sahifasi",
+    url: "/payments/expenses",
+    kutish: 'role=heading[name="Xarajatlar"]',
+    belgilar: [{ selector: 'role=button[name="Oldingi oy"]', raqam: 1 }],
     kesish: null,
   },
 ];

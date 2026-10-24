@@ -36,6 +36,7 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toApiDateStr } from "@/components/groups/edit-group-form-utils";
 import { EnrollPreviewBlock } from "./enroll-preview-block";
+import { useT } from "@/i18n/context";
 
 interface GroupTeacher {
   id: number;
@@ -65,7 +66,7 @@ function isIntensive(courseName: string): boolean {
 const ODD_DAYS = ["monday", "wednesday", "friday"];
 const EVEN_DAYS = ["tuesday", "thursday", "saturday"];
 
-import { sortWeekdays, WEEKDAY_SHORT } from "@/lib/weekdays";
+import { formatWeekdays, sortWeekdays } from "@/lib/weekdays";
 
 function getDaysList(days: string | null, exactDays: string[]): string[] {
   if (exactDays.length > 0) return sortWeekdays(exactDays);
@@ -99,6 +100,7 @@ export function EnrollToGroupDialog({
   studentBranchId,
   onEnrolled,
 }: EnrollToGroupDialogProps) {
+  const t = useT();
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -152,7 +154,19 @@ export function EnrollToGroupDialog({
 
   // Current (active) enrollment group — use first enrolled group as "from".
   // Backend marks the previous ACTIVE enrollment as TRANSFERRED on the new POST.
-  const currentGroup = groups.find((g) => enrolledGroupIds.includes(g.id));
+  const listedCurrent = groups.find((g) => enrolledGroupIds.includes(g.id));
+  // Hozirgi guruh ro'yxatda bo'lmasligi mumkin (qidiruv, 50 tadan keyin, yopilgan
+  // holat). Shunda ustoz farqini bilish uchun uni alohida yuklaymiz — server
+  // baribir ustoz farqli bo'lsa sabab talab qiladi.
+  const missingCurrentId = listedCurrent ? undefined : enrolledGroupIds[0];
+  const { data: fetchedCurrent } = useQuery<GroupOption>({
+    queryKey: ["enroll-current-group", missingCurrentId],
+    queryFn: () =>
+      api.get<GroupOption>(`/groups/${missingCurrentId}`).then((r) => r.data),
+    enabled: open && !!missingCurrentId,
+    staleTime: 60_000,
+  });
+  const currentGroup = listedCurrent ?? fetchedCurrent;
   const targetGroup = selectedId
     ? groups.find((g) => g.id === selectedId)
     : null;
@@ -205,7 +219,7 @@ export function EnrollToGroupDialog({
       setTransferReasonId(created.id);
       setAddingReason(false);
       setNewReasonName("");
-      toast.success("Sabab qo'shildi");
+      toast.success(t("Sabab qo'shildi"));
     },
     onError: async (error, submittedName) => {
       const status = (error as { response?: { status?: number } }).response
@@ -225,14 +239,14 @@ export function EnrollToGroupDialog({
             setTransferReasonId(match.id);
             setAddingReason(false);
             setNewReasonName("");
-            toast.success("Bu sabab allaqachon bor — tanlandi");
+            toast.success(t("Bu sabab allaqachon bor — tanlandi"));
             return;
           }
         } catch {
           // Ro'yxatni qayta o'qib bo'lmadi — pastdagi xabar chiqadi.
         }
       }
-      toast.error(getErrorMessage(error, "Sabab qo'shilmadi"));
+      toast.error(getErrorMessage(error, t("Sabab qo'shilmadi")));
     },
   });
 
@@ -250,7 +264,7 @@ export function EnrollToGroupDialog({
   const handleEnroll = async () => {
     if (!selectedId) return;
     if (teachersDiffer && !transferReasonId) {
-      toast.error("Iltimos, guruh almashtirish sababini tanlang");
+      toast.error(t("Iltimos, guruh almashtirish sababini tanlang"));
       return;
     }
     setSubmitting(true);
@@ -261,11 +275,11 @@ export function EnrollToGroupDialog({
         // Backend defaults to today when omitted.
         ...(startDate && { startDate: toApiDateStr(startDate) }),
       });
-      toast.success("O'quvchi guruhga qo'shildi");
+      toast.success(t("O'quvchi guruhga qo'shildi"));
       onEnrolled?.();
       onOpenChange(false);
     } catch (err) {
-      toast.error(getErrorMessage(err, "Guruhga qo'shishda xatolik"));
+      toast.error(getErrorMessage(err, t("Guruhga qo'shishda xatolik")));
     } finally {
       setSubmitting(false);
     }
@@ -279,14 +293,19 @@ export function EnrollToGroupDialog({
   });
 
   const hasGroup = enrolledGroupIds.length > 0;
+  // The student's name is bold inside the sentence: translate the sentence with
+  // a marker where the name goes, and draw the name between the two halves.
+  const [beforeName, afterName] = t("{name} uchun guruh tanlang", { name: "\n" }).split("\n");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>{hasGroup ? "Guruhni o'zgartirish" : "Guruhga qo'shish"}</DialogTitle>
+          <DialogTitle>{hasGroup ? t("Guruhni o'zgartirish") : t("Guruhga qo'shish")}</DialogTitle>
           <DialogDescription>
-            <strong>{studentName}</strong> uchun guruh tanlang
+            {beforeName}
+            <strong>{studentName}</strong>
+            {afterName}
           </DialogDescription>
         </DialogHeader>
 
@@ -294,7 +313,7 @@ export function EnrollToGroupDialog({
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Guruh nomi yoki ustoz bo'yicha qidirish..."
+            placeholder={t("Guruh nomi yoki ustoz bo'yicha qidirish...")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -321,7 +340,7 @@ export function EnrollToGroupDialog({
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <Users className="size-8 text-muted-foreground/40 mb-2" />
               <p className="text-sm text-muted-foreground">
-                Guruhlar topilmadi
+                {t("Guruhlar topilmadi")}
               </p>
             </div>
           ) : (
@@ -378,7 +397,7 @@ export function EnrollToGroupDialog({
                         </span>
                         {isEnrolled && (
                           <Badge className="h-4 px-1.5 text-[10px] bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-400 dark:border-emerald-800">
-                            Qo&apos;shilgan
+                            {t("Qo'shilgan")}
                           </Badge>
                         )}
                       </div>
@@ -398,7 +417,7 @@ export function EnrollToGroupDialog({
                               ? "text-orange-700 bg-orange-100 border-orange-200 dark:text-orange-400 dark:bg-orange-950/30 dark:border-orange-800"
                               : "text-blue-700 bg-blue-100 border-blue-200 dark:text-blue-400 dark:bg-blue-950/30 dark:border-blue-800"
                           }`}>
-                            {intensive ? "Intensiv" : "Standart"}
+                            {intensive ? t("Intensiv") : t("Standart")}
                           </span>
                           <span className="text-sm text-muted-foreground truncate">{group.course.name}</span>
                         </div>
@@ -415,7 +434,7 @@ export function EnrollToGroupDialog({
                                 key={d}
                                 className="flex size-7 items-center justify-center rounded-md bg-muted text-xs font-semibold"
                               >
-                                {WEEKDAY_SHORT[d] ?? d}
+                                {formatWeekdays([d], t)}
                               </span>
                             ))}
                           </div>
@@ -487,7 +506,7 @@ export function EnrollToGroupDialog({
               <AlertCircle className="size-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
               <div className="flex-1">
                 <div className="font-medium text-amber-900 dark:text-amber-200">
-                  Ustoz farqli — sabab majburiy
+                  {t("Ustoz farqli — sabab majburiy")}
                 </div>
                 <div className="text-amber-800 dark:text-amber-300 mt-0.5">
                   {currentGroup?.teachers.map((t) => `${t.firstName} ${t.lastName}`).join(", ") || "—"}
@@ -503,7 +522,7 @@ export function EnrollToGroupDialog({
                 <Input
                   value={newReasonName}
                   onChange={(e) => setNewReasonName(e.target.value)}
-                  placeholder="Sababni yozing, masalan: Ish jadvali o'zgardi"
+                  placeholder={t("Sababni yozing, masalan: Ish jadvali o'zgardi")}
                   autoFocus
                   maxLength={100}
                   disabled={createReason.isPending}
@@ -529,7 +548,7 @@ export function EnrollToGroupDialog({
                     ) : (
                       <Plus className="mr-1.5 size-4" />
                     )}
-                    Qo&apos;shib tanlash
+                    {t("Qo'shib tanlash")}
                   </Button>
                   {hasReasons && (
                     <Button
@@ -541,13 +560,12 @@ export function EnrollToGroupDialog({
                       }}
                       disabled={createReason.isPending}
                     >
-                      Bekor qilish
+                      {t("Bekor qilish")}
                     </Button>
                   )}
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Yangi sabab ro&apos;yxatga qo&apos;shiladi va keyingi
-                  o&apos;tkazishlarda ham chiqadi.
+                  {t("Yangi sabab ro'yxatga qo'shiladi va keyingi o'tkazishlarda ham chiqadi.")}
                 </p>
               </div>
             ) : (
@@ -557,7 +575,7 @@ export function EnrollToGroupDialog({
                   onValueChange={(v) => setTransferReasonId(v || undefined)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Guruh almashtirish sababini tanlang..." />
+                    <SelectValue placeholder={t("Guruh almashtirish sababini tanlang...")} />
                   </SelectTrigger>
                   <SelectContent>
                     {transferReasons.map((r) => (
@@ -576,13 +594,13 @@ export function EnrollToGroupDialog({
                     onClick={() => setAddingReason(true)}
                   >
                     <Plus className="mr-1 size-3" />
-                    Sabab boshqa — yangi qo&apos;shish
+                    {t("Sabab boshqa — yangi qo'shish")}
                   </Button>
                   <Link
                     href="/settings/reasons?tab=transfer"
                     className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground hover:underline"
                   >
-                    Ro&apos;yxatni boshqarish
+                    {t("Ro'yxatni boshqarish")}
                     <ArrowUpRight className="size-3" />
                   </Link>
                 </div>
@@ -593,7 +611,7 @@ export function EnrollToGroupDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button
             onClick={handleEnroll}
@@ -604,7 +622,7 @@ export function EnrollToGroupDialog({
             }
           >
             {submitting && <Loader2 className="mr-1.5 size-4 animate-spin" />}
-            {hasGroup ? "O'zgartirish" : "Qo'shish"}
+            {hasGroup ? t("O'zgartirish") : t("Qo'shish")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -2,7 +2,6 @@ import {
   BookOpen,
   DoorOpen,
   CalendarOff,
-  PauseCircle,
   ListChecks,
   Archive,
   Users,
@@ -10,9 +9,17 @@ import {
   Building2,
   Send,
   Wallet,
-  Smartphone,
+  ShieldCheck,
+  UserCheck,
+  Scale,
+  Landmark,
+  UsersRound,
+  GraduationCap,
+  Banknote,
+  MessagesSquare,
   type LucideIcon,
 } from "lucide-react";
+import { msg } from "@/i18n/msg";
 import type { Can } from "./permission-check";
 import type { PermissionKey } from "./permission-keys";
 
@@ -20,6 +27,21 @@ import type { PermissionKey } from "./permission-keys";
 // dropdown but a plain link to that page: a new settings page is registered
 // here (not in the sidebar) and appears on /settings automatically. Its
 // breadcrumb label is separate — add it to src/lib/breadcrumb-routes.ts.
+//
+// Sections group pages by TOPIC, never by who sees them: a Branch Director or
+// an Administrator must not meet a heading named after another role.
+
+/**
+ * One part of a page that gathers several small settings («O'quv qoidalari»,
+ * «Lidlar va KPI», «Telegram»). Each part keeps the gate its own endpoints
+ * have, so merging pages never widens who may change what.
+ */
+export interface SettingsBlock {
+  id: string;
+  permission?: PermissionKey;
+  /** Identity, not a capability: see `SettingsNavItem.ceoOnly`. */
+  ceoOnly?: true;
+}
 
 export interface SettingsNavItem {
   title: string;
@@ -27,42 +49,112 @@ export interface SettingsNavItem {
   icon: LucideIcon;
   /** One-line summary shown under the title in the /settings list. */
   description: string;
+  /** Extra words the /settings search matches (what people call it). */
+  keywords?: string[];
   /** Shown to users who hold this capability. Omit to show to all. */
   permission?: PermissionKey;
+  /**
+   * Only the CEO sees and opens it — an identity, never a capability (the
+   * API is `@CeoOnly()`, ADR-0087). Such an item has no `permission`.
+   */
+  ceoOnly?: true;
+  /**
+   * A page made of parts. It shows (and opens) for whoever may see at least
+   * one part, and draws only those parts. Such an item has neither
+   * `permission` nor `ceoOnly` of its own.
+   */
+  blocks?: SettingsBlock[];
 }
 
 export interface SettingsNavSection {
   title: string;
+  /** Small mark beside the title: the eye finds a topic before it reads. */
+  icon: LucideIcon;
+  /** What the section is about, in a few words, under its title. */
+  summary: string;
   items: SettingsNavItem[];
 }
 
 export const settingsNavSections: SettingsNavSection[] = [
   {
-    title: "Administratsiya",
+    title: msg("Markaz"),
+    icon: Landmark,
+    summary: msg("Kompaniya, filiallar, xonalar va bayramlar"),
     items: [
+      // Shown to everyone who sees the reference pages; the form inside
+      // edits only for a holder of `settings.company`.
+      {
+        title: msg("Kompaniya ma'lumotlari"),
+        url: "/settings/general",
+        icon: Building,
+        description: msg("Kompaniya nomi, telefon va asosiy ma'lumotlar"),
+        keywords: ["nom", "telefon", "umumiy", "markaz"],
+        permission: "settings.reference",
+      },
+      {
+        title: msg("Filiallar"),
+        url: "/settings/branches",
+        icon: Building2,
+        description: msg("Filiallarni boshqarish va yangi filial qo'shish"),
+        keywords: ["filial", "yangi filial", "manzil"],
+        permission: "settings.branches",
+      },
       // Kurslar, Xonalar, Dam olish kunlari: the reads are open to all staff,
       // but these pages exist to edit — a cashier on them saw add/edit/delete
       // buttons that all answered 403. `settings.reference` is the capability
       // the writes check.
       {
-        title: "Kurslar",
-        url: "/settings/courses",
-        icon: BookOpen,
-        description: "Kurslarni boshqarish va yangi kurs qo'shish",
-        permission: "settings.reference",
-      },
-      {
-        title: "Xonalar",
+        title: msg("Xonalar"),
         url: "/settings/rooms",
         icon: DoorOpen,
-        description: "Filiallardagi xonalarni boshqarish",
+        description: msg("Filiallardagi xonalarni boshqarish"),
+        keywords: ["xona", "sinf", "sig'im"],
         permission: "settings.reference",
       },
       {
-        title: "Dam olish kunlari",
+        title: msg("Dam olish kunlari"),
         url: "/settings/holidays",
         icon: CalendarOff,
-        description: "Rasmiy bayramlar va dam olish kunlari",
+        description: msg("Rasmiy bayramlar va dam olish kunlari"),
+        keywords: ["bayram", "dam olish", "ta'til"],
+        permission: "settings.reference",
+      },
+    ],
+  },
+  {
+    title: msg("Jamoa va ruxsatlar"),
+    icon: UsersRound,
+    summary: msg("Xodimlar va ularning imkoniyatlari"),
+    items: [
+      {
+        title: msg("Xodimlar"),
+        url: "/settings/employees",
+        icon: Users,
+        description: msg("Xodimlarni boshqarish va rollarni belgilash"),
+        keywords: ["xodim", "ustoz", "administrator", "kassir", "rol", "parol"],
+        permission: "employees.view",
+      },
+      {
+        title: msg("Ruxsatlar"),
+        url: "/settings/permissions",
+        icon: ShieldCheck,
+        description: msg("Har bir rol uchun imkoniyatlarni yoqish va o'chirish"),
+        keywords: ["huquq", "rol", "imkoniyat"],
+        ceoOnly: true,
+      },
+    ],
+  },
+  {
+    title: msg("O'quv jarayoni"),
+    icon: GraduationCap,
+    summary: msg("Kurslar, sabablar va o'quvchiga qo'yiladigan talablar"),
+    items: [
+      {
+        title: msg("Kurslar"),
+        url: "/settings/courses",
+        icon: BookOpen,
+        description: msg("Kurslarni boshqarish va yangi kurs qo'shish"),
+        keywords: ["kurs", "narx", "daraja"],
         permission: "settings.reference",
       },
       {
@@ -70,89 +162,136 @@ export const settingsNavSections: SettingsNavSection[] = [
         // group-teacher-change reason endpoints check `settings.reference`;
         // the gate matches them exactly — a link that ends in a 403 is worse
         // than no link.
-        title: "Sabablar",
+        title: msg("Sabablar"),
         url: "/settings/reasons",
         icon: ListChecks,
-        description: "Guruhdan chiqarish, o'tkazish va ustoz almashish sabablari",
+        description: msg("Guruhdan chiqarish, o'tkazish va ustoz almashish sabablari"),
+        keywords: ["sabab", "chiqarish", "o'tkazish"],
         permission: "settings.reference",
       },
       {
-        // The CEO and a Branch Director read it; only the CEO writes — the
-        // setting belongs to the whole company.
-        title: "Avtomatik pauza",
-        url: "/settings/absence-pause",
-        icon: PauseCircle,
-        description: "Ketma-ket dars qoldirgan o'quvchini pauzaga o'tkazish",
-        permission: "settings.absence-pause",
-      },
-      {
-        title: "Arxiv",
-        url: "/settings/archive",
-        icon: Archive,
-        description: "O'chirilgan ma'lumotlar",
-        permission: "settings.archive",
-      },
-      {
-        title: "DaF normasi",
-        url: "/settings/daf",
-        icon: Smartphone,
-        description: "O'quvchi ilovada qancha ishlashi kerakligi",
-        permission: "settings.company",
+        // Three small settings on one page. Avtomatik pauza: the CEO and a
+        // Branch Director read it, only the CEO writes. DaF normasi:
+        // `settings.company`. Qatnashganlik hujjati: every route is
+        // `@CeoOnly()` (spec 2026-10-17).
+        title: msg("O'quv qoidalari"),
+        url: "/settings/rules",
+        icon: Scale,
+        description: msg("Avtomatik pauza, DaF normasi va qatnashganlik hujjati chegaralari"),
+        keywords: [
+          "pauza",
+          "davomat",
+          "dars qoldirish",
+          "ogohlantirish",
+          "ilova",
+          "norma",
+          "daf",
+          "vaqt",
+          "savol",
+          "teilnahmebestätigung",
+          "sertifikat",
+          "hujjat",
+          "chegara",
+        ],
+        blocks: [
+          { id: "pauza", permission: "settings.absence-pause" },
+          { id: "daf", permission: "settings.company" },
+          { id: "hujjat", ceoOnly: true },
+        ],
       },
     ],
   },
   {
-    title: "CEO",
+    title: msg("To'lov va lidlar"),
+    icon: Banknote,
+    summary: msg("Pul qoidalari, lidlar va KPI"),
     items: [
-      {
-        // Shown to everyone who sees the reference pages; the form inside
-        // edits only for a holder of `settings.company`.
-        title: "Kompaniya ma'lumotlari",
-        url: "/settings/general",
-        icon: Building,
-        description: "Kompaniya nomi, telefon va asosiy ma'lumotlar",
-        permission: "settings.reference",
-      },
-      {
-        title: "Xodimlar",
-        url: "/settings/employees",
-        icon: Users,
-        description: "Xodimlarni boshqarish va rollarni belgilash",
-        permission: "employees.view",
-      },
-      {
-        title: "Filiallar",
-        url: "/settings/branches",
-        icon: Building2,
-        description: "Filiallarni boshqarish va yangi filial qo'shish",
-        permission: "settings.branches",
-      },
-      {
-        title: "Telegram guruhlar",
-        url: "/settings/telegram-groups",
-        icon: Send,
-        description: "Botga ulangan Telegram guruhlar",
-        permission: "settings.telegram-groups",
-      },
       {
         // GET/PATCH /settings/payment check `settings.payment`; the gate
         // matches it exactly — a link that ends in a 403 is worse than no link.
-        title: "To'lov",
+        title: msg("To'lov"),
         url: "/settings/payment",
         icon: Wallet,
-        description: "Kurs to'lov modeli va hisob-kitob qoidalari",
+        description: msg("Kurs to'lov modeli va hisob-kitob qoidalari"),
+        keywords: ["pul", "model", "oylik to'lov", "qarz", "hisob-kitob"],
         permission: "settings.payment",
+      },
+      {
+        // Both writes are `@CeoOnly()` (ADR-0093, ADR-0096): identity, not a
+        // capability.
+        title: msg("Lidlar va KPI"),
+        url: "/settings/leads-kpi",
+        icon: UserCheck,
+        description: msg("Lidni band qilish muddatlari va KPI narxlari"),
+        keywords: ["lid", "band qilish", "muddat", "mas'ul", "kpi", "mukofot", "bonus", "narx"],
+        blocks: [
+          { id: "lidlar", ceoOnly: true },
+          { id: "kpi", ceoOnly: true },
+        ],
+      },
+    ],
+  },
+  {
+    title: msg("Telegram va arxiv"),
+    icon: MessagesSquare,
+    summary: msg("Bot ulanishlari, hisobotlar va o'chirilgan ma'lumotlar"),
+    items: [
+      {
+        // Guruhlar: `settings.telegram-groups`. Hisobot: every route is
+        // `@CeoOnly()` (ADR-0095).
+        title: msg("Telegram"),
+        url: "/settings/telegram",
+        icon: Send,
+        description: msg("Botga ulangan guruhlar va kunlik hisobot qabul qiluvchilar"),
+        keywords: ["telegram", "bot", "guruh", "kunlik hisobot", "chat", "qabul qiluvchi"],
+        blocks: [
+          { id: "guruhlar", permission: "settings.telegram-groups" },
+          { id: "hisobot", ceoOnly: true },
+        ],
+      },
+      {
+        title: msg("Arxiv"),
+        url: "/settings/archive",
+        icon: Archive,
+        description: msg("O'chirilgan ma'lumotlar"),
+        keywords: ["o'chirilgan", "tiklash", "arxiv"],
+        permission: "settings.archive",
       },
     ],
   },
 ];
 
+function gateOpens(
+  gate: { permission?: PermissionKey; ceoOnly?: true },
+  can: Can,
+  isCeo: boolean,
+): boolean {
+  if (gate.ceoOnly) return isCeo;
+  return !gate.permission || can(gate.permission);
+}
+
+/** The entry that owns this exact page url. */
+export function findSettingsItem(url: string): SettingsNavItem | undefined {
+  return settingsNavSections.flatMap((s) => s.items).find((item) => item.url === url);
+}
+
+/** The parts of a merged page this user may see, in page order. */
+export function getVisibleBlocks(item: SettingsNavItem, can: Can, isCeo = false): string[] {
+  return (item.blocks ?? []).filter((b) => gateOpens(b, can, isCeo)).map((b) => b.id);
+}
+
+/** One rule for the list and the URL: a CEO-only item for the CEO, else its capability. */
+function isVisible(item: SettingsNavItem, can: Can, isCeo: boolean): boolean {
+  if (item.blocks) return getVisibleBlocks(item, can, isCeo).length > 0;
+  return gateOpens(item, can, isCeo);
+}
+
 /** Sections of /settings this user sees; a section with nothing visible is dropped. */
-export function getVisibleSettingsSections(can: Can): SettingsNavSection[] {
+export function getVisibleSettingsSections(can: Can, isCeo = false): SettingsNavSection[] {
   return settingsNavSections
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => !item.permission || can(item.permission)),
+      items: section.items.filter((item) => isVisible(item, can, isCeo)),
     }))
     .filter((section) => section.items.length > 0);
 }
@@ -161,11 +300,11 @@ export function getVisibleSettingsSections(can: Can): SettingsNavSection[] {
  * May the user open a /settings page or a page under it: the entry's gate.
  * SettingsLayoutShell sends anyone else back. A path no entry owns is open.
  */
-export function canOpenSettingsPath(pathname: string, can: Can): boolean {
+export function canOpenSettingsPath(pathname: string, can: Can, isCeo = false): boolean {
   const item = settingsNavSections
     .flatMap((section) => section.items)
     .find((entry) => pathname === entry.url || pathname.startsWith(`${entry.url}/`));
-  return !item?.permission || can(item.permission);
+  return !item || isVisible(item, can, isCeo);
 }
 
 /** May the user open an employee's page, /settings/employees/<id>. */
@@ -178,7 +317,7 @@ export const SETTINGS_PERMISSIONS: PermissionKey[] = [
   ...new Set(
     settingsNavSections
       .flatMap((s) => s.items)
-      .map((i) => i.permission)
+      .flatMap((i) => [i.permission, ...(i.blocks ?? []).map((b) => b.permission)])
       .filter((p): p is PermissionKey => p !== undefined),
   ),
 ];

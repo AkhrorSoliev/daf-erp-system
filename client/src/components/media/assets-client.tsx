@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,6 +35,7 @@ import {
 } from "./media-types";
 
 function PersonaCard({ p }: { p: MediaPersona }) {
+  const t = useT();
   const band = yoshGuruhi(p.alter);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -96,11 +98,11 @@ function PersonaCard({ p }: { p: MediaPersona }) {
         </div>
         <div className="flex flex-wrap gap-1">
           <Badge variant="secondary" className="text-[10px]">
-            {band.label} · {p.alter}
+            {t(band.label)} · {p.alter}
           </Badge>
           {!p.stimme.dialogfaehig && (
             <Badge variant="outline" className="text-[10px]">
-              faqat yakka
+              {t("faqat yakka")}
             </Badge>
           )}
         </div>
@@ -112,7 +114,7 @@ function PersonaCard({ p }: { p: MediaPersona }) {
             type="button"
             onClick={toggle}
             disabled={!p.probeUrl}
-            aria-label={`${p.vorname} ovozini tinglash`}
+            aria-label={t("{name} ovozini tinglash", { name: p.vorname })}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition hover:opacity-90 disabled:opacity-40"
           >
             {playing ? (
@@ -142,9 +144,10 @@ function PersonaCard({ p }: { p: MediaPersona }) {
  * turadi va u yerdan bitta havola bilan ochiladi.
  */
 export function AssetsClient() {
+  const t = useT();
   const [data, setData] = useState<MediaOverview | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -154,7 +157,7 @@ export function AssetsClient() {
         if (!cancelled) setData(data);
       })
       .catch(() => {
-        if (!cancelled) setError("Ma'lumot olinmadi");
+        if (!cancelled) setError(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -197,15 +200,14 @@ export function AssetsClient() {
         <Button variant="ghost" size="sm" asChild className="-ml-2 mb-2">
           <Link href="/media">
             <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-            Media
+            {t("Media")}
           </Link>
         </Button>
         <h1 className="text-2xl font-semibold tracking-tight">
-          Media fayllari
+          {t("Media fayllari")}
         </h1>
         <p className="text-sm text-muted-foreground">
-          Eski quvurdan qolgan obrazlar, ovozlar va rasmlar — kurs kontenti
-          emas.
+          {t("Eski quvurdan qolgan obrazlar, ovozlar va rasmlar — kurs kontenti emas.")}
         </p>
       </div>
 
@@ -220,7 +222,7 @@ export function AssetsClient() {
       {error && (
         <Card>
           <CardContent className="p-4 text-sm text-muted-foreground">
-            {error}
+            {t("Ma'lumot olinmadi")}
           </CardContent>
         </Card>
       )}
@@ -228,8 +230,7 @@ export function AssetsClient() {
       {data && !data.vorhanden && (
         <Card>
           <CardContent className="p-4 text-sm text-muted-foreground">
-            Kontent fayllari topilmadi. Server <code>content/daf</code> papkasini
-            ko'rmayapti.
+            {t("Kontent fayllari topilmadi. Server {path} papkasini ko'rmayapti.", { path: "content/daf" })}
           </CardContent>
         </Card>
       )}
@@ -237,21 +238,21 @@ export function AssetsClient() {
       {data?.vorhanden && (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard icon={Users} value={String(data.personas.length)} label="obraz" />
+            <StatCard icon={Users} value={String(data.personas.length)} label={t("obraz")} />
             <StatCard
               icon={AudioLines}
               value={String(audio?.anzahl ?? 0)}
-              label={`ovoz · ${hajm(audio?.bytes ?? 0)}`}
+              label={t("ovoz · {size}", { size: hajm(audio?.bytes ?? 0) })}
             />
             <StatCard
               icon={ImageIcon}
               value={String(image?.anzahl ?? 0)}
-              label={`rasm · ${hajm(image?.bytes ?? 0)}`}
+              label={t("rasm · {size}", { size: hajm(image?.bytes ?? 0) })}
             />
             <StatCard
               icon={Sparkles}
               value={String(data.personas.filter((p) => p.stimme.dialogfaehig).length)}
-              label="suhbatga yaroqli"
+              label={t("suhbatga yaroqli")}
             />
           </div>
 
@@ -259,7 +260,7 @@ export function AssetsClient() {
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Qidirish — sarlavha yoki kalit"
+              placeholder={t("Qidirish — sarlavha yoki kalit")}
               className="h-9 max-w-xs"
             />
             <div className="flex gap-1">
@@ -274,7 +275,7 @@ export function AssetsClient() {
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  {n === "hammasi" ? "Hamma daraja" : n}
+                  {n === "hammasi" ? t("Hamma daraja") : n}
                 </button>
               ))}
             </div>
@@ -285,14 +286,17 @@ export function AssetsClient() {
 
           <Tabs defaultValue="persona">
             <TabsList>
-              {bereiche.map((b) => (
+              {bereiche.map((b) => {
+                const label = BEREICH_LABEL[b.bereich];
+                return (
                 <TabsTrigger key={b.bereich} value={b.bereich}>
-                  {BEREICH_LABEL[b.bereich] ?? b.bereich}
+                  {label ? t(label) : b.bereich}
                   <span className="ml-1.5 text-[10px] tabular-nums opacity-60">
                     {b.anzahl}
                   </span>
                 </TabsTrigger>
-              ))}
+                );
+              })}
             </TabsList>
 
             <TabsContent value="persona" className="mt-4 space-y-4">

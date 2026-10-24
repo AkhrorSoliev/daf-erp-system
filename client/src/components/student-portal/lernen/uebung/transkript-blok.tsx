@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useT } from "@/i18n/use-t";
 import { SuhbatRasmi } from "./rasm-tanlash";
 
 /**
@@ -33,6 +34,7 @@ export function TranskriptBlok({
   /** The dialog's title: the picture's `alt`. */
   titel?: string;
 }) {
+  const t = useT();
   const ref = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
@@ -55,9 +57,9 @@ export function TranskriptBlok({
       ref={ref}
       className="scroll-mb-48 space-y-2 rounded-2xl border border-line bg-surface p-4"
     >
-      {bild ? <SuhbatRasmi url={bild} alt={titel || "Suhbat rasmi"} /> : null}
+      {bild ? <SuhbatRasmi url={bild} alt={titel || t("Suhbat rasmi")} /> : null}
       <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">
-        {suhbatMi ? "Suhbat matni" : "Matn"}
+        {suhbatMi ? t("Suhbat matni") : t("Matn")}
       </p>
       {sahna ? <p className="text-sm italic text-ink-500">{sahna}</p> : null}
       {zeilen.map((z, i) => (

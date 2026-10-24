@@ -22,11 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useLeadsBoard } from "@/hooks/use-leads-board";
+import { leadColumnName, useLeadsBoard } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
+import { useT } from "@/i18n/context";
 
 /** Keyboard-friendly fallback for moving a lead without drag-and-drop. */
 export function MoveLeadDialog() {
+  const t = useT();
   const moveTarget = useLeadsUi((s) => s.moveLead);
   const closeMoveLead = useLeadsUi((s) => s.closeMoveLead);
   const board = useLeadsBoard((s) => s.board);
@@ -47,7 +49,7 @@ export function MoveLeadDialog() {
   async function handleConfirm() {
     if (!moveTarget) return;
     if (!target) {
-      toast.error("Bo'limni tanlang");
+      toast.error(t("Bo'limni tanlang"));
       return;
     }
     setSubmitting(true);
@@ -63,6 +65,8 @@ export function MoveLeadDialog() {
       sections: col.sections.filter((s) => s.id !== moveTarget?.sectionId),
     }))
     .filter((col) => col.sections.length > 0);
+  // On "Barcha filiallar" column names repeat across branches — prefix them.
+  const showBranch = new Set(board.map((c) => c.branchId)).size > 1;
 
   return (
     <Dialog
@@ -71,22 +75,26 @@ export function MoveLeadDialog() {
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Lidni ko&apos;chirish</DialogTitle>
+          <DialogTitle>{t("Lidni ko'chirish")}</DialogTitle>
           <DialogDescription>
-            Lid ko&apos;chiriladigan bo&apos;limni tanlang
+            {t("Lid ko'chiriladigan bo'limni tanlang")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-1.5">
-          <Label>Bo&apos;lim</Label>
+          <Label>{t("Bo'lim")}</Label>
           <Select value={target} onValueChange={setTarget}>
             <SelectTrigger>
-              <SelectValue placeholder="Bo'limni tanlang" />
+              <SelectValue placeholder={t("Bo'limni tanlang")} />
             </SelectTrigger>
             <SelectContent>
               {columns.map((col) => (
                 <SelectGroup key={col.id}>
-                  <SelectLabel>{col.name}</SelectLabel>
+                  <SelectLabel>
+                    {showBranch && col.branch
+                      ? `${col.branch.name} · ${leadColumnName(col, t)}`
+                      : leadColumnName(col, t)}
+                  </SelectLabel>
                   {col.sections.map((sec) => (
                     <SelectItem key={sec.id} value={sec.id}>
                       {sec.name}
@@ -105,11 +113,11 @@ export function MoveLeadDialog() {
             onClick={closeMoveLead}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button type="button" onClick={handleConfirm} disabled={submitting}>
             {submitting && <Loader2 className="size-4 animate-spin" />}
-            Ko&apos;chirish
+            {t("Lidni ko'chirish")}
           </Button>
         </DialogFooter>
       </DialogContent>

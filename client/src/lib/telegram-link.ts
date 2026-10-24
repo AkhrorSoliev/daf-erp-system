@@ -12,6 +12,8 @@
  * o'rniga tushunarli xabar ko'rsatishi va nusxalash/QR tugmalarini o'chirishi kerak.
  */
 
+import { msg } from "@/i18n/msg";
+
 const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT;
 
 /** Bot sozlanganmi (env o'zgaruvchisi mavjudmi). */
@@ -21,12 +23,14 @@ export const isTelegramBotConfigured = Boolean(BOT_USERNAME);
  * Xodimga ko'rsatiladigan xabar. Ataylab texnik atamasiz — env o'zgaruvchisi
  * nomi foydalanuvchiga hech narsa anglatmaydi, u faqat konsolga yoziladi.
  */
-export const TELEGRAM_BOT_NOT_CONFIGURED =
-  "Telegram bot hozircha sozlanmagan — havola yaratib bo'lmaydi. Iltimos, administratorga murojaat qiling.";
+export const TELEGRAM_BOT_NOT_CONFIGURED = msg(
+  "Telegram bot hozircha sozlanmagan — havola yaratib bo'lmaydi. Iltimos, administratorga murojaat qiling.",
+);
 
 /** Shown in place of a registration link or QR for a branch the bot refuses. */
-export const BRANCH_CLOSED_TO_REGISTRATION =
-  "Filial faol emas — bu filialga Telegram orqali ro'yxatdan o'tib bo'lmaydi.";
+export const BRANCH_CLOSED_TO_REGISTRATION = msg(
+  "Filial faol emas — bu filialga Telegram orqali ro'yxatdan o'tib bo'lmaydi.",
+);
 
 /**
  * Whether the bot refuses student registration for a branch with this status.

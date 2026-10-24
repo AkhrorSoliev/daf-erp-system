@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
+  GroupPauseSource,
   GroupStatus,
   EnrollmentStatus,
   RoomStatus,
@@ -190,6 +191,12 @@ export class StatusCascadeService {
     const filter = liveEnrollmentsOfGroup(params.groupId);
     const reason = groupDeletedReason(params.note);
 
+    // A deleted group has no pause to wait for (ADR-0119).
+    await tx.groupPause.updateMany({
+      where: { groupId: params.groupId, endedAt: null },
+      data: { endedAt: params.at, endedById: params.userId },
+    });
+
     await this.recordRemovals(filter, reason, params.userId, tx);
 
     const { count } = await this.cascadeEnrollmentStatus(
@@ -214,10 +221,12 @@ export class StatusCascadeService {
    *
    * CANCELLED drops every ACTIVE and FROZEN enrolment. COMPLETED completes
    * the ACTIVE ones, drops the FROZEN ones (ADR-0036) and graduates the
-   * students it leaves without an ACTIVE enrolment. Any other status closes
-   * nothing. Money steps run on `tx`, so one failed refund rolls the whole
-   * change back. Status-change events land in `deferredEvents`, for the
-   * caller to emit after the commit.
+   * students it leaves without an ACTIVE enrolment. ACTIVE closes nothing but
+   * charges the month to the enrolments the group took while it was not open
+   * (`chargeActivatedGroup`); any other status does nothing. Money steps run
+   * on `tx`, so one failed refund or charge rolls the whole change back.
+   * Status-change events land in `deferredEvents`, for the caller to emit
+   * after the commit.
    */
   async cascadeGroupStatusChange(
     tx: Prisma.TransactionClient,
@@ -230,6 +239,13 @@ export class StatusCascadeService {
     },
   ): Promise<CascadeResult[]> {
     const { groupId, status, userId, at, deferredEvents } = params;
+    if (status === GroupStatus.ACTIVE) {
+      await this.monthlyChargeService.chargeActivatedGroup(tx, {
+        groupId,
+        performedById: userId,
+      });
+      return [];
+    }
     if (status !== GroupStatus.CANCELLED && status !== GroupStatus.COMPLETED) {
       return [];
     }
@@ -696,6 +712,47 @@ export class StatusCascadeService {
    * Per-Group statusChange tarixini yozadi (Branch/Course cascade'larida).
    * updateMany dan OLDIN chaqirilishi kerak — eski statuslar yo'qolmasligi uchun.
    */
+  /**
+   * A branch going INACTIVE pauses its ACTIVE groups without an admin naming a
+   * restart day, so each gets an open pause of source BRANCH with the day
+   * unknown (ADR-0119). The nightly job then refunds their lessons like any
+   * other pause. Call before the groups' status is written.
+   */
+  private async openBranchPauses(
+    filter: Prisma.GroupWhereInput,
+    at: Date,
+    userId: number | undefined,
+    reason: string,
+  ): Promise<void> {
+    const groups = await this.prisma.group.findMany({
+      where: filter,
+      select: { id: true, companyId: true },
+    });
+    if (groups.length === 0) return;
+    await this.prisma.groupPause.createMany({
+      data: groups.map((g) => ({
+        groupId: g.id,
+        companyId: g.companyId,
+        startedAt: at,
+        reason,
+        source: GroupPauseSource.BRANCH,
+        startedById: userId ?? null,
+      })),
+    });
+  }
+
+  /** Groups a branch or course closing cancels have no pause left to wait for. */
+  private async closeOpenPauses(
+    filter: Prisma.GroupWhereInput,
+    at: Date,
+    userId: number | undefined,
+  ): Promise<void> {
+    await this.prisma.groupPause.updateMany({
+      where: { endedAt: null, group: filter },
+      data: { endedAt: at, endedById: userId ?? null },
+    });
+  }
+
   private async recordGroupBatchStatusChange(
     filter: Prisma.GroupWhereInput,
     toStatus: string,
@@ -770,6 +827,7 @@ export class StatusCascadeService {
       ) {
         // Guruhlar → CANCELLED
         const groupFilter = groupsCancelledBy('Branch', entityId, newStatus)!;
+        await this.closeOpenPauses(groupFilter, now, userId);
         await this.recordGroupBatchStatusChange(
           groupFilter,
           GroupStatus.CANCELLED,
@@ -844,6 +902,7 @@ export class StatusCascadeService {
           deletedAt: null,
           statusEnum: GroupStatus.ACTIVE,
         };
+        await this.openBranchPauses(groupFilter, now, userId, reason);
         await this.recordGroupBatchStatusChange(
           groupFilter,
           GroupStatus.PAUSED,
@@ -866,6 +925,7 @@ export class StatusCascadeService {
       if (newStatus === CourseStatus.ARCHIVED) {
         // Guruhlar → CANCELLED
         const groupFilter = groupsCancelledBy('Course', entityId, newStatus)!;
+        await this.closeOpenPauses(groupFilter, now, userId);
         await this.recordGroupBatchStatusChange(
           groupFilter,
           GroupStatus.CANCELLED,

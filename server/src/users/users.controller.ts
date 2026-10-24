@@ -8,6 +8,7 @@ import {
   Param,
   Query,
   ParseIntPipe,
+  ParseUUIDPipe,
   UseGuards,
   Logger,
   HttpCode,
@@ -18,10 +19,13 @@ import { UserQueryDto } from './dto/user-query.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdateUiSkinDto } from './dto/update-ui-skin.dto';
+import { UpdateUiLocaleDto } from './dto/update-ui-locale.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ChangePhoneDto } from './dto/change-phone.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { BranchScope } from '../common/decorators';
+import { PermissionsService } from '../common/permissions/permissions.service';
 import {
   AnyStaff,
   AnyUser,
@@ -36,26 +40,57 @@ export class UsersController {
   constructor(
     private usersService: UsersService,
     private authService: AuthService,
+    private permissions: PermissionsService,
   ) {}
 
   @Get()
-  @Can('employees.view', 'teachers.view', 'groups.manage')
-  findAll(
+  // `salary.pay`: the advance dialog's recipient list loads from here (ADR-0087).
+  @Can('employees.view', 'teachers.view', 'groups.manage', 'salary.pay')
+  async findAll(
     @Query() query: UserQueryDto,
+    @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
     @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.usersService.findAll(query, companyId, branchScope);
+    // The employee's salary balance goes only to a caller who may see pay.
+    return this.usersService.findAll(
+      query,
+      companyId,
+      branchScope,
+      await this.permissions.has(userId, 'salary.view'),
+    );
+  }
+
+  /**
+   * Profildagi «Faol seanslar» (ADR-0113): shu hisobning tirik qurilmalari.
+   * Id token'dan olinadi, so'rovdan emas — boshqa hisobga yetib bo'lmaydi.
+   * `:id` dan OLDIN e'lon qilingan: marshrut e'lon tartibida mos keladi va
+   * `:id` "sessions" ni ParseIntPipe bilan 400 qilib yuborardi.
+   */
+  @Get('sessions')
+  @AnyUser()
+  listSessions(
+    @CurrentUser('id') userId: number,
+    @CurrentUser('sessionVersion') sessionVersion: number,
+    @CurrentUser('sid') sid: string | undefined,
+  ) {
+    return this.authService.listSessions(userId, sessionVersion, sid);
   }
 
   @Get(':id')
   @Can('employees.view', 'teachers.view')
-  findOne(
+  async findOne(
     @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('id') userId: number,
     @CurrentUser('companyId') companyId: number,
     @BranchScope() branchScope: ReportBranchIds,
   ) {
-    return this.usersService.findById(id, companyId, branchScope);
+    return this.usersService.findById(
+      id,
+      companyId,
+      branchScope,
+      await this.permissions.has(userId, 'salary.view'),
+    );
   }
 
   // Administrators do not hold `employees.manage` (docs/role-access.md,
@@ -85,21 +120,40 @@ export class UsersController {
     return this.usersService.updateProfile(userId, dto);
   }
 
+  @Patch('ui-skin')
+  @AnyStaff()
+  updateUiSkin(
+    @CurrentUser('id') userId: number,
+    @Body() dto: UpdateUiSkinDto,
+  ) {
+    return this.usersService.updateUiSkin(userId, dto.skin);
+  }
+
+  @Patch('ui-locale')
+  @AnyStaff()
+  updateUiLocale(
+    @CurrentUser('id') userId: number,
+    @Body() dto: UpdateUiLocaleDto,
+  ) {
+    return this.usersService.updateUiLocale(userId, dto.locale);
+  }
+
   @Patch('password')
   @AnyUser()
   @UseGuards(OwnPasswordAttemptGuard)
   async changePassword(
     @CurrentUser('id') userId: number,
+    @CurrentUser('sid') sid: string | undefined,
     @Body() dto: ChangePasswordDto,
   ) {
     const { sessionVersion, ...result } =
       await this.usersService.changePassword(userId, dto);
     // The change ended every session of this account, the caller's included
     // (ADR-0030). A fresh pair, signed with the version this change produced,
-    // keeps THIS device signed in.
+    // keeps THIS device signed in (and on its own row in the list, ADR-0113).
     return {
       ...result,
-      ...(await this.authService.issueSession(userId, sessionVersion)),
+      ...(await this.authService.issueSession(userId, sessionVersion, sid)),
     };
   }
 
@@ -113,8 +167,19 @@ export class UsersController {
   logoutOthers(
     @CurrentUser('id') userId: number,
     @CurrentUser('sessionVersion') sessionVersion: number,
+    @CurrentUser('sid') sid: string | undefined,
   ) {
-    return this.authService.logoutOtherSessions(userId, sessionVersion);
+    return this.authService.logoutOtherSessions(userId, sessionVersion, sid);
+  }
+
+  @Delete('sessions/:sid')
+  @AnyUser()
+  revokeSession(
+    @CurrentUser('id') userId: number,
+    @CurrentUser('sid') callerSid: string | undefined,
+    @Param('sid', ParseUUIDPipe) sid: string,
+  ) {
+    return this.authService.revokeSession(userId, sid, callerSid);
   }
 
   // Declared before `@Patch(':id')`: routes match in declaration order, and
@@ -126,8 +191,8 @@ export class UsersController {
     return this.usersService.changeOwnPhone(userId, dto);
   }
 
-  // Own profile, password and phone go through `profile` / `password` /
-  // `phone` above.
+  // Own profile, password, phone, design skin and interface language go
+  // through `profile` / `password` / `phone` / `ui-skin` / `ui-locale` above.
   @Patch(':id')
   @Can('employees.manage')
   update(

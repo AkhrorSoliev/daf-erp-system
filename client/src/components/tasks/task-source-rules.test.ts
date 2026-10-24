@@ -70,7 +70,7 @@ describe("sourceFacts — the card's rows on the Tashkent clock", () => {
       { label: "Lid", value: "Karimova Dilnoza" },
       { label: "Telefon", value: "+998 93 111 22 33" },
       { label: "Manba", value: "Instagram" },
-      { label: "Kelgan", value: "08.10, 10:15" },
+      { label: "Kelgan sana", value: "08.10, 10:15" },
     ]);
   });
 });

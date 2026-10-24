@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/tooltip";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 import { smsErrorText } from "./sms-error-text";
 
 // Escape EVERYTHING first, then re-allow only a tiny fixed set of
@@ -66,6 +67,13 @@ export function SmsTab({
   telegramChatId,
   telegramDisconnectedAt,
 }: SmsTabProps) {
+  const t = useT();
+  // The fetch below reads `t` only to say an error, so a language switch must
+  // not re-run it: it goes through a ref.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  });
   const [messages, setMessages] = useState<SmsMessageData[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -83,15 +91,17 @@ export function SmsTab({
         const res = await api.get(`/students/${studentId}/sms`, {
           params: { page: pageNum, pageSize },
         });
-        const { data, total: t } = res.data;
-        setTotal(t);
+        const { data, total: count } = res.data;
+        setTotal(count);
         if (prepend) {
           setMessages((prev) => [...prev, ...data]);
         } else {
           setMessages(data);
         }
       } catch {
-        toast.error("SMS tarixini yuklashda xatolik");
+        // `t` here is the ref's current one (the i18n scan reads a bare `t(…)`).
+        const t = tRef.current;
+        toast.error(t("SMS tarixini yuklashda xatolik"));
       }
     },
     [studentId],
@@ -153,18 +163,19 @@ export function SmsTab({
       setMessages((prev) =>
         prev.map((m) => (m.id === tempId ? { ...res.data, _pending: false } : m)),
       );
-      setTotal((t) => t + 1);
+      setTotal((n) => n + 1);
       if (res.data.status === "SENT") {
-        toast.success("Xabar yuborildi");
+        toast.success(t("Xabar yuborildi"));
       } else {
-        toast.error(smsErrorText(res.data.errorMessage));
+        toast.error(smsErrorText(res.data.errorMessage, t));
       }
     } catch (err: unknown) {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      const msg =
-        (err as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message || "Xabar yuborishda xatolik";
-      toast.error(msg);
+      // The server's own message is shown as it comes; only the fallback is ours.
+      const serverMessage = (
+        err as { response?: { data?: { message?: string } } }
+      )?.response?.data?.message;
+      toast.error(serverMessage || t("Xabar yuborishda xatolik"));
     } finally {
       setSending(false);
     }
@@ -184,9 +195,9 @@ export function SmsTab({
           <Info className="h-6 w-6 text-muted-foreground" />
         </div>
         <p className="text-muted-foreground text-sm max-w-sm">
-          O&apos;quvchining Telegram akkaunti bog&apos;lanmagan. Telegram bot
-          orqali ro&apos;yxatdan o&apos;tgandan so&apos;ng xabar yuborish
-          mumkin.
+          {t(
+            "O'quvchining Telegram akkaunti bog'lanmagan. Telegram bot orqali ro'yxatdan o'tgandan so'ng xabar yuborish mumkin.",
+          )}
         </p>
       </div>
     );
@@ -219,10 +230,10 @@ export function SmsTab({
         <div className="flex gap-2 rounded-t-lg border-b bg-red-50 px-4 py-2.5 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-400">
           <Unplug className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
-            {format(new Date(telegramDisconnectedAt), "dd.MM.yyyy")} dan beri
-            bot xabarlari yetib bormayapti: o&apos;quvchi botni bloklagan yoki
-            Telegram hisobini o&apos;chirgan. Botga qaytsa, aloqa o&apos;zi
-            tiklanadi.
+            {t(
+              "{date} dan beri bot xabarlari yetib bormayapti: o'quvchi botni bloklagan yoki Telegram hisobini o'chirgan. Botga qaytsa, aloqa o'zi tiklanadi.",
+              { date: format(new Date(telegramDisconnectedAt), "dd.MM.yyyy") },
+            )}
           </p>
         </div>
       )}
@@ -244,7 +255,7 @@ export function SmsTab({
               ) : (
                 <ChevronUp className="h-3 w-3 mr-1.5" />
               )}
-              Eski xabarlarni yuklash
+              {t("Eski xabarlarni yuklash")}
             </Button>
           </div>
         )}
@@ -255,10 +266,10 @@ export function SmsTab({
               <MessageSquare className="h-7 w-7 text-muted-foreground" />
             </div>
             <p className="text-muted-foreground text-sm">
-              SMS tarixi mavjud emas
+              {t("SMS tarixi mavjud emas")}
             </p>
             <p className="text-muted-foreground text-xs mt-1">
-              Xabar yuborish uchun pastdagi formadan foydalaning
+              {t("Xabar yuborish uchun pastdagi formadan foydalaning")}
             </p>
           </div>
         )}
@@ -292,7 +303,7 @@ export function SmsTab({
       {/* Send area */}
       <div className="border-t bg-muted/30 p-3 flex gap-2 items-end rounded-b-lg">
         <Textarea
-          placeholder="Xabar yozing..."
+          placeholder={t("Xabar yozing...")}
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -314,7 +325,7 @@ export function SmsTab({
               )}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Yuborish (Ctrl+Enter)</TooltipContent>
+          <TooltipContent>{t("Yuborish (Ctrl+Enter)")}</TooltipContent>
         </Tooltip>
       </div>
     </div>
@@ -322,8 +333,10 @@ export function SmsTab({
 }
 
 function MessageBubble({ message }: { message: SmsMessageData }) {
+  const t = useT();
   const isSystem = message.type === "AUTO";
-  const senderName = message.senderUser?.name ?? "Tizim";
+  // The sender's name is data; only the fallback «Tizim xabari» is our text.
+  const senderName = message.senderUser?.name ?? t("Tizim xabari");
   const fullTime = format(new Date(message.createdAt), "HH:mm");
 
   return (
@@ -345,7 +358,7 @@ function MessageBubble({ message }: { message: SmsMessageData }) {
           <span className="text-[13px] font-semibold">{senderName}</span>
           {isSystem && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium dark:bg-blue-950 dark:text-blue-400">
-              Avtomatik
+              {t("Avtomatik")}
             </span>
           )}
           <Tooltip>

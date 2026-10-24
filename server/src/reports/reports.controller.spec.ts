@@ -13,9 +13,6 @@ import { ReportsProfitCompositionService } from './reports-profit-composition.se
 import { PrismaService } from '../prisma/prisma.service';
 import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 import type { PermissionKey } from '../common/permissions/permission-catalog';
-import { DepartedStudentsSummaryQueryDto } from './dto/departed-students-summary-query.dto';
-import { DepartedStudentsListQueryDto } from './dto/departed-students-list-query.dto';
-import { PaymentReportsQueryDto } from './dto/payment-reports-query.dto';
 
 describe('ReportsController', () => {
   let controller: ReportsController;
@@ -23,8 +20,6 @@ describe('ReportsController', () => {
   const mockService = {
     getKpis: jest.fn().mockResolvedValue({}),
     getRoomUtilization: jest.fn().mockResolvedValue({}),
-    getTeacherPerformance: jest.fn().mockResolvedValue({}),
-    getAttendanceAnalytics: jest.fn().mockResolvedValue({}),
     getGroupAnalytics: jest.fn().mockResolvedValue({}),
     getFinancialTrendCanonical: jest.fn().mockResolvedValue([]),
     getIncomeMonthAttribution: jest.fn().mockResolvedValue({}),
@@ -52,18 +47,8 @@ describe('ReportsController', () => {
     // «Oyning o'z foydasi» left the overview; kept so the payload test can show
     // the controller no longer asks for it.
     getOwnMonthProfit: jest.fn().mockResolvedValue({ ownMonthProfit: null }),
-    getPaymentReports: jest.fn().mockResolvedValue({}),
-    getTeacherPaymentReports: jest.fn().mockResolvedValue({}),
-    getTeacherGroupsReport: jest.fn().mockResolvedValue({}),
-    getStudentPaymentsReport: jest.fn().mockResolvedValue({}),
     getStudentPaymentsFilterOptions: jest.fn().mockResolvedValue({}),
-    getDepartedStudentsSummary: jest.fn().mockResolvedValue({}),
-    getDepartedStudentsDynamics: jest.fn().mockResolvedValue({}),
-    getDepartedStudentsReasons: jest.fn().mockResolvedValue({}),
-    getDepartedStudentsGroupBy: jest.fn().mockResolvedValue({}),
-    getDepartedStudentsList: jest.fn().mockResolvedValue({}),
-    getDepartedStudentsByReason: jest.fn().mockResolvedValue({}),
-    getDepartedStudentsByStatus: jest.fn().mockResolvedValue({}),
+    getDepartedAfterTeacherChangeList: jest.fn().mockResolvedValue([]),
     getDebtWriteOffsSummary: jest.fn().mockResolvedValue({
       totalAmount: 0,
       count: 0,
@@ -157,22 +142,6 @@ describe('ReportsController', () => {
         'getExpectationHistory',
         'getMonthlyDebtRecovery',
         'exportFinancialExcel',
-        // Only the «O'quvchi to'lovi» report calls it, and its menu entry is
-        // CEO/BD only: the Administrator and the Cashier left (Appendix C).
-        'getStudentPaymentsReport',
-      ],
-    },
-    {
-      // /reports/payment-reports page: open to the Administrator too (CEO,
-      // 05.10.2026). The branch scope still confines them to their own
-      // branch(es).
-      capability: 'payment reports',
-      keys: ['reports.payments'],
-      roles: ['Administrator', 'Branch Director', 'CEO'],
-      handlers: [
-        'getPaymentReports',
-        'getTeacherPaymentReports',
-        'getTeacherGroupsReport',
       ],
     },
     {
@@ -184,23 +153,9 @@ describe('ReportsController', () => {
       handlers: [
         'getKpis',
         'getRoomUtilization',
-        'getCenterActivity',
-        'getTeacherPerformance',
-        'getAttendanceAnalytics',
-        'getAttendanceByGroup',
-        'getAttendanceByCourse',
         'getGroupAnalytics',
-        'getDepartedStudentsSummary',
-        'getDepartedStudentsDynamics',
-        'getDepartedStudentsByStatus',
-        'getDepartedStudentsReasons',
         'getTeacherChangeReasons',
-        'getTransferReasons',
-        'getDepartedStudentsList',
-        'getDepartedStudentsByReason',
-        'getDepartedStudentsGroupBy',
         'getTeacherChangesList',
-        'getTransferredList',
         'getDepartedAfterTeacherChangeList',
       ],
     },
@@ -522,92 +477,27 @@ describe('ReportsController', () => {
     });
   });
 
-  describe('departed students — branch scope', () => {
-    const september = {
-      startDate: '2026-09-01',
-      endDate: '2026-09-30',
-    } as DepartedStudentsSummaryQueryDto;
-
-    it('hands the summary the branch list instead of narrowing it to one branch', async () => {
-      await controller.getDepartedStudentsSummary(september, 1001, [3, 7]);
-      expect(mockService.getDepartedStudentsSummary).toHaveBeenLastCalledWith(
-        1001,
-        {
-          scope: [3, 7],
-          startDate: '2026-09-01',
-          endDate: '2026-09-30',
-        },
-      );
-    });
-
-    it('hands the dynamics chart the date range', async () => {
-      await controller.getDepartedStudentsDynamics(
-        { startDate: '2026-07-01', endDate: '2026-09-30' },
-        1001,
-        null,
-      );
-      expect(mockService.getDepartedStudentsDynamics).toHaveBeenLastCalledWith(
-        1001,
-        {
-          scope: null,
-          startDate: '2026-07-01',
-          endDate: '2026-09-30',
-        },
-      );
-    });
-
-    it('refuses a caller whose scope resolved to no branch', () => {
-      expect(() =>
-        controller.getDepartedStudentsSummary(september, 1001, []),
-      ).toThrow(ForbiddenException);
-    });
-
-    it('hands the list the branch list and its own filters', async () => {
-      await controller.getDepartedStudentsList(
-        {
-          status: 'FROZEN',
-          debtorsOnly: true,
-          page: 2,
-          pageSize: 20,
-        } as DepartedStudentsListQueryDto,
-        1001,
-        [3, 7],
-      );
-      expect(mockService.getDepartedStudentsList).toHaveBeenLastCalledWith(
-        1001,
-        {
-          scope: [3, 7],
-          status: 'FROZEN',
-          debtorsOnly: true,
-          page: 2,
-          pageSize: 20,
-        },
-      );
-    });
-  });
-
-  describe('getPaymentReports() — branch scope', () => {
-    it('hands a multi-branch director their branch list instead of a 400', async () => {
-      await controller.getPaymentReports(
+  describe('departed-after-change drill-down', () => {
+    it('passes the course and teacher filter of the page, like the overview card', async () => {
+      await controller.getDepartedAfterTeacherChangeList(
         {
           startDate: '2026-09-01',
           endDate: '2026-09-30',
-        } as PaymentReportsQueryDto,
+          courseId: ['3f2a8c1e-0000-4000-8000-000000000001'],
+          teacherIds: [5, 7],
+        },
         1001,
-        [3, 7],
+        [3],
       );
-      expect(mockService.getPaymentReports).toHaveBeenLastCalledWith(1001, {
-        branchIds: [3, 7],
+      expect(
+        mockService.getDepartedAfterTeacherChangeList,
+      ).toHaveBeenLastCalledWith(1001, {
+        branchId: 3,
+        courseId: ['3f2a8c1e-0000-4000-8000-000000000001'],
+        teacherIds: [5, 7],
         startDate: '2026-09-01',
         endDate: '2026-09-30',
-        months: undefined,
       });
-    });
-
-    it('refuses a scope that resolved to no branch', () => {
-      expect(() =>
-        controller.getPaymentReports({} as PaymentReportsQueryDto, 1001, []),
-      ).toThrow(ForbiddenException);
     });
   });
 

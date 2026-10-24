@@ -6,6 +6,10 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { HolidaysService } from '../holidays/holidays.service';
+import {
+  tashkentDateStr,
+  utcMidnightFromDateStr,
+} from '../common/date/tashkent';
 import { DIGEST_ROW_MAX_AGE_MS } from '../telegram-digest/telegram-digest.constants';
 import { TelegramDigestItemRow } from '../telegram-digest/telegram-digest-payloads';
 import { packBlocks } from '../telegram-digest/telegram-message-parts';
@@ -77,8 +81,10 @@ export class TelegramGroupDigestCronService {
     }
     // Company-wide holidays only (`null`): one branch closing does not stop
     // the other branches' messages (CEO decision 10.10.2026).
+    // Holidays are UTC-midnight dates (date <= X <= endDate): ask for the
+    // Tashkent day, not the instant, or a holiday's last day is missed.
     const holiday = await this.holidaysService.findActiveHolidayCovering(
-      new Date(),
+      utcMidnightFromDateStr(tashkentDateStr(new Date())),
       null,
     );
     if (holiday) {

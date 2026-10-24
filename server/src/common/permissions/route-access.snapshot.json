@@ -125,6 +125,13 @@
     "Branch Director",
     "CEO"
   ],
+  "DELETE /tasks/:id/files/:fileId": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
   "DELETE /tasks/:id/steps/:stepId": [
     "Administrator",
     "Branch Director",
@@ -146,7 +153,19 @@
   "DELETE /telegram-groups/:id": [
     "CEO"
   ],
+  "DELETE /telegram-report/recipients/:id": [
+    "CEO"
+  ],
   "DELETE /users/:id": [
+    "Branch Director",
+    "CEO"
+  ],
+  "DELETE /users/sessions/:sid": "ANY",
+  "GET /absence-pause/history": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /absence-pause/preview": [
     "Branch Director",
     "CEO"
   ],
@@ -366,6 +385,10 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /expenses/month-summary": [
+    "Branch Director",
+    "CEO"
+  ],
   "GET /expenses/pdf": [
     "Branch Director",
     "CEO"
@@ -406,6 +429,12 @@
     "Administrator",
     "Branch Director",
     "CEO"
+  ],
+  "GET /groups/:id/musobaqa": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Teacher"
   ],
   "GET /groups/:id/status-history": [
     "Administrator",
@@ -462,6 +491,18 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /kpi/overview": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /kpi/settings": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /kpi/users/:id": [
+    "Branch Director",
+    "CEO"
+  ],
   "GET /lead-sources": [
     "Administrator",
     "Branch Director",
@@ -487,7 +528,22 @@
     "Branch Director",
     "CEO"
   ],
-  "GET /leads/archive": [
+  "GET /leads/archive/leads": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /leads/archive/leads/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /leads/archive/sections": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /leads/archive/summary": [
     "Administrator",
     "Branch Director",
     "CEO"
@@ -498,6 +554,20 @@
     "CEO"
   ],
   "GET /leads/by-student/:studentId": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /leads/ownership/assignable": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /leads/ownership/settings": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /leads/ownership/summary": [
     "Administrator",
     "Branch Director",
     "CEO"
@@ -517,6 +587,15 @@
     "Branch Director",
     "CEO",
     "Teacher"
+  ],
+  "GET /lesson-ratings/low": [
+    "CEO"
+  ],
+  "GET /lesson-ratings/summary": [
+    "CEO"
+  ],
+  "GET /lesson-ratings/teachers/:id": [
+    "CEO"
   ],
   "GET /lesson-reschedules": [
     "Administrator",
@@ -610,6 +689,15 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /participation-certificates/:id/pdf": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /participation-certificates/:id/verify": "PUBLIC",
+  "GET /participation-certificates/settings": [
+    "CEO"
+  ],
   "GET /payment-promises": [
     "Administrator",
     "Branch Director",
@@ -670,11 +758,33 @@
     "CEO",
     "Cashier"
   ],
-  "GET /payments/pending-students": [
+  "GET /payments/list/excel": [
     "Administrator",
     "Branch Director",
     "CEO",
     "Cashier"
+  ],
+  "GET /payments/list/filter-options": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /payments/list/rows": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /payments/list/rows/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier"
+  ],
+  "GET /payments/list/summary": [
+    "Branch Director",
+    "CEO"
   ],
   "GET /payments/preview": [
     "Administrator",
@@ -687,6 +797,12 @@
     "Branch Director",
     "CEO",
     "Cashier"
+  ],
+  "GET /permissions": [
+    "CEO"
+  ],
+  "GET /permissions/history": [
+    "CEO"
   ],
   "GET /permissions/me": "ANY",
   "GET /public/forms/:slug": "PUBLIC",
@@ -724,23 +840,27 @@
     "Branch Director",
     "CEO"
   ],
-  "GET /reports/attendance-analytics": [
-    "Administrator",
+  "GET /reports/attendance-stats/excel": [
     "Branch Director",
     "CEO"
   ],
-  "GET /reports/attendance-by-course": [
-    "Administrator",
+  "GET /reports/attendance-stats/missers": [
     "Branch Director",
     "CEO"
   ],
-  "GET /reports/attendance-by-group": [
-    "Administrator",
+  "GET /reports/attendance-stats/overview": [
     "Branch Director",
     "CEO"
   ],
-  "GET /reports/center-activity": [
-    "Administrator",
+  "GET /reports/audience/overview": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/center-activity/excel": [
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/center-activity/overview": [
     "Branch Director",
     "CEO"
   ],
@@ -750,28 +870,12 @@
     "CEO",
     "Cashier"
   ],
-  "GET /reports/departed-students/by-reason": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
-  "GET /reports/departed-students/by-status": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
   "GET /reports/departed-students/departed-after-change": [
     "Administrator",
     "Branch Director",
     "CEO"
   ],
-  "GET /reports/departed-students/dynamics": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
-  "GET /reports/departed-students/group-by": [
-    "Administrator",
+  "GET /reports/departed-students/excel": [
     "Branch Director",
     "CEO"
   ],
@@ -780,13 +884,7 @@
     "Branch Director",
     "CEO"
   ],
-  "GET /reports/departed-students/reasons": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
-  "GET /reports/departed-students/summary": [
-    "Administrator",
+  "GET /reports/departed-students/overview": [
     "Branch Director",
     "CEO"
   ],
@@ -796,16 +894,6 @@
     "CEO"
   ],
   "GET /reports/departed-students/teacher-changes-list": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
-  "GET /reports/departed-students/transfer-reasons": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
-  "GET /reports/departed-students/transferred-list": [
     "Administrator",
     "Branch Director",
     "CEO"
@@ -827,6 +915,21 @@
     "CEO"
   ],
   "GET /reports/group-analytics": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/group-payments": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/group-payments/excel": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /reports/group-payments/groups/:groupId": [
     "Administrator",
     "Branch Director",
     "CEO"
@@ -882,21 +985,6 @@
     "CEO",
     "Cashier"
   ],
-  "GET /reports/payment-reports": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
-  "GET /reports/payment-reports/teachers": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
-  "GET /reports/payment-reports/teachers/:teacherId/groups": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
-  ],
   "GET /reports/profit-composition": [
     "Branch Director",
     "CEO"
@@ -906,22 +994,11 @@
     "Branch Director",
     "CEO"
   ],
-  "GET /reports/student-payments": [
-    "Administrator",
-    "Branch Director",
-    "CEO",
-    "Cashier"
-  ],
   "GET /reports/student-payments/filter-options": [
     "Administrator",
     "Branch Director",
     "CEO",
     "Cashier"
-  ],
-  "GET /reports/teacher-performance": [
-    "Administrator",
-    "Branch Director",
-    "CEO"
   ],
   "GET /rooms": [
     "Administrator",
@@ -1013,6 +1090,12 @@
     "Branch Director",
     "CEO"
   ],
+  "PUT /salary/monthly/user/:userId/adjustment": [
+    "CEO"
+  ],
+  "DELETE /salary/monthly/user/:userId/adjustment": [
+    "CEO"
+  ],
   "GET /salary/monthly/user/:userId/lessons": [
     "Branch Director",
     "CEO"
@@ -1087,6 +1170,9 @@
   "GET /student-portal/lernen/grammar": [
     "Student"
   ],
+  "GET /student-portal/lernen/guruhlar": [
+    "Student"
+  ],
   "GET /student-portal/lernen/lessons/:id": [
     "Student"
   ],
@@ -1100,6 +1186,12 @@
     "Student"
   ],
   "GET /student-portal/lernen/levels": [
+    "Student"
+  ],
+  "GET /student-portal/lernen/liga": [
+    "Student"
+  ],
+  "GET /student-portal/lernen/nishonlar": [
     "Student"
   ],
   "GET /student-portal/lernen/reyting": [
@@ -1186,6 +1278,16 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /students/:id/level-tests": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /students/:id/participation-certificates/preview": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "GET /students/:id/sms": [
     "Administrator",
     "Branch Director",
@@ -1225,7 +1327,21 @@
     "Cashier",
     "Teacher"
   ],
+  "GET /tasks/:id/files": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
   "GET /tasks/assignable": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "GET /tasks/config": [
     "Administrator",
     "Branch Director",
     "CEO",
@@ -1297,6 +1413,19 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /telegram-report/candidates": [
+    "CEO"
+  ],
+  "GET /telegram-report/recipients": [
+    "CEO"
+  ],
+  "GET /telegram-report/recipients/:id/preview": [
+    "CEO"
+  ],
+  "GET /telegram/channel-report/level-tests": [
+    "Branch Director",
+    "CEO"
+  ],
   "GET /telegram/channel-report/list": [
     "Branch Director",
     "CEO"
@@ -1343,6 +1472,8 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /users/sessions": "ANY",
+  "GET /webhooks/meta-leads": "PUBLIC",
   "GET /withdrawals/preview/:studentId": [
     "Administrator",
     "Branch Director",
@@ -1410,6 +1541,11 @@
     "Branch Director",
     "CEO"
   ],
+  "PATCH /groups/:id/pause": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "PATCH /groups/:id/status": [
     "Administrator",
     "Branch Director",
@@ -1423,6 +1559,9 @@
   "PATCH /holidays/:id/status": [
     "Administrator",
     "Branch Director",
+    "CEO"
+  ],
+  "PATCH /kpi/settings": [
     "CEO"
   ],
   "PATCH /lead-columns/:id": [
@@ -1470,9 +1609,19 @@
     "Branch Director",
     "CEO"
   ],
+  "PATCH /leads/:id/owner": [
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /leads/ownership/settings": [
+    "CEO"
+  ],
   "PATCH /leads/reorder": [
     "Administrator",
     "Branch Director",
+    "CEO"
+  ],
+  "PATCH /lesson-ratings/settings": [
     "CEO"
   ],
   "PATCH /lesson-reschedules/:id": [
@@ -1517,6 +1666,9 @@
   ],
   "PATCH /notifications/:id/read": "ANY",
   "PATCH /notifications/read-all": "ANY",
+  "PATCH /participation-certificates/settings": [
+    "CEO"
+  ],
   "PATCH /payment-promises/:id/cancel": [
     "Administrator",
     "Branch Director",
@@ -1547,6 +1699,12 @@
     "Administrator",
     "Branch Director",
     "CEO"
+  ],
+  "PATCH /student-portal/lernen/eslatmalar": [
+    "Student"
+  ],
+  "PATCH /student-portal/lernen/maqsad": [
+    "Student"
   ],
   "PATCH /student-portal/name": [
     "Student"
@@ -1600,6 +1758,9 @@
     "Branch Director",
     "CEO"
   ],
+  "PATCH /telegram-report/recipients/:id": [
+    "CEO"
+  ],
   "PATCH /users/:id": [
     "Branch Director",
     "CEO"
@@ -1613,6 +1774,20 @@
     "Teacher"
   ],
   "PATCH /users/profile": "ANY",
+  "PATCH /users/ui-locale": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "PATCH /users/ui-skin": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
   "POST /archive/:entityType/:id/restore": [
     "CEO"
   ],
@@ -1772,7 +1947,16 @@
     "Branch Director",
     "CEO"
   ],
+  "POST /leads/:id/claim": [
+    "Administrator",
+    "CEO"
+  ],
   "POST /leads/:id/convert": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /leads/:id/release": [
     "Administrator",
     "Branch Director",
     "CEO"
@@ -1849,6 +2033,11 @@
   ],
   "POST /notifications/devices": "ANY",
   "POST /notifications/push/subscribe": "ANY",
+  "POST /participation-certificates/:id/revoke": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "POST /payment-promises": [
     "Administrator",
     "Branch Director",
@@ -1874,6 +2063,9 @@
     "Branch Director",
     "CEO",
     "Cashier"
+  ],
+  "POST /permissions/roles/:roleId/reset": [
+    "CEO"
   ],
   "POST /planned-absences/:groupId/date/:date": [
     "Administrator",
@@ -2017,6 +2209,11 @@
   "POST /students/:id/initial-balance": [
     "CEO"
   ],
+  "POST /students/:id/participation-certificates": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "POST /students/:id/sms": [
     "Administrator",
     "Branch Director",
@@ -2044,6 +2241,13 @@
     "Teacher"
   ],
   "POST /tasks/:id/events": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
+  "POST /tasks/:id/files": [
     "Administrator",
     "Branch Director",
     "CEO",
@@ -2093,6 +2297,15 @@
   "POST /telegram-groups/announce": [
     "CEO"
   ],
+  "POST /telegram-report/recipients": [
+    "CEO"
+  ],
+  "POST /telegram-report/recipients/:id/check": [
+    "CEO"
+  ],
+  "POST /telegram-report/recipients/:id/test": [
+    "CEO"
+  ],
   "POST /telegram/employee-link": [
     "Administrator",
     "Branch Director",
@@ -2115,6 +2328,7 @@
     "CEO"
   ],
   "POST /users/logout-others": "ANY",
+  "POST /webhooks/meta-leads": "PUBLIC",
   "POST /withdrawals": [
     "Administrator",
     "Branch Director",
@@ -2123,6 +2337,9 @@
   "PUT /lesson-teacher-overrides/:groupId/:date": [
     "Administrator",
     "Branch Director",
+    "CEO"
+  ],
+  "PUT /permissions/roles/:roleId": [
     "CEO"
   ],
   "PUT /tasks/:id/participants": [

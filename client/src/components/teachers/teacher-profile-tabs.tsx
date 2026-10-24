@@ -20,6 +20,12 @@ import {
 } from "@/components/shared/teacher-groups-rate-list";
 import { SalaryMonthlyPanel } from "@/components/shared/salary-monthly-panel";
 import { PossibleDeductionsInfo } from "@/components/payments/possible-deductions-info";
+import { useAuth, isCeoUser } from "@/hooks/use-auth";
+import { MonthStepper } from "@/components/shared/month-stepper";
+import { currentMonthKey } from "@/components/payments/salary-utils";
+import { TeacherRatingsPanel } from "@/components/reports/lesson-ratings/teacher-ratings-panel";
+import { RATING_FLOOR_MONTH } from "@/components/reports/lesson-ratings/rating-format";
+import { useT } from "@/i18n/context";
 
 function EmptyState({ message }: { message: string }) {
   return (
@@ -40,8 +46,11 @@ export function TeacherProfileTabs({
   activeTab,
   onTabChange,
 }: TeacherProfileTabsProps) {
+  const t = useT();
   const canSeeSalary = useCan("salary.view");
   const canSeeTimeline = useCan("teachers.view");
+  const isCeo = isCeoUser(useAuth((s) => s.user));
+  const [ratingMonth, setRatingMonth] = useState(currentMonthKey);
 
   const [groups, setGroups] = useState<GroupData[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
@@ -130,16 +139,17 @@ export function TeacherProfileTabs({
       onValueChange={handleTabChange}
     >
       <TabsList className="w-full justify-start overflow-x-auto sticky top-0 z-10 bg-background md:static">
-        <TabsTrigger value="korsatkichlar">Ko&apos;rsatkichlar</TabsTrigger>
-        <TabsTrigger value="guruhlar">Guruhlar</TabsTrigger>
-        <TabsTrigger value="izohlar">Izohlar</TabsTrigger>
-        <TabsTrigger value="tarix">Tarix</TabsTrigger>
+        <TabsTrigger value="korsatkichlar">{t("Ko'rsatkichlar")}</TabsTrigger>
+        <TabsTrigger value="guruhlar">{t("Guruhlar")}</TabsTrigger>
+        <TabsTrigger value="izohlar">{t("Izohlar")}</TabsTrigger>
+        <TabsTrigger value="tarix">{t("Tarix")}</TabsTrigger>
         {canSeeTimeline && (
-          <TabsTrigger value="taymlayn">Taymlayn</TabsTrigger>
+          <TabsTrigger value="taymlayn">{t("Taymlayn")}</TabsTrigger>
         )}
         {canSeeSalary && (
-          <TabsTrigger value="ish-haqi">Ish haqi</TabsTrigger>
+          <TabsTrigger value="ish-haqi">{t("Ish haqi")}</TabsTrigger>
         )}
+        {isCeo && <TabsTrigger value="baholar">{t("Baholar")}</TabsTrigger>}
       </TabsList>
 
       {/* Ko'rsatkichlar — Radix unmounts inactive content, so the query runs on open only. */}
@@ -182,7 +192,7 @@ export function TeacherProfileTabs({
             />
           </div>
         ) : (
-          <EmptyState message="Izohlar mavjud emas" />
+          <EmptyState message={t("Izohlar mavjud emas")} />
         )}
       </TabsContent>
 
@@ -191,7 +201,7 @@ export function TeacherProfileTabs({
         {historyVisible ? (
           <EntityHistoryTable entityType="User" entityId={teacher.id} />
         ) : (
-          <EmptyState message="Tarix ma'lumotlari mavjud emas" />
+          <EmptyState message={t("Tarix ma'lumotlari mavjud emas")} />
         )}
       </TabsContent>
 
@@ -222,6 +232,21 @@ export function TeacherProfileTabs({
               <PossibleDeductionsInfo variant="teacher" />
             </div>
           )}
+        </TabsContent>
+      )}
+
+      {/* Baholar — faqat CEO (spec 2026-10-13 §6.4) */}
+      {isCeo && (
+        <TabsContent value="baholar" className="space-y-4">
+          <div className="flex justify-end">
+            <MonthStepper
+              value={ratingMonth}
+              min={RATING_FLOOR_MONTH}
+              max={currentMonthKey()}
+              onChange={setRatingMonth}
+            />
+          </div>
+          <TeacherRatingsPanel teacherId={teacher.id} month={ratingMonth} />
         </TabsContent>
       )}
     </Tabs>

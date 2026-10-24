@@ -15,6 +15,8 @@ import { ExpensesService } from './expenses.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { ExpenseQueryDto } from './dto/expense-query.dto';
+import { ExpenseMonthQueryDto } from './dto/expense-month-query.dto';
+import { ExpensesMonthService } from './expenses-month.service';
 import { CurrentUser } from '../common/decorators';
 import { Can } from '../common/permissions/access.decorators';
 import { PrismaService } from '../prisma/prisma.service';
@@ -28,6 +30,7 @@ import {
 export class ExpensesController {
   constructor(
     private expensesService: ExpensesService,
+    private monthService: ExpensesMonthService,
     private prisma: PrismaService,
   ) {}
 
@@ -55,8 +58,12 @@ export class ExpensesController {
     return ids;
   }
 
+  // ADR-0087: an advance (TEACHER_ADVANCE) requires `salary.pay` and any other
+  // category requires `expenses.manage`; neither key alone writes the other's
+  // categories. Both keys are listed here only so their holders reach
+  // `ExpensesService.assertMayWrite`, which enforces that rule.
   @Post()
-  @Can('expenses.manage')
+  @Can('expenses.manage', 'salary.pay')
   create(
     @Body() dto: CreateExpenseDto,
     @CurrentUser('id') userId: number,
@@ -79,6 +86,22 @@ export class ExpensesController {
     );
   }
 
+  // The month card, «Bu oy hali yozilmagan» and the «Kim kiritgan» options
+  // (spec B6 §5.2). Same scope rule as the list: an empty scope is 403.
+  @Get('month-summary')
+  @Can('expenses.view')
+  async monthSummary(
+    @Query() query: ExpenseMonthQueryDto,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.monthService.monthSummary(
+      companyId,
+      await this.scope(userId, query.branchId),
+      query.oy,
+    );
+  }
+
   // Filtered expenses as a downloadable PDF (same filters as the list, no
   // pagination). Gated by `expenses.view`; the frontend fetches it as a blob
   // (an <a href> can't carry the JWT). No dynamic ':id' GET exists, so the
@@ -91,12 +114,11 @@ export class ExpensesController {
     @CurrentUser('id') userId: number,
     @Res() res: Response,
   ) {
-    const buffer = await this.expensesService.generateExpensesPdf(
+    const { buffer, filename } = await this.expensesService.generateExpensesPdf(
       query,
       companyId,
       await this.scope(userId, query.branchId),
     );
-    const filename = `xarajatlar-${new Date().toISOString().slice(0, 10)}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Length', buffer.length);
@@ -104,7 +126,7 @@ export class ExpensesController {
   }
 
   @Patch(':id')
-  @Can('expenses.manage')
+  @Can('expenses.manage', 'salary.pay')
   update(
     @Param('id') id: string,
     @Body() dto: UpdateExpenseDto,
@@ -115,7 +137,7 @@ export class ExpensesController {
   }
 
   @Delete(':id')
-  @Can('expenses.manage')
+  @Can('expenses.manage', 'salary.pay')
   remove(
     @Param('id') id: string,
     @CurrentUser('id') userId: number,

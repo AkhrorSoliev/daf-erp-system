@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
 import { WriteOffDebtDialog } from "./write-off-debt-dialog";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/context";
 
 interface ClosedEnrollment {
   enrollmentId: string;
@@ -34,8 +36,8 @@ interface StudentClosedEnrollmentsSectionProps {
 }
 
 const STATUS_LABEL: Record<"DROPPED" | "FROZEN", string> = {
-  DROPPED: "Chiqarilgan",
-  FROZEN: "Muzlatilgan",
+  DROPPED: msg("Chiqarilgan"),
+  FROZEN: msg("Muzlatilgan"),
 };
 
 export function StudentClosedEnrollmentsSection({
@@ -114,13 +116,14 @@ export function StudentClosedEnrollmentsSection({
 }
 
 function SectionHeader() {
+  const t = useT();
   return (
     <div className="mb-2 flex items-baseline justify-between gap-2">
       <h3 className="text-sm font-semibold text-muted-foreground">
-        Yopilgan guruhlar (qarzdorlik bilan)
+        {t("Yopilgan guruhlar (qarzdorlik bilan)")}
       </h3>
       <span className="text-xs text-muted-foreground">
-        Joriy siklda kelmagan o&apos;quvchi qarzini hisobdan chiqarish
+        {t("Joriy siklda kelmagan o'quvchi qarzini hisobdan chiqarish")}
       </span>
     </div>
   );
@@ -133,6 +136,8 @@ function ClosedEnrollmentCard({
   enrollment: ClosedEnrollment;
   onWriteOffClick: () => void;
 }) {
+  const t = useT();
+  const statusLabel = STATUS_LABEL[enrollment.status];
   return (
     <div className="rounded-lg border bg-card p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -140,7 +145,7 @@ function ClosedEnrollmentCard({
           <div className="flex items-center gap-2">
             <h4 className="truncate font-medium">{enrollment.groupName}</h4>
             <Badge variant="secondary" className="shrink-0">
-              {STATUS_LABEL[enrollment.status]}
+              {t(statusLabel)}
             </Badge>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -176,7 +181,7 @@ function ClosedEnrollmentCard({
           onClick={onWriteOffClick}
         >
           <Eraser className="mr-1 size-3.5" />
-          Qarzni chiqarish
+          {t("Qarzni chiqarish")}
         </Button>
       </div>
     </div>

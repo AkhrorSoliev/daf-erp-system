@@ -10,11 +10,21 @@ import { CallHistoryTab } from "./call-history-tab";
 import { LogCallDialog, type LogCallPrefill } from "./log-call-dialog";
 import { OutreachStatsWidget } from "./outreach-stats";
 import { OverduePromisesBanner } from "./overdue-promises-banner";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 
 const DEFAULT_TAB = "absentees";
-const VALID_TABS = new Set(["absentees", "removals", "paused", "history"]);
+// URL values stay as they are; the labels are msg() texts drawn with t().
+const TABS = [
+  { value: "absentees", label: msg("Bugungi kelmaganlar") },
+  { value: "removals", label: msg("Ko'p dars qoldirganlar") },
+  { value: "paused", label: msg("Pauzadagilar") },
+  { value: "history", label: msg("Qo'ng'iroq tarixi") },
+];
+const VALID_TABS = new Set(TABS.map((tab) => tab.value));
 
 export function OutreachPageClient() {
+  const t = useT();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -42,10 +52,9 @@ export function OutreachPageClient() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Aloqa markazi</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("Aloqa markazi")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Darsga kelmaganlar va ko&apos;p dars qoldirganlar bilan ishlang —
-          qo&apos;ng&apos;iroq qiling va natijasini qayd eting
+          {t("Darsga kelmaganlar va ko'p dars qoldirganlar bilan ishlang — qo'ng'iroq qiling va natijasini qayd eting")}
         </p>
       </div>
 
@@ -59,12 +68,11 @@ export function OutreachPageClient() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="absentees">Bugungi kelmaganlar</TabsTrigger>
-          <TabsTrigger value="removals">
-            Ko&apos;p dars qoldirganlar
-          </TabsTrigger>
-          <TabsTrigger value="paused">Pauzadagilar</TabsTrigger>
-          <TabsTrigger value="history">Qo&apos;ng&apos;iroq tarixi</TabsTrigger>
+          {TABS.map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value}>
+              {t(tab.label)}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         {/* Pass `isActive` so each tab can defer its useQuery until activated.

@@ -23,6 +23,7 @@ import { LernenLevelsPage } from "./lernen/lernen-levels-page";
 import { LernenUnitPage } from "./lernen/lernen-unit-page";
 import { LernenLessonPage } from "./lernen/lernen-lesson-page";
 import { ReytingEkrani } from "./lernen/reyting/reyting-ekrani";
+import { ReytingJadvali } from "./lernen/reyting/reyting-jadvali";
 
 const SCHEDULE = ["student-portal", "schedule"];
 const HISTORY = ["student-portal", "attendance-history"];
@@ -277,7 +278,13 @@ describe("a portal screen whose refresh failed after it had loaded", () => {
 const LEVELS = ["lernen", "levels"];
 const UNIT = ["lernen", "unit", 7];
 const LESSON = ["lernen", "lesson", 9];
-const RANKING = ["lernen", "reyting", "gruppe"];
+// The ranking opens on the Liga tab; Guruhim keeps its own key.
+const RANKING = ["lernen", "liga"];
+const GROUP_TABLE = ["lernen", "reyting", "gruppe"];
+
+function GroupTable() {
+  return createElement(ReytingJadvali, { scope: "gruppe" });
+}
 
 function UnitPage() {
   return createElement(LernenUnitPage, { unitId: 7 });
@@ -320,7 +327,7 @@ describe("a Ta'lim screen", () => {
   });
 
   it("shows the ranking's own empty state for an empty answer", async () => {
-    const text = await render(ReytingEkrani, [[RANKING, []]]);
+    const text = await render(GroupTable, [[GROUP_TABLE, []]]);
     expect(text).toContain("Siz hali guruhga qo'shilmagansiz");
     expect(text).not.toContain("Ma'lumotni yuklab bo'lmadi");
   });

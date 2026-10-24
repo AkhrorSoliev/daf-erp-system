@@ -16,6 +16,9 @@ import {
   getPercentageColor,
   type DotStatus,
 } from "@/components/shared/attendance-dot";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
+import type { Params } from "@/i18n/translate";
 import { blockCount, blockTitle } from "./lesson-trail-labels";
 
 interface Cycle {
@@ -57,12 +60,13 @@ interface LessonsOverview {
   groups: GroupOverview[];
 }
 
+// The group card draws `t(label)`.
 const ENROLLMENT_STATUS_LABEL: Record<GroupOverview["status"], string> = {
-  ACTIVE: "Faol",
-  FROZEN: "Muzlatilgan",
-  COMPLETED: "Tugatgan",
-  DROPPED: "Chiqarilgan",
-  TRANSFERRED: "O'tkazilgan",
+  ACTIVE: msg("Faol"),
+  FROZEN: msg("Muzlatilgan"),
+  COMPLETED: msg("Tugatgan"),
+  DROPPED: msg("Chiqarilgan"),
+  TRANSFERRED: msg("O'tkazilgan"),
 };
 
 /** "YYYY-MM-DD" → "dd.MM" (Tashkent kunini siljitmasdan). */
@@ -70,13 +74,16 @@ function shortDate(date: string): string {
   return format(new Date(date + "T00:00:00"), "dd.MM");
 }
 
-function cycleLabel(c: Cycle): string {
+function cycleLabel(
+  c: Cycle,
+  t: (source: string, params?: Params) => string,
+): string {
   const range =
     c.lastDate && c.lastDate !== c.firstDate
       ? `${shortDate(c.firstDate)} — ${shortDate(c.lastDate)}`
       : shortDate(c.firstDate);
   // To'liq blok → "(12 dars)"; davom etayotgan blok → "(4/12 dars)".
-  return `${range} (${blockCount(c.lessonCount, c.capacity)})`;
+  return `${range} (${blockCount(c.lessonCount, c.capacity, t)})`;
 }
 
 function LessonTimeline({
@@ -86,10 +93,11 @@ function LessonTimeline({
   lessons: Lesson[];
   year: string;
 }) {
+  const t = useT();
   if (lessons.length === 0) {
     return (
       <p className="text-xs text-muted-foreground">
-        Hali dars o&apos;tilmagan
+        {t("Hali dars o'tilmagan")}
       </p>
     );
   }
@@ -100,7 +108,7 @@ function LessonTimeline({
     const block =
       l.month ??
       (l.cycleSequenceNumber != null ? String(l.cycleSequenceNumber) : null);
-    const title = block ? blockTitle(l, year) : null;
+    const title = block ? blockTitle(l, year, t) : null;
     if (block && block !== seenBlock) {
       seenBlock = block;
       items.push(
@@ -125,6 +133,8 @@ function LessonTimeline({
 }
 
 function GroupCard({ group }: { group: GroupOverview }) {
+  const t = useT();
+  const statusLabel = ENROLLMENT_STATUS_LABEL[group.status];
   const year = tashkentNow().dateStr.slice(0, 4);
   return (
     <div className="space-y-3 rounded-lg border p-4">
@@ -134,7 +144,7 @@ function GroupCard({ group }: { group: GroupOverview }) {
             <p className="font-medium">{group.groupName}</p>
             {group.status !== "ACTIVE" && (
               <Badge variant="outline" className="text-[10px]">
-                {ENROLLMENT_STATUS_LABEL[group.status]}
+                {t(statusLabel)}
               </Badge>
             )}
           </div>
@@ -149,7 +159,10 @@ function GroupCard({ group }: { group: GroupOverview }) {
             getPercentageColor(group.attended, group.total),
           )}
         >
-          {group.attended}/{group.total} keldi
+          {t("{attended}/{total} keldi", {
+            attended: group.attended,
+            total: group.total,
+          })}
         </Badge>
       </div>
 
@@ -162,9 +175,9 @@ function GroupCard({ group }: { group: GroupOverview }) {
               className="text-muted-foreground"
             >
               <span className="font-medium text-foreground">
-                {blockTitle(c, year)}:
+                {blockTitle(c, year, t)}:
               </span>{" "}
-              {cycleLabel(c)}
+              {cycleLabel(c, t)}
             </li>
           ))}
         </ul>
@@ -177,6 +190,7 @@ function GroupCard({ group }: { group: GroupOverview }) {
 }
 
 export function LessonTrailTab({ studentId }: { studentId: number }) {
+  const t = useT();
   const [includeClosed, setIncludeClosed] = useState(false);
 
   const { data, isLoading } = useQuery<LessonsOverview>({
@@ -195,22 +209,22 @@ export function LessonTrailTab({ studentId }: { studentId: number }) {
         {/* Belgilar + yopilgan guruhlar toggle */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-            <span className="font-medium">Belgilar:</span>
+            <span className="font-medium">{t("Belgilar:")}</span>
             <span className="flex items-center gap-1.5">
               <span className="inline-block size-3 rounded-full bg-emerald-500" />
-              Keldi
+              {t("Keldi")}
             </span>
             <span className="flex items-center gap-1.5">
               <span className="inline-block size-3 rounded-full bg-amber-500" />
-              Kech
+              {t("Kech")}
             </span>
             <span className="flex items-center gap-1.5">
               <span className="inline-block size-3 rounded-full bg-sky-400" />
-              Sababli
+              {t("Sababli")}
             </span>
             <span className="flex items-center gap-1.5">
               <span className="inline-block size-3 rounded-full bg-red-500" />
-              Kelmadi
+              {t("Kelmadi")}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -223,7 +237,7 @@ export function LessonTrailTab({ studentId }: { studentId: number }) {
               htmlFor="include-closed"
               className="text-xs text-muted-foreground"
             >
-              Yopilgan guruhlarni ko&apos;rsatish
+              {t("Yopilgan guruhlarni ko'rsatish")}
             </Label>
           </div>
         </div>
@@ -238,8 +252,10 @@ export function LessonTrailTab({ studentId }: { studentId: number }) {
           <div className="flex h-24 items-center justify-center rounded-md border">
             <p className="text-sm text-muted-foreground">
               {includeClosed
-                ? "Dars ma'lumotlari mavjud emas"
-                : "Faol guruhda dars ma'lumotlari yo'q — yopilgan guruhlarni ko'rsatib ko'ring"}
+                ? t("Dars ma'lumotlari mavjud emas")
+                : t(
+                    "Faol guruhda dars ma'lumotlari yo'q — yopilgan guruhlarni ko'rsatib ko'ring",
+                  )}
             </p>
           </div>
         ) : (

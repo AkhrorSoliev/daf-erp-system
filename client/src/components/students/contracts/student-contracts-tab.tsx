@@ -21,6 +21,7 @@ import { useCan } from "@/hooks/use-permissions";
 import api from "@/lib/api";
 import { openAuthedFile } from "@/lib/download-file";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
 import { ContractCancelDialog } from "./contract-cancel-dialog";
 import { ContractCard } from "./contract-card";
 import { ContractFormDialog, type ContractDialogMode } from "./contract-form-dialog";
@@ -39,10 +40,12 @@ interface Props {
 }
 
 export function StudentContractsTab({ studentId, onStudentChanged }: Props) {
+  const t = useT();
   const user = useAuth((s) => s.user);
   const isCeo =
     user?.roles.some((r) => SIGNED_CONTRACT_CANCEL_ROLE_IDS.includes(r.id)) ?? false;
-  const canManage = useCan("students.manage");
+  // `contracts.manage` is what the four contract writes check (ADR-0087); reads stay on `students.details`.
+  const canManage = useCan("contracts.manage");
   const qc = useQueryClient();
   const query = useQuery({
     queryKey: contractsKey(studentId),
@@ -66,7 +69,7 @@ export function StudentContractsTab({ studentId, onStudentChanged }: Props) {
     try {
       await openAuthedFile(`/contract-documents/${c.id}/pdf`, `Shartnoma-${c.number}.pdf`);
     } catch (err) {
-      toast.error(getErrorMessage(err, "PDF ochishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("PDF ochishda xatolik yuz berdi")));
     } finally {
       setBusyId(null);
     }
@@ -80,9 +83,9 @@ export function StudentContractsTab({ studentId, onStudentChanged }: Props) {
     try {
       const { data } = await api.post<ContractView>(`/contract-documents/${c.id}/sign`);
       apply(data);
-      toast.success(`Shartnoma ${data.number} qog'ozda imzolangan deb belgilandi`);
+      toast.success(t("Shartnoma {number} qog'ozda imzolangan deb belgilandi", { number: data.number }));
     } catch (err) {
-      toast.error(getErrorMessage(err, "Belgilashda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("Belgilashda xatolik yuz berdi")));
     } finally {
       setBusyId(null);
     }
@@ -92,9 +95,9 @@ export function StudentContractsTab({ studentId, onStudentChanged }: Props) {
     if (query.isError) {
       return (
         <div className="flex flex-col items-center gap-3 rounded-lg border py-10 text-center">
-          <p className="text-sm text-muted-foreground">Shartnomalarni yuklab bo&apos;lmadi</p>
+          <p className="text-sm text-muted-foreground">{t("Shartnomalarni yuklab bo'lmadi")}</p>
           <Button variant="outline" size="sm" onClick={() => query.refetch()}>
-            Qayta urinish
+            {t("Qayta urinish")}
           </Button>
         </div>
       );
@@ -112,11 +115,11 @@ export function StudentContractsTab({ studentId, onStudentChanged }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-base font-semibold">Shartnomalar</h2>
+        <h2 className="text-base font-semibold">{t("Shartnomalar")}</h2>
         {canManage && (
           <Button size="sm" onClick={() => setDialog({ kind: "create" })}>
             <FilePlus2 className="mr-1.5 size-4" />
-            Shartnoma tuzish
+            {t("Shartnoma tuzish")}
           </Button>
         )}
       </div>
@@ -125,11 +128,18 @@ export function StudentContractsTab({ studentId, onStudentChanged }: Props) {
         <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
           <div className="space-y-0.5">
-            {uncovered.map((u) => (
-              <p key={u.enrollmentId}>
-                Shartnomasiz kurs: {u.courseName}, {u.groupName} ({LINK_STATE_LABEL[u.status]})
-              </p>
-            ))}
+            {uncovered.map((u) => {
+              const stateLabel = LINK_STATE_LABEL[u.status];
+              return (
+                <p key={u.enrollmentId}>
+                  {t("Shartnomasiz kurs: {course}, {group} ({state})", {
+                    course: u.courseName,
+                    group: u.groupName,
+                    state: t(stateLabel),
+                  })}
+                </p>
+              );
+            })}
           </div>
         </div>
       )}
@@ -138,8 +148,8 @@ export function StudentContractsTab({ studentId, onStudentChanged }: Props) {
         <div className="flex h-24 items-center justify-center rounded-md border">
           <p className="text-sm text-muted-foreground">
             {canManage
-              ? "Hali shartnoma tuzilmagan — «Shartnoma tuzish» tugmasini bosing"
-              : "Hali shartnoma tuzilmagan"}
+              ? t("Hali shartnoma tuzilmagan — «Shartnoma tuzish» tugmasini bosing")
+              : t("Hali shartnoma tuzilmagan")}
           </p>
         </div>
       ) : (
@@ -176,16 +186,17 @@ export function StudentContractsTab({ studentId, onStudentChanged }: Props) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Shartnoma № {signTarget?.number} qog&apos;ozda imzolandimi?
+              {t("Shartnoma № {number} qog'ozda imzolandimi?", { number: signTarget?.number ?? "" })}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Buyurtmachi imzolagan nusxa markazda saqlanadi. Belgilangandan keyin shartnoma
-              o&apos;zgarmaydi; xato bo&apos;lsa, uni faqat CEO bekor qila oladi.
+              {t(
+                "Buyurtmachi imzolagan nusxa markazda saqlanadi. Belgilangandan keyin shartnoma o'zgarmaydi; xato bo'lsa, uni faqat CEO bekor qila oladi.",
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Ortga</AlertDialogCancel>
-            <AlertDialogAction onClick={sign}>Ha, imzolandi</AlertDialogAction>
+            <AlertDialogCancel>{t("Ortga")}</AlertDialogCancel>
+            <AlertDialogAction onClick={sign}>{t("Ha, imzolandi")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -4,9 +4,11 @@ import {
   tashkentHhmm as hhmm,
   tashkentWallClock,
 } from "@/lib/tashkent-time";
+import { msg } from "@/i18n/msg";
+import { uzbek, type Translate } from "./task-labels";
 
 const PRIORITY_RANK: Record<string, number> = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
-const WEEKDAY = ["Yak", "Du", "Se", "Cho", "Pa", "Ju", "Sha"];
+const WEEKDAY = [msg("Yak"), msg("Du"), msg("Se"), msg("Cho"), msg("Pa"), msg("Ju"), msg("Sha")];
 
 export type DueState = "overdue" | "today" | "tomorrow" | "soon" | "later" | "none";
 // «soon» is +2…+6 Tashkent days, the same span as the server's `week` filter
@@ -27,17 +29,21 @@ export function tashkentDayAndTime(iso: string): { day: Date; time: string } {
   const t = tashkentWallClock(d);
   return { day: new Date(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate()), time: hhmm(d) };
 }
-export function formatDue(dueAt: string, now: Date): string {
+export function formatDue(dueAt: string, now: Date, t: Translate = uzbek): string {
   const d = new Date(dueAt);
   const diff = tDay(d) - tDay(now);
-  if (diff === 0) return `Bugun ${hhmm(d)}`;
-  if (diff === 1) return `Ertaga ${hhmm(d)}`;
-  if (diff > 1 && diff <= 6) return `${WEEKDAY[tashkentWallClock(d).getUTCDay()]}, ${ddmm(d)}`;
+  if (diff === 0) return t("Bugun {time}", { time: hhmm(d) });
+  if (diff === 1) return t("Ertaga {time}", { time: hhmm(d) });
+  if (diff > 1 && diff <= 6) {
+    const day = WEEKDAY[tashkentWallClock(d).getUTCDay()];
+    return `${t(day)}, ${ddmm(d)}`;
+  }
   return ddmm(d);
 }
+// msg() labels: the list draws them with t().
 const GROUPS: { key: DueState; label: string }[] = [
-  { key: "overdue", label: "Muddati o'tgan" }, { key: "today", label: "Bugun" }, { key: "tomorrow", label: "Ertaga" },
-  { key: "soon", label: "Shu hafta" }, { key: "later", label: "Keyinroq" }, { key: "none", label: "Muddatsiz" },
+  { key: "overdue", label: msg("Muddati o'tgan") }, { key: "today", label: msg("Bugun") }, { key: "tomorrow", label: msg("Ertaga") },
+  { key: "soon", label: msg("Shu hafta") }, { key: "later", label: msg("Keyinroq") }, { key: "none", label: msg("Muddatsiz") },
 ];
 export function groupByDue<T extends { dueAt: string | null; priority: string }>(cards: T[], now: Date) {
   const by = new Map<DueState, T[]>();

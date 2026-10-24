@@ -1,6 +1,7 @@
 "use client";
 
 import { Clock, Hash, Phone, Type, X } from "lucide-react";
+import { useT } from "@/i18n/context";
 import type { FlatItem } from "./search-dropdown-utils";
 
 interface EmptyStateProps {
@@ -20,25 +21,27 @@ export function EmptyState({
   onRemove,
   onClear,
 }: EmptyStateProps) {
+  const t = useT();
+
   return (
     <div className="py-2">
       {/* Search hints */}
       <div className="px-3 pb-2">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-          Qidirish bo&#39;yicha maslahatlar
+          {t("Qidirish bo'yicha maslahatlar")}
         </p>
         <div className="space-y-1.5">
           <HintRow
             icon={Type}
-            text="Ism yoki familiya yozing"
+            text={t("Ism yoki familiya yozing")}
             example="Ali Valiyev"
           />
           <HintRow
             icon={Phone}
-            text="Telefon raqam bilan qidiring"
+            text={t("Telefon raqam bilan qidiring")}
             example="901234567"
           />
-          <HintRow icon={Hash} text="ID bilan qidiring" example="#10234" />
+          <HintRow icon={Hash} text={t("ID bilan qidiring")} example="#10234" />
         </div>
       </div>
 
@@ -47,13 +50,13 @@ export function EmptyState({
         <div className="border-t border-border pt-2">
           <div className="flex items-center justify-between px-3 mb-1">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              So&#39;nggi qidiruvlar
+              {t("So'nggi qidiruvlar")}
             </p>
             <button
               className="text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
               onClick={onClear}
             >
-              Tozalash
+              {t("Tozalash")}
             </button>
           </div>
           {recentSearches.map((term) => {

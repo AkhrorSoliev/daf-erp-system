@@ -140,6 +140,7 @@ describe('loadDepartures', () => {
     expect(result).toEqual({
       episodes: [],
       activeAtStart: 0,
+      activeAtStartMembers: [],
       floor: null,
       graceDays: DEPARTURE_GRACE_DAYS,
     });
@@ -457,6 +458,54 @@ describe('loadDepartures', () => {
     expect(result.activeAtStart).toBe(2);
     expect(result.floor).toEqual(at('2026-06-01T00:00:00Z'));
   });
+
+  describe('who was studying at activeAt', () => {
+    const fixture: Fixture = {
+      students: [student(10001), student(10002), student(10003)],
+      enrollments: [
+        // 10001 changed enrollment before activeAt: only e2 was ACTIVE then.
+        enrollment('e1', 10001, 'TRANSFERRED', '2026-06-01T09:00:00Z'),
+        enrollment('e2', 10001, 'ACTIVE', null, '2026-06-01T09:00:00Z'),
+        // 10002 joined after activeAt.
+        enrollment('e3', 10002, 'ACTIVE', null, '2026-08-01T09:00:00Z'),
+        // 10003 had already left by activeAt.
+        enrollment('e4', 10003, 'DROPPED', '2026-06-10T09:00:00Z'),
+      ],
+      logs: [
+        log('e1', 'ACTIVE', MAY),
+        log('e1', 'TRANSFERRED', '2026-06-01T09:00:00Z'),
+        log('e2', 'ACTIVE', '2026-06-01T09:00:00Z'),
+        log('e3', 'ACTIVE', '2026-08-01T09:00:00Z'),
+        log('e4', 'ACTIVE', MAY),
+        log('e4', 'DROPPED', '2026-06-10T09:00:00Z'),
+      ],
+    };
+
+    it('names each student and the enrollment that was ACTIVE then', async () => {
+      const result = await loadDepartures(
+        fakePrisma(fixture) as unknown as PrismaService,
+        1001,
+        null,
+        { now: NOW, activeAt: at('2026-07-01T00:00:00Z') },
+      );
+      expect(result.activeAtStartMembers).toEqual([
+        { studentId: 10001, enrollmentId: 'e2' },
+      ]);
+      expect(result.activeAtStart).toBe(1);
+    });
+
+    it('is empty when activeAt is not asked', async () => {
+      const result = await loadDepartures(
+        fakePrisma(fixture) as unknown as PrismaService,
+        1001,
+        null,
+        { now: NOW },
+      );
+      expect(result.activeAtStartMembers).toEqual([]);
+      expect(result.activeAtStart).toBe(0);
+    });
+  });
+
   describe('an enrollment of a deleted group', () => {
     // Deleting a group leaves its enrollments open; the loader closes them.
     const DELETED = '2026-08-01T09:00:00.000Z';

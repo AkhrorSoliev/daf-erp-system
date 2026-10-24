@@ -40,7 +40,8 @@ export interface DashboardPeople {
   /** Days each kind of stop waits for a return (ADR-0035). */
   leftGraceDays: { LEFT_GROUP: number; FROZEN: number };
   activeGroups: number;
-  attendancePct: number;
+  /** Shu oy davomati (ADR-0103), bir kasr; yozuv bo'lmasa null («—»). */
+  attendancePct: number | null;
   /** Filial tanlanmagan bo'lsa `null` — jadval bitta filialga bog'liq. */
   todayLessons: number | null;
 }

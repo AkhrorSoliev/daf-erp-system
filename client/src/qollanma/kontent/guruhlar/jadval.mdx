@@ -2,10 +2,16 @@
 
 «Jadval» — tanlangan kunning darslari, bitta filial bo'yicha. Chap menyudan «Jadval» ni oching: bugungi kun ochiladi. O'qituvchi roli bor, lekin CEO, direktor yoki administrator roli yo'q xodimga Bosh sahifaning o'zi shu jadvalni ko'rsatadi.
 
-- **Kun.** Sana tanlagichdan istalgan kunni tanlaysiz. Boshqa kunni tanlagach, yonida qaytish tugmasi chiqadi (ustiga olib borsangiz, «Bugunga qaytish»).
+- **Kun.** Sana tanlagichdan istalgan kunni tanlaysiz, yoki yonidagi «‹» va «›» tugmalari bilan bir kun oldinga yoki orqaga o'tasiz (oldingi va keyingi darslarni shunday ko'rasiz). Boshqa kunni tanlagach, yonida qaytish tugmasi chiqadi (ustiga olib borsangiz, «Bugunga qaytish»).
 - **Filial.** Yuqoridagi filial tanlagich bo'yicha. CEO «Barcha filiallar»ni tanlagan bo'lsa, jadval chizilmaydi: «Kunlik jadval uchun filial tanlang» yoziladi, chunki jadval bitta filialning xonalari va ish vaqti bo'yicha chiziladi.
 - **Kartalar.** Tepada «Darslar», «Jami o'quvchilar», «Band xonalar» va «O'qituvchilar» sonlari turadi. O'qituvchida faqat «Darslarim» va «O'quvchilarim».
 - **Ko'rinish.** Sarlavha («Bugungi darslar» yoki «26.10.2026 darslar») yonida darslar soni turadi, o'ngda «Grid» va «Ro'yxat» tugmalari bor. Tanlangan ko'rinish manzilda saqlanadi: sahifani yangilasangiz ham o'sha ko'rinish qoladi.
+
+## O'qituvchi uchun
+
+O'qituvchi «Grid»ni ko'rmaydi: u xonalarni emas, o'z kunini ko'rishi kerak. Jadval kartalar ro'yxati bo'lib chiqadi, har dars uchun: vaqt, guruh nomi (bossangiz guruh ochiladi), kurs, xona, «keldi/jami» va davomat belgisi. Bugungi dars uchun davomat hali olinmagan bo'lsa, kartada «Davomat olish» tugmasi chiqadi: u guruh sahifasini ochadi, birinchi tab — davomat. Davomat faqat dars kunida, dars boshlanishidan 10 daqiqa oldin ochiladi va dars tugaguncha ochiq turadi; tugagan darsga tugma chiqmaydi.
+
+Ro'yxat ostida «Boshlanmagan guruhlarim» turadi: sizga biriktirilgan, lekin hali ochilmagan guruhlar (kun, vaqt, xona va boshlanish sanasi bilan). Bunday guruh bo'lmasa, blok chiqmaydi.
 
 ## Grid: xona bandligi
 
@@ -39,11 +45,21 @@ Dars tugab, davomat olinmagan bo'lsa, CEO, filial direktori va administrator dar
 
 Tanlangan filialning quyidagi shartlarga mos guruhlari, boshlanish vaqti bo'yicha tartiblangan:
 
-- guruh «Faol» yoki «Boshlanmagan» ([Guruh holatlari](/qollanma/guruhlar/guruh-holatlari)): «Pauza»dagi va yopilgan guruh chiqmaydi;
+- guruh «Faol» yoki «Boshlanmagan» ([Guruh holatlari](/qollanma/guruhlar/guruh-holatlari)): «Pauza»dagi va yopilgan guruh chiqmaydi. «Boshlanmagan» guruh oddiy dars bo'lib faqat boshlanish sanasi kelgach chiqadi; undan oldin u «Rejadagi guruhlar» ko'rinishida turadi (pastdagi bo'lim);
 - guruhda dars vaqti kiritilgan va tanlangan hafta kuni guruhning dars kunlari orasida;
 - kun guruhning boshlanish va tugash sanasi oralig'ida (sanalar kiritilgan bo'lsa).
 
 Bayram kuni (butun markazniki yoki shu filialniki) darslar chiqmaydi, o'rniga to'q sariq banner turadi ([Bayramlar](/qollanma/guruhlar/bayramlar)). Guruh formasida yakshanba yo'q, shuning uchun yakshanba jadvali odatda bo'sh: «Ro'yxat»da «Darslar yo'q», «Grid»da xonalar ostida «Bugun dars rejalashtirilmagan» (boshqa kunda «Tanlangan kunda dars rejalashtirilmagan») yoziladi.
+
+## Rejadagi guruhlar
+
+Ochilishi rejalashtirilgan («Boshlanmagan») guruhlar, boshlanish sanasi hali kelmagan yoki kiritilmagan bo'lsa, jadvalda alohida ko'rinadi: xona bandligini oldindan ko'rish uchun.
+
+- **Grid.** Guruh o'z xonasi va vaqtida, lekin punktir chiziqli, shtrixli kartada turadi. Kartada «Ochiladi 03.11.2026» va yozilgan o'quvchilar soni bor. Xonasi yoki vaqti kiritilmagan guruh gridga qo'yilmaydi: u tagidagi «Vaqti yoki xonasi belgilanmagan» qatorida, sanasi kiritilmasa «Sana belgilanmagan» yozuvi bilan turadi.
+- **Ro'yxat.** Ro'yxat ostida «Rejadagi guruhlar» bloki hammasini ko'rsatadi.
+- **Hisobga kirmaydi.** Rejadagi guruh «Darslar», «Jami o'quvchilar», «Band xonalar» kartalariga qo'shilmaydi, davomati va «Dars bo'ldimi?» savoli yo'q: u hali o'tmagan dars.
+- **Yoqish va o'chirish.** «Rejadagi guruhlar (N)» tugmasi ularni yashiradi yoki ko'rsatadi (manzilda `rejada=0`). Tugma faqat o'sha kunda rejadagi guruh bo'lsa chiqadi.
+- **Kimga.** CEO, filial direktori, administrator va kassirga. O'qituvchi bu guruhlarni jadvalda ko'rmaydi: ularni «Boshlanmagan guruhlarim» blokida ko'radi.
 
 ## Kim nimani ko'radi
 

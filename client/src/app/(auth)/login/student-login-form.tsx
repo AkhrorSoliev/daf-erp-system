@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { formatPhoneWithCodeInput } from "@/lib/format-utils";
 import { useAuth } from "@/hooks/use-auth";
+import { useT } from "@/i18n/context";
 import { ForgotPasswordDialog } from "@/components/auth/forgot-password-dialog";
 import { TelegramLoginButton } from "@/components/auth/telegram-login-button";
 import { Button, Input, Field } from "@/components/student-portal/lumio";
@@ -14,6 +15,7 @@ import { Button, Input, Field } from "@/components/student-portal/lumio";
 // exact auth logic with the shared LoginForm — only the look is Lumio. Admin /
 // teacher logins keep the default form.
 export function StudentLoginForm() {
+  const t = useT();
   const router = useRouter();
   const { setAuth } = useAuth();
 
@@ -45,11 +47,11 @@ export function StudentLoginForm() {
         setError(
           getErrorMessage(
             err,
-            "Sizning rolingiz bu portalga kirish huquqiga ega emas",
+            t("Sizning rolingiz bu portalga kirish huquqiga ega emas"),
           ),
         );
       } else {
-        setError("Telefon raqam yoki parol noto'g'ri");
+        setError(t("Telefon raqam yoki parol noto'g'ri"));
       }
     } finally {
       setLoading(false);
@@ -60,10 +62,10 @@ export function StudentLoginForm() {
     <div className="w-full max-w-sm space-y-7">
       <div className="text-center">
         <h1 className="font-display text-[28px] font-extrabold tracking-tight text-ink-900">
-          Kirish
+          {t("Kirish")}
         </h1>
         <p className="mt-0.5 text-sm font-semibold text-ink-500">
-          DAF Sprachzentrum — o&apos;quvchi kabineti
+          {t("DAF Sprachzentrum — o'quvchi kabineti")}
         </p>
       </div>
 
@@ -74,7 +76,7 @@ export function StudentLoginForm() {
           </div>
         ) : null}
 
-        <Field label="Telefon raqam">
+        <Field label={t("Telefon raqam")}>
           <Input
             addon="+"
             type="text"
@@ -87,19 +89,19 @@ export function StudentLoginForm() {
           />
         </Field>
 
-        <Field label="Parol">
+        <Field label={t("Parol")}>
           <Input
             type="password"
             autoComplete="current-password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Parolingizni kiriting"
+            placeholder={t("Parolingizni kiriting")}
           />
         </Field>
 
         <Button type="submit" block size="lg" loading={loading}>
-          Kirish
+          {t("Kirish")}
         </Button>
 
         <button
@@ -107,7 +109,7 @@ export function StudentLoginForm() {
           onClick={() => setForgotOpen(true)}
           className="w-full text-center text-sm font-bold text-coral-600 hover:underline"
         >
-          Parolni unutdingizmi?
+          {t("Parolni unutdingizmi?")}
         </button>
       </form>
 

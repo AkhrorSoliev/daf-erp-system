@@ -41,6 +41,11 @@ import { createMockExamRegistrationScene } from './scenes/mock-exam-registration
 import { createPasswordResetScene } from './scenes/password-reset.scene';
 import { createStatementScene } from './scenes/statement.scene';
 import {
+  LEVEL_TEST_ACTION,
+  createLevelTestScene,
+} from './scenes/level-test.scene';
+import { levelTestTimeoutUpdate } from './scenes/level-test-timer';
+import {
   ACCOUNT_LINK_ACTION,
   ACCOUNT_LINK_BUTTON,
   chatHasAccount,
@@ -339,6 +344,38 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       (ctx) => this.startFlow!(ctx, ''),
     );
 
+    // Daraja testida savol vaqti (ADR-0121): vaqt tugagach bot o'ziga `ltt:`
+    // yangilanishini yuboradi. Taymer jarayon xotirasida: qayta ishga tushsa
+    // yo'qoladi, lekin kech kelgan javobni sahnaning o'zi muddat bo'yicha
+    // rad etadi, shuning uchun test buzilmaydi (avto-o'tish kechikadi xolos).
+    const levelTestScene = createLevelTestScene(
+      this.prisma,
+      this.entityHistoryService,
+      undefined,
+      undefined,
+      {
+        schedule: ({ chatId, counter, messageId, delayMs, action }) => {
+          setTimeout(() => {
+            this.bot
+              .handleUpdate(
+                levelTestTimeoutUpdate(
+                  chatId,
+                  counter,
+                  messageId,
+                  Date.now(),
+                  action,
+                ),
+              )
+              .catch((err: Error) =>
+                this.logger.warn(
+                  `Daraja testi taymeri ishlamadi (chat ${chatId}): ${err.message}`,
+                ),
+              );
+          }, delayMs).unref();
+        },
+      },
+    );
+
     const stage = new Scenes.Stage<BotContext>([
       studentScene,
       employeeScene,
@@ -347,6 +384,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       statementScene,
       staffLinkScene,
       accountLinkScene,
+      levelTestScene,
     ]);
     // `useBeforeScenes`: composed per update, so a registration made after
     // boot (another module's onApplicationBootstrap) takes effect.
@@ -625,8 +663,14 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       await answerPlatformMenu(ctx, this.miniAppUrl);
     });
 
+    // «📊 Darajani aniqlash» — savollar havzasidan test (ADR-0121)
+    this.bot.action(LEVEL_TEST_ACTION, async (ctx) => {
+      await ctx.answerCbQuery();
+      await ctx.scene.enter(SCENES.LEVEL_TEST);
+    });
+
     // Menu action handlers — "Tez kunda" responses (boshqa tugmalar uchun)
-    this.bot.action(/^menu_(registration|level|groups)$/, async (ctx) => {
+    this.bot.action(/^menu_(registration|groups)$/, async (ctx) => {
       await ctx.answerCbQuery('Bu funksiya tez kunda ishga tushadi! ⏳', {
         show_alert: true,
       });

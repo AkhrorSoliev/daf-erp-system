@@ -90,12 +90,12 @@ describe('StudentPortalController — route access', () => {
         sessionVersion: 4,
       });
 
-      const res = await controller.changePassword(99001, 10001, {
+      const res = await controller.changePassword(99001, 10001, 'sid-1', {
         oldPassword: 'eskiParol1',
         newPassword: 'yangiParol1',
       });
 
-      expect(mockAuth.issueSession).toHaveBeenCalledWith(99001, 4);
+      expect(mockAuth.issueSession).toHaveBeenCalledWith(99001, 4, 'sid-1');
       expect(res).not.toHaveProperty('sessionVersion');
       const last = (fn: jest.Mock) =>
         fn.mock.invocationCallOrder[fn.mock.invocationCallOrder.length - 1];

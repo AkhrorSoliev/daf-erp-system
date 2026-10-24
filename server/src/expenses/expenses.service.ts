@@ -8,6 +8,8 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import type { PermissionKey } from '../common/permissions/permission-catalog';
 import { ExpenseCategory, ExpensePaymentMethod, Prisma } from '@prisma/client';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
@@ -25,7 +27,16 @@ import {
 import { renderPdf } from '../receipts/pdf/render';
 import { buildExpensesDoc, type ExpensesPdfRow } from './pdf/expenses-template';
 import { formatDate } from './pdf/format.util';
-import { utcMidnightFromDateStr } from '../common/date/tashkent';
+import {
+  tashkentDateStr,
+  utcMidnightFromDateStr,
+} from '../common/date/tashkent';
+import { expenseHint } from './expense-hints';
+import {
+  expenseMonthTitle,
+  expenseMonthWindow,
+  parseExpenseMonth,
+} from './expenses-month';
 
 const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   RENT: 'Ijara',
@@ -40,7 +51,7 @@ const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
 };
 
 const METHOD_LABELS: Record<ExpensePaymentMethod, string> = {
-  CASH: 'Naqt',
+  CASH: 'Naqd',
   CARD: 'Karta',
 };
 
@@ -53,6 +64,12 @@ const OWN_ADVANCE_REFUSAL =
 // branch the recipient belongs to.
 const RECIPIENT_OTHER_BRANCH =
   "Bu xodim tanlangan filialga biriktirilmagan — avansni xodimning o'z filialida yozing.";
+
+// ADR-0087 (CEO, 10.10 and 11.10.2026): an advance is cut from its
+// recipient's salary, so it is written with «Oylik va avans to'lash»
+// (`salary.pay`) alone; every other category with «Xarajat kiritish»
+// (`expenses.manage`).
+const EXPENSE_WRITE_REFUSAL = "Bu xarajatni kiritish huquqingiz yo'q";
 
 // Human label for the PDF "Davr" line. Handles one-sided ranges.
 function buildDateRangeLabel(start?: string, end?: string): string {
@@ -69,7 +86,27 @@ export class ExpensesService {
     private prisma: PrismaService,
     private transactionsService: TransactionsService,
     private entityHistoryService: EntityHistoryService,
+    private permissions: PermissionsService,
   ) {}
+
+  /**
+   * The one place the category rule lives (ADR-0087): TEACHER_ADVANCE
+   * requires `salary.pay`, every other category `expenses.manage`. Runs before
+   * any other check, so a caller who may not write the category learns
+   * nothing about branches or recipients.
+   */
+  private async assertMayWrite(
+    userId: number,
+    category: ExpenseCategory,
+  ): Promise<void> {
+    const key: PermissionKey =
+      category === ExpenseCategory.TEACHER_ADVANCE
+        ? 'salary.pay'
+        : 'expenses.manage';
+    if (!(await this.permissions.has(userId, key))) {
+      throw new ForbiddenException(EXPENSE_WRITE_REFUSAL);
+    }
+  }
 
   /**
    * The named branch must exist, belong to this company, and be one the caller
@@ -183,8 +220,33 @@ export class ExpensesService {
     }
   }
 
+  /**
+   * The channel a MARKETING expense paid for (ADR-0109). Only MARKETING rows
+   * carry one, and it must be a live lead source of this company: the marketing
+   * report joins spend to leads by it.
+   */
+  private async assertLeadSource(
+    leadSourceId: string | null | undefined,
+    category: ExpenseCategory,
+    companyId: number,
+  ): Promise<void> {
+    if (leadSourceId == null) return;
+    if (category !== ExpenseCategory.MARKETING) {
+      throw new BadRequestException(
+        'Manba (kanal) faqat marketing xarajatiga yoziladi',
+      );
+    }
+    const source = await this.prisma.leadSource.findFirst({
+      where: { id: leadSourceId, companyId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!source) throw new BadRequestException('Manba topilmadi');
+  }
+
   async create(dto: CreateExpenseDto, userId: number, companyId: number) {
+    await this.assertMayWrite(userId, dto.category);
     await this.assertBranchWritable(dto.branchId, companyId, userId);
+    await this.assertLeadSource(dto.leadSourceId, dto.category, companyId);
 
     if (dto.category === ExpenseCategory.TEACHER_ADVANCE) {
       await this.assertAdvanceRecipient(
@@ -208,6 +270,7 @@ export class ExpensesService {
             branchId: dto.branchId,
             receiptUrl: dto.receiptUrl,
             relatedUserId: dto.relatedUserId,
+            leadSourceId: dto.leadSourceId ?? null,
             createdById: userId,
             companyId,
           },
@@ -295,16 +358,40 @@ export class ExpensesService {
       ...(query.search && {
         description: { contains: query.search, mode: 'insensitive' },
       }),
-      // Date is a date-only column, so a midnight `lte` correctly includes the
-      // whole `endDate`. Either bound works on its own (one-sided range).
-      ...((query.startDate || query.endDate) && {
-        date: {
-          ...(query.startDate && {
-            gte: utcMidnightFromDateStr(query.startDate),
-          }),
-          ...(query.endDate && { lte: utcMidnightFromDateStr(query.endDate) }),
-        },
+      ...(query.createdById?.length && {
+        createdById: equalsOrIn(query.createdById),
       }),
+      date: this.dateWhere(query),
+    };
+  }
+
+  /**
+   * The month a read covers (spec B6 §4.1): `oy`, or the current Tashkent month
+   * when neither `oy` nor the old range is sent. `null` = the old
+   * `startDate`/`endDate` range, kept for a client still on the old page.
+   */
+  private monthOf(query: ExpenseQueryDto): string | null {
+    const legacy = Boolean(query.startDate || query.endDate);
+    if (query.oy && legacy) {
+      throw new BadRequestException(
+        "Oy yoki sana oralig'i — ikkalasi birga emas",
+      );
+    }
+    return legacy ? null : parseExpenseMonth(query.oy, new Date());
+  }
+
+  // `Expense.date` is a date-only column: the month is [1st, next 1st); the old
+  // range keeps its midnight `lte` (either bound works on its own).
+  private dateWhere(query: ExpenseQueryDto): {
+    gte?: Date;
+    lt?: Date;
+    lte?: Date;
+  } {
+    const month = this.monthOf(query);
+    if (month) return expenseMonthWindow(month);
+    return {
+      ...(query.startDate && { gte: utcMidnightFromDateStr(query.startDate) }),
+      ...(query.endDate && { lte: utcMidnightFromDateStr(query.endDate) }),
     };
   }
 
@@ -318,8 +405,16 @@ export class ExpensesService {
     branchId: true,
     receiptUrl: true,
     createdAt: true,
+    leadSource: { select: { id: true, name: true } },
     createdBy: { select: { id: true, firstName: true, lastName: true } },
   } satisfies Prisma.ExpenseSelect;
+
+  // Newest first; `createdAt` and `id` keep one day's rows from jumping between pages.
+  private readonly listOrder = [
+    { date: 'desc' },
+    { createdAt: 'desc' },
+    { id: 'desc' },
+  ] satisfies Prisma.ExpenseOrderByWithRelationInput[];
 
   async findAll(
     query: ExpenseQueryDto,
@@ -331,11 +426,11 @@ export class ExpensesService {
 
     const where = this.buildWhere(query, companyId, branchIds);
 
-    const [data, total, byCatMethod] = await Promise.all([
+    const [rows, total, byCatMethod] = await Promise.all([
       this.prisma.expense.findMany({
         where,
         select: this.listSelect,
-        orderBy: { date: 'desc' },
+        orderBy: this.listOrder,
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
@@ -350,7 +445,7 @@ export class ExpensesService {
     ]);
 
     // Advances are excluded from `where` (managed on the salary page), so the
-    // headline totals (Jami / Naqt / Karta) are the pure operational spend and
+    // headline totals (Jami / Naqd / Karta) are the pure operational spend and
     // `advancesTotal` here is always 0 (kept for response-shape stability).
     const sumWhere = (
       pred: (g: (typeof byCatMethod)[number]) => boolean,
@@ -360,7 +455,7 @@ export class ExpensesService {
       g.category === ExpenseCategory.TEACHER_ADVANCE;
 
     return {
-      data,
+      data: rows.map((r) => ({ ...r, hint: expenseHint(r) })),
       total,
       page,
       pageSize,
@@ -391,7 +486,7 @@ export class ExpensesService {
     return this.prisma.expense.findMany({
       where,
       select: this.listSelect,
-      orderBy: { date: 'desc' },
+      orderBy: this.listOrder,
     });
   }
 
@@ -455,9 +550,12 @@ export class ExpensesService {
     query: ExpenseQueryDto,
     companyId: number,
     branchIds: ReportBranchIds,
-  ): Promise<Buffer> {
-    const [rows, company, branch] = await Promise.all([
-      this.exportAll(query, companyId, branchIds),
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    // One month per request: rows, title and file name all name this one.
+    const month = this.monthOf(query);
+    const monthQuery = month ? { ...query, oy: month } : query;
+    const [rows, company, branch, creators] = await Promise.all([
+      this.exportAll(monthQuery, companyId, branchIds),
       this.prisma.company.findUnique({
         where: { id: companyId },
         select: { name: true },
@@ -468,6 +566,14 @@ export class ExpensesService {
             select: { name: true },
           })
         : Promise.resolve(null),
+      // «Kim kiritgan: …» names the people the list was filtered by.
+      query.createdById?.length
+        ? this.prisma.user.findMany({
+            where: { id: { in: query.createdById }, companyId },
+            select: { firstName: true, lastName: true },
+            orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+          })
+        : Promise.resolve([]),
     ]);
 
     const pdfRows: ExpensesPdfRow[] = rows.map((r) => ({
@@ -479,7 +585,7 @@ export class ExpensesService {
       createdByName: `${r.createdBy.firstName} ${r.createdBy.lastName}`.trim(),
     }));
 
-    // Totals mirror the on-screen summary: the Jami / Naqt / Karta figures
+    // Totals mirror the on-screen summary: the Jami / Naqd / Karta figures
     // include every category (advance included), with the advance shown as a
     // separate "shundan Ustoz avansi" sub-line.
     const sumRows = (pred: (r: (typeof rows)[number]) => boolean): number =>
@@ -503,13 +609,21 @@ export class ExpensesService {
       categoryLabel: joinLabels(query.category, CATEGORY_LABELS),
       methodLabel: joinLabels(query.paymentMethod, METHOD_LABELS),
       search: query.search?.trim() || null,
-      dateRangeLabel: buildDateRangeLabel(query.startDate, query.endDate),
+      dateRangeLabel: month
+        ? expenseMonthTitle(month)
+        : buildDateRangeLabel(query.startDate, query.endDate),
+      creatorLabel: creators.length
+        ? creators.map((u) => `${u.firstName} ${u.lastName}`.trim()).join(', ')
+        : null,
       generatedAt: new Date(),
       rows: pdfRows,
       totals,
     });
 
-    return renderPdf(doc);
+    return {
+      buffer: await renderPdf(doc),
+      filename: `xarajatlar-${month ?? tashkentDateStr(new Date())}.pdf`,
+    };
   }
 
   async update(
@@ -522,6 +636,13 @@ export class ExpensesService {
       where: { id, deletedAt: null, companyId },
     });
     if (!existing) throw new NotFoundException('Xarajat topilmadi');
+
+    // The category it is now, and the one it becomes: rent turned into an
+    // advance needs both keys.
+    await this.assertMayWrite(userId, existing.category);
+    if (dto.category !== undefined && dto.category !== existing.category) {
+      await this.assertMayWrite(userId, dto.category);
+    }
 
     // Both sides: the caller must own the branch the row is IN, and the branch
     // they are moving it TO. Checking only the target would let someone reach
@@ -574,6 +695,19 @@ export class ExpensesService {
       );
     }
 
+    // The channel follows the category (ADR-0109): a row that stops being
+    // MARKETING loses it; a given one is checked against the category it gets.
+    const nextCategory = dto.category ?? existing.category;
+    await this.assertLeadSource(dto.leadSourceId, nextCategory, companyId);
+    const leadSourceData: { leadSourceId?: string | null } =
+      nextCategory !== ExpenseCategory.MARKETING
+        ? existing.leadSourceId != null
+          ? { leadSourceId: null }
+          : {}
+        : dto.leadSourceId !== undefined
+          ? { leadSourceId: dto.leadSourceId }
+          : {};
+
     // Detect if the change touches financial fields. Description/date/branch/
     // receiptUrl edits do not require a ledger correction; amount or category
     // changes must be reflected in Transaction or cash-flow reports drift.
@@ -602,6 +736,7 @@ export class ExpensesService {
             ...(dto.relatedUserId !== undefined && {
               relatedUserId: dto.relatedUserId,
             }),
+            ...leadSourceData,
           },
         });
 
@@ -670,6 +805,7 @@ export class ExpensesService {
       where: { id, deletedAt: null, companyId },
     });
     if (!existing) throw new NotFoundException('Xarajat topilmadi');
+    await this.assertMayWrite(userId, existing.category);
 
     // Delete REVERSES a ledger entry and moves cash back into the branch's
     // kassa, so it needs the same branch check as create/update.

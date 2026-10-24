@@ -16,6 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useT } from "@/i18n/context";
 import {
   RelativeTime,
   SendStatus,
@@ -49,6 +50,7 @@ export function CommentItem({
   onSaveEdit,
   onDelete,
 }: CommentItemProps) {
+  const t = useT();
   const isAuthor = comment.author?.id === currentUserId;
   const isSystemComment = comment.isSystem;
   const canEdit = (isAuthor || canModerate) && !comment._pending && !isSystemComment;
@@ -83,7 +85,7 @@ export function CommentItem({
             <span className="text-[13px] font-semibold leading-none">
               {comment.author
                 ? `${comment.author.firstName} ${comment.author.lastName}`
-                : "Tizim"}
+                : t("Tizim (avtomatik)")}
             </span>
             <RelativeTime date={comment.createdAt} />
             <SendStatus pending={comment._pending} failed={comment._failed} />
@@ -99,7 +101,7 @@ export function CommentItem({
                   <DropdownMenuContent align="end" className="w-36">
                     <DropdownMenuItem onClick={() => onStartEdit(comment)}>
                       <Pencil className="mr-2 size-3.5" />
-                      Tahrirlash
+                      {t("Tahrirlash")}
                     </DropdownMenuItem>
                     {canModerate && (
                       <DropdownMenuItem
@@ -107,7 +109,7 @@ export function CommentItem({
                         onClick={() => onDelete(comment.id)}
                       >
                         <Trash2 className="mr-2 size-3.5" />
-                        O&apos;chirish
+                        {t("O'chirish")}
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
@@ -141,7 +143,7 @@ export function CommentItem({
                   disabled={!editContent.trim() || editSaving}
                 >
                   <Check className="mr-1 size-3" />
-                  {editSaving ? "..." : "Saqlash"}
+                  {editSaving ? "..." : t("Saqlash")}
                 </Button>
                 <Button
                   variant="ghost"
@@ -150,10 +152,10 @@ export function CommentItem({
                   onClick={onCancelEdit}
                   disabled={editSaving}
                 >
-                  Bekor
+                  {t("Bekor")}
                 </Button>
                 <span className="text-[11px] text-muted-foreground/40 ml-auto hidden sm:inline">
-                  Esc — bekor, Ctrl+Enter — saqlash
+                  {t("Esc — bekor, Ctrl+Enter — saqlash")}
                 </span>
               </div>
             </div>

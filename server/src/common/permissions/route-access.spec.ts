@@ -23,6 +23,10 @@ describe('accessSummary', () => {
     ]);
   });
 
+  it('writes a @CeoOnly() route as the CEO alone', () => {
+    expect(accessSummary({ kind: 'ceo' })).toEqual(['CEO']);
+  });
+
   it('turns capabilities into the CEO plus the union of their defaults', () => {
     expect(accessSummary({ kind: 'can', keys: ['expenses.view'] })).toEqual([
       'Branch Director',

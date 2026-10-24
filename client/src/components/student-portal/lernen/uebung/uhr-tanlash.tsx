@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle, XCircle } from "@phosphor-icons/react";
+import { useT } from "@/i18n/use-t";
 import { cn } from "@/lib/utils";
 import type { PruefErgebnis } from "../types";
 import { Uhr } from "./uhr";
@@ -27,6 +28,7 @@ export function UhrTanlash({
   natija,
   kutilmoqda = false,
 }: UhrTanlashProps) {
+  const t = useT();
   return (
     <div className="mx-auto grid w-full max-w-sm grid-cols-2 gap-3">
       {options.map((zeit, i) => {
@@ -40,7 +42,7 @@ export function UhrTanlash({
             disabled={natija != null || kutilmoqda}
             onClick={() => onTanla(zeit)}
             aria-pressed={bosilgan}
-            aria-label={`${i + 1}-variant`}
+            aria-label={t("{n}-variant", { n: i + 1 })}
             className={cn(
               "relative w-full rounded-2xl border-4 bg-tint p-3 text-ink-900 transition-colors",
               "border-transparent",
@@ -50,7 +52,7 @@ export function UhrTanlash({
               (natija != null || kutilmoqda) && "cursor-default",
             )}
           >
-            <Uhr zeit={zeit} label={`${i + 1}-variant`} className="w-full" />
+            <Uhr zeit={zeit} label={t("{n}-variant", { n: i + 1 })} className="w-full" />
             <span className="absolute left-2 top-2 hidden size-6 items-center justify-center rounded-full bg-black/40 text-xs font-bold text-white lg:flex">
               {i + 1}
             </span>

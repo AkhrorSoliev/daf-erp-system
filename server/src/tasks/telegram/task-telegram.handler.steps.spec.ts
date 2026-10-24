@@ -37,6 +37,7 @@ const view = (): TgTaskView => ({
   entityLabel: null,
   participants: [{ userId: 40, role: 'ASSIGNEE', name: 'Rahimov A.' }],
   steps: [{ id: STEP, title: 'Matn qoralamasi', done: false }],
+  history: [],
 });
 
 function tick() {
@@ -78,6 +79,7 @@ beforeEach(() => {
     tasks,
     { getBot: () => ({}), useBeforeScenes: jest.fn() } as any,
     { openUrl: jest.fn(), record: jest.fn() } as any,
+    { onMessage: jest.fn() } as never,
   );
   error = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
 });

@@ -7,6 +7,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { interpolate, type Params } from "@/i18n/translate";
 import { formatNumber, formatPercent } from "@/lib/format-utils";
 import type { FunnelRow } from "./lead-funnel-math";
 import type { FunnelStage } from "./lead-funnel-types";
@@ -91,6 +92,11 @@ interface LeadFunnelChartProps {
   onStageClick?: (stage: FunnelStage) => void;
   /** Bosh sahifa uchun: past bloklar, manba va «o'tmadi» yozuvlarisiz. */
   compact?: boolean;
+  /**
+   * The page's `t` from `useT()`. The report page does not pass it and keeps
+   * reading the Uzbek texts as written; the home page does.
+   */
+  t?: (source: string, params?: Params) => string;
 }
 
 /**
@@ -103,6 +109,7 @@ export function LeadFunnelChart({
   leadSplit,
   onStageClick,
   compact = false,
+  t = interpolate,
 }: LeadFunnelChartProps) {
   const { isDark } = useChartTheme();
   const fill = STAGE_FILL[isDark ? "dark" : "light"];
@@ -128,25 +135,35 @@ export function LeadFunnelChart({
                     onClick={onStageClick && (() => onStageClick(row.stage))}
                     aria-label={
                       onStageClick
-                        ? `${row.label}: ${row.count} kishi — ro'yxatni ochish`
-                        : `${row.label}: ${row.count} kishi`
+                        ? t("{label}: {n} kishi — ro'yxatni ochish", {
+                            label: t(row.label),
+                            n: row.count,
+                          })
+                        : t("{label}: {n} kishi", {
+                            label: t(row.label),
+                            n: row.count,
+                          })
                     }
                     className={`group/row grid w-full ${size.cols} items-center gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${onStageClick ? "" : "cursor-default"}`}
                   >
                     <span className="min-w-0">
                       <span className={`block truncate ${size.label}`}>
-                        {row.label}
+                        {t(row.label)}
                       </span>
                       {i === 0 && hasSplit && leadSplit && (
                         // Tor ustunda (telefon) ikki qatorga bo'linadi —
                         // kesilib «to'g'…» bo'lib qolmasin.
                         <span className="block text-xs text-muted-foreground tabular-nums">
                           <span className="block whitespace-nowrap sm:inline">
-                            doskadan {formatNumber(leadSplit.board)}
+                            {t("doskadan {n}", {
+                              n: formatNumber(leadSplit.board),
+                            })}
                           </span>
                           <span className="hidden sm:inline"> · </span>
                           <span className="block whitespace-nowrap sm:inline">
-                            to&apos;g&apos;ridan {formatNumber(leadSplit.direct)}
+                            {t("to'g'ridan {n}", {
+                              n: formatNumber(leadSplit.direct),
+                            })}
                           </span>
                         </span>
                       )}
@@ -178,10 +195,17 @@ export function LeadFunnelChart({
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="tabular-nums">
                   <p className="font-medium">
-                    {row.label} — {formatNumber(row.count)} kishi
+                    {t("{label} — {n} kishi", {
+                      label: t(row.label),
+                      n: formatNumber(row.count),
+                    })}
                   </p>
                   {i > 0 && (
-                    <p>lidlarning {formatPercent(row.pctOfFirst)}</p>
+                    <p>
+                      {t("lidlarning {pct}", {
+                        pct: formatPercent(row.pctOfFirst),
+                      })}
+                    </p>
                   )}
                 </TooltipContent>
               </Tooltip>
@@ -205,13 +229,15 @@ export function LeadFunnelChart({
                   <span
                     className={`absolute inset-0 flex items-center justify-center tabular-nums ${size.step}`}
                   >
-                    {formatPercent(next.pctOfPrev)} o&apos;tdi
+                    {t("{pct} o'tdi", { pct: formatPercent(next.pctOfPrev) })}
                   </span>
                   {!compact &&
                     next.lostFromPrev !== null &&
                     next.lostFromPrev > 0 && (
                       <span className="absolute inset-y-0 right-0 hidden items-center text-xs text-muted-foreground tabular-nums sm:flex">
-                        {formatNumber(next.lostFromPrev)} kishi o&apos;tmadi
+                        {t("{n} kishi o'tmadi", {
+                          n: formatNumber(next.lostFromPrev),
+                        })}
                       </span>
                     )}
                 </span>

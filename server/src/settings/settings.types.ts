@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { PaymentModel } from '@prisma/client';
+import { KpiRuleMode, PaymentModel } from '@prisma/client';
 
 /**
  * Sozlamalar registri — `/settings` panelining yagona manbasi.
@@ -33,7 +33,22 @@ export type SettingKey =
   | 'payment.trialLessonEnabled'
   | 'payment.attendanceOpensMinutesBefore'
   | 'payment.admissionMinPaidPercent'
-  | 'payment.paidThroughReminderDays';
+  | 'payment.paidThroughReminderDays'
+  | 'lessonRating.enabled'
+  | 'leads.maxUntouched'
+  | 'leads.firstActionHours'
+  | 'leads.followUpDays'
+  | 'kpi.enabled'
+  | 'kpi.leadPaid.mode'
+  | 'kpi.leadPaid.value'
+  | 'kpi.promiseKept.mode'
+  | 'kpi.promiseKept.value'
+  | 'participation.minAttendancePercent'
+  | 'participation.minAppPercent.A1'
+  | 'participation.minAppPercent.A2'
+  | 'participation.minAppPercent.B1'
+  | 'participation.minLessons'
+  | 'participation.maxLatePercent';
 
 export interface SettingValueMap {
   'payment.defaultModel': PaymentModel;
@@ -48,6 +63,21 @@ export interface SettingValueMap {
   'payment.attendanceOpensMinutesBefore': number;
   'payment.admissionMinPaidPercent': number;
   'payment.paidThroughReminderDays': number;
+  'lessonRating.enabled': boolean;
+  'leads.maxUntouched': number;
+  'leads.firstActionHours': number;
+  'leads.followUpDays': number;
+  'kpi.enabled': boolean;
+  'kpi.leadPaid.mode': KpiRuleMode;
+  'kpi.leadPaid.value': number;
+  'kpi.promiseKept.mode': KpiRuleMode;
+  'kpi.promiseKept.value': number;
+  'participation.minAttendancePercent': number;
+  'participation.minAppPercent.A1': number;
+  'participation.minAppPercent.A2': number;
+  'participation.minAppPercent.B1': number;
+  'participation.minLessons': number;
+  'participation.maxLatePercent': number;
 }
 
 interface SettingDefinition<K extends SettingKey> {
@@ -161,6 +191,36 @@ function parseReminderDays(raw: unknown): number {
     `payment.paidThroughReminderDays 0 dan 10 gacha bo'lgan butun son bo'lishi kerak, kelgan qiymat: ${JSON.stringify(raw)}`,
   );
 }
+
+/** A whole number in `[min, max]`, refused with the key's name otherwise. */
+function parseIntInRange(
+  key: string,
+  raw: unknown,
+  min: number,
+  max: number,
+): number {
+  if (
+    typeof raw === 'number' &&
+    Number.isInteger(raw) &&
+    raw >= min &&
+    raw <= max
+  ) {
+    return raw;
+  }
+  throw new BadRequestException(
+    `${key} ${min} dan ${max} gacha bo'lgan butun son bo'lishi kerak, kelgan qiymat: ${JSON.stringify(raw)}`,
+  );
+}
+
+function parseKpiMode(key: SettingKey, raw: unknown): KpiRuleMode {
+  if (raw === KpiRuleMode.FIXED || raw === KpiRuleMode.PERCENT) return raw;
+  throw new BadRequestException(
+    `${key} faqat "FIXED" yoki "PERCENT" bo'lishi mumkin, kelgan qiymat: ${JSON.stringify(raw)}`,
+  );
+}
+
+/** A rule's value: whole so'm up to 10 000 000; a percent is held to 0–100 by `KpiSettingsService`. */
+const KPI_VALUE_MAX = 10_000_000;
 
 export const SETTING_DEFINITIONS: {
   [K in SettingKey]: SettingDefinition<K>;
@@ -283,6 +343,115 @@ export const SETTING_DEFINITIONS: {
     // 0: no such reminder. Read by `MonthlyPaymentNoticeCronService`.
     defaultValue: 3,
     parse: parseReminderDays,
+    companyLevelOnly: true,
+  },
+  'lessonRating.enabled': {
+    key: 'lessonRating.enabled',
+    // Darsdan keyin o'quvchidan Telegram'da baho so'rash (spec 2026-10-13).
+    // O'chiq chiqadi — CEO «Dars baholari» sahifasida yoqadi.
+    // `LessonRatingSenderService` kompaniya bo'yicha o'qiydi.
+    defaultValue: false,
+    parse: (raw) => parseBoolean('lessonRating.enabled', raw),
+    companyLevelOnly: true,
+  },
+  // Lead owner (ADR-0093): read by `LeadOwnershipService` per company; the
+  // CEO changes them on Sozlamalar → «Lidlar egaligi».
+  'leads.maxUntouched': {
+    key: 'leads.maxUntouched',
+    defaultValue: 10,
+    parse: (raw) => parseIntInRange('leads.maxUntouched', raw, 1, 100),
+    companyLevelOnly: true,
+  },
+  'leads.firstActionHours': {
+    key: 'leads.firstActionHours',
+    defaultValue: 2,
+    parse: (raw) => parseIntInRange('leads.firstActionHours', raw, 1, 24),
+    companyLevelOnly: true,
+  },
+  'leads.followUpDays': {
+    key: 'leads.followUpDays',
+    defaultValue: 3,
+    parse: (raw) => parseIntInRange('leads.followUpDays', raw, 1, 14),
+    companyLevelOnly: true,
+  },
+  // Admin KPI (ADR-0096): read by `KpiSettingsService` per company; the CEO
+  // changes them on Sozlamalar → «KPI sozlamalari» (`PATCH /kpi/settings`).
+  'kpi.enabled': {
+    key: 'kpi.enabled',
+    defaultValue: true,
+    parse: (raw) => parseBoolean('kpi.enabled', raw),
+    companyLevelOnly: true,
+  },
+  'kpi.leadPaid.mode': {
+    key: 'kpi.leadPaid.mode',
+    defaultValue: KpiRuleMode.FIXED,
+    parse: (raw) => parseKpiMode('kpi.leadPaid.mode', raw),
+    companyLevelOnly: true,
+  },
+  'kpi.leadPaid.value': {
+    key: 'kpi.leadPaid.value',
+    defaultValue: 50_000,
+    parse: (raw) =>
+      parseIntInRange('kpi.leadPaid.value', raw, 0, KPI_VALUE_MAX),
+    companyLevelOnly: true,
+  },
+  'kpi.promiseKept.mode': {
+    key: 'kpi.promiseKept.mode',
+    defaultValue: KpiRuleMode.FIXED,
+    parse: (raw) => parseKpiMode('kpi.promiseKept.mode', raw),
+    companyLevelOnly: true,
+  },
+  'kpi.promiseKept.value': {
+    key: 'kpi.promiseKept.value',
+    defaultValue: 20_000,
+    parse: (raw) =>
+      parseIntInRange('kpi.promiseKept.value', raw, 0, KPI_VALUE_MAX),
+    companyLevelOnly: true,
+  },
+  // Teilnahmebestätigung (spec 2026-10-17): read by
+  // `ParticipationSettingsService` per company; the CEO changes them on
+  // Sozlamalar → «Qatnashganlik hujjati».
+  'participation.minAttendancePercent': {
+    key: 'participation.minAttendancePercent',
+    defaultValue: 80,
+    parse: (raw) =>
+      parseIntInRange('participation.minAttendancePercent', raw, 0, 100),
+    companyLevelOnly: true,
+  },
+  'participation.minAppPercent.A1': {
+    key: 'participation.minAppPercent.A1',
+    defaultValue: 100,
+    parse: (raw) =>
+      parseIntInRange('participation.minAppPercent.A1', raw, 0, 100),
+    companyLevelOnly: true,
+  },
+  'participation.minAppPercent.A2': {
+    key: 'participation.minAppPercent.A2',
+    defaultValue: 100,
+    parse: (raw) =>
+      parseIntInRange('participation.minAppPercent.A2', raw, 0, 100),
+    companyLevelOnly: true,
+  },
+  'participation.minAppPercent.B1': {
+    key: 'participation.minAppPercent.B1',
+    defaultValue: 100,
+    parse: (raw) =>
+      parseIntInRange('participation.minAppPercent.B1', raw, 0, 100),
+    companyLevelOnly: true,
+  },
+  // The CEO's conditions of 17.10.2026: the fewest counted lessons, and the
+  // most late lessons as a percent of the lessons attended.
+  'participation.minLessons': {
+    key: 'participation.minLessons',
+    defaultValue: 20,
+    parse: (raw) => parseIntInRange('participation.minLessons', raw, 1, 200),
+    companyLevelOnly: true,
+  },
+  'participation.maxLatePercent': {
+    key: 'participation.maxLatePercent',
+    defaultValue: 20,
+    parse: (raw) =>
+      parseIntInRange('participation.maxLatePercent', raw, 0, 100),
     companyLevelOnly: true,
   },
 };

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
+import de from "@/i18n/dictionaries/de";
+import en from "@/i18n/dictionaries/en";
+import ru from "@/i18n/dictionaries/ru";
+import { translate, type Params } from "@/i18n/translate";
 import {
+  CONTRACT_STATUS_LABEL,
+  CUSTOMER_KIND_LABEL,
+  INCLUDE_LABEL,
+  LINK_STATE_LABEL,
   ageOn,
   canCancel,
   courseDraftFromPrefill,
@@ -170,6 +178,35 @@ describe("request body", () => {
     expect(
       formProblem({ enrollmentIds: ["e-1"], customer, minor: false, branchMissing: ["shahar"] }),
     ).toMatch(/Filial sozlamasida shahar/);
+  });
+});
+
+describe("the form problems in another language", () => {
+  const tRu = (source: string, params?: Params) => translate("ru", ru, source, params);
+  const tEn = (source: string, params?: Params) => translate("en", en, source, params);
+
+  it("says each problem in the page language and keeps the server's setting names as they are", () => {
+    const customer = customerDraft("SELF", prefill());
+    expect(formProblem({ enrollmentIds: [], customer, minor: false }, tRu)).toBe("Выберите хотя бы один курс");
+    expect(formProblem({ enrollmentIds: ["e-1"], customer, minor: true }, tEn)).toBe(
+      "A minor student cannot be the customer themselves",
+    );
+    expect(
+      formProblem({ enrollmentIds: ["e-1"], customer, minor: false, branchMissing: ["shahar", "manzil"] }, tRu),
+    ).toBe("В настройках филиала не заполнено: shahar, manzil");
+    expect(formProblem({ enrollmentIds: ["e-1"], customer, minor: false }, tRu)).toBeNull();
+  });
+
+  it("every status, enrollment-state, customer and include label has a translation in ru, de and en", () => {
+    const labels = [
+      ...Object.values(CONTRACT_STATUS_LABEL),
+      ...Object.values(LINK_STATE_LABEL),
+      ...Object.values(CUSTOMER_KIND_LABEL),
+      ...Object.values(INCLUDE_LABEL),
+    ];
+    for (const dictionary of [ru, de, en]) {
+      for (const label of labels) expect(dictionary[label], label).toBeTruthy();
+    }
   });
 });
 

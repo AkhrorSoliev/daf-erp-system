@@ -20,7 +20,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { MOCK_EXAM_STATUS_LABELS } from "@/hooks/use-mock-exams-board";
+import { GRADING_STEP_LABEL } from "./exam-status-stepper";
+import { useT } from "@/i18n/context";
 import api from "@/lib/api";
+import { formatNumber } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
 import type { ExamDetail } from "./exam-detail-types";
 import {
@@ -74,6 +78,12 @@ interface MatrixResponse {
 
 
 export function ExamResultsTab({ exam }: ExamResultsTabProps) {
+  const t = useT();
+  // The load reads t from here: a language switch must not refetch.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
   const [matrix, setMatrix] = useState<MatrixResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -103,7 +113,8 @@ export function ExamResultsTab({ exam }: ExamResultsTabProps) {
       initialRef.current = new Map(seed);
       setEdits(seed);
     } catch (error) {
-      toast.error(getErrorMessage(error, "Natijalarni yuklashda xatolik"));
+      const t = tRef.current;
+      toast.error(getErrorMessage(error, t("Natijalarni yuklashda xatolik")));
     } finally {
       setLoading(false);
     }
@@ -153,6 +164,7 @@ export function ExamResultsTab({ exam }: ExamResultsTabProps) {
       dirtyParticipantIds,
       edits,
       initialRef.current,
+      t,
     );
     if (!res.ok) {
       toast.error(res.error);
@@ -165,7 +177,7 @@ export function ExamResultsTab({ exam }: ExamResultsTabProps) {
     if (!matrix) return;
     const payload = validateAndBuildPayload();
     if (!payload || payload.participants.length === 0) {
-      toast("Saqlanadigan o'zgarish topilmadi");
+      toast(t("Saqlanadigan o'zgarish topilmadi"));
       return;
     }
     setSaving(true);
@@ -188,10 +200,12 @@ export function ExamResultsTab({ exam }: ExamResultsTabProps) {
       initialRef.current = new Map(seed);
       setEdits(seed);
       toast.success(
-        `${payload.participants.length} ishtirokchi natijasi saqlandi`,
+        t("{n} ishtirokchi natijasi saqlandi", {
+          n: formatNumber(payload.participants.length),
+        }),
       );
     } catch (error) {
-      toast.error(getErrorMessage(error, "Saqlashda xatolik"));
+      toast.error(getErrorMessage(error, t("Saqlashda xatolik")));
     } finally {
       setSaving(false);
     }
@@ -201,10 +215,10 @@ export function ExamResultsTab({ exam }: ExamResultsTabProps) {
     setRanking(true);
     try {
       await api.post(`/mock-exams/${exam.id}/recalculate-ranks`);
-      toast.success("O'rinlar qayta hisoblandi");
+      toast.success(t("O'rinlar qayta hisoblandi"));
       await fetchMatrix();
     } catch (error) {
-      toast.error(getErrorMessage(error, "O'rinlarni hisoblashda xatolik"));
+      toast.error(getErrorMessage(error, t("O'rinlarni hisoblashda xatolik")));
     } finally {
       setRanking(false);
     }
@@ -225,15 +239,21 @@ export function ExamResultsTab({ exam }: ExamResultsTabProps) {
   const canEdit = isGrading;
   const subjects = matrix.subjects;
   const participants = matrix.participants;
+  // Status words are `msg()` texts: bind to a local before `t`. The warning
+  // quotes the step bar's own label for the grading step.
+  const gradingLabel = GRADING_STEP_LABEL;
+  // ANNOUNCED and ARCHIVED never go back to grading (MOCK_EXAM_TRANSITIONS).
+  const isAnnounced =
+    exam.status === "ANNOUNCED" || exam.status === "ARCHIVED";
+  const statusLabel: string | undefined = MOCK_EXAM_STATUS_LABELS[exam.status];
 
   if (subjects.length === 0) {
     return (
       <div className="rounded-lg border border-dashed py-16 text-center">
         <ClipboardList className="mx-auto size-8 text-muted-foreground opacity-50" />
-        <p className="mt-2 text-sm font-medium">Hali bo&apos;lim yo&apos;q</p>
+        <p className="mt-2 text-sm font-medium">{t("Hali bo'lim yo'q")}</p>
         <p className="text-sm text-muted-foreground">
-          Ball kiritish uchun avval &quot;Bo&apos;limlar&quot; tabida
-          imtihon bo&apos;limlarini sozlang
+          {t("Ball kiritish uchun avval imtihon bo'limlarini sozlang")}
         </p>
       </div>
     );
@@ -244,11 +264,10 @@ export function ExamResultsTab({ exam }: ExamResultsTabProps) {
       <div className="rounded-lg border border-dashed py-16 text-center">
         <ClipboardList className="mx-auto size-8 text-muted-foreground opacity-50" />
         <p className="mt-2 text-sm font-medium">
-          Hali ishtirokchi yo&apos;q
+          {t("Hali ishtirokchi yo'q")}
         </p>
         <p className="text-sm text-muted-foreground">
-          Ball kiritish uchun avval ishtirokchilar ro&apos;yxatga olinishi
-          kerak
+          {t("Ball kiritish uchun avval ishtirokchilar ro'yxatga olinishi kerak")}
         </p>
       </div>
     );
@@ -258,13 +277,21 @@ export function ExamResultsTab({ exam }: ExamResultsTabProps) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold">Natijalar</h2>
+          <h2 className="text-base font-semibold">{t("Natijalar")}</h2>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Jami: {participants.length} ishtirokchi · {subjects.length}{" "}
-            bo&apos;lim · {dirtyParticipantIds.size > 0 && (
-              <span className="text-amber-600">
-                {dirtyParticipantIds.size} ta saqlanmagan
-              </span>
+            {t("Jami: {n} ishtirokchi · {sections} bo'lim", {
+              n: formatNumber(participants.length),
+              sections: formatNumber(subjects.length),
+            })}
+            {dirtyParticipantIds.size > 0 && (
+              <>
+                {" · "}
+                <span className="text-amber-600">
+                  {t("{n} ta saqlanmagan", {
+                    n: formatNumber(dirtyParticipantIds.size),
+                  })}
+                </span>
+              </>
             )}
           </p>
         </div>
@@ -280,7 +307,7 @@ export function ExamResultsTab({ exam }: ExamResultsTabProps) {
             ) : (
               <Award className="size-4" />
             )}
-            O&apos;rinlarni qayta hisoblash
+            {t("O'rinlarni qayta hisoblash")}
           </Button>
           <Button
             size="sm"
@@ -289,17 +316,24 @@ export function ExamResultsTab({ exam }: ExamResultsTabProps) {
           >
             {saving && <Loader2 className="size-4 animate-spin" />}
             <Save className="size-4" />
-            Saqlash
+            {t("Saqlash")}
           </Button>
         </div>
       </div>
 
-      {!isGrading && (
+      {isAnnounced && (
         <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
-          Ballarni faqat &quot;Baholanmoqda&quot; (GRADING) holatida kiritish
-          mumkin. Hozirgi holat: <strong>{exam.status}</strong>. Header&apos;dagi
-          &quot;Holatni o&apos;zgartirish&quot; menyusi orqali GRADING&apos;ga
-          o&apos;ting.
+          {t("Natijalar e'lon qilingan — ballarni o'zgartirib bo'lmaydi.")}
+        </div>
+      )}
+      {!isGrading && !isAnnounced && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+          {t("Ballarni faqat «{status}» holatida kiritish mumkin.", {
+            status: t(gradingLabel),
+          })}{" "}
+          {t("Hozirgi holat:")}{" "}
+          <strong>{statusLabel ? t(statusLabel) : exam.status}</strong>.{" "}
+          {t("Holatni sahifa tepasidagi bosqichlar qatoridan o'zgartiring.")}
         </div>
       )}
 
@@ -309,14 +343,14 @@ export function ExamResultsTab({ exam }: ExamResultsTabProps) {
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
               <TableHead className="min-w-48 border-r">
-                Ishtirokchi
+                {t("Ishtirokchi")}
               </TableHead>
               {subjects.map((s) => (
                 <TableHead key={s.id} className="text-center">
                   {s.name}
                 </TableHead>
               ))}
-              <TableHead className="text-center">O&apos;rin</TableHead>
+              <TableHead className="text-center">{t("O'rin")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -392,10 +426,15 @@ export function ExamResultsTab({ exam }: ExamResultsTabProps) {
 
       <div className="rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
         <Calculator className="mr-1 inline size-3" />
-        Bo&apos;lim o&apos;tish balidan past bo&apos;lsa <span className="text-destructive">qizil</span>,
-        yetsa <span className="text-emerald-600">yashil</span> rangda ko&apos;rinadi.
-        Ballar saqlangach <strong>O&apos;rin</strong>ni yuqoridagi tugmadan
-        qayta hisoblang.
+        <span className="text-destructive">
+          {t("Qizil — bo'limning o'tish balidan past")}
+        </span>
+        {", "}
+        <span className="text-emerald-600">
+          {t("yashil — o'tish baliga yetgan")}
+        </span>
+        {". "}
+        {t("Ballar saqlangach «O'rin» ustunini yuqoridagi tugma bilan qayta hisoblang.")}
       </div>
     </div>
   );

@@ -1,25 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useEffect, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import type { FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { PhoneInput } from "@/components/ui/phone-input";
-import { DatePicker } from "@/components/ui/date-picker";
-import { Label } from "@/components/ui/label";
+import { COMPANY } from "@/lib/company";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/use-t";
 import type { FormFieldShape } from "@/lib/schemas/custom-form-schema";
+import { FieldError, FieldRow } from "./public-form-fields";
+import { firstInvalidId } from "./public-form-scroll";
+
+// After a successful send the lead is taken to the centre's website; the
+// pause lets them read the thanks first.
+const REDIRECT_AFTER_MS = 3000;
 
 interface Props {
   slug: string;
@@ -32,6 +29,32 @@ interface Props {
   source?: string;
 }
 
+// The schema keeps its Uzbek messages; the form translates them when drawn
+// (`fieldError`). Any other text (a Zod default) is shown as it is.
+const PHONE_9 = msg("Telefon — 9 raqam");
+const EMAIL = msg("To'g'ri email kiriting");
+const NUMBER = msg("Son kiriting");
+const MUST_CHECK = msg("Bu maydon belgilanishi kerak");
+const REQUIRED = msg("To'ldirilishi shart");
+const OWN_MESSAGES: ReadonlySet<string> = new Set([PHONE_9, EMAIL, NUMBER, MUST_CHECK, REQUIRED]);
+
+const SUBMIT_FAILED = msg("Yuborishda xatolik. Qayta urinib ko'ring.");
+const RECEIVED = msg("Ma'lumotlaringiz qabul qilindi.");
+const NO_SERVER = msg("Server bilan aloqa o'rnatib bo'lmadi");
+
+interface ShownText {
+  text: string;
+  own?: boolean;
+}
+
+const shown = (t: (source: string) => string, s: ShownText) => (s.own ? t(s.text) : s.text);
+
+/** A validation message in the page language; only the schema's own texts go through `t`. */
+export function fieldError(t: (source: string) => string, message: unknown): string | undefined {
+  if (typeof message !== "string" || !message) return undefined;
+  return OWN_MESSAGES.has(message) ? t(message) : message;
+}
+
 // Build a per-form zod schema from the field definitions.
 function buildZodSchema(fields: FormFieldShape[]) {
   const shape: Record<string, z.ZodTypeAny> = {};
@@ -39,11 +62,11 @@ function buildZodSchema(fields: FormFieldShape[]) {
     let base: z.ZodTypeAny;
     if (f.type === "phone") {
       // 9 raw digits
-      base = z.string().regex(/^\d{9}$/, "Telefon — 9 raqam");
+      base = z.string().regex(/^\d{9}$/, PHONE_9);
     } else if (f.type === "email") {
-      base = z.string().email("To'g'ri email kiriting");
+      base = z.string().email(EMAIL);
     } else if (f.type === "number") {
-      base = z.coerce.number({ message: "Son kiriting" });
+      base = z.coerce.number({ message: NUMBER });
     } else if (f.type === "checkbox") {
       base = z.boolean().default(false);
     } else if (f.type === "date") {
@@ -70,7 +93,7 @@ function buildZodSchema(fields: FormFieldShape[]) {
     } else {
       if (f.type === "checkbox") {
         // a required checkbox must be true
-        shape[f.id] = z.literal(true, { message: "Bu maydon belgilanishi kerak" });
+        shape[f.id] = z.literal(true, { message: MUST_CHECK });
       } else {
         shape[f.id] = z.preprocess(
           (v) => (v === "" ? undefined : v),
@@ -78,7 +101,7 @@ function buildZodSchema(fields: FormFieldShape[]) {
           // check (which would otherwise emit "expected string, received
           // undefined") so the friendly Uzbek message is shown instead.
           base.optional().refine((v) => v !== undefined && v !== null, {
-            message: "To'ldirilishi shart",
+            message: REQUIRED,
           }),
         );
       }
@@ -86,12 +109,14 @@ function buildZodSchema(fields: FormFieldShape[]) {
   }
   return z.object(shape);
 }
-
 export function PublicFormRenderer({ slug, schema, source }: Props) {
+  const t = useT();
   const zodSchema = useMemo(() => buildZodSchema(schema.fields), [schema.fields]);
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  // `own` = our Uzbek source text, translated when drawn so a language switch
+  // reaches it; a text the server sent has no flag and is shown as sent.
+  const [done, setDone] = useState<ShownText | null>(null);
+  const [submitError, setSubmitError] = useState<ShownText | null>(null);
 
   const defaultValues = useMemo(() => {
     const out: Record<string, unknown> = {};
@@ -126,76 +151,117 @@ export function PublicFormRenderer({ slug, schema, source }: Props) {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const msg = Array.isArray(body?.message)
+        const serverMessage = Array.isArray(body?.message)
           ? body.message[0]
           : body?.message;
-        setSubmitError(msg || "Yuborishda xatolik. Qayta urinib ko'ring.");
+        // The server's text is shown as sent; only our own fallback is translated.
+        setSubmitError(serverMessage ? { text: serverMessage } : { text: SUBMIT_FAILED, own: true });
         return;
       }
-      setDone(body?.message || "Ma'lumotlaringiz qabul qilindi.");
+      // The success text the staff wrote (or the server's) is data, never `t()`.
+      setDone(body?.message ? { text: body.message } : { text: RECEIVED, own: true });
     } catch {
-      setSubmitError("Server bilan aloqa o'rnatib bo'lmadi");
+      setSubmitError({ text: NO_SERVER, own: true });
     } finally {
       setSubmitting(false);
     }
   }
 
+  useEffect(() => {
+    if (done === null) return;
+    const timer = setTimeout(
+      () => window.location.assign(COMPANY.websiteHref),
+      REDIRECT_AFTER_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [done]);
+
+  // A phone shows only a slice of a long form: after a failed submit, take
+  // the lead to the first field that needs fixing instead of leaving them to
+  // hunt for a red line.
+  function onInvalid(errs: FieldErrors<Record<string, unknown>>) {
+    const id = firstInvalidId(schema.fields, errs);
+    const el = id ? document.getElementById(id) : null;
+    if (!el) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+    el.focus({ preventScroll: true });
+  }
+
   if (done) {
     return (
-      <FormCard>
-        <div className="py-2 text-center">
-          <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-[#2BB673]/10">
-            <CheckCircle2 className="size-9 text-[#2BB673]" />
+      <FormShell>
+        <div className="flex min-h-[60dvh] flex-col items-center justify-center pb-8 text-center motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-500 sm:min-h-0 sm:py-4">
+          <div className="flex size-20 items-center justify-center rounded-full bg-[#2BB673]/10">
+            <CheckCircle2 className="size-11 text-[#2BB673]" aria-hidden />
           </div>
-          <h1 className="mt-5 text-2xl font-bold">Rahmat!</h1>
-          <p className="mx-auto mt-2 max-w-xs text-[15px] leading-relaxed text-muted-foreground">
-            {done}
+          <h1 className="mt-6 text-3xl font-bold">{t("Rahmat!")}</h1>
+          <p
+            role="status"
+            className="mx-auto mt-2 max-w-xs text-base leading-relaxed text-muted-foreground"
+          >
+            {shown(t, done)}
           </p>
+          <a
+            href={COMPANY.websiteHref}
+            className="mt-6 text-[15px] font-semibold text-primary underline-offset-4 hover:underline"
+          >
+            {t("{site} saytiga o'tish", { site: COMPANY.website })}
+          </a>
         </div>
-      </FormCard>
+      </FormShell>
     );
   }
 
   return (
-    <FormCard>
+    <FormShell>
       <BrandHeader title={schema.title} description={schema.description} />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <form
+        onSubmit={handleSubmit(onSubmit, onInvalid)}
+        noValidate
+        className="space-y-6"
+      >
         {schema.fields.map((f) => (
           <FieldRow
             key={f.id}
             field={f}
             control={control}
             register={register}
-            error={errors[f.id]?.message as string | undefined}
+            error={fieldError(t, errors[f.id]?.message)}
           />
         ))}
 
-        {submitError && (
-          <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
-            {submitError}
-          </p>
-        )}
-
-        <Button
-          type="submit"
-          disabled={submitting}
-          className="clay-btn h-14 w-full rounded-[22px] text-base font-bold"
-        >
-          {submitting && <Loader2 className="size-5 animate-spin" />}
-          Yuborish
-        </Button>
+        {/* On a phone the button stays at the bottom edge while the form
+            scrolls under it; from sm up it is an ordinary last row. */}
+        <div className="sticky bottom-0 z-10 -mx-5 space-y-3 border-t border-border bg-card px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:static sm:mx-0 sm:border-0 sm:p-0 sm:pt-2">
+          {submitError && (
+            <FieldError id="submit-error" error={shown(t, submitError)} />
+          )}
+          <Button
+            type="submit"
+            disabled={submitting}
+            className="clay-btn h-14 w-full rounded-[22px] text-base font-bold"
+          >
+            {submitting && <Loader2 className="size-5 animate-spin" />}
+            {t("Yuborish")}
+          </Button>
+        </div>
       </form>
-    </FormCard>
+    </FormShell>
   );
 }
 
-// Lumio surface card — soft 26px radius, hairline border, ink-tinted shadow.
-function FormCard({ children }: { children: React.ReactNode }) {
+// Phone: the page itself is the form — no card, no grey gutter, so fields get
+// the whole width. From sm up it is the Lumio card on the grey canvas.
+function FormShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-[26px] border border-border bg-card p-6 shadow-[0_18px_40px_-12px_rgba(14,42,61,0.18)] sm:p-8">
-      {children}
-    </div>
+    <main className="min-h-dvh bg-card sm:grid sm:place-items-center sm:bg-background sm:px-4 sm:py-12">
+      <div className="mx-auto w-full bg-card sm:max-w-lg sm:rounded-[26px] sm:border sm:border-border sm:shadow-[0_18px_40px_-12px_rgba(14,42,61,0.18)]">
+        <div className="h-1.5 bg-primary sm:rounded-t-[26px]" aria-hidden />
+        <div className="px-5 pt-6 sm:p-8">{children}</div>
+      </div>
+    </main>
   );
 }
 
@@ -207,219 +273,21 @@ function BrandHeader({
   description: string | null;
 }) {
   return (
-    <div className="mb-6 flex flex-col items-center text-center">
+    <header className="mb-7">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/daf-logo.png"
         alt="DaF Sprachzentrum"
-        className="h-10 w-auto object-contain"
+        className="h-8 w-auto object-contain object-left sm:h-10"
       />
-      <h1 className="mt-5 text-[26px] leading-tight font-bold text-foreground">
+      <h1 className="mt-5 text-balance text-[26px] leading-tight font-bold text-foreground sm:text-[28px]">
         {title}
       </h1>
       {description && (
-        <p className="mt-2 max-w-sm whitespace-pre-line text-[15px] leading-relaxed text-muted-foreground">
+        <p className="mt-2 max-w-prose whitespace-pre-line text-[15px] leading-relaxed text-muted-foreground">
           {description}
         </p>
       )}
-    </div>
-  );
-}
-
-function FieldRow({
-  field,
-  control,
-  register,
-  error,
-}: {
-  field: FormFieldShape;
-  control: ReturnType<typeof useForm<Record<string, unknown>>>["control"];
-  register: ReturnType<typeof useForm<Record<string, unknown>>>["register"];
-  error?: string;
-}) {
-  const labelEl = (
-    <Label
-      htmlFor={field.id}
-      className="text-[15px] font-semibold text-foreground"
-    >
-      {field.label}
-      {field.required && <span className="ml-0.5 text-destructive">*</span>}
-    </Label>
-  );
-
-  if (field.type === "textarea") {
-    return (
-      <div className="space-y-2">
-        {labelEl}
-        <Textarea
-          id={field.id}
-          {...register(field.id)}
-          placeholder={field.placeholder}
-          rows={3}
-          className="min-h-28 rounded-2xl px-4 py-3 text-base"
-        />
-        {error && <p className="text-[13px] font-medium text-destructive">{error}</p>}
-      </div>
-    );
-  }
-
-  if (field.type === "phone") {
-    return (
-      <div className="space-y-2">
-        {labelEl}
-        <Controller
-          control={control}
-          name={field.id}
-          render={({ field: f }) => (
-            <PhoneInput
-              value={(f.value as string) ?? ""}
-              onChange={(e) => f.onChange(e.target.value)}
-              className="h-12 px-4 text-base"
-            />
-          )}
-        />
-        {error && <p className="text-[13px] font-medium text-destructive">{error}</p>}
-      </div>
-    );
-  }
-
-  if (field.type === "select") {
-    return (
-      <div className="space-y-2">
-        {labelEl}
-        <Controller
-          control={control}
-          name={field.id}
-          render={({ field: f }) => (
-            <Select
-              value={(f.value as string) ?? ""}
-              onValueChange={f.onChange}
-            >
-              <SelectTrigger className="w-full px-4 text-base">
-                <SelectValue placeholder={field.placeholder ?? "Tanlang"} />
-              </SelectTrigger>
-              <SelectContent>
-                {field.options?.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        />
-        {error && <p className="text-[13px] font-medium text-destructive">{error}</p>}
-      </div>
-    );
-  }
-
-  if (field.type === "radio") {
-    return (
-      <div className="space-y-2">
-        {labelEl}
-        <Controller
-          control={control}
-          name={field.id}
-          render={({ field: f }) => (
-            <div className="space-y-2">
-              {field.options?.map((o) => {
-                const selected = f.value === o.value;
-                return (
-                  <label
-                    key={o.value}
-                    className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 text-[15px] transition-colors ${
-                      selected
-                        ? "border-primary bg-primary/5 font-semibold text-foreground"
-                        : "border-border bg-card text-foreground hover:bg-accent"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name={field.id}
-                      value={o.value}
-                      checked={selected}
-                      onChange={() => f.onChange(o.value)}
-                      className="size-5 cursor-pointer accent-primary"
-                    />
-                    {o.label}
-                  </label>
-                );
-              })}
-            </div>
-          )}
-        />
-        {error && <p className="text-[13px] font-medium text-destructive">{error}</p>}
-      </div>
-    );
-  }
-
-  if (field.type === "checkbox") {
-    return (
-      <div className="space-y-2">
-        <Controller
-          control={control}
-          name={field.id}
-          render={({ field: f }) => (
-            <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-card px-4 py-3.5 text-[15px] leading-snug transition-colors hover:bg-accent">
-              <Checkbox
-                checked={Boolean(f.value)}
-                onCheckedChange={(v) => f.onChange(Boolean(v))}
-                className="mt-0.5 size-5"
-              />
-              <span>
-                {field.label}
-                {field.required && (
-                  <span className="ml-0.5 text-destructive">*</span>
-                )}
-              </span>
-            </label>
-          )}
-        />
-        {error && <p className="text-[13px] font-medium text-destructive">{error}</p>}
-      </div>
-    );
-  }
-
-  if (field.type === "date") {
-    return (
-      <div className="space-y-2">
-        {labelEl}
-        <Controller
-          control={control}
-          name={field.id}
-          render={({ field: f }) => (
-            <DatePicker
-              value={f.value ? new Date(f.value as string) : undefined}
-              onChange={(d) =>
-                f.onChange(d ? d.toISOString().slice(0, 10) : "")
-              }
-              className="h-12 rounded-2xl px-4 text-base font-normal"
-            />
-          )}
-        />
-        {error && <p className="text-[13px] font-medium text-destructive">{error}</p>}
-      </div>
-    );
-  }
-
-  // text / email / number
-  return (
-    <div className="space-y-2">
-      {labelEl}
-      <Input
-        id={field.id}
-        type={
-          field.type === "email"
-            ? "email"
-            : field.type === "number"
-              ? "number"
-              : "text"
-        }
-        {...register(field.id)}
-        placeholder={field.placeholder}
-        className="h-12 px-4 text-base"
-      />
-      {error && <p className="text-[13px] font-medium text-destructive">{error}</p>}
-    </div>
+    </header>
   );
 }

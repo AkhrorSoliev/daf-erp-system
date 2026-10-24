@@ -12,6 +12,7 @@ import {
 import { LeadsService } from './leads.service';
 import { LeadsBoardService } from './leads-board.service';
 import { LeadsArchiveService } from './leads-archive.service';
+import { LeadsArchiveReadService } from './archive/leads-archive-read.service';
 import { LeadsStatsService } from './leads-stats.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
@@ -23,6 +24,7 @@ import { MarkCalledLeadDto } from './dto/mark-called-lead.dto';
 import { RestoreLeadDto } from './dto/restore-lead.dto';
 import { RemoveLeadDto } from './dto/remove-lead.dto';
 import { LeadStatsQueryDto } from './dto/lead-stats-query.dto';
+import { LeadsArchiveQueryDto } from './dto/leads-archive-query.dto';
 import { CurrentUser, BranchScope } from '../common/decorators';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { Can } from '../common/permissions/access.decorators';
@@ -33,6 +35,7 @@ export class LeadsController {
     private readonly leadsService: LeadsService,
     private readonly boardService: LeadsBoardService,
     private readonly archiveService: LeadsArchiveService,
+    private readonly archiveReadService: LeadsArchiveReadService,
     private readonly statsService: LeadsStatsService,
   ) {}
 
@@ -43,8 +46,9 @@ export class LeadsController {
     @Query() query: LeadQueryDto,
     @CurrentUser('companyId') companyId: number,
     @BranchScope() scope: ReportBranchIds,
+    @CurrentUser('id') userId: number,
   ) {
-    return this.leadsService.findAll(query, companyId, scope);
+    return this.leadsService.findAll(query, companyId, scope, userId);
   }
 
   // Full board: columns -> sections -> per-section lead counts.
@@ -70,15 +74,45 @@ export class LeadsController {
     return this.statsService.getStats(companyId, scope, query.period);
   }
 
-  // Archived leads + sections (two-column leads archive). Declared before ':id'
-  // so "/leads/archive" is not captured as an id.
-  @Get('archive')
+  // Archived leads / sections, paged (the leads archive page). Declared before
+  // ':id' so "/leads/archive/..." is not captured as an id.
+  @Get('archive/summary')
   @Can('leads.view')
-  getArchive(
+  getArchiveSummary(
     @CurrentUser('companyId') companyId: number,
     @BranchScope() scope: ReportBranchIds,
   ) {
-    return this.archiveService.getArchive(companyId, scope);
+    return this.archiveReadService.getSummary(companyId, scope);
+  }
+
+  @Get('archive/leads')
+  @Can('leads.view')
+  listArchivedLeads(
+    @Query() query: LeadsArchiveQueryDto,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.archiveReadService.listLeads(companyId, scope, query);
+  }
+
+  @Get('archive/leads/:id')
+  @Can('leads.view')
+  getArchivedLead(
+    @Param('id') id: string,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.archiveReadService.getArchivedLead(id, companyId, scope);
+  }
+
+  @Get('archive/sections')
+  @Can('leads.view')
+  listArchivedSections(
+    @Query() query: LeadsArchiveQueryDto,
+    @CurrentUser('companyId') companyId: number,
+    @BranchScope() scope: ReportBranchIds,
+  ) {
+    return this.archiveReadService.listSections(companyId, scope, query);
   }
 
   // Lazily loaded when a section is expanded on the board.

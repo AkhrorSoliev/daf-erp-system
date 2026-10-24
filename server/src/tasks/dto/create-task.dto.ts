@@ -56,6 +56,8 @@ export class CreateTaskDto {
   @MaxLength(64)
   entityId?: string;
   @IsOptional() @IsBoolean() separateCopies?: boolean;
+  /** «Rasm bilan tasdiqlansin» (spec §3.2): review needs a fresh photo. */
+  @IsOptional() @IsBoolean() requiresPhoto?: boolean;
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

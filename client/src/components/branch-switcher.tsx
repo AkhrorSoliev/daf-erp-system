@@ -16,12 +16,16 @@ import {
 } from "@/components/ui/tooltip";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useAuth } from "@/hooks/use-auth";
+import { showBranchSwitcher } from "@/lib/branch-header";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { cn } from "@/lib/utils";
 
-const ALL_BRANCHES_LABEL = "Barcha filiallar";
+const ALL_BRANCHES_LABEL = msg("Barcha filiallar");
 
 export function BranchSwitcher() {
   const { user } = useAuth();
+  const t = useT();
   const {
     branches,
     selectedBranch,
@@ -56,11 +60,12 @@ export function BranchSwitcher() {
     );
   }, [isCeo, user, fetchBranches, hydrateFor]);
 
-  const label = selectedBranch?.name ?? ALL_BRANCHES_LABEL;
+  // A branch name is data and stays as it came; only the «all» label is translated.
+  const label = selectedBranch?.name ?? t(ALL_BRANCHES_LABEL);
 
-  // A confined user with no branch at all has nothing to switch between, and
-  // rendering an empty dropdown would suggest otherwise.
-  if (!canSelectAll && branches.length === 0) return null;
+  // No choice to make (a teacher works in one branch): draw nothing. The
+  // effect above still seeds that branch, so requests keep their branch header.
+  if (!showBranchSwitcher(canSelectAll, branches.length)) return null;
 
   return (
     <DropdownMenu>
@@ -81,7 +86,7 @@ export function BranchSwitcher() {
             </button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent>Filialni tanlash</TooltipContent>
+        <TooltipContent>{t("Filialni tanlash")}</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="start" className="w-56">
         {canSelectAll && (
@@ -94,7 +99,7 @@ export function BranchSwitcher() {
             >
               <div className="flex items-center gap-2">
                 <Layers className="size-4 text-muted-foreground" />
-                <span>{ALL_BRANCHES_LABEL}</span>
+                <span>{t(ALL_BRANCHES_LABEL)}</span>
               </div>
               {selectedBranch === null && (
                 <Check className={cn("size-4 text-primary")} />

@@ -3,6 +3,9 @@
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { tashkentDayAsLocalDate } from "@/lib/tashkent-time";
+import { msg } from "@/i18n/msg";
+import { interpolate } from "@/i18n/translate";
+import type { Translate } from "./record-payment-admission";
 import { instantDayMonth } from "./debt/debt-format";
 import type { PromiseMonthState } from "./debt/debt-types";
 
@@ -27,9 +30,9 @@ export function dateFromDay(day: string): Date {
 }
 
 /** The line under a date that moves this month's OPEN promise (both dialogs). */
-export const PROMISE_MOVE_NOTE = "Shu oy yozilgan va'daning sanasi o'zgaradi (ko'pi bilan 7 kunga).";
+export const PROMISE_MOVE_NOTE = msg("Shu oy yozilgan va'daning sanasi o'zgaradi (ko'pi bilan 7 kunga).");
 
-const LOOKUP_FAILED = "Va'da holatini yuklab bo'lmadi — sana so'ralmaydi.";
+const LOOKUP_FAILED = msg("Va'da holatini yuklab bo'lmadi — sana so'ralmaydi.");
 
 /**
  * What the payment dialog asks of a part payment. The server checks a sent
@@ -40,13 +43,17 @@ const LOOKUP_FAILED = "Va'da holatini yuklab bo'lmadi — sana so'ralmaydi.";
  * date would move (the default, so the date does not jump silently), null
  * when it would write the month's first.
  */
-export function paymentPromiseAsk(partPayment: boolean, month: { data?: PromiseMonthState; isError: boolean }) {
+export function paymentPromiseAsk(
+  partPayment: boolean,
+  month: { data?: PromiseMonthState; isError: boolean },
+  t: Translate = interpolate,
+) {
   const range = month.data ? (month.data.create ?? month.data.edit) : null;
   if (!partPayment) return { needsPromise: false, range, hint: null, movesFrom: null };
-  if (month.isError) return { needsPromise: false, range, hint: LOOKUP_FAILED, movesFrom: null };
+  if (month.isError) return { needsPromise: false, range, hint: t(LOOKUP_FAILED), movesFrom: null };
   const closed = range ? null : (month.data?.monthPromise ?? null);
   if (closed) {
-    return { needsPromise: false, range, hint: `Shu oy va'da yozilgan: ${instantDayMonth(closed.promiseDate)} gacha. Yangisi so'ralmaydi.`, movesFrom: null };
+    return { needsPromise: false, range, hint: t("Shu oy va'da yozilgan: {date} gacha. Yangisi so'ralmaydi.", { date: instantDayMonth(closed.promiseDate) }), movesFrom: null };
   }
   const open = month.data && !month.data.create && month.data.edit ? month.data.monthPromise : null;
   return { needsPromise: true, range, hint: null, movesFrom: open ? tashkentDayAsLocalDate(open.promiseDate) : null };
@@ -58,11 +65,11 @@ export function paymentPromiseAsk(partPayment: boolean, month: { data?: PromiseM
  * (`create`). A closed promise, or a lookup that failed, takes no date and
  * says why — the call itself is still logged.
  */
-export function callPromiseAsk(month: { data?: PromiseMonthState; isError: boolean }) {
-  if (month.isError) return { asksDate: false, range: null, hint: LOOKUP_FAILED, moves: false };
+export function callPromiseAsk(month: { data?: PromiseMonthState; isError: boolean }, t: Translate = interpolate) {
+  if (month.isError) return { asksDate: false, range: null, hint: t(LOOKUP_FAILED), moves: false };
   const range = month.data ? (month.data.edit ?? month.data.create) : null;
   if (month.data && !range) {
-    return { asksDate: false, range, hint: "Bu o'quvchiga shu oy va'da yozilgan — to'lov sanasi kiritilmaydi.", moves: false };
+    return { asksDate: false, range, hint: t("Bu o'quvchiga shu oy va'da yozilgan — to'lov sanasi kiritilmaydi."), moves: false };
   }
   return { asksDate: true, range, hint: null, moves: !!month.data?.edit };
 }

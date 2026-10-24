@@ -2,12 +2,13 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/i18n/use-t";
 import { cn } from "@/lib/utils";
 import { Clock, Fire, Star, Trophy } from "@phosphor-icons/react";
 import { Button, Card, FadeIn, StatChip } from "../../lumio";
 import type { SeansXato } from "../seans-navbat";
-import { useFortschritt } from "../queries";
-import { orinXabari, xatoYorligi } from "./natija-xabari";
+import type { SeansNatijasi } from "../types";
+import { natijaQatorlari, xatoYorligi } from "./natija-xabari";
 import { DeWort } from "./de-wort";
 import { sinovKorinishi, type SinovHolati } from "./sinov-natijasi";
 
@@ -18,15 +19,8 @@ export interface NatijaEkraniProps {
   xatolar: SeansXato[];
   unitId: number | null;
   onQayta: () => void;
-  /**
-   * Seans BOSHLANGANDAGI `Fortschritt` — bittasi ham serverdan qayta
-   * hisoblanmaydi, faqat seans oxiridagi (`useFortschritt` ning joriy
-   * javobi) qiymat bilan solishtiriladi. Barchasi `null` bo'lishi mumkin:
-   * seans boshlanganda `useFortschritt` hali yuklanmagan bo'lsa.
-   */
-  gesamtBoshida: number | null;
-  serieBoshida: number | null;
-  orinBoshida: number | null;
+  /** Server javobidagi seans natijasi; yo'q bo'lsa yutuqlar kartasi chizilmaydi. */
+  natija: SeansNatijasi | null;
   /** Yakuniy sinov darsida — server qarori holati; oddiy darsda yo'q. */
   sinov?: SinovHolati | null;
   /** `sinov.tur === "xato"` bo'lganda natijani qayta yuborish. */
@@ -107,6 +101,7 @@ function useSanaladiganBall(maqsad: number | null): number | null {
  *    qarang).
  */
 function XatoQatori({ xato }: { xato: SeansXato }) {
+  const t = useT();
   if (xato.format === "ZUORDNEN" || xato.format === "PAAR") {
     // Re-review topilmasi (Minor): `pruefeZuordnen`ning fail-closed yo'li
     // (`funktionUz` kolliziyasi) `richtig: ''` qaytarishi mumkin edi —
@@ -142,7 +137,7 @@ function XatoQatori({ xato }: { xato: SeansXato }) {
     return (
       <div className="flex items-center justify-between gap-3">
         <span className="font-semibold text-ink-800">
-          {xato.titel ?? "Dialog"}
+          {xato.titel ?? t("Dialog")}
         </span>
         <span className="text-sm font-bold text-danger">{xato.richtig}</span>
       </div>
@@ -161,7 +156,7 @@ function XatoQatori({ xato }: { xato: SeansXato }) {
             className="size-10 shrink-0 rounded-lg bg-white object-cover"
           />
         ) : null}
-        <DeWort text={xatoYorligi(xato.format, xato.prompt)} />
+        <DeWort text={xatoYorligi(xato.format, xato.prompt, t)} />
       </span>
       <DeWort text={xato.richtig} className="text-sm font-bold text-danger" />
     </div>
@@ -174,12 +169,8 @@ function XatoQatori({ xato }: { xato: SeansXato }) {
  * ichida allaqachon bor — bu ekran hech narsani qayta hisoblamaydi,
  * faqat `seans-navbat.ts` yig'gan holatni ko'rsatadi.
  *
- * Ball, seriya va o'rin ham xuddi shunday — MIJOZ ULARNI HISOBLAMAYDI.
- * `useFortschritt` seans boshida bir marta o'qilib (`gesamtBoshida` va
- * hokazo — chaqiruvchi eslab qoladi), shu yerda ESA joriy (seansdan
- * keyingi, `useAbschluss`/`SeansEkrani` allaqachon yangilagan) qiymat
- * bilan solishtiriladi. Ekranda ko'rinadigan raqam shu ikkisining farqi
- * — ya'ni serverning o'zi bergan raqam, mijoz hisob-kitobi emas.
+ * Ball, seriya va o'rinni server `natija` sifatida qaytaradi — bu ekran
+ * faqat ko'rsatadi (spec 2026-10-18 §5).
  */
 export function NatijaEkrani({
   togri,
@@ -188,48 +179,25 @@ export function NatijaEkrani({
   xatolar,
   unitId,
   onQayta,
-  gesamtBoshida,
-  serieBoshida,
-  orinBoshida,
+  natija,
   sinov,
   onNatijaQaytaYubor,
 }: NatijaEkraniProps) {
+  const t = useT();
   const router = useRouter();
-  const fortschritt = useFortschritt();
   const davomHref = unitId
     ? `/portal/lernen/units/${unitId}`
     : "/portal/lernen";
-  const korinish = sinov ? sinovKorinishi(sinov) : null;
+  const korinish = sinov ? sinovKorinishi(sinov, t) : null;
 
-  // Farq faqat IKKALA uchi ham ma'lum bo'lganda hisoblanadi — aks holda
-  // "0 ball topdingiz" kabi noto'g'ri xabar chiqib ketardi, holbuki
-  // haqiqatda serverdan javob hali kelmagan, xolos.
-  const topilganBall =
-    gesamtBoshida != null && fortschritt.data
-      ? Math.max(0, fortschritt.data.gesamt - gesamtBoshida)
-      : null;
-  const sanaladiganBall = useSanaladiganBall(topilganBall);
-  // Nol — qonuniy natija (masalan takrorlashda hech narsa muddati
-  // kelmagan bo'lishi mumkin), lekin "+0 ball" chipi buzilishdek
-  // o'qiladi. Shuning uchun BALL FAQAT musbat bo'lganda ko'rsatiladi —
-  // seriya va o'rin qatorlari esa nol ball bilan ham o'z holicha turaveradi.
-  const ballKorsatilsinmi = topilganBall != null && topilganBall > 0;
-
-  // Seriya faqat OSHGANDA ko'rsatiladi (bugungi birinchi seans) — buni
-  // aytadigan server, mijoz emas: `serieBoshida` seansdan oldingi qiymat,
-  // `fortschritt.data.serie` esa hozirgisi.
-  const serieOshdimi =
-    serieBoshida != null &&
-    fortschritt.data != null &&
-    fortschritt.data.serie > serieBoshida;
-
-  const orinXabariMatni = orinXabari(
-    orinBoshida,
-    fortschritt.data?.wochePlatzGruppe ?? null,
-  );
-
+  const qator = natijaQatorlari(natija, t);
+  const sanaladiganBall = useSanaladiganBall(qator.ball);
   const yutuqlarBormi =
-    ballKorsatilsinmi || serieOshdimi || orinXabariMatni != null;
+    qator.ball != null ||
+    qator.serie != null ||
+    qator.orin != null ||
+    qator.maqsad != null ||
+    qator.nishonlar.length > 0;
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col justify-center gap-4 px-4 py-8">
@@ -266,36 +234,44 @@ export function NatijaEkrani({
 
         {yutuqlarBormi ? (
           <Card className="flex flex-wrap items-center justify-center gap-2 text-center">
-            {ballKorsatilsinmi && sanaladiganBall != null ? (
+            {qator.ball != null && sanaladiganBall != null ? (
               <StatChip
                 icon={<Star weight="fill" className="text-amber-500" />}
-                value={`+${sanaladiganBall} ball`}
+                value={t("+{n} ball", { n: sanaladiganBall })}
               />
             ) : null}
-            {serieOshdimi ? (
+            {qator.serie != null ? (
               <StatChip
                 icon={<Fire weight="fill" className="text-coral-500" />}
-                value={`${fortschritt.data?.serie} kun`}
-                label="seriya"
+                value={t("{n} kun ketma-ket", { n: qator.serie })}
+                label={t("seriya")}
               />
             ) : null}
-            {orinXabariMatni ? (
+            {qator.orin ? (
               <p className="w-full text-sm font-semibold text-ink-700">
-                {orinXabariMatni}
+                {qator.orin}
               </p>
             ) : null}
+            {qator.maqsad ? (
+              <p className="w-full text-sm font-bold text-success">{qator.maqsad}</p>
+            ) : null}
+            {qator.nishonlar.map((matn) => (
+              <p key={matn} className="w-full text-sm font-bold text-ink-900">
+                {matn}
+              </p>
+            ))}
           </Card>
         ) : null}
 
         <Card className="space-y-3">
           {xatolar.length === 0 ? (
             <p className="text-center font-semibold text-ink-700">
-              Hammasi to&apos;g&apos;ri — ajoyib natija!
+              {t("Hammasi to'g'ri — ajoyib natija!")}
             </p>
           ) : (
             <>
               <p className="font-display text-sm font-bold uppercase tracking-wide text-ink-500">
-                Qaytarib ko&apos;ring · {xatolar.length}
+                {t("Qaytarib ko'ring · {n}", { n: xatolar.length })}
               </p>
               <ul className="space-y-2">
                 {xatolar.map((x, i) => (
@@ -319,10 +295,10 @@ export function NatijaEkrani({
                 className="flex-1"
                 onClick={() => router.push(davomHref)}
               >
-                Chiqish
+                {t("Mashqdan chiqish")}
               </Button>
               <Button className="flex-1" onClick={onNatijaQaytaYubor}>
-                Qayta yuborish
+                {t("Qayta yuborish")}
               </Button>
             </>
           ) : korinish?.asosiy === "qayta" ? (
@@ -332,10 +308,10 @@ export function NatijaEkrani({
                 className="flex-1"
                 onClick={() => router.push(davomHref)}
               >
-                Yo&apos;lga qaytish
+                {t("Yo'lga qaytish")}
               </Button>
               <Button className="flex-1" onClick={onQayta}>
-                Qayta urinish
+                {t("Qayta urinish")}
               </Button>
             </>
           ) : korinish?.asosiy === null ? (
@@ -349,19 +325,19 @@ export function NatijaEkrani({
                 className="flex-1"
                 onClick={() => router.push(davomHref)}
               >
-                Chiqish
+                {t("Mashqdan chiqish")}
               </Button>
               <Button className="flex-1" disabled>
-                Davom etish
+                {t("Davom etish")}
               </Button>
             </>
           ) : (
             <>
               <Button variant="secondary" className="flex-1" onClick={onQayta}>
-                {korinish ? "Qayta urinish" : "Qayta o'tish"}
+                {korinish ? t("Qayta urinish") : t("Qayta o'tish")}
               </Button>
               <Button className="flex-1" onClick={() => router.push(davomHref)}>
-                Davom etish
+                {t("Davom etish")}
               </Button>
             </>
           )}

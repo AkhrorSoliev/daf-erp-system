@@ -16,6 +16,7 @@ import {
 import { formatPhone } from "@/lib/format-utils";
 import api from "@/lib/api";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useT } from "@/i18n/context";
 import {
   CALL_OUTCOME_INFO as OUTCOME_INFO,
   CALL_REASON_INFO as REASON_INFO,
@@ -36,6 +37,7 @@ const FILTER_SCHEMA = {
 } as const;
 
 export function CallHistoryTab({ isActive }: CallHistoryTabProps) {
+  const t = useT();
   const { filters, setFilter, setFilters } = useUrlFilters(FILTER_SCHEMA);
   const page = filters.h_page;
   const pageSize = filters.h_size;
@@ -55,7 +57,7 @@ export function CallHistoryTab({ isActive }: CallHistoryTabProps) {
   if ((data?.items.length ?? 0) === 0) {
     return (
       <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-        Hali qo&apos;ng&apos;iroqlar qayd qilinmagan
+        {t("Hali qo'ng'iroqlar qayd qilinmagan")}
       </div>
     );
   }
@@ -67,13 +69,13 @@ export function CallHistoryTab({ isActive }: CallHistoryTabProps) {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>Sana / vaqt</TableHead>
-              <TableHead>O&apos;quvchi</TableHead>
-              <TableHead>Telefon</TableHead>
-              <TableHead>Sabab</TableHead>
-              <TableHead>Natija</TableHead>
-              <TableHead>Izoh</TableHead>
-              <TableHead>Kim qo&apos;ng&apos;iroq qildi</TableHead>
+              <TableHead>{t("Sana / vaqt")}</TableHead>
+              <TableHead>{t("O'quvchi")}</TableHead>
+              <TableHead>{t("Telefon")}</TableHead>
+              <TableHead>{t("Sabab")}</TableHead>
+              <TableHead>{t("Natija")}</TableHead>
+              <TableHead>{t("Izoh")}</TableHead>
+              <TableHead>{t("Kim qo'ng'iroq qildi")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -95,6 +97,7 @@ export function CallHistoryTab({ isActive }: CallHistoryTabProps) {
 }
 
 function Row({ row, index }: { row: CallLogItem; index: number }) {
+  const t = useT();
   const reason = REASON_INFO[row.reason];
   const outcome = OUTCOME_INFO[row.outcome];
   return (
@@ -115,12 +118,12 @@ function Row({ row, index }: { row: CallLogItem; index: number }) {
       <TableCell>{formatPhone(row.student.phone)}</TableCell>
       <TableCell>
         <Badge variant="outline" className={`${reason.className} hover:${reason.className}`}>
-          {reason.label}
+          {t(reason.label)}
         </Badge>
       </TableCell>
       <TableCell>
         <Badge variant="outline" className={`${outcome.className} hover:${outcome.className}`}>
-          {outcome.label}
+          {t(outcome.label)}
         </Badge>
       </TableCell>
       <TableCell className="max-w-[240px] truncate text-sm text-muted-foreground">

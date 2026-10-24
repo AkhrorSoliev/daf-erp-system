@@ -6,17 +6,19 @@ import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/context";
 import { formatDavomiylik, formatKunYorligi } from "./activity-format";
 import { davrniUrldanOqi } from "./use-app-activity";
 import type { Davr, KunSurati } from "./types";
 
 export function PeriodToggle({ value, onChange }: { value: Davr; onChange: (davr: Davr) => void }) {
+  const t = useT();
   const options: { value: Davr; label: string }[] = [
-    { value: 7, label: "7 kun" },
-    { value: 30, label: "30 kun" },
+    { value: 7, label: t("7 kun") },
+    { value: 30, label: t("30 kun") },
   ];
   return (
-    <div role="radiogroup" aria-label="Davr" className="inline-flex h-9 items-center rounded-lg bg-muted p-1">
+    <div role="radiogroup" aria-label={t("Davr")} className="inline-flex h-9 items-center rounded-lg bg-muted p-1">
       {options.map((option) => (
         <button
           key={option.value}
@@ -83,26 +85,34 @@ export function KpiCard({
  * Bir kunning tooltip matni — `DayBars` va `XaritaBolimi` heatmapida bitta manba.
  * `shugullanganMatni` — markaz sahifasida `shugullangan` = norma bo'yicha faol
  * kun, guruh tabida esa «mashq yoki 5 daqiqa radio»; bir xil so'z ikki ma'noda
- * turmasin.
+ * turmasin. A text passed in is already in the caller's language; the default
+ * is drawn in the page's.
  */
 export function KunTooltipIchi({
   kun,
-  shugullanganMatni = "Shug'ullangan kun",
+  shugullanganMatni,
 }: {
   kun: KunSurati;
   shugullanganMatni?: string;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-col">
-      <span className="font-medium">{formatKunYorligi(kun.sana)}</span>
+      <span className="font-medium">{formatKunYorligi(kun.sana, t)}</span>
       {!kun.kuzatilgan ? (
-        <span>Kuzatuv boshlanmagan</span>
+        <span>{t("Kuzatuv boshlanmagan")}</span>
       ) : (
         <>
-          <span>{kun.shugullangan ? shugullanganMatni : kun.kirdi ? "Faqat kirgan" : "Kirmagan"}</span>
-          {kun.savollar > 0 && <span>Savollar: {kun.savollar}</span>}
-          {kun.faolSoniya > 0 && <span>Faol: {formatDavomiylik(kun.faolSoniya)}</span>}
-          {kun.radioSoniya > 0 && <span>Radio: {formatDavomiylik(kun.radioSoniya)}</span>}
+          <span>
+            {kun.shugullangan
+              ? (shugullanganMatni ?? t("Shug'ullangan kun"))
+              : kun.kirdi
+                ? t("Faqat kirgan")
+                : t("Kirmagan")}
+          </span>
+          {kun.savollar > 0 && <span>{t("Savollar: {n}", { n: kun.savollar })}</span>}
+          {kun.faolSoniya > 0 && <span>{t("Faol: {time}", { time: formatDavomiylik(kun.faolSoniya, t) })}</span>}
+          {kun.radioSoniya > 0 && <span>{t("Radio: {time}", { time: formatDavomiylik(kun.radioSoniya, t) })}</span>}
         </>
       )}
     </div>
@@ -150,11 +160,12 @@ export function DayBars({
 }
 
 export function ActivityError({ onRetry }: { onRetry: () => void }) {
+  const t = useT();
   return (
     <div className="flex flex-col items-center gap-3 rounded-md border px-4 py-8 text-center">
-      <p className="text-sm text-muted-foreground">Ma&apos;lumotni yuklab bo&apos;lmadi</p>
+      <p className="text-sm text-muted-foreground">{t("Ma'lumotni yuklab bo'lmadi")}</p>
       <Button variant="outline" size="sm" onClick={onRetry}>
-        Qayta urinish
+        {t("Qayta urinish")}
       </Button>
     </div>
   );

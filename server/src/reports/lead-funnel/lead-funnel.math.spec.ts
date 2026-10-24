@@ -185,9 +185,15 @@ describe('sourceBreakdown', () => {
     };
 
     expect(sourceBreakdown(persons, sets)).toEqual([
-      { source: 'Instagram', leads: 2, students: 1, rate: 50 },
-      { source: 'Telegram', leads: 1, students: 0, rate: 0 },
-      { source: null, leads: 1, students: 1, rate: 100 },
+      {
+        source: 'Instagram',
+        leads: 2,
+        students: 1,
+        rate: 50,
+        studentIds: [11],
+      },
+      { source: 'Telegram', leads: 1, students: 0, rate: 0, studentIds: [] },
+      { source: null, leads: 1, students: 1, rate: 100, studentIds: [13] },
     ]);
   });
 
@@ -204,7 +210,13 @@ describe('sourceBreakdown', () => {
     };
 
     expect(sourceBreakdown(persons, sets)).toEqual([
-      { source: 'Facebook', leads: 3, students: 2, rate: 66.7 },
+      {
+        source: 'Facebook',
+        leads: 3,
+        students: 2,
+        rate: 66.7,
+        studentIds: [21, 22],
+      },
     ]);
   });
 });

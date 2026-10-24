@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { useTheme } from "next-themes";
+import { useT } from "@/i18n/use-t";
+import { msg } from "@/i18n/msg";
 import { cn } from "@/lib/utils";
 import { Desktop, Sun, Moon } from "./icon";
 import { SegmentedControl, type SegmentOption } from "./segmented-control";
@@ -15,11 +17,11 @@ export type ThemeMode = "system" | "light" | "dark";
 const THEME_OPTIONS: SegmentOption<ThemeMode>[] = [
   {
     value: "system",
-    label: "Tizim",
+    label: msg("Tizim"),
     icon: <Desktop size={16} weight="bold" />,
   },
-  { value: "light", label: "Yorug'", icon: <Sun size={16} weight="bold" /> },
-  { value: "dark", label: "Qorong'i", icon: <Moon size={16} weight="bold" /> },
+  { value: "light", label: msg("Yorug'"), icon: <Sun size={16} weight="bold" /> },
+  { value: "dark", label: msg("Qorong'i"), icon: <Moon size={16} weight="bold" /> },
 ];
 
 export interface ThemeSegmentedProps {
@@ -35,6 +37,7 @@ export function ThemeSegmented({
   orientation = "horizontal",
   className,
 }: ThemeSegmentedProps) {
+  const t = useT();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
@@ -61,7 +64,7 @@ export function ThemeSegmented({
 
   return (
     <SegmentedControl<ThemeMode>
-      options={THEME_OPTIONS}
+      options={THEME_OPTIONS.map((o) => ({ ...o, label: t(o.label) }))}
       value={(theme as ThemeMode) ?? "system"}
       onChange={setTheme}
       compact={compact}

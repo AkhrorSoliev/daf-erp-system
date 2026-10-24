@@ -5,11 +5,15 @@ const enrollment = (over: {
   createdAt?: Date;
   returnedAt?: Date | null;
   groupStart?: Date | null;
+  resumedOn?: Date | null;
 }) => ({
   startDate: over.startDate ?? null,
   createdAt: over.createdAt ?? new Date('2026-05-02T06:00:00.000Z'),
   returnedAt: over.returnedAt ?? null,
-  group: { startDate: over.groupStart ?? null },
+  group: {
+    startDate: over.groupStart ?? null,
+    lastResumedOn: over.resumedOn ?? null,
+  },
 });
 
 describe('chargeStartDate', () => {
@@ -101,5 +105,37 @@ describe('chargeStartDate', () => {
         }),
       ),
     ).toBe('2026-05-02');
+  });
+
+  describe('after a group pause (ADR-0119)', () => {
+    it('starts on the day the group came back, the resume day included', () => {
+      expect(
+        chargeStartDate(
+          enrollment({
+            createdAt: new Date('2026-05-02T06:00:00.000Z'),
+            resumedOn: new Date('2026-11-05T00:00:00.000Z'),
+          }),
+        ),
+      ).toBe('2026-11-05');
+    });
+
+    it('leaves a student who joined after the resume on their own start', () => {
+      expect(
+        chargeStartDate(
+          enrollment({
+            startDate: new Date('2026-11-12T00:00:00.000Z'),
+            resumedOn: new Date('2026-11-05T00:00:00.000Z'),
+          }),
+        ),
+      ).toBe('2026-11-12');
+    });
+
+    it('a group never paused changes nothing', () => {
+      expect(
+        chargeStartDate(
+          enrollment({ createdAt: new Date('2026-05-02T06:00:00.000Z') }),
+        ),
+      ).toBe('2026-05-02');
+    });
   });
 });

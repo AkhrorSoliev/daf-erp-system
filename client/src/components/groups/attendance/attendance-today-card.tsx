@@ -8,7 +8,10 @@ import { tashkentNow } from "@/lib/tashkent-time";
 import { answerState } from "@/lib/unmarked-lesson";
 import { useAuth } from "@/hooks/use-auth";
 import { UnmarkedLessonPrompt } from "@/components/attendance/unmarked/unmarked-lesson-prompt";
+import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import { formatShortDate, type LessonDate } from "./attendance-cycle-utils";
+import { dayNameOf } from "./attendance-form-utils";
 
 // An answer refreshes the group's calendar (this card's source) by itself.
 const noop = () => {};
@@ -32,6 +35,7 @@ export function AttendanceTodayCard({
   lessonEndTime,
   onSelectDate,
 }: AttendanceTodayCardProps) {
+  const t = useT();
   const user = useAuth((s) => s.user);
   const [countdown, setCountdown] = useState("");
   const [countdownLabel, setCountdownLabel] = useState("");
@@ -54,10 +58,10 @@ export function AttendanceTodayCard({
 
       if (nowSecs < startSecs) {
         diffSecs = startSecs - nowSecs;
-        label = "Darsgacha";
+        label = msg("Darsgacha");
       } else if (nowSecs < endSecs) {
         diffSecs = endSecs - nowSecs;
-        label = "Dars tugashiga";
+        label = msg("Dars tugashiga");
       } else {
         setCountdown("");
         setCountdownLabel("");
@@ -85,7 +89,8 @@ export function AttendanceTodayCard({
     return nowMinutes >= sh * 60 + sm && nowMinutes <= eh * 60 + em;
   })();
 
-  const dateLabel = `${todayLesson.dayName}, ${formatShortDate(todayStr)}.${todayStr.slice(0, 4)}`;
+  const dayKey = dayNameOf(todayStr);
+  const dateLabel = `${dayKey ? t(dayKey) : todayLesson.dayName}, ${formatShortDate(todayStr)}.${todayStr.slice(0, 4)}`;
 
   // The lesson ended unmarked and this viewer may answer «Dars bo'ldimi?»: a new
   // register can no longer be entered, so the question replaces the button.
@@ -107,15 +112,18 @@ export function AttendanceTodayCard({
         )}
       >
         <div>
-          <p className="text-sm font-medium">Bugungi dars — {dateLabel}</p>
+          <p className="text-sm font-medium">
+            {t("Bugungi dars — {date}", { date: dateLabel })}
+          </p>
           <p className="text-xs text-muted-foreground">
             {lessonStartTime} – {lessonEndTime}
-            {!isLessonTime && " · Dars vaqti tugagan yoki hali boshlanmagan"}
+            {!isLessonTime &&
+              ` · ${t("Dars vaqti tugagan yoki hali boshlanmagan")}`}
           </p>
           {countdown && (
             <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">
               <Clock className="size-3.5" />
-              {countdownLabel}: {countdown}
+              {t(countdownLabel)}: {countdown}
             </p>
           )}
         </div>
@@ -137,7 +145,7 @@ export function AttendanceTodayCard({
             onClick={() => onSelectDate(todayStr)}
             variant={isLessonTime ? "default" : "outline"}
           >
-            Davomat olish
+            {t("Davomat olish")}
           </Button>
         )}
       </div>
@@ -148,15 +156,19 @@ export function AttendanceTodayCard({
   return (
     <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950/30">
       <div>
-        <p className="text-sm font-medium">Bugungi dars — {dateLabel}</p>
+        <p className="text-sm font-medium">
+            {t("Bugungi dars — {date}", { date: dateLabel })}
+          </p>
         <p className="text-xs text-muted-foreground">
-          Davomat olingan: {todayLesson.presentCount}/{todayLesson.totalStudents}{" "}
-          keldi
+          {t("Davomat olingan: {present}/{total} keldi", {
+            present: todayLesson.presentCount,
+            total: todayLesson.totalStudents,
+          })}
         </p>
         {countdown && (
           <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">
             <Clock className="size-3.5" />
-            {countdownLabel}: {countdown}
+            {t(countdownLabel)}: {countdown}
           </p>
         )}
       </div>
@@ -166,12 +178,12 @@ export function AttendanceTodayCard({
           variant="outline"
           onClick={() => onSelectDate(todayStr)}
         >
-          Tahrirlash
+          {t("Tahrirlash")}
         </Button>
       ) : (
         <span className="inline-flex items-center gap-1.5 rounded-md border border-green-300 bg-white px-3 py-1.5 text-xs font-medium text-green-700 dark:border-green-700 dark:bg-green-950/50 dark:text-green-400">
           <Check className="size-3.5" />
-          Davomat olib bo&apos;lingan
+          {t("Davomat olib bo'lingan")}
         </span>
       )}
     </div>

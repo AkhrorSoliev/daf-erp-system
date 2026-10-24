@@ -19,6 +19,7 @@ import { ChangeStatusDialog } from "@/components/shared/change-status-dialog";
 import { StatusHistoryDialog } from "@/components/shared/status-history-dialog";
 import { useEditGroup, type GroupData } from "@/hooks/use-edit-group";
 import { GroupDeleteDialog } from "./group-delete-dialog";
+import { useT } from "@/i18n/context";
 
 interface GroupRowActionsProps {
   group: GroupData;
@@ -27,6 +28,7 @@ interface GroupRowActionsProps {
 }
 
 export function GroupRowActions({ group, onDeleted, onStatusChanged }: GroupRowActionsProps) {
+  const t = useT();
   const { openDrawer } = useEditGroup();
   const [showDelete, setShowDelete] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
@@ -44,24 +46,24 @@ export function GroupRowActions({ group, onDeleted, onStatusChanged }: GroupRowA
                 onClick={(e) => e.stopPropagation()}
               >
                 <MoreHorizontal className="size-4" />
-                <span className="sr-only">Amallar</span>
+                <span className="sr-only">{t("Amallar")}</span>
               </Button>
             </DropdownMenuTrigger>
           </TooltipTrigger>
-          <TooltipContent>Amallar</TooltipContent>
+          <TooltipContent>{t("Amallar")}</TooltipContent>
         </Tooltip>
         <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
           <DropdownMenuItem onClick={() => openDrawer(group)}>
             <Pencil className="mr-2 size-4" />
-            Tahrirlash
+            {t("Tahrirlash")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setShowStatus(true)}>
             <RefreshCw className="mr-2 size-4" />
-            Status o&apos;zgartirish
+            {t("Status o'zgartirish")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setShowHistory(true)}>
             <History className="mr-2 size-4" />
-            Status tarixi
+            {t("Status tarixi")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -69,7 +71,7 @@ export function GroupRowActions({ group, onDeleted, onStatusChanged }: GroupRowA
             onClick={() => setShowDelete(true)}
           >
             <Trash2 className="mr-2 size-4" />
-            O&apos;chirish
+            {t("O'chirish")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -85,6 +87,7 @@ export function GroupRowActions({ group, onDeleted, onStatusChanged }: GroupRowA
         open={showStatus}
         onOpenChange={setShowStatus}
         entityType="groups"
+        groupPause={group.pause}
         entityId={group.id}
         entityName={group.name}
         currentStatus={group.statusEnum || "FORMING"}

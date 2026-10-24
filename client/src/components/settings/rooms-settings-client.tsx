@@ -32,7 +32,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { TranslatedStatusBadge } from "@/components/shared/translated-status-badge";
+import { useT } from "@/i18n/context";
 import { SettingsPageHeader } from "./settings-page-header";
 import { RoomRowActions } from "./room-row-actions";
 import { EditRoomDrawer } from "./edit-room-drawer";
@@ -71,6 +72,7 @@ function BranchListView({
   search: string;
   onSearchChange: (value: string) => void;
 }) {
+  const t = useT();
   const [branches, setBranches] = useState<BranchWithCount[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -99,13 +101,13 @@ function BranchListView({
   return (
     <div className="space-y-4">
       <SettingsPageHeader
-        title="Xonalar"
-        description="Filial tanlang va xonalarni boshqaring"
+        title={t("Xonalar")}
+        description={t("Filial tanlang va xonalarni boshqaring")}
       />
 
       <div className="flex items-center gap-3">
         <Input
-          placeholder="Filial nomi bo'yicha qidirish..."
+          placeholder={t("Filial nomi bo'yicha qidirish...")}
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           className="w-full sm:max-w-sm"
@@ -117,10 +119,10 @@ function BranchListView({
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>Filial nomi</TableHead>
-              <TableHead>Manzil</TableHead>
-              <TableHead>Xonalar soni</TableHead>
-              <TableHead>Holati</TableHead>
+              <TableHead>{t("Filial nomi")}</TableHead>
+              <TableHead>{t("Manzil")}</TableHead>
+              <TableHead>{t("Xonalar soni")}</TableHead>
+              <TableHead>{t("Holati")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -138,7 +140,7 @@ function BranchListView({
                 >
                   <div className="flex flex-col items-center gap-2">
                     <Building2 className="h-8 w-8 text-muted-foreground/50" />
-                    Filiallar topilmadi
+                    {t("Filiallar topilmadi")}
                   </div>
                 </TableCell>
               </TableRow>
@@ -153,11 +155,11 @@ function BranchListView({
                   <TableCell className="font-medium">{branch.name}</TableCell>
                   <TableCell>{branch.address ?? "—"}</TableCell>
                   <TableCell>
-                    <Badge variant="outline">{branch.roomCount} ta xona</Badge>
+                    <Badge variant="outline">{t("{n} ta xona", { n: branch.roomCount })}</Badge>
                   </TableCell>
                   <TableCell>
                     {branch.status && (
-                      <StatusBadge entityType="branches" status={branch.status} />
+                      <TranslatedStatusBadge entityType="branches" status={branch.status} />
                     )}
                   </TableCell>
                 </TableRow>
@@ -190,6 +192,7 @@ function BranchRoomsView({
   searchInput: string;
   onSearchChange: (value: string) => void;
 }) {
+  const t = useT();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -251,17 +254,17 @@ function BranchRoomsView({
   return (
     <div className="space-y-4">
       <SettingsPageHeader
-        title={`${branch.name} — Xonalar`}
-        description={`${branch.name} filialidagi xonalarni boshqarish`}
+        title={t("{branch} — Xonalar", { branch: branch.name })}
+        description={t("{branch} filialidagi xonalarni boshqarish", { branch: branch.name })}
         action={
           <Tooltip>
             <TooltipTrigger asChild>
               <Button size="sm" data-tour="room-add" onClick={() => openAddDrawer(branch.id)}>
                 <Plus className="mr-1.5 h-4 w-4" />
-                Yangi xona
+                {t("Yangi xona")}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Yangi xona qo&apos;shish</TooltipContent>
+            <TooltipContent>{t("Yangi xona qo'shish")}</TooltipContent>
           </Tooltip>
         }
       />
@@ -271,13 +274,13 @@ function BranchRoomsView({
           <TooltipTrigger asChild>
             <Button variant="outline" size="sm" onClick={onBack}>
               <ArrowLeft className="mr-1.5 h-4 w-4" />
-              Filiallar
+              {t("Filiallar")}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Filiallar ro&apos;yxatiga qaytish</TooltipContent>
+          <TooltipContent>{t("Filiallar ro'yxatiga qaytish")}</TooltipContent>
         </Tooltip>
         <Input
-          placeholder="Xona nomi bo'yicha qidirish..."
+          placeholder={t("Xona nomi bo'yicha qidirish...")}
           value={searchInput}
           onChange={(e) => onSearchChange(e.target.value)}
           className="w-full sm:max-w-sm"
@@ -289,9 +292,9 @@ function BranchRoomsView({
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>Xona nomi</TableHead>
-              <TableHead>Sig&apos;imi</TableHead>
-              <TableHead>Guruhlar</TableHead>
+              <TableHead>{t("Xona nomi")}</TableHead>
+              <TableHead>{t("Sig'imi")}</TableHead>
+              <TableHead>{t("Guruhlar")}</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -310,7 +313,7 @@ function BranchRoomsView({
                 >
                   <div className="flex flex-col items-center gap-2">
                     <DoorOpen className="h-8 w-8 text-muted-foreground/50" />
-                    Xonalar topilmadi
+                    {t("Xonalar topilmadi")}
                   </div>
                 </TableCell>
               </TableRow>
@@ -328,10 +331,10 @@ function BranchRoomsView({
                     {room.name}
                   </TableCell>
                   <TableCell>
-                    {room.capacity ? `${room.capacity} o'rin` : "—"}
+                    {room.capacity ? t("{n} o'rin", { n: room.capacity }) : "—"}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{room.groupCount ?? 0} ta guruh</Badge>
+                    <Badge variant="outline">{t("{n} ta guruh", { n: room.groupCount ?? 0 })}</Badge>
                   </TableCell>
                   <TableCell>
                     <RoomRowActions room={room} onDeleted={handleDeleted} />
@@ -347,7 +350,7 @@ function BranchRoomsView({
       {totalPages > 0 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Jami: {total} ta xona
+            {t("Jami: {n} ta xona", { n: total })}
           </p>
           <div className="flex items-center gap-3">
             <Select
@@ -374,7 +377,7 @@ function BranchRoomsView({
                 disabled={filters.page <= 1}
                 onClick={() => setFilter("page", filters.page - 1)}
               >
-                Oldingi
+                {t("Oldingi")}
               </Button>
               <span className="px-2 text-sm text-muted-foreground">
                 {filters.page} / {totalPages}
@@ -385,7 +388,7 @@ function BranchRoomsView({
                 disabled={filters.page >= totalPages}
                 onClick={() => setFilter("page", filters.page + 1)}
               >
-                Keyingi
+                {t("Keyingi")}
               </Button>
             </div>
           </div>

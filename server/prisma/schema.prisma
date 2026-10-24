@@ -189,6 +189,7 @@ enum TaskEventType {
   CANCELLED
   AUTO_CLOSED
   REASSIGNED
+  FILE_DELETED
 }
 
 enum TaskEventVia {
@@ -211,8 +212,10 @@ enum TaskOutboxKind {
 enum TaskTelegramPurpose {
   NOTICE
   RETURN_PROMPT
-  /// Not used before phase 3 (photo upload).
+  /// «Rasmni shu xabarga javob qilib yuboring» (phase 3): a photo reply sends the task to review.
   PHOTO_PROMPT
+  /// The person's live card (ADR-0089): edited on every task change.
+  CARD
 }
 
 /// Spec 2026-10-07 §3.6.
@@ -220,6 +223,13 @@ enum TaskRecurrenceFreq {
   DAILY
   WEEKLY
   MONTHLY
+}
+
+/// Spec 2026-10-07 §3.5 (ADR-0086): image → IMAGE, ogg/webm audio → VOICE, the rest → DOCUMENT.
+enum TaskFileKind {
+  IMAGE
+  DOCUMENT
+  VOICE
 }
 
 // ===== FINANCIAL SYSTEM ENUMS =====
@@ -349,7 +359,8 @@ model Role {
   id   Int    @id
   name String @unique
 
-  users UserRole[]
+  users       UserRole[]
+  permissions RolePermission[]
 }
 
 model User {
@@ -362,6 +373,10 @@ model User {
   balance        Int        @default(0)
   login          String?
   position       String?
+  // The staff portals' design skin (ADR-0101): one of common/ui-skins.ts, null = the default.
+  uiSkin         String?
+  // The staff portals' interface language (ADR-0102): one of common/ui-locales.ts, null = the default.
+  uiLocale       String?
   password       String?
   // Bumped by every password write and by "log out other devices"; every
   // token carries it as `sv` and stops working once it falls behind (ADR-0030).
@@ -369,6 +384,11 @@ model User {
   isActive       Boolean    @default(true)
   status         UserStatus @default(ACTIVE)
   telegramChatId String?
+  /// When the bot learned this account's linked chat no longer takes its
+  /// messages (blocked the bot, deleted Telegram). Null = reachable. Same rule
+  /// as `Student.telegramDisconnectedAt` (ADR-0066); written only by
+  /// `StudentChatReach` and the report page's probe (ADR-0097).
+  telegramDisconnectedAt DateTime?
   companyId      Int
   company        Company    @relation(fields: [companyId], references: [id])
   mainBranch     Int?
@@ -396,6 +416,7 @@ model User {
   deletedStudents                  Student[]                  @relation("StudentDeletedBy")
   deletedLeads                     Lead[]                     @relation("LeadDeletedBy")
   calledLeads                      Lead[]                     @relation("LeadCalledBy")
+  ownedLeads                       Lead[]                     @relation("LeadOwner")
   deletedLeadColumns               LeadColumn[]               @relation("LeadColumnDeletedBy")
   deletedLeadSections              LeadSection[]              @relation("LeadSectionDeletedBy")
   deletedLeadSources               LeadSource[]               @relation("LeadSourceDeletedBy")
@@ -421,6 +442,7 @@ model User {
   taskRecurrencesAuthored          TaskRecurrence[]           @relation("TaskRecurrenceAuthor")
   taskParticipations               TaskParticipant[]          @relation("TaskParticipantUser")
   taskEvents                       TaskEvent[]                @relation("TaskEventActor")
+  taskFilesUploaded                TaskFile[]                 @relation("TaskFileUploader")
   commentAssignees                 CommentAssignee[]          @relation("CommentAssignees")
   notifications                    Notification[]             @relation("UserNotifications")
   pushSubscriptions                PushSubscription[]         @relation("UserPushSubscriptions")
@@ -432,6 +454,8 @@ model User {
   // Financial relations (employee salary — works for all roles)
   salaryConfigs       EmployeeSalaryConfig[] @relation("UserSalaryConfigs")
   salaryPayments      SalaryPayment[]        @relation("UserSalaryPayments")
+  staffSalaryAdjustments        StaffSalaryAdjustment[] @relation("StaffSalaryAdjustmentUser")
+  staffSalaryAdjustmentsWritten StaffSalaryAdjustment[] @relation("StaffSalaryAdjustmentBy")
   salaryAccruals      SalaryAccrual[]        @relation("UserSalaryAccruals")
   teacherTransactions Transaction[]          @relation("TeacherTransactions")
 
@@ -481,8 +505,32 @@ model User {
 
   updatedSettings Setting[] @relation("SettingUpdatedBy")
 
+  rolePermissionUpdates RolePermission[] @relation("RolePermissionUpdatedBy")
+
+  sessions UserSession[]
+
   @@index([deletedAt])
   @@index([status])
+}
+
+/// Bitta kirish = bitta qator (ADR-0113). Token `sid` sifatida shu id'ni
+/// ko'taradi; qator o'chsa, qurilma `refresh` da to'xtaydi va Redis belgisi
+/// access token'ni ham keyingi so'rovdayoq to'xtatadi.
+model UserSession {
+  id             String   @id @default(uuid())
+  userId         Int
+  /// Qator yaratilgan paytdagi `User.sessionVersion`. Parol o'zgarsa hisob
+  /// versiyasi oshadi va eski qatorlar ro'yxatdan o'zi tushib qoladi.
+  sessionVersion Int
+  userAgent      String?
+  ip             String?
+  createdAt      DateTime @default(now())
+  /// Oxirgi refresh (yoki kirish) vaqti — «oxirgi faollik».
+  lastUsedAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, lastUsedAt])
 }
 
 model UserRole {
@@ -649,6 +697,7 @@ model Course {
 
 model Student {
   id                     Int           @id @default(autoincrement())
+  levelTestAttempts      LevelTestAttempt[]
   firstName              String
   lastName               String
   phone                  String
@@ -721,6 +770,12 @@ model Student {
   salaryAccruals    SalaryAccrual[]           @relation("StudentSalaryAccruals")
   paymentPromises   PaymentPromise[]
   dafAttempts       DafAttempt[]
+  dafStudentDays    DafStudentDay[]
+  dafSetting        DafStudentSetting?
+  dafBadges         DafStudentBadge[]
+  dafLeague         DafStudentLeague?
+  dafLeagueEntries  DafLeagueEntry[]
+  dafReminders      DafReminderLog[]
   appSessions       StudentAppSession[]
   dafLexemeStates   DafLexemeState[]
   dafLessonProgress DafLessonProgress[]
@@ -729,6 +784,7 @@ model Student {
   scholarships      Scholarship[]
   monthlyCharges    EnrollmentMonthlyCharge[]
   balanceNotices    BalanceNotice[]
+  lessonRatings     LessonRating[]
 
   @@index([deletedAt])
   @@index([status])
@@ -794,7 +850,26 @@ model Lead {
   deletedBy       User?     @relation("LeadDeletedBy", fields: [deletedById], references: [id])
   deletionBatchId String?
 
-  formSubmissions CustomFormSubmission[]
+  // Lead owner (ADR-0093). `ownerId` is the current owner (null = the common
+  // pool); `ownedAt` is when the current ownership began; `ownerActedAt` is the
+  // owner's last action in it (null = none yet). The deadline is never stored:
+  // `ownershipDueAt` derives it from these two fields.
+  ownerId       Int?
+  owner         User?              @relation("LeadOwner", fields: [ownerId], references: [id])
+  ownedAt       DateTime?
+  ownerActedAt  DateTime?
+  ownershipLogs LeadOwnershipLog[]
+  // How the lead was converted (ADR-0096): written by `LeadsService.convert`
+  // and `StudentLeadOriginService`. Null = not converted, or converted before
+  // stage 2 (the backfill restores the ones since KPI_START).
+  conversionKind LeadConversionKind?
+
+  formSubmissions   CustomFormSubmission[]
+  levelTestAttempts LevelTestAttempt[]
+
+  // Meta Lead Ads `leadgen_id`. Meta resends a webhook until it gets a 200, so
+  // the unique key is what keeps a retry from creating the lead twice.
+  metaLeadId String? @unique
 
   // `Lead` carried NEITHER companyId NOR branchId — `getBoard()` was
   // `where: { deletedAt: null }`, i.e. every lead in the database. A Namangan
@@ -816,6 +891,174 @@ model Lead {
   @@index([statusEnum])
   @@index([sectionId])
   @@index([sourceId])
+  @@index([ownerId])
+}
+
+/// Test urinishining holati (ADR-0121, ADR-0122).
+enum LevelTestStatus {
+  /// Test boshlangan, hali tugamagan (yoki odam tashlab ketgan).
+  IN_PROGRESS
+  /// Hamma 20 savolga javob berilgan.
+  COMPLETED
+  /// Odam «Natijani bilish» ni bosib o'zi to'xtatgan: natija bor.
+  STOPPED
+  /// Ketma-ket bir necha savol javobsiz qolgan, test to'xtatilgan.
+  TIMED_OUT
+  /// Odam /cancel yozgan.
+  CANCELLED
+}
+
+/// Botdagi «📊 Darajani aniqlash» testining bitta urinishi (ADR-0121, ADR-0122).
+///
+/// Urinish test BOSHLANGANDA yoziladi va har javobdan keyin yangilanadi, shuning
+/// uchun "yarim qoldirgan" ham hisobotda ko'rinadi. `questionIds` — berilgan
+/// savollar (`level-test-questions.ts` dagi barqaror id'lar): keyingi urinishda
+/// shu chatga avval ko'rmagan savollar beriladi.
+/// `leadId` — odam telefonini yuborib lid bo'lgach to'ldiriladi.
+/// `studentId` — chat bitta o'quvchi kartasiga bog'langan bo'lsa: natija
+/// o'quvchi profilida ko'rinadi va lid ochilmaydi.
+model LevelTestAttempt {
+  id          String   @id @default(uuid())
+  chatId      String
+  questionIds String[]
+  /// Nechta savolga javob berilgan (vaqt tugagani ham hisobda).
+  answered Int @default(0)
+  /// `{ "A1": 5, "A2": 4 }` — darajalar bo'yicha to'g'ri javoblar.
+  correctByLevel Json
+  status         LevelTestStatus @default(IN_PROGRESS)
+  /// BEGINNER | A1 | A2 | B1 | B2 | UNKNOWN. null — natija chiqarilmagan
+  /// (tugamagan, bekor qilingan yoki javobsiz qolgan test).
+  result     String?
+  createdAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  leadId String?
+  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  studentId Int?
+  student   Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
+
+  @@index([chatId, createdAt])
+  @@index([leadId])
+  @@index([studentId, createdAt])
+  @@index([companyId, createdAt])
+}
+
+enum LeadOwnershipKind {
+  CLAIM
+  ASSIGN
+  RELEASE
+  EXPIRE
+}
+
+enum LeadConversionKind {
+  NEW_STUDENT
+  RETURNING
+  ALREADY_STUDYING
+}
+
+// Every change of a lead's owner (ADR-0093), append-only. Reports and the
+// later KPI stages read it; the lead's «Tarix» tab gets an EntityHistory row
+// for the same change. User ids are plain columns, like `statusChangedById`.
+model LeadOwnershipLog {
+  id         String            @id @default(uuid())
+  leadId     String
+  lead       Lead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  kind       LeadOwnershipKind
+  fromUserId Int?
+  toUserId   Int?
+  // Null = the system (the deadline passed).
+  actorId    Int?
+  reason     String?
+  branchId   Int?
+  companyId  Int
+  createdAt  DateTime          @default(now())
+
+  @@index([leadId])
+  @@index([companyId, kind, createdAt])
+  @@index([fromUserId])
+}
+
+enum KpiResultType {
+  LEAD_PAID
+  PROMISE_KEPT
+}
+
+enum KpiResultStatus {
+  ACTIVE
+  CANCELLED
+}
+
+enum KpiRuleMode {
+  FIXED
+  PERCENT
+}
+
+// One KPI result (ADR-0096), written only by `KpiResultsService`; the amount
+// is sealed at the rule of that moment and no money moves in stage 2. Ids are
+// plain columns (like `LeadOwnershipLog`), so archiving or deleting a lead, a
+// promise or a user never touches the record. One ACTIVE result per lead and
+// per payment (LEAD_PAID) and per promise (PROMISE_KEPT): partial unique
+// indexes in the migration, which this schema cannot express.
+model KpiResult {
+  id               String          @id @default(uuid())
+  companyId        Int
+  branchId         Int?
+  userId           Int
+  type             KpiResultType
+  leadId           String?
+  promiseId        String?
+  studentId        Int
+  paymentId        String
+  paymentAmount    Int
+  baseAmount       Int
+  ruleMode         KpiRuleMode
+  ruleValue        Int
+  amount           Int
+  // 'YYYY-MM', the Tashkent month of the payment.
+  month            String
+  occurredAt       DateTime
+  status           KpiResultStatus @default(ACTIVE)
+  cancelledAt      DateTime?
+  cancelReason     String?
+  // A correction's re-post carries the old result over (spec §7.3).
+  replacesResultId String?
+  createdAt        DateTime        @default(now())
+
+  @@index([companyId, month])
+  @@index([userId, month])
+  @@index([paymentId])
+}
+
+/// Berilgan har «Teilnahmebestätigung» bitta qator. `snapshot` hujjat
+/// berilgan paytdagi hisobni MUHRLAYDI: keyin davomat tuzatilsa yoki
+/// chegara o'zgarsa ham berilgan hujjatning raqamlari qimirlamaydi.
+/// `branchId` faqat kirish huquqi uchun; hujjatga ham, ochiq sahifaga ham
+/// chiqmaydi. Hujjat hech qachon o'chirilmaydi; xato berilgani bekor
+/// qilinadi (ADR-0104): `revokedAt` va `revokedReason` bir marta yoziladi,
+/// raqam band qoladi, ochiq sahifa sababsiz «bekor qilingan» deydi.
+model ParticipationCertificate {
+  id            String    @id @default(uuid())
+  companyId     Int
+  branchId      Int?
+  studentId     Int
+  level         String
+  year          Int
+  seq           Int
+  number        String
+  issuedAt      DateTime  @default(now())
+  issuedById    Int
+  snapshot      Json
+  exemptReason  String?
+  exemptById    Int?
+  revokedAt     DateTime?
+  revokedReason String?
+
+  @@unique([companyId, year, seq])
+  @@index([studentId, level])
 }
 
 // Leads board column. Two rows are seeded as fixed/system columns
@@ -908,6 +1151,7 @@ model LeadSource {
 
   leads       Lead[]
   customForms CustomForm[]
+  expenses    Expense[]
 
   @@index([companyId])
   @@index([deletedAt])
@@ -1354,6 +1598,10 @@ model Group {
   statusChangedById  Int?
   statusChangeReason String?
 
+  /// The day the group last came back from a pause (ADR-0119). The monthly
+  /// charge of a group that resumes mid-month starts here, not at the join date.
+  lastResumedOn DateTime? @db.Date
+
   deletedAt       DateTime?
   deletedById     Int?
   deletedBy       User?     @relation("GroupDeletedBy", fields: [deletedById], references: [id])
@@ -1378,6 +1626,9 @@ model Group {
   plannedAbsences        PlannedAbsence[]
   monthlyCharges         EnrollmentMonthlyCharge[]
   unmarkedLessons        UnmarkedLesson[]          @relation("UnmarkedLessonGroup")
+  lessonRatings          LessonRating[]
+  dafWeeks               DafGroupWeek[]
+  pauses                 GroupPause[]
 
   @@unique([name, branchId])
   @@index([deletedAt])
@@ -1778,12 +2029,30 @@ model Company {
   leadColumns                 LeadColumn[]
   leadSections                LeadSection[]
   leadSources                 LeadSource[]
+  levelTestAttempts           LevelTestAttempt[]
   mockExamSections            MockExamSection[]
   mockExams                   MockExam[]
   mockExamParticipants        MockExamParticipant[]
   holidays                    Holiday[]
   monthlyCharges              EnrollmentMonthlyCharge[]
   settings                    Setting[]
+  rolePermissions             RolePermission[]
+}
+
+/// The CEO's change to a role's capabilities. Only differences from the
+/// catalog default are stored (ADR-0086).
+model RolePermission {
+  companyId   Int
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  roleId      Int
+  role        Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  key         String
+  granted     Boolean
+  updatedById Int?
+  updatedBy   User?    @relation("RolePermissionUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedAt   DateTime @updatedAt
+
+  @@id([companyId, roleId, key])
 }
 
 enum TelegramGroupStatus {
@@ -2042,6 +2311,7 @@ model Task {
   events           TaskEvent[]
   outbox           TaskOutbox[]
   telegramMessages TaskTelegramMessage[]
+  files            TaskFile[]
   notifications    Notification[]
   unmarkedLesson   UnmarkedLesson?       @relation("UnmarkedLessonTaskRow")
 
@@ -2093,6 +2363,9 @@ model TaskEvent {
   actor     User?         @relation("TaskEventActor", fields: [actorId], references: [id], onDelete: SetNull)
   text      String?
   meta      Json?
+  /// FILE / VOICE / FILE_DELETED: the file the row is about (ADR-0086).
+  fileId    String?
+  file      TaskFile?     @relation(fields: [fileId], references: [id], onDelete: SetNull)
   via       TaskEventVia  @default(WEB)
   createdAt DateTime      @default(now())
 
@@ -2185,6 +2458,39 @@ model TaskRecurrence {
   @@index([companyId, authorId])
 }
 
+/// A file on a task (spec 2026-10-07 §3.5, ADR-0086). The object lives in the
+/// PRIVATE bucket R2_TASKS_BUCKET_NAME under `key`; it is read only through a
+/// presigned GET minted after an access check. A delete is soft (`deletedAt`);
+/// the 03:00 run removes the object 30 days later and stamps `purgedAt`, the row
+/// stays for the history. Written only by tasks/task-files.service.ts.
+model TaskFile {
+  id           String       @id @default(uuid())
+  taskId       String
+  task         Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  /// `tasks/<companyId>/<taskId>/<uuid><ext>`; the extension comes from the sniffed type.
+  key          String       @unique
+  /// The person's base name with the sniffed extension (`safeFileName`).
+  name         String
+  size         Int
+  mime         String
+  kind         TaskFileKind
+  /// VOICE: seconds, from the recorder or Telegram; null when unknown.
+  durationSec  Int?
+  uploadedById Int?
+  uploadedBy   User?        @relation("TaskFileUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  via          TaskEventVia @default(WEB)
+  createdAt    DateTime     @default(now())
+  deletedAt    DateTime?
+  /// A bare id, like TaskOutbox.userId.
+  deletedById  Int?
+  purgedAt     DateTime?
+
+  events TaskEvent[]
+
+  @@index([taskId, createdAt])
+  @@index([deletedAt, purgedAt])
+}
+
 model Notification {
   id                String           @id @default(uuid())
   userId            Int
@@ -2205,6 +2511,9 @@ model Notification {
   resolvedAt        DateTime?
   /// One day's rows of one lesson alert type, folded into one line: `ATTENDANCE_ADMIN_ALERT:2026-10-10`.
   groupKey          String?
+  /// The Telegram copy of a lesson alert (ADR-0090): edited when the row is resolved.
+  telegramChatId    String?
+  telegramMessageId Int?
   companyId         Int
   createdAt         DateTime         @default(now())
 
@@ -2363,6 +2672,9 @@ model PaymentPromise {
   resolvedAt       DateTime?
   resolvedById     Int?
   resolvedBy       User?                @relation("PaymentPromiseResolvedBy", fields: [resolvedById], references: [id])
+  // The payment that made the promise KEPT (ADR-0096), written by
+  // `settleKeptPromises` in the payment's own transaction. A plain column.
+  resolvedPaymentId String?
   createdById      Int
   createdBy        User                 @relation("PaymentPromiseCreatedBy", fields: [createdById], references: [id])
   branchId         Int? // for Branch Director scoping on /outreach
@@ -2375,6 +2687,7 @@ model PaymentPromise {
   @@index([companyId, status])
   @@index([status, promiseDate])
   @@index([branchId])
+  @@index([resolvedPaymentId])
 }
 
 enum CallReason {
@@ -2445,6 +2758,10 @@ model Payment {
   branchId           Int?
   companyId          Int
   receiptCode        String?       @unique
+  // The payment this one corrects (reverse + re-post, spec B4 §4.8). Set on the NEW payment.
+  correctsPaymentId  String?       @unique
+  correctsPayment    Payment?      @relation("PaymentCorrection", fields: [correctsPaymentId], references: [id], onDelete: SetNull)
+  correctedBy        Payment?      @relation("PaymentCorrection")
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
@@ -2518,6 +2835,7 @@ model Transaction {
   @@index([contractId])
   @@index([expenseId])
   @@index([reversedTransactionId])
+  @@index([paymentId])
 }
 
 model Contract {
@@ -2920,6 +3238,30 @@ model SalaryPayment {
   @@index([status])
 }
 
+// ADR-0112: the CEO's manual figure for one staff member's pay (before advances)
+// in one Tashkent calendar month. The prorated FIXED_MONTHLY formula stays the
+// proposal; when this row exists it replaces the formula everywhere, through
+// `resolveStaffMonthly`. Deleting the row returns the month to the formula.
+model StaffSalaryAdjustment {
+  id               String   @id @default(uuid())
+  companyId        Int
+  userId           Int
+  user             User     @relation("StaffSalaryAdjustmentUser", fields: [userId], references: [id])
+  /// 'YYYY-MM', the Tashkent calendar month of the payroll period.
+  month            String
+  amount           Int
+  /// What the formula gave when this was saved (audit only; the live figure is re-derived on read).
+  calculatedAmount Int
+  reason           String
+  createdById      Int
+  createdBy        User     @relation("StaffSalaryAdjustmentBy", fields: [createdById], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([companyId, userId, month])
+  @@index([companyId, month])
+}
+
 model Refund {
   id               String         @id @default(uuid())
   studentId        Int
@@ -3021,6 +3363,11 @@ model Expense {
   settledBySalaryPaymentId String?
   settledBySalaryPayment   SalaryPayment? @relation("ExpenseSettledBy", fields: [settledBySalaryPaymentId], references: [id])
 
+  // Which lead source (channel) a MARKETING expense paid for (ADR-0109).
+  // NULL = not tied to one channel. Only MARKETING rows carry it.
+  leadSourceId String?
+  leadSource   LeadSource? @relation(fields: [leadSourceId], references: [id])
+
   companyId Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3037,6 +3384,7 @@ model Expense {
   @@index([deletedAt])
   @@index([relatedUserId])
   @@index([branchId])
+  @@index([leadSourceId])
 }
 
 // ===== PAYMENT GATEWAY EVENT LOG =====
@@ -4019,6 +4367,167 @@ model DafAttempt {
   @@index([studentId, sessionId])
 }
 
+/// DERIVED: the source of truth is DafAttempt. Rebuilt from it at any time by
+/// `scripts/rebuild-daf-student-day.ts`. One writer: `recordAttempt`
+/// (src/daf/shared/attempt-writer.ts). ADR-0114.
+model DafStudentDay {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  companyId Int
+  /// Tashkent calendar day.
+  day       DateTime @db.Date
+  /// The attempt's sealed groupId; "" for no group (never NULL: a NULL key
+  /// would not block a duplicate row).
+  groupKey  String   @default("")
+  points    Int      @default(0)
+  attempts  Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, day, groupKey])
+  @@index([companyId, day])
+  @@index([groupKey, day])
+}
+
+/// Kunlik maqsad darajasi. Ballari kodda (`src/daf/uebung/punkte.ts`,
+/// `MAQSAD_BALL`), shuning uchun ularni o'zgartirish deploy bilan.
+enum DafDailyGoal {
+  YENGIL
+  ORTA
+  JIDDIY
+}
+
+/// The student's own choice — NOT derived, cannot be rebuilt (ADR-0115).
+/// No row = ORTA, reminders on. Written by `PATCH student-portal/lernen/maqsad`
+/// (`dailyGoal`) and `eslatmalarniSaqla` (`remindersEnabled`, ADR-0117), both upsert.
+model DafStudentSetting {
+  studentId        Int          @id
+  companyId        Int
+  dailyGoal        DafDailyGoal @default(ORTA)
+  /// S4 (ADR-0117): kechki eslatma va dushanba xulosasi; o'chirish ikkalasini to'xtatadi.
+  remindersEnabled Boolean      @default(true)
+  updatedAt        DateTime     @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id])
+}
+
+/// A badge the student earned: given once, NEVER taken back (ADR-0115).
+/// Only the catalogue key is stored (`src/daf/nishon/nishon-katalogi.ts`).
+/// One writer: `grantBadges` (`src/daf/nishon/nishon-berish.ts`).
+model DafStudentBadge {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  companyId Int
+  key       String
+  earnedAt  DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, key])
+}
+
+/// Doimiy liga darajasi (ADR-0116): o'quvchiga bitta qator, faqat o'sadi
+/// (`GREATEST`). Qator yo'q = Bronza (0); migratsiyada hech narsa
+/// to'ldirilmaydi. Yozuvchi: `settleWeek` (`src/daf/liga/liga-hisob.ts`).
+model DafStudentLeague {
+  studentId Int      @id
+  companyId Int
+  tier      Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id])
+}
+
+/// Haftalik liga xonasi (ADR-0116). `settledAt` — hafta hisoblangan payt:
+/// hisob xonani `UPDATE … WHERE "settledAt" IS NULL RETURNING` bilan oladi,
+/// shuning uchun ikkinchi hisob hech narsa olmaydi.
+/// Yozuvchilar: `src/daf/liga/liga-xona.ts`, `src/daf/liga/liga-hisob.ts`.
+model DafLeagueRoom {
+  id        Int       @id @default(autoincrement())
+  companyId Int
+  weekStart DateTime  @db.Date
+  tier      Int
+  number    Int
+  settledAt DateTime?
+
+  leagueEntries DafLeagueEntry[]
+
+  @@unique([companyId, weekStart, tier, number])
+  @@index([companyId, settledAt])
+}
+
+/// Xonadagi a'zolik: hafta ichida bitta xona. `place`, `points`, `promoted`
+/// hafta hisoblangach yoziladi — tarix va nishonlar shulardan o'qiydi; hafta
+/// davomida ball bu yerda saqlanmaydi (`DafStudentDay` dan yig'iladi).
+model DafLeagueEntry {
+  id        Int      @id @default(autoincrement())
+  roomId    Int
+  studentId Int
+  companyId Int
+  weekStart DateTime @db.Date
+  tier      Int
+  place     Int?
+  points    Int?
+  promoted  Boolean  @default(false)
+
+  room    DafLeagueRoom @relation(fields: [roomId], references: [id])
+  student Student       @relation(fields: [studentId], references: [id])
+
+  @@unique([weekStart, studentId])
+  @@index([roomId])
+  @@index([studentId])
+}
+
+/// Guruhlar jadvalining hafta natijasi (ADR-0116), hafta oxirida bir marta
+/// yoziladi. Jonli jadval o'qishda hisoblanadi (`src/daf/liga/guruhlar-jadvali.ts`).
+model DafGroupWeek {
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  weekStart DateTime @db.Date
+  groupId   String
+  place     Int
+  average   Float
+  members   Int
+  points    Int
+
+  group Group @relation(fields: [groupId], references: [id])
+
+  @@unique([weekStart, groupId])
+}
+
+/// Kechki eslatma (S4 §1) yoki dushanba xulosasi (§2) turi.
+enum DafReminderKind {
+  EVENING
+  WEEKLY
+}
+
+enum DafReminderStatus {
+  SENT
+  FAILED
+}
+
+/// S4 xabarlari jurnali (ADR-0117). Qator yuborishdan OLDIN egallanadi
+/// (`INSERT … ON CONFLICT DO NOTHING RETURNING id`): qatorni yaratgan chaqiruv
+/// yuboradi, ikkinchisi hech narsa qilmaydi. `FAILED` qayta urinilmaydi va
+/// chegaraga sanalmaydi; 90 kundan eski qatorlar o'chiriladi.
+/// Yagona yozuvchi: `src/daf/eslatma/eslatma-jurnali.ts`.
+model DafReminderLog {
+  id        Int               @id @default(autoincrement())
+  companyId Int
+  studentId Int
+  kind      DafReminderKind
+  /// Toshkent kuni.
+  sentOn    DateTime          @db.Date
+  status    DafReminderStatus
+  createdAt DateTime          @default(now())
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, kind, sentOn])
+  @@index([companyId, sentOn])
+}
+
 /// Bitta mashq seansi. Klient uuid yaratadi; server birinchi urinishda
 /// yaratadi, yakunda natijani URINISHLARDAN o'zi hisoblaydi — klient aytgan
 /// `richtig`ga ishonmaydi (dizayn 5.3, 5.5).
@@ -4272,4 +4781,132 @@ model StudentJoinRequest {
 
   @@index([status, createdAt])
   @@index([branchId, status])
+}
+
+enum LessonRatingStatus {
+  SENT // qator yozildi; messageId bo'lsa xabar yetgan
+  FAILED // Telegram rad etdi — qayta urinilmaydi
+}
+
+/// Darsdan keyin o'quvchidan so'ralgan baho (spec 2026-10-13, yangi ADR).
+/// Bitta dars, bitta o'quvchi — bitta qator; qator xabardan OLDIN yoziladi,
+/// shuning uchun ikki parallel cron bir o'quvchiga ikki marta yubora olmaydi.
+model LessonRating {
+  id              String             @id @default(uuid())
+  companyId       Int
+  /// Guruh filiali, yuborilgan paytda muzlatiladi (hisobot doirasi).
+  branchId        Int
+  groupId         String
+  group           Group              @relation(fields: [groupId], references: [id])
+  studentId       Int
+  student         Student            @relation(fields: [studentId], references: [id])
+  date            DateTime           @db.Date
+  /// Dars ustozlari (override hisobga olingan), yuborilgan paytda muzlatiladi.
+  teacherIds      Int[]
+  chatId          String
+  /// Yetkazilgan xabar; null — yetmagan.
+  messageId       Int?
+  /// «Nima yoqmadi?» so'rovi (force_reply).
+  promptMessageId Int?
+  status          LessonRatingStatus @default(SENT)
+  /// 1–5.
+  score           Int?
+  /// ≤ 500 belgi.
+  comment         String?
+  sentAt          DateTime           @default(now())
+  ratedAt         DateTime?
+  commentedAt     DateTime?
+  failReason      String?
+
+  @@unique([groupId, studentId, date])
+  @@index([companyId, date])
+  @@index([chatId, promptMessageId])
+}
+
+/// Who gets the personal daily report in their own Telegram chat (ADR-0095).
+/// Settings, not a ledger row: removing a recipient deletes the row.
+enum TelegramReportLayout {
+  BY_SECTION
+  TABLE
+  BY_BRANCH
+  TOTAL_ONLY
+}
+
+enum TelegramReportSection {
+  TODAY_MONEY
+  STUDENTS
+  LESSONS
+  ACTIVE_STUDENTS
+  DEBT
+  MONTH
+  SALARY
+  ALERTS
+}
+
+model TelegramReportRecipient {
+  id           Int                     @id @default(autoincrement())
+  companyId    Int
+  userId       Int
+  /// "HH:MM", :00 or :30, 07:00–23:30 (Tashkent).
+  sendTime     String                  @default("21:00")
+  layout       TelegramReportLayout    @default(BY_SECTION)
+  /// true = every live branch, including branches opened later.
+  allBranches  Boolean                 @default(false)
+  branchIds    Int[]                   @default([])
+  sections     TelegramReportSection[] @default([])
+  isActive     Boolean                 @default(true)
+  /// Tashkent day of the last automatic send (the cron's claim).
+  lastSentDate DateTime?               @db.Date
+  /// The last attempt to send this recipient a report (cron, test or none yet).
+  lastAttemptAt   DateTime?
+  lastAttemptOk   Boolean?
+  /// Why it failed, in the CEO's words; null after a success.
+  lastAttemptNote String?
+  createdById  Int
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+
+  @@unique([companyId, userId])
+  @@index([isActive, sendTime])
+}
+
+enum GroupPauseSource {
+  MANUAL
+  BRANCH
+}
+
+/// One pause of a group (ADR-0119). The centre pauses a group, not the
+/// student, so every lesson day that passes during the pause is cancelled the
+/// same night and its money goes back (ADR-0053). Rows are written by
+/// `GroupPausesService` only; an open row has `endedAt` NULL.
+model GroupPause {
+  id        String @id @default(uuid())
+  groupId   String
+  group     Group  @relation(fields: [groupId], references: [id])
+  companyId Int
+
+  startedAt DateTime
+  /// The day lessons are planned to restart, as the admin said when pausing.
+  /// NULL = not known yet.
+  plannedResumeOn DateTime? @db.Date
+  /// The day lessons restart, as confirmed when the group is resumed. A day
+  /// still ahead keeps the group PAUSED until the morning of that day.
+  resumeOn DateTime? @db.Date
+  endedAt  DateTime?
+
+  reason      String?
+  source      GroupPauseSource @default(MANUAL)
+  startedById Int?
+  endedById   Int?
+
+  /// How many pause lessons moved `Group.endDate`, and what it was before,
+  /// so a pause that ends in a cancelled group can undo the move.
+  extendedLessons Int       @default(0)
+  endDateBefore   DateTime? @db.Date
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([groupId, startedAt])
+  @@index([companyId, endedAt])
 }

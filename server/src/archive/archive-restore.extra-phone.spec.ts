@@ -41,6 +41,7 @@ describe('ArchiveRestoreService — backup number on restore (ADR-0070)', () => 
       prisma,
       { changeStatus: jest.fn().mockResolvedValue({}) } as any,
       history,
+      {} as any,
     );
   }
 

@@ -30,21 +30,23 @@ import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
 import { useCan } from "@/hooks/use-permissions";
 import { formatPhone } from "@/lib/format-utils";
 import { SalaryDueCard } from "@/components/shared/salary-due-card";
+import { useT } from "@/i18n/context";
 
 interface TeacherProfileCardProps {
   teacher: TeacherData;
 }
 
 export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
+  const t = useT();
   const { openDrawer } = useEditTeacher();
   const router = useRouter();
   const canManageTeachers = useCan("teachers.manage");
   const canSeeSalary = useCan("salary.view");
   const handleDelete = () => {
     router.push("/teachers");
-    toast.success("O'qituvchi muvaffaqiyatli o'chirildi");
+    toast.success(t("O'qituvchi muvaffaqiyatli o'chirildi"));
     api.delete(`/teachers/${teacher.id}`).catch(() => {
-      toast.error("O'chirishda xatolik yuz berdi");
+      toast.error(t("O'chirishda xatolik yuz berdi"));
     });
   };
 
@@ -79,7 +81,7 @@ export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
             </Badge>
           ))}
           {!teacher.isActive && (
-            <Badge variant="destructive">Nofaol</Badge>
+            <Badge variant="destructive">{t("Nofaol")}</Badge>
           )}
         </div>
       </div>
@@ -89,7 +91,7 @@ export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
         {teacher.phone && (
           <div className="flex items-center gap-2">
             <Phone className="size-3.5 text-muted-foreground" />
-            <span className="text-muted-foreground">Telefon:</span>
+            <span className="text-muted-foreground">{t("Telefon")}:</span>
             <a
               href={`tel:+998${teacher.phone}`}
               className="text-blue-600 hover:underline dark:text-blue-400"
@@ -101,21 +103,21 @@ export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
 
         {teacher.gender && (
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Jinsi:</span>
-            <span>{teacher.gender === "MALE" ? "Erkak" : "Ayol"}</span>
+            <span className="text-muted-foreground">{t("Jinsi")}:</span>
+            <span>{teacher.gender === "MALE" ? t("Erkak") : t("Ayol")}</span>
           </div>
         )}
 
         {teacher.login && (
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Login:</span>
+            <span className="text-muted-foreground">{t("Login")}:</span>
             <span className="font-medium">{teacher.login}</span>
           </div>
         )}
 
         {teacher.branches.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-muted-foreground">Filiallar:</span>
+            <span className="text-muted-foreground">{t("Filiallar")}:</span>
             {teacher.branches.map((b) => (
               <Badge key={b.id} variant="outline" className="text-xs">
                 {b.name}
@@ -125,7 +127,7 @@ export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
         )}
 
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground">Qo&apos;shilgan:</span>
+          <span className="text-muted-foreground">{t("Qo'shilgan sana")}:</span>
           <span>{format(new Date(teacher.createdAt), "dd.MM.yyyy")}</span>
         </div>
       </div>
@@ -155,7 +157,7 @@ export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
                 <Pencil className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Tahrirlash</TooltipContent>
+            <TooltipContent>{t("Tahrirlash")}</TooltipContent>
           </Tooltip>
 
           <AlertDialog>
@@ -172,23 +174,22 @@ export function TeacherProfileCard({ teacher }: TeacherProfileCardProps) {
                   </Button>
                 </AlertDialogTrigger>
               </TooltipTrigger>
-              <TooltipContent>O&apos;chirish</TooltipContent>
+              <TooltipContent>{t("O'chirish")}</TooltipContent>
             </Tooltip>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>O&apos;qituvchini o&apos;chirish</AlertDialogTitle>
+                <AlertDialogTitle>{t("O'qituvchini o'chirish")}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  &quot;{fullName}&quot; arxivga o&apos;tkaziladi. Keyinchalik
-                  arxivdan tiklash mumkin.
+                  {t("\"{name}\" arxivga o'tkaziladi. Keyinchalik arxivdan tiklash mumkin.", { name: fullName })}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                <AlertDialogCancel>{t("Bekor qilish")}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleDelete}
                   variant="destructive"
                 >
-                  O&apos;chirish
+                  {t("O'chirish")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

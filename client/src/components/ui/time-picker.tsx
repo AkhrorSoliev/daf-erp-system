@@ -3,6 +3,7 @@
 import * as React from "react";
 import { ClockIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/use-t";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -38,13 +39,14 @@ const timeOptions = generateHours();
 export function TimePicker({
   value,
   onChange,
-  placeholder = "Vaqtni tanlang",
+  placeholder,
   disabled,
   className,
   id,
   minTime,
   maxTime,
 }: TimePickerProps) {
+  const t = useT();
   const [open, setOpen] = React.useState(false);
   const selectedRef = React.useRef<HTMLButtonElement>(null);
 
@@ -77,7 +79,7 @@ export function TimePicker({
           )}
         >
           <ClockIcon className="mr-2 size-4" />
-          {value || <span>{placeholder}</span>}
+          {value || <span>{placeholder ?? t("Vaqtni tanlang")}</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">

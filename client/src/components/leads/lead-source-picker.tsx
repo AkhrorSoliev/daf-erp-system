@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import {
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import type { LeadSourceOption } from "@/hooks/use-leads-board";
+import { useT } from "@/i18n/context";
 import { LEAD_SOURCE_NAME_MAX, normalizeSourceName } from "./lead-source-name";
 
 interface LeadSourcePickerProps {
@@ -50,8 +51,15 @@ export function LeadSourcePicker({
   required = false,
   error,
   id = "sourceId",
-  loadErrorMessage = "Manbalar ro'yxati yuklanmadi",
+  loadErrorMessage: loadErrorProp,
 }: LeadSourcePickerProps) {
+  const t = useT();
+  const loadErrorMessage = loadErrorProp ?? t("Manbalar ro'yxati yuklanmadi");
+  // Read by the fetch through a ref: a language switch must not refetch.
+  const loadErrorRef = useRef(loadErrorMessage);
+  useEffect(() => {
+    loadErrorRef.current = loadErrorMessage;
+  }, [loadErrorMessage]);
   const [sources, setSources] = useState<LeadSourceOption[]>([]);
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
@@ -70,18 +78,20 @@ export function LeadSourcePicker({
       .catch(() => {
         if (cancelled) return;
         setSources([]);
-        toast.error(loadErrorMessage);
+        toast.error(loadErrorRef.current);
       });
     return () => {
       cancelled = true;
     };
-  }, [open, loadErrorMessage]);
+  }, [open]);
 
   async function handleCreate() {
     const name = normalizeSourceName(newName);
     if (!name) {
       toast.error(
-        `Manba nomini kiriting (eng ko'pi ${LEAD_SOURCE_NAME_MAX} belgi)`,
+        t("Manba nomini kiriting (eng ko'pi {n} belgi)", {
+          n: LEAD_SOURCE_NAME_MAX,
+        }),
       );
       return;
     }
@@ -95,9 +105,9 @@ export function LeadSourcePicker({
       onChange(data.id);
       setAdding(false);
       setNewName("");
-      toast.success("Manba qo'shildi");
+      toast.success(t("Manba qo'shildi"));
     } catch (err) {
-      toast.error(getErrorMessage(err, "Manba qo'shishda xatolik"));
+      toast.error(getErrorMessage(err, t("Manba qo'shishda xatolik")));
     } finally {
       setSaving(false);
     }
@@ -112,7 +122,7 @@ export function LeadSourcePicker({
 
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger id={id}>
-          <SelectValue placeholder="Manbani tanlang" />
+          <SelectValue placeholder={t("Manbani tanlang")} />
         </SelectTrigger>
         <SelectContent>
           {sources.map((source) => (
@@ -134,7 +144,7 @@ export function LeadSourcePicker({
               e.preventDefault();
               void handleCreate();
             }}
-            placeholder="Yangi manba nomi"
+            placeholder={t("Yangi manba nomi")}
             maxLength={LEAD_SOURCE_NAME_MAX}
             autoFocus
           />
@@ -145,7 +155,7 @@ export function LeadSourcePicker({
             disabled={saving}
           >
             {saving && <Loader2 className="size-4 animate-spin" />}
-            Qo&apos;shish
+            {t("Qo'shish")}
           </Button>
           <Button
             type="button"
@@ -157,7 +167,7 @@ export function LeadSourcePicker({
             }}
             disabled={saving}
           >
-            Bekor
+            {t("Bekor")}
           </Button>
         </div>
       ) : (
@@ -166,7 +176,7 @@ export function LeadSourcePicker({
           onClick={() => setAdding(true)}
           className="text-xs text-primary hover:underline"
         >
-          + Yangi manba qo&apos;shish
+          {t("+ Yangi manba qo'shish")}
         </button>
       )}
 

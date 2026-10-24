@@ -1,3 +1,4 @@
+import { msg } from "@/i18n/msg";
 import type { ReadinessKey } from "./launch-types";
 
 /**
@@ -7,6 +8,8 @@ import type { ReadinessKey } from "./launch-types";
  * a class changes along with styling, the attribute exists only for this
  * purpose). When there are several, the first one found is highlighted.
  * `launch-targets.test.ts` checks that each one exists in the source.
+ *
+ * The texts are `msg()` markers: the card draws them with `t(…)`.
  */
 export interface LaunchStation {
   key: ReadinessKey;
@@ -23,78 +26,83 @@ export interface LaunchStation {
 export const LAUNCH_STATIONS: LaunchStation[] = [
   {
     key: "workingHours",
-    short: "Ish vaqti",
-    action: "Ish vaqtini kiritish",
-    tourTitle: "Ish vaqti",
-    tourBody:
+    short: msg("Ish vaqti"),
+    action: msg("Ish vaqtini kiritish"),
+    tourTitle: msg("Ish vaqti"),
+    tourBody: msg(
       "Filial qaysi soatda ochilib yopilishini kiriting. Guruh jadvali shu oraliqda tuziladi.",
+    ),
     route: (id) => `/settings/branches/${id}`,
     targets: ["branch-edit"],
   },
   {
     key: "room",
-    short: "Xona",
-    action: "Xona qo'shish",
-    tourTitle: "Xona qo'shing",
-    tourBody: "Xonasiz guruh kunlik jadvalda ko'rinmaydi.",
+    short: msg("Xona"),
+    action: msg("Xona qo'shish"),
+    tourTitle: msg("Xona qo'shing"),
+    tourBody: msg("Xonasiz guruh kunlik jadvalda ko'rinmaydi."),
     route: (id) => `/settings/rooms?branch=${id}`,
     targets: ["room-add"],
   },
   {
     key: "course",
-    short: "Kurs",
-    action: "Kurs qo'shish",
-    tourTitle: "Kurs qo'shing",
-    tourBody:
+    short: msg("Kurs"),
+    action: msg("Kurs qo'shish"),
+    tourTitle: msg("Kurs qo'shing"),
+    tourBody: msg(
       "Nomi, narxi, to'lov modeli va necha darsga bo'linishi. Guruh ochish uchun kamida bitta kurs kerak.",
+    ),
     route: () => "/settings/courses",
     targets: ["course-add"],
   },
   {
     key: "teachers",
-    short: "Ustoz",
-    action: "Ustoz qo'shish",
-    tourTitle: "Ustozlarni qo'shing",
-    tourBody:
+    short: msg("Ustoz"),
+    action: msg("Ustoz qo'shish"),
+    tourTitle: msg("Ustozlarni qo'shing"),
+    tourBody: msg(
       "Havolani ustozlarga yuboring — ular Telegram orqali o'zi ro'yxatdan o'tadi va shu filialga tushadi. Yoki qo'lda qo'shing.",
+    ),
     route: () => "/teachers",
     targets: ["teacher-invite-link", "teacher-add"],
   },
   {
     key: "teacherRates",
-    short: "Stavka",
-    action: "Stavka qo'yish",
-    tourTitle: "Stavka qo'ying",
-    tourBody:
+    short: msg("Stavka"),
+    action: msg("Stavka qo'yish"),
+    tourTitle: msg("Stavka qo'ying"),
+    tourBody: msg(
       "«Stavkalar» → «Ustoz stavkalari». Stavkasiz ustozni guruhga biriktirib bo'lmaydi.",
+    ),
     route: () => "/payments/salary",
     targets: ["salary-settings"],
   },
   {
     key: "group",
-    short: "Guruh",
-    action: "Guruh ochish",
-    tourTitle: "Guruh oching",
-    tourBody: "Kurs, xona, ustoz, dars kunlari va boshlanish sanasini kiriting.",
+    short: msg("Guruh"),
+    action: msg("Guruh ochish"),
+    tourTitle: msg("Guruh oching"),
+    tourBody: msg("Kurs, xona, ustoz, dars kunlari va boshlanish sanasini kiriting."),
     route: () => "/groups",
     targets: ["group-add"],
   },
   {
     key: "enrollment",
-    short: "O'quvchi",
-    action: "O'quvchi qo'shish",
-    tourTitle: "O'quvchi qo'shing",
-    tourBody: "O'quvchini qo'shing va guruhga yozing.",
+    short: msg("O'quvchi"),
+    action: msg("O'quvchi qo'shish"),
+    tourTitle: msg("O'quvchi qo'shing"),
+    tourBody: msg("O'quvchini qo'shing va guruhga yozing."),
     route: () => "/students",
     targets: ["student-add"],
   },
   {
     key: "payment",
-    short: "To'lov",
-    action: "To'lov qayd qilish",
-    tourTitle: "Birinchi to'lov",
-    tourBody:
+    short: msg("To'lov"),
+    action: msg("To'lov qayd qilish"),
+    tourTitle: msg("Birinchi to'lov"),
+    tourBody: msg(
       "Birinchi to'lovni qayd qiling — shundan keyin filial ishga tushgan hisoblanadi.",
+    ),
     route: () => "/payments/overview",
     targets: ["payment-record"],
   },
@@ -104,28 +112,28 @@ export const LAUNCH_STATIONS: LaunchStation[] = [
 export const LAUNCH_EXTRAS: LaunchStation[] = [
   {
     key: "administrator",
-    short: "Administrator",
-    action: "Administrator qo'shish",
-    tourTitle: "Administrator qo'shing",
-    tourBody: "Administratorsiz davomat ogohlantirishlari hech kimga bormaydi.",
+    short: msg("Administrator"),
+    action: msg("Administrator qo'shish"),
+    tourTitle: msg("Administrator qo'shing"),
+    tourBody: msg("Administratorsiz davomat ogohlantirishlari hech kimga bormaydi."),
     route: () => "/settings/employees",
     targets: ["employee-add"],
   },
   {
     key: "leadSection",
-    short: "Lid bo'limi",
-    action: "Lid bo'limi ochish",
-    tourTitle: "Lid bo'limi oching",
-    tourBody: "Lidlar va onlayn formalar shu bo'limga tushadi.",
+    short: msg("Lid bo'limi"),
+    action: msg("Lid bo'limi ochish"),
+    tourTitle: msg("Lid bo'limi oching"),
+    tourBody: msg("Lidlar va onlayn formalar shu bo'limga tushadi."),
     route: () => "/leads",
     targets: ["lead-section-add"],
   },
   {
     key: "telegramGroup",
-    short: "Telegram guruh",
-    action: "Telegram guruhni ulash",
-    tourTitle: "Telegram hisobot guruhi",
-    tourBody: "Sahifadagi yo'riqnoma bo'yicha botni guruhga qo'shing va tasdiqlang.",
+    short: msg("Telegram guruh"),
+    action: msg("Telegram guruhni ulash"),
+    tourTitle: msg("Telegram hisobot guruhi"),
+    tourBody: msg("Sahifadagi yo'riqnoma bo'yicha botni guruhga qo'shing va tasdiqlang."),
     route: () => "/settings/telegram-groups",
     // The page itself has a step-by-step guide — no button to highlight.
     targets: [],

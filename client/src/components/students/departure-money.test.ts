@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { interpolate } from "@/i18n/translate";
 import {
   DEFAULT_DEPARTURE_POLICY,
   departureConsequence,
@@ -8,6 +9,8 @@ import {
   monthlyRows,
   offeredPolicies,
   policyHint,
+  policyTitle,
+  withheldWarning,
   type DepartureMonth,
   type DeparturePreview,
 } from "./departure-money";
@@ -338,5 +341,109 @@ describe("departure money block (contract 6.2, ADR-0043)", () => {
     expect(
       departurePolicyPayload("QUALITY_CLAIM", offeredPolicies("removal", true)),
     ).toEqual({ departurePolicy: "QUALITY_CLAIM" });
+  });
+});
+
+// The helpers take the page's `t` as an optional last argument; a marker `t`
+// shows every piece of text goes through it, and the data never does.
+describe("departure wording in another language", () => {
+  const marked = (source: string, params?: Record<string, string | number>) =>
+    `[${interpolate(source, params)}]`;
+
+  it("passes the month name, the unit and the sentence through t", () => {
+    const f = factsLine(month(), marked);
+    expect(plain(f.lead)).toBe(
+      "[[Oktabr]: 13 dars, 1 040 000 [so'm]. Bugun 14.10, o'tgani:]",
+    );
+    expect(f.held).toBe("[6 ta (46%)]");
+  });
+
+  it("opens the sentence with a capital month name, even when the language writes it small", () => {
+    const small = (source: string, params?: Record<string, string | number>) =>
+      interpolate(source === "Oktabr" ? "oktyabr" : source, params);
+    expect(factsLine(month(), small).lead.startsWith("Oktyabr: ")).toBe(true);
+  });
+
+  it("passes the policy title and every hint through t", () => {
+    expect(policyTitle("LEVEL_COMPLETED", marked)).toBe("[Darajani tugatdi]");
+    expect(policyTitle("QUALITY_CLAIM")).toBe("Sifat bo'yicha shikoyat");
+    expect(policyHint("QUALITY_CLAIM", month(), marked)).toBe(
+      "[Oyning to'liq puli qaytadi]",
+    );
+    expect(policyHint("STUDENT_CANCELLED", month(), marked)).toBe(
+      "[13 darsdan 6 tasi o'tgan (40% dan ko'p) — pul qaytmaydi]",
+    );
+  });
+
+  it("passes the consequence head and line through t, the amounts too", () => {
+    const c = departureConsequence(preview(), "QUALITY_CLAIM", marked)!;
+    expect(plain(c.head)).toBe("[Oyning to'liq puli qaytadi: 1 040 000 [so'm]]");
+    expect(plain(c.line)).toContain("[Balans: 0 → 1 040 000 [so'm].]");
+    expect(c.line).toContain("[Naqd pulni keyin «Pul qaytarish» orqali berasiz.]");
+    expect(c.line).toContain("[Ustoz oyligi kamaymaydi, farqni markaz qoplaydi.]");
+
+    const kept = departureConsequence(preview(), "STUDENT_CANCELLED", marked)!;
+    expect(kept.head).toBe("[Pul qaytmaydi]");
+    expect(kept.line).toBe("[Oy darslarining 46% o'tgan.] [Balans o'zgarmaydi.]");
+  });
+
+  it("leaves the server's «Dars bo'ldimi?» sentence as it came", () => {
+    const text = "Avval «Dars bo'ldimi?» savoliga javob bering: 05.10 (#014).";
+    const c = departureConsequence(
+      preview({}, month({ trialAwaitsAnswer: text })),
+      "STUDENT_CANCELLED",
+      marked,
+    )!;
+    expect(c.head).toBe(text);
+  });
+});
+
+describe("withheldWarning (removal looks like a move)", () => {
+  it("warns with the amount that would have come back", () => {
+    const w = withheldWarning(preview(), {})!;
+    expect(w.tone).toBe("warning");
+    expect(plain(w.title)).toBe(
+      "Oy to'lovi qaytarilmaydi — 560 000 so'm ushlab qolinadi",
+    );
+    expect(w.body).toContain("Oyning 46% i o'tgan (shartnoma 6.2: 40% dan ko'p)");
+    expect(w.body).toContain("Guruhni o'zgartirish");
+  });
+
+  it("is null when nothing is withheld, or no monthly row", () => {
+    const free = month({
+      outcomes: {
+        ...month().outcomes,
+        STUDENT_CANCELLED: { lessons: 7, amount: 560000, withheld: false },
+      },
+    });
+    expect(withheldWarning(preview({}, free), {})).toBeNull();
+    expect(withheldWarning(preview({}, null), {})).toBeNull();
+    expect(withheldWarning(undefined, {})).toBeNull();
+  });
+
+  it("turns red with an extra first line when the reason reads like a move", () => {
+    const w = withheldWarning(preview(), { looksLikeMove: true })!;
+    expect(w.tone).toBe("danger");
+    expect(w.body.startsWith("Siz «ko'chdi» sababini tanladingiz")).toBe(true);
+    expect(w.body).toContain("Oyning 46% i o'tgan");
+  });
+
+  it("sums the withheld rows and leaves the amount out when it is zero", () => {
+    const second = {
+      ...preview().enrollments[0],
+      enrollmentId: "enr-2",
+      groupName: "B1",
+    };
+    const two = preview({ enrollments: [preview().enrollments[0], second] });
+    expect(plain(withheldWarning(two, {})!.title)).toContain("1 120 000 so'm");
+    const zero = month({
+      outcomes: {
+        ...month().outcomes,
+        CENTER_INITIATIVE: { lessons: 0, amount: 0, withheld: false },
+      },
+    });
+    expect(withheldWarning(preview({}, zero), {})!.title).toBe(
+      "Oy to'lovi qaytarilmaydi",
+    );
   });
 });

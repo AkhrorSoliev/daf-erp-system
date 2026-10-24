@@ -1,3 +1,4 @@
+import { msg } from "@/i18n/msg";
 import { tashkentNow } from "@/lib/tashkent-time";
 import type { FunnelStage, PeopleStage } from "./lead-funnel-types";
 
@@ -14,18 +15,20 @@ export const FUNNEL_ORDER: FunnelStage[] = [
 ];
 
 export const STAGE_LABELS: Record<PeopleStage, string> = {
-  lead: "Lid",
-  enrolled: "Guruhga yozildi",
-  attended: "Darsga keldi",
-  paid: "To'lov qildi",
-  unpaid: "Darsga kelgan, lekin to'lamagan",
+  // The four funnel stages are drawn translated on the home page and on the
+  // report (the chart takes the page's `t`).
+  lead: msg("Lid"),
+  enrolled: msg("Guruhga yozildi"),
+  attended: msg("Darsga keldi"),
+  paid: msg("To'lov qildi"),
+  unpaid: msg("Darsga kelgan, lekin to'lamagan"),
 };
 
 /** «Keyingi bosqichga o'tmaganlar» tugmasining har bosqichdagi ma'nosi. */
 export const STUCK_LABELS: Record<Exclude<FunnelStage, "paid">, string> = {
-  lead: "Guruhga yozilmaganlar",
-  enrolled: "Darsga kelmaganlar",
-  attended: "To'lov qilmaganlar",
+  lead: msg("Guruhga yozilmaganlar"),
+  enrolled: msg("Darsga kelmaganlar"),
+  attended: msg("To'lov qilmaganlar"),
 };
 
 export interface FunnelRow {

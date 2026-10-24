@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PermissionsService } from '../common/permissions/permissions.service';
 import { assertCallerMayTouchUser } from '../common/auth/user-branch-scope';
+import { redactHistoryValues } from '../common/entity-history/diff.util';
 
 export type TimelineEventKind =
   | 'SalaryChanged'
@@ -188,8 +189,10 @@ export class TeacherTimelineService {
         summary: `Profil ${e.action.toLowerCase()}`,
         payload: {
           action: e.action,
-          oldValues: e.oldValues,
-          newValues: e.newValues,
+          // An old row may still carry the employee's salary balance
+          // (ADR-0087); `teachers.view` is not a salary key.
+          oldValues: redactHistoryValues('User', e.oldValues),
+          newValues: redactHistoryValues('User', e.newValues),
         },
       });
     }

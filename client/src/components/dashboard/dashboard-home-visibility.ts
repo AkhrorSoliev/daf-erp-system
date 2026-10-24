@@ -1,3 +1,4 @@
+import { msg } from "@/i18n/msg";
 import type { Can } from "@/lib/permission-check";
 import type {
   DashboardAttention,
@@ -70,21 +71,21 @@ export function visibleAttentionRows(
   const rows: AttentionRow[] = [
     {
       key: "absentees",
-      label: "Bugun darsga kelmadi",
+      label: msg("Bugun darsga kelmadi"),
       count: attention.todayAbsentees,
       href: "/outreach",
       tone: "danger",
     },
     {
       key: "brokenPromises",
-      label: "Muddati o'tgan to'lov va'dasi",
+      label: msg("Muddati o'tgan to'lov va'dasi"),
       count: attention.brokenPromises,
       href: "/outreach",
       tone: "danger",
     },
     {
       key: "removalQueue",
-      label: "Ketma-ket 3 marta kelmadi",
+      label: msg("Ketma-ket 3 marta kelmadi"),
       count: attention.removalQueue,
       href: "/outreach",
       tone: "warning",

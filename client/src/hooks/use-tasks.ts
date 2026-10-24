@@ -1,9 +1,12 @@
+import { useEffect } from "react";
 import { create } from "zustand";
 import axios from "axios";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { registerBranchScopedStore } from "@/lib/branch-scoped-stores";
+import { useT } from "@/i18n/use-t";
+import { msg } from "@/i18n/msg";
 // task-labels only `import type`s from this file, so there is no runtime cycle.
 import { STATUS_COLUMNS } from "@/components/tasks/task-labels";
 import type { CallOutcome, CallReason } from "@/components/outreach/outreach-types";
@@ -27,12 +30,15 @@ export interface TaskCard {
   branchId: number | null; entityType: string | null; entityId: string | null; requiresPhoto: boolean;
   batchId: string | null; claimedById: number | null; returnedCount: number; closedAt: string | null; createdAt: string;
   author: TaskPerson | null; assignees: TaskPerson[]; watchers: TaskPerson[];
-  stepsTotal: number; stepsDone: number; eventsCount: number; unmarkedLesson: TaskLesson | null;
+  stepsTotal: number; stepsDone: number; eventsCount: number; filesCount?: number; unmarkedLesson: TaskLesson | null;
   batch?: { total: number; done: number; statuses: TaskStatus[] };
   recurrence?: TaskRecurrenceBadge | null;
 }
 export interface TaskStep { id: string; title: string; position: number; doneAt: string | null; doneById: number | null }
-export interface TaskEvent { id: string; type: string; actorId: number | null; text: string | null; meta: Record<string, unknown> | null; via: "WEB" | "TELEGRAM" | "SYSTEM"; createdAt: string; actor: TaskPerson | null }
+export type TaskFileKind = "IMAGE" | "DOCUMENT" | "VOICE";
+/** `GET /tasks/:id/files` rows; `url` / `downloadUrl` are presigned for 10 minutes. */
+export interface TaskFileView { id: string; name: string; size: number; mime: string; kind: TaskFileKind; durationSec: number | null; via: "WEB" | "TELEGRAM" | "SYSTEM"; createdAt: string; uploadedBy: TaskPerson | null; canDelete: boolean; url: string; downloadUrl: string }
+export interface TaskEvent { id: string; type: string; actorId: number | null; text: string | null; meta: Record<string, unknown> | null; via: "WEB" | "TELEGRAM" | "SYSTEM"; createdAt: string; actor: TaskPerson | null; fileId?: string | null }
 export interface TaskDetail extends TaskCard { description: string | null; lastReturnedAt: string | null; cancelReason: string | null; steps: TaskStep[] }
 export interface TaskAccess { isAuthor: boolean; isAssignee: boolean; isWatcher: boolean; isManager: boolean; canView: boolean; canManage: boolean; canWork: boolean }
 export interface TaskSourceCall { at: string; outcome: CallOutcome; note: string | null; by: string }
@@ -66,6 +72,20 @@ let lastLoadReq = 0;
 let lastReloadReq = 0;
 
 type StoreView = Exclude<TaskView, "workload">;
+
+// The store's own toast fallbacks are msg() texts; every page root that drives
+// the store (the tasks page, the entity panel, the header button) calls
+// useTasksTranslator() to hand its `t` in (identity until then, and on the server).
+let translate: (source: string) => string = (source) => source;
+export function setTasksTranslator(fn: (source: string) => string): void {
+  translate = fn;
+}
+export function useTasksTranslator(): void {
+  const t = useT();
+  useEffect(() => setTasksTranslator(t), [t]);
+}
+/** A `msg()` text in the language handed in by useTasksTranslator(); for the sibling file store (`use-task-files.ts`). */
+export const tasksText = (source: string): string => translate(source);
 
 interface TasksState {
   view: StoreView;
@@ -142,7 +162,7 @@ export const useTasks = create<TasksState>((set, get) => ({
     } catch (error) {
       if (get().columns[status].reqId !== reqId) return;
       set((s) => ({ columns: { ...s.columns, [status]: { ...s.columns[status], loading: false } } }));
-      toast.error(getErrorMessage(error, "Topshiriqlarni yuklashda xatolik"));
+      toast.error(getErrorMessage(error, translate(msg("Topshiriqlarni yuklashda xatolik"))));
     }
   },
   fetchBoard: async () => { await Promise.all(BOARD_STATUSES.map((s) => get().fetchColumn(s))); },
@@ -204,7 +224,7 @@ export const useTasks = create<TasksState>((set, get) => ({
     } catch (error) {
       if (stale()) return;
       set({ detail: null, openTaskId: null });
-      toast.error(getErrorMessage(error, "Topshiriq topilmadi"));
+      toast.error(getErrorMessage(error, translate(msg("Topshiriq topilmadi"))));
     }
   },
   reloadDetail: async (id) => {

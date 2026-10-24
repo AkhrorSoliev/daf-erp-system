@@ -1,0 +1,290 @@
+import { NotFoundException } from '@nestjs/common';
+import { LessonRatingsService } from './lesson-ratings.service';
+
+const d = (s: string) => new Date(`${s}T00:00:00.000Z`);
+
+function setup(rows: Record<string, unknown>[] = []) {
+  const prisma = {
+    lessonRating: {
+      findMany: jest.fn().mockResolvedValue(rows),
+      count: jest.fn().mockResolvedValue(rows.length),
+    },
+    user: {
+      findMany: jest.fn(
+        async ({ where }: { where: { id: { in: number[] } } }) =>
+          where.id.in.map((id) => ({
+            id,
+            firstName: 'U',
+            lastName: String(id),
+          })),
+      ),
+      findFirst: jest
+        .fn()
+        .mockResolvedValue({ id: 7, firstName: 'Anna', lastName: 'S' }),
+    },
+  };
+  const settings = {
+    get: jest.fn().mockResolvedValue(true),
+    set: jest.fn().mockResolvedValue(false),
+  };
+  return {
+    service: new LessonRatingsService(prisma as never, settings as never),
+    prisma,
+    settings,
+  };
+}
+
+type FindManyArgs = { where: unknown; skip?: number; take?: number };
+const findManyArgs = (p: { lessonRating: { findMany: jest.Mock } }) =>
+  (p.lessonRating.findMany.mock.calls as [FindManyArgs][]).map((c) => c[0]);
+
+describe('LessonRatingsService.summary', () => {
+  it('reads the month and the one before inside the branch scope', async () => {
+    const { service, prisma } = setup();
+    await service.summary(1, [7], '2026-11');
+    const wheres = findManyArgs(prisma).map((a) => a.where);
+    expect(wheres).toContainEqual({
+      companyId: 1,
+      date: { gte: d('2026-11-01'), lt: d('2026-12-01') },
+      branchId: { in: [7] },
+    });
+    expect(wheres).toContainEqual({
+      companyId: 1,
+      date: { gte: d('2026-10-01'), lt: d('2026-11-01') },
+      branchId: { in: [7] },
+    });
+  });
+
+  it('counts a rated row as delivered even when its messageId was never saved', async () => {
+    const { service } = setup([
+      { score: 4, messageId: null, comment: null, teacherIds: [1] },
+    ]);
+    const r = await service.summary(1, null, '2026-10');
+    expect(r.totals).toMatchObject({
+      delivered: 1,
+      rated: 1,
+      responseRate: 100,
+    });
+  });
+
+  it('lists teachers lowest average first with their names', async () => {
+    const { service } = setup([
+      { score: 5, messageId: 1, comment: null, teacherIds: [1] },
+      { score: 2, messageId: 2, comment: null, teacherIds: [2] },
+    ]);
+    const r = await service.summary(1, null, '2026-10');
+    expect(r.enabled).toBe(true);
+    expect(r.teachers.map((t) => t.teacherId)).toEqual([2, 1]);
+    expect(r.teachers[0]).toMatchObject({ name: 'U 2', average: 2, low: 1 });
+  });
+
+  it('gives the distribution, commented low ratings and best/worst teacher', async () => {
+    const { service } = setup([
+      { score: 5, messageId: 1, comment: null, teacherIds: [1] },
+      { score: 5, messageId: 2, comment: 'yaxshi', teacherIds: [1] },
+      { score: 2, messageId: 3, comment: 'kech', teacherIds: [2] },
+      { score: 3, messageId: 4, comment: null, teacherIds: [2] },
+      { score: null, messageId: 5, comment: null, teacherIds: [2] },
+    ]);
+    const r = await service.summary(1, null, '2026-10');
+    expect(r.distribution).toEqual([0, 1, 1, 0, 2]);
+    expect(r.lowCommented).toBe(1);
+    expect(r.best).toEqual({ teacherId: 1, name: 'U 1', average: 5, rated: 2 });
+    expect(r.worst).toEqual({
+      teacherId: 2,
+      name: 'U 2',
+      average: 2.5,
+      rated: 2,
+    });
+  });
+
+  it('has no worst teacher when only one is rated, and none when nobody is', async () => {
+    const one = setup([
+      { score: 4, messageId: 1, comment: null, teacherIds: [1] },
+    ]);
+    const r1 = await one.service.summary(1, null, '2026-10');
+    expect(r1.best).toMatchObject({ teacherId: 1, average: 4 });
+    expect(r1.worst).toBeNull();
+
+    const none = setup([]);
+    const r0 = await none.service.summary(1, null, '2026-10');
+    expect(r0).toMatchObject({
+      distribution: [0, 0, 0, 0, 0],
+      lowCommented: 0,
+      best: null,
+      worst: null,
+    });
+  });
+
+  it('gives each teacher row its commented count', async () => {
+    const { service } = setup([
+      { score: 2, messageId: 1, comment: 'x', teacherIds: [1] },
+      { score: 2, messageId: 2, comment: null, teacherIds: [1] },
+    ]);
+    const r = await service.summary(1, null, '2026-10');
+    expect(r.teachers[0]).toMatchObject({ teacherId: 1, commented: 1 });
+  });
+
+  it('reads the comment column so lowCommented can be counted', async () => {
+    const { service, prisma } = setup();
+    await service.summary(1, null, '2026-10');
+    const selects = (
+      prisma.lessonRating.findMany.mock.calls as [{ select: object }][]
+    ).map((c) => c[0].select);
+    expect(selects[0]).toMatchObject({ comment: true, score: true });
+  });
+});
+
+describe('LessonRatingsService.teacher', () => {
+  it('answers 404 for an unknown teacher', async () => {
+    const { service, prisma } = setup();
+    prisma.user.findFirst.mockResolvedValue(null);
+    await expect(
+      service.teacher(1, null, 99, '2026-10'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('gives six months, the month by group and its comments', async () => {
+    const { service, prisma } = setup([
+      {
+        date: d('2026-10-05'),
+        score: 2,
+        messageId: 1,
+        comment: 'kech',
+        groupId: 'g1',
+        teacherIds: [7],
+        group: { name: 'A1-3' },
+      },
+      {
+        date: d('2026-09-10'),
+        score: 5,
+        messageId: 2,
+        comment: null,
+        groupId: 'g1',
+        teacherIds: [7],
+        group: { name: 'A1-3' },
+      },
+    ]);
+    const r = await service.teacher(1, null, 7, '2026-10');
+    expect(prisma.user.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 7, companyId: 1 } }),
+    );
+    await service.teacher(1, [7], 7, '2026-10');
+    expect(findManyArgs(prisma).at(-1)?.where).toMatchObject({
+      branchId: { in: [7] },
+    });
+    expect(findManyArgs(prisma)[0].where).toMatchObject({
+      companyId: 1,
+      teacherIds: { has: 7 },
+      date: { gte: d('2026-05-01'), lt: d('2026-11-01') },
+    });
+    expect(r.months.map((m) => m.month)).toEqual([
+      '2026-05',
+      '2026-06',
+      '2026-07',
+      '2026-08',
+      '2026-09',
+      '2026-10',
+    ]);
+    expect(r.months[4]).toEqual({ month: '2026-09', average: 5, rated: 1 });
+    expect(r.groups).toEqual([
+      { groupId: 'g1', name: 'A1-3', average: 2, rated: 1 },
+    ]);
+    expect(JSON.stringify(r)).not.toMatch(/student/i);
+    expect(r.comments).toEqual([
+      {
+        date: '2026-10-05',
+        groupName: 'A1-3',
+        score: 2,
+        comment: 'kech',
+      },
+    ]);
+  });
+});
+
+describe('LessonRatingsService.low', () => {
+  const now = new Date('2026-10-18T12:00:00.000Z');
+  const hoursAgo = (h: number) => new Date(now.getTime() - h * 3_600_000);
+  const row = (id: string, comment: string | null, sentAt: Date) => ({
+    id,
+    date: d('2026-10-05'),
+    score: 1,
+    comment,
+    sentAt,
+    groupId: 'g1',
+    teacherIds: [7],
+    group: { name: 'A1-3' },
+  });
+
+  it('pages the 1–3 scores of the month, newest first', async () => {
+    const { service, prisma } = setup([row('r1', null, hoursAgo(1))]);
+    const r = await service.low(1, null, '2026-10', 2, 20, undefined, now);
+    const args = findManyArgs(prisma)[0];
+    expect(args.where).toEqual({
+      companyId: 1,
+      date: { gte: d('2026-10-01'), lt: d('2026-11-01') },
+      score: { lte: 3 },
+    });
+    await service.low(1, [7], '2026-10', 1, 10);
+    expect(findManyArgs(prisma).at(-1)?.where).toMatchObject({
+      branchId: { in: [7] },
+    });
+    expect(args.skip).toBe(20);
+    expect(args.take).toBe(20);
+    expect(r).toMatchObject({ total: 1, page: 2, pageSize: 20 });
+    expect(r.data[0]).toMatchObject({
+      id: 'r1',
+      date: '2026-10-05',
+      teacherNames: ['U 7'],
+    });
+  });
+
+  it('carries no student fields and selects no student relation', async () => {
+    const { service, prisma } = setup([row('r1', 'x', hoursAgo(1))]);
+    const r = await service.low(1, null, '2026-10', 1, 10, undefined, now);
+    expect(Object.keys(r.data[0])).not.toContain('studentId');
+    expect(Object.keys(r.data[0])).not.toContain('studentName');
+    const select = (
+      prisma.lessonRating.findMany.mock.calls as [{ select: object }][]
+    )[0][0].select;
+    expect(select).not.toHaveProperty('student');
+    expect(select).not.toHaveProperty('studentId');
+  });
+
+  it('computes WRITTEN / PENDING / NOT_WRITTEN from the 48h window', async () => {
+    const { service } = setup([
+      row('a', 'izoh', hoursAgo(100)),
+      row('b', null, hoursAgo(47)),
+      row('c', null, hoursAgo(49)),
+    ]);
+    const r = await service.low(1, null, '2026-10', 1, 10, undefined, now);
+    expect(r.data.map((x) => x.commentState)).toEqual([
+      'WRITTEN',
+      'PENDING',
+      'NOT_WRITTEN',
+    ]);
+  });
+
+  it('adds comment: { not: null } when only commented are asked', async () => {
+    const { service, prisma } = setup();
+    await service.low(1, null, '2026-10', 1, 10, true, now);
+    expect(findManyArgs(prisma)[0].where).toMatchObject({
+      comment: { not: null },
+    });
+  });
+});
+
+describe('LessonRatingsService.setEnabled', () => {
+  it('writes the company-level setting', async () => {
+    const { service, settings } = setup();
+    await expect(service.setEnabled(1, false, 10001)).resolves.toEqual({
+      enabled: false,
+    });
+    expect(settings.set).toHaveBeenCalledWith(
+      1,
+      'lessonRating.enabled',
+      false,
+      10001,
+    );
+  });
+});

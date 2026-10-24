@@ -136,6 +136,57 @@ export function getInclude(entityType: ArchiveEntityType) {
   return map[entityType] || null;
 }
 
+/** Yon oynadagi ro'yxat uzunligi: ko'proq bo'lsa `_count` jami sonni aytadi. */
+export const ARCHIVE_DETAIL_ROWS = 50;
+
+/**
+ * Bitta arxivlangan yozuvni ochish uchun (yon oyna). Ro'yxat (`findAll`)
+ * `getInclude` da qoladi: har qator uchun yozilishlarni o'qish ortiqcha.
+ */
+export function getDetailInclude(entityType: ArchiveEntityType) {
+  const person = { select: { id: true, firstName: true, lastName: true } };
+  const base = getInclude(entityType) ?? {};
+  switch (entityType) {
+    case ArchiveEntityType.STUDENTS:
+      return {
+        ...base,
+        branches: { include: { branch: { select: { id: true, name: true } } } },
+        enrollments: {
+          orderBy: { createdAt: 'desc' as const },
+          take: ARCHIVE_DETAIL_ROWS,
+          include: { group: { select: { id: true, name: true } } },
+        },
+        _count: { select: { enrollments: true } },
+      };
+    case ArchiveEntityType.GROUPS:
+      return {
+        ...base,
+        teachers: { include: { teacher: person } },
+        enrollments: {
+          orderBy: { createdAt: 'desc' as const },
+          take: ARCHIVE_DETAIL_ROWS,
+          include: { student: person },
+        },
+        _count: { select: { enrollments: true } },
+      };
+    default:
+      return getInclude(entityType);
+  }
+}
+
+/**
+ * Columns an archive read must never return. The archive endpoints hand the
+ * whole row to the browser, and a `User` row carries the bcrypt hash, the
+ * session version and the Telegram chat id — none of which the archive page
+ * reads (it shows names, deleter and roles/branches only).
+ */
+export function getOmit(entityType: ArchiveEntityType) {
+  if (entityType === ArchiveEntityType.USERS) {
+    return { password: true, sessionVersion: true, telegramChatId: true };
+  }
+  return null;
+}
+
 export function getSearchFilter(entityType: ArchiveEntityType, search: string) {
   switch (entityType) {
     // `User` has no `name` column — only firstName/lastName. Filtering on

@@ -7,6 +7,9 @@ import toast from "react-hot-toast";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { EmployeeProfileCard } from "./employee-profile-card";
 import { EmployeeProfileTabs } from "./employee-profile-tabs";
+import { isKpiAdministrator, showKpiTab } from "@/components/reports/admin-kpi/kpi-format";
+import { useKpiUser } from "@/components/reports/admin-kpi/kpi-queries";
+import { currentMonthKey } from "@/components/payments/salary-utils";
 import { EditEmployeeDrawer } from "./edit-employee-drawer";
 import { MobileProfileHeader } from "@/components/shared/mobile-profile-header";
 import {
@@ -26,22 +29,18 @@ import { useAuth } from "@/hooks/use-auth";
 import { useCan } from "@/hooks/use-permissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import api from "@/lib/api";
-
-const ROLE_LABELS: Record<string, string> = {
-  CEO: "CEO",
-  "Branch Director": "Direktor",
-  Administrator: "Administrator",
-  Teacher: "O'qituvchi",
-  Cashier: "Kassir",
-};
+import { roleTitle } from "@/components/profile/profile-roles";
+import { useT } from "@/i18n/context";
 
 export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
+  const t = useT();
   const setName = useBreadcrumbName((s) => s.setName);
   const authUser = useAuth((s) => s.user);
   const canSeeBalance = useCan("salary.view");
   const canSeeTimeline = useCan("teachers.view");
   // DELETE /users/:id needs `employees.manage`, not the salary capability.
   const canManageEmployees = useCan("employees.manage");
+  const canSeeKpi = useCan("kpi.view");
   const isMobile = useIsMobile();
   const router = useRouter();
   const pathname = usePathname();
@@ -55,6 +54,13 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
   // O'qituvchilar uchun "Guruhlar", boshqa xodimlar uchun "Izohlar" —
   // o'qituvchi profili bilan bir xil bo'lishi uchun.
   const isTeacher = employee?.roles.some((r) => r.id === 4) ?? false;
+  // Spec §7.8: the «KPI» tab, for `kpi.view`, of a current Administrator (no request
+  // until the tab opens) or of anyone with a KPI result — for a non-administrator
+  // one request on load asks (`hasAny`); it is the tab's own current-month query.
+  const kpiProbeId =
+    canSeeKpi && employee && !isKpiAdministrator(employee.roles) ? employee.id : null;
+  const kpiProbe = useKpiUser(kpiProbeId, currentMonthKey());
+  const hasKpiTab = showKpiTab(employee?.roles, canSeeKpi, kpiProbe.data?.hasAny === true);
   const canDelete = canManageEmployees && employee != null && employee.id !== authUser?.id;
   const defaultTab = isTeacher ? "guruhlar" : "izohlar";
 
@@ -66,6 +72,7 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
     "tarix",
     ...(canSeeTimeline ? ["taymlayn"] : []),
     ...(canSeeBalance && isTeacher ? ["ish-haqi"] : []),
+    ...(hasKpiTab ? ["kpi"] : []),
   ];
   const urlTab = searchParams.get("tab");
   const activeTab = urlTab && availableTabs.includes(urlTab) ? urlTab : defaultTab;
@@ -87,9 +94,9 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
   const handleDelete = () => {
     if (!employee) return;
     router.push("/settings/employees");
-    toast.success("Xodim arxivga o'tkazildi");
+    toast.success(t("Xodim arxivga o'tkazildi"));
     api.delete(`/users/${employee.id}`).catch(() => {
-      toast.error("O'chirishda xatolik yuz berdi");
+      toast.error(t("O'chirishda xatolik yuz berdi"));
     });
   };
 
@@ -150,9 +157,9 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
   if (error || !employee) {
     return (
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold">Xodim topilmadi</h1>
+        <h1 className="text-2xl font-bold">{t("Xodim topilmadi")}</h1>
         <p className="text-muted-foreground">
-          ID: {employeeId} bo&apos;yicha xodim mavjud emas
+          {t("ID: {id} bo'yicha xodim mavjud emas", { id: employeeId })}
         </p>
       </div>
     );
@@ -162,10 +169,10 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
 
   const mobileInfoItems = [
     ...(employee.gender
-      ? [{ label: "Jinsi", value: employee.gender === "MALE" ? "Erkak" : "Ayol" }]
+      ? [{ label: t("Jinsi"), value: employee.gender === "MALE" ? t("Erkak") : t("Ayol") }]
       : []),
-    ...(employee.login ? [{ label: "Login", value: employee.login }] : []),
-    { label: "Qo'shilgan", value: format(new Date(employee.createdAt), "dd.MM.yyyy") },
+    ...(employee.login ? [{ label: t("Login"), value: employee.login }] : []),
+    { label: t("Qo'shilgan sana"), value: format(new Date(employee.createdAt), "dd.MM.yyyy") },
   ];
 
   const mobileComment = latestComment
@@ -173,7 +180,7 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
         content: latestComment.content,
         author: latestComment.author
           ? `${latestComment.author.firstName} ${latestComment.author.lastName}`
-          : "Tizim",
+          : t("Tizim (avtomatik)"),
         date: format(new Date(latestComment.createdAt), "dd.MM.yyyy, HH:mm"),
       }
     : null;
@@ -188,7 +195,7 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
             id={employee.id}
             roles={employee.roles.map((r) => ({
               ...r,
-              name: ROLE_LABELS[r.name] || r.name,
+              name: roleTitle(r, t),
             }))}
             isActive={employee.status === "ACTIVE"}
             salaryDueUserId={canSeeBalance ? employee.id : undefined}
@@ -199,14 +206,14 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
             actions={[
               {
                 icon: <Pencil className="size-4" />,
-                label: "Tahrirlash",
+                label: t("Tahrirlash"),
                 onClick: () => openDrawer(employee),
               },
               ...(canDelete
                 ? [
                     {
                       icon: <Trash2 className="size-4" />,
-                      label: "O'chirish",
+                      label: t("O'chirish"),
                       onClick: () => setDeleteConfirmOpen(true),
                       variant: "destructive" as const,
                     },
@@ -219,6 +226,7 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
             onCommentChange={handleCommentChange}
             activeTab={activeTab}
             onTabChange={handleTabChange}
+            showKpi={hasKpiTab}
           />
         </div>
       ) : (
@@ -232,6 +240,7 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
             onCommentChange={handleCommentChange}
             activeTab={activeTab}
             onTabChange={handleTabChange}
+            showKpi={hasKpiTab}
           />
           </div>
         </div>
@@ -245,19 +254,18 @@ export function EmployeeProfileClient({ employeeId }: { employeeId: string }) {
         <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Xodimni o&apos;chirish</AlertDialogTitle>
+              <AlertDialogTitle>{t("Xodimni o'chirish")}</AlertDialogTitle>
               <AlertDialogDescription>
-                &quot;{fullName}&quot; arxivga o&apos;tkaziladi. Keyinchalik
-                arxivdan tiklash mumkin.
+                {t("\"{name}\" arxivga o'tkaziladi. Keyinchalik arxivdan tiklash mumkin.", { name: fullName })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+              <AlertDialogCancel>{t("Bekor qilish")}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDelete}
                 variant="destructive"
               >
-                O&apos;chirish
+                {t("O'chirish")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

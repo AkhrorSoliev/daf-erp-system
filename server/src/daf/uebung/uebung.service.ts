@@ -42,6 +42,7 @@ import {
 } from './satz-fragen';
 import { baueSeans, neuheit } from './seans';
 import { seansYigindisi } from './seans-natija';
+import { recordAttempt } from '../shared/attempt-writer';
 import {
   istUhrFormat,
   uhrHoeren,
@@ -1562,20 +1563,18 @@ export class UebungService {
 
     await this.sicherSeans(input, ctx, branchId, groupId);
 
-    await this.prisma.dafAttempt.create({
-      data: {
-        studentId: ctx.studentId,
-        companyId: ctx.companyId,
-        branchId,
-        groupId,
-        lexemeId: itemType === 'WORT' ? itemId : null,
-        isCorrect,
-        given,
-        durationMs: durationMs ?? null,
-        points,
-        ...this.seansMaydonlari(input, itemType, itemId, format, isCorrect),
-      },
-    } as any);
+    await recordAttempt(this.prisma, {
+      studentId: ctx.studentId,
+      companyId: ctx.companyId,
+      branchId,
+      groupId,
+      lexemeId: itemType === 'WORT' ? itemId : null,
+      isCorrect,
+      given,
+      durationMs: durationMs ?? null,
+      points,
+      ...this.seansMaydonlari(input, itemType, itemId, format, isCorrect),
+    });
 
     if (paarNatijalari) {
       // Har so'z FAQAT O'Z juftining natijasi bilan yangilanadi. Umumiy
@@ -1765,33 +1764,31 @@ export class UebungService {
 
     await this.sicherSeans(input, ctx, branchId, groupId);
 
-    await this.prisma.dafAttempt.create({
-      data: {
-        studentId: ctx.studentId,
-        companyId: ctx.companyId,
-        branchId,
-        groupId,
-        lexemeId: format === 'PAAR' ? lexemeId : null,
+    await recordAttempt(this.prisma, {
+      studentId: ctx.studentId,
+      companyId: ctx.companyId,
+      branchId,
+      groupId,
+      lexemeId: format === 'PAAR' ? lexemeId : null,
+      isCorrect,
+      given: `${chap}=${ong}`,
+      // `pruefen` buni yozadi, `juft()` avval YO'Q edi — har juftlashuv
+      // urinishi hech qachon davomiylik saqlamasdi. Mijoz allaqachon
+      // shu juftga ketgan vaqtni kuzatadi (`seans-ekrani.tsx`), shuni
+      // qabul qilib yozamiz.
+      durationMs: durationMs ?? null,
+      points,
+      // Har juft qatoriga shu juftning O'Z materiali (dizayn 5.5):
+      // `PAAR` — bosilgan so'z, `ZUORDNEN` — bosilgan ibora. `input.itemId`
+      // to'rtlik/oltilikning BIRINCHISI, bosilgan juft esa boshqasi.
+      ...this.seansMaydonlari(
+        input,
+        itemType,
+        format === 'PAAR' ? (lexemeId ?? itemId) : (iboraId ?? itemId),
+        format,
         isCorrect,
-        given: `${chap}=${ong}`,
-        // `pruefen` buni yozadi, `juft()` avval YO'Q edi — har juftlashuv
-        // urinishi hech qachon davomiylik saqlamasdi. Mijoz allaqachon
-        // shu juftga ketgan vaqtni kuzatadi (`seans-ekrani.tsx`), shuni
-        // qabul qilib yozamiz.
-        durationMs: durationMs ?? null,
-        points,
-        // Har juft qatoriga shu juftning O'Z materiali (dizayn 5.5):
-        // `PAAR` — bosilgan so'z, `ZUORDNEN` — bosilgan ibora. `input.itemId`
-        // to'rtlik/oltilikning BIRINCHISI, bosilgan juft esa boshqasi.
-        ...this.seansMaydonlari(
-          input,
-          itemType,
-          format === 'PAAR' ? (lexemeId ?? itemId) : (iboraId ?? itemId),
-          format,
-          isCorrect,
-        ),
-      },
-    } as any);
+      ),
+    });
 
     // Leitner FAQAT `PAAR` uchun — ibora bu jadvalga kirmaydi.
     if (format === 'PAAR' && lexemeId != null) {

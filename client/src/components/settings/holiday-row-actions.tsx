@@ -31,6 +31,8 @@ import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { mayManageHoliday } from "@/lib/holiday-scope";
+import { useT } from "@/i18n/context";
+import { markedText, unmarked } from "@/components/payments/debt-history/marked-text";
 
 interface HolidayRowActionsProps {
   holiday: Holiday;
@@ -41,6 +43,7 @@ export function HolidayRowActions({
   holiday,
   onDeleted,
 }: HolidayRowActionsProps) {
+  const t = useT();
   const { openDrawer } = useEditHoliday();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -51,12 +54,12 @@ export function HolidayRowActions({
     setDeleting(true);
     try {
       await api.delete(`/holidays/${holiday.id}`);
-      toast.success("Bayram muvaffaqiyatli o'chirildi");
+      toast.success(t("Bayram muvaffaqiyatli o'chirildi"));
       onDeleted?.(holiday.id);
       setConfirmOpen(false);
     } catch (err) {
       toast.error(
-        getErrorMessage(err, "Bayramni o'chirishda xatolik yuz berdi"),
+        getErrorMessage(err, t("Bayramni o'chirishda xatolik yuz berdi")),
       );
     } finally {
       setDeleting(false);
@@ -93,16 +96,16 @@ export function HolidayRowActions({
                 ) : (
                   <MoreHorizontal className="size-4" />
                 )}
-                <span className="sr-only">Amallar</span>
+                <span className="sr-only">{t("Amallar")}</span>
               </Button>
             </DropdownMenuTrigger>
           </TooltipTrigger>
-          <TooltipContent>Amallar</TooltipContent>
+          <TooltipContent>{t("Amallar")}</TooltipContent>
         </Tooltip>
         <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
           <DropdownMenuItem onClick={() => openDrawer(holiday)}>
             <Pencil className="mr-2 size-4" />
-            Tahrirlash
+            {t("Tahrirlash")}
           </DropdownMenuItem>
           <DropdownMenuItem
             className="text-destructive focus:text-destructive"
@@ -112,7 +115,7 @@ export function HolidayRowActions({
             }}
           >
             <Trash2 className="mr-2 size-4" />
-            O&apos;chirish
+            {t("O'chirish")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -121,19 +124,24 @@ export function HolidayRowActions({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Bayramni o&apos;chirishni xohlaysizmi?
+              {t("Bayramni o'chirishni xohlaysizmi?")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              <span className="font-medium">{holiday.name}</span>
-              {formattedDate ? ` (${formattedDate})` : ""} bayrami o&apos;chiriladi.
-              Agar bu bayram tufayli ba&apos;zi guruhlarning tugash sanasi
-              avtomatik uzaytirilgan bo&apos;lsa, ular asl tugash sanasiga
-              qaytariladi. Bu amalni keyinroq qaytarib bo&apos;lmaydi.
+              {markedText(
+                t(
+                  "**{name}**{date} bayrami o'chiriladi. Agar bu bayram tufayli ba'zi guruhlarning tugash sanasi avtomatik uzaytirilgan bo'lsa, ular asl tugash sanasiga qaytariladi. Bu amalni keyinroq qaytarib bo'lmaydi.",
+                  {
+                    name: unmarked(holiday.name),
+                    date: formattedDate ? ` (${formattedDate})` : "",
+                  },
+                ),
+                "font-medium",
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>
-              Bekor qilish
+              {t("Bekor qilish")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
@@ -144,7 +152,7 @@ export function HolidayRowActions({
               variant="destructive"
             >
               {deleting && <Loader2 className="mr-2 size-4 animate-spin" />}
-              O&apos;chirish
+              {t("O'chirish")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

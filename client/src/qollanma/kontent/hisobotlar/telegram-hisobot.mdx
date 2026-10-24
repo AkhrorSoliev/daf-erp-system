@@ -1,0 +1,44 @@
+## Qanday ishlaydi
+
+CEO Sozlamalar → «Telegram» → «Kunlik hisobot» varag'ida xodimlarni tanlaydi. Har biriga kunlik hisobot o'z Telegram chatiga, belgilangan vaqtda keladi. Raqamlar 21:00 dagi guruh hisobotining o'zi.
+
+- Vaqt 07:00 dan 23:30 gacha, yarim soat qadam bilan. Xabar sarlavhasida «18:30 holati» kabi qaysi paytning raqamlari ekani yoziladi.
+- Dushanba–shanba keladi. Yakshanba va butun markaz bayramida avtomatik kelmaydi.
+- Xodimning Telegrami botga ulangan bo'lishi kerak (`/xodim`). Ulanmagan yoki botni bloklagan bo'lsa, sahifada o'sha oluvchining qatorida «Ulanmagan» yoki «Yetmaydi» yorlig'i turadi.
+
+<Eslatma tur="malumot">
+
+Sahifani faqat CEO ko'radi va o'zgartiradi. Kimga qaysi filial va qaysi bo'lim borishini ham faqat CEO belgilaydi.
+
+</Eslatma>
+
+## Har oluvchi uchun sozlama
+
+- **Vaqt** — hisobot keladigan soat.
+- **Ko'rinish** — bo'lim bo'yicha, jadval, filial bo'yicha yoki faqat jami.
+- **Filiallar** — «Barcha filiallar» (keyin ochilganlar ham) yoki bitta-bitta filial.
+- **Bo'limlar** — Bugungi pul, O'quvchilar, Darslar, Faol o'quvchilar, Qarz, Oy boshidan, Ustozlar oyligi, Diqqat. Pul bo'limlari belgilangan.
+- **Yoqilgan** — vaqtincha to'xtatish uchun.
+- **Hozir yuborish** — hisobot shu zahoti ketadi; o'sha kungi avtomatik hisobot baribir keladi. Telegram ulanmagan yoki xodim botni bloklagan bo'lsa, tugma o'chiq turadi.
+
+Yangi oluvchiga avtomatik ravishda o'z filiali, pul bo'lmagan bo'limlar va 21:00 belgilanadi.
+
+## Telegram holati
+
+Tepada to'rtta karta: **Oluvchilar** (hammasi), **Hisobot yetadi**, **Yetmaydi** (Telegrami muammoli oluvchilar, o'chirilgani ham, agar chati yetmasa) va **Bot** (ishlayapti yoki o'chiq). Har oluvchi qatorida xabar yetib borishi ko'rinadi:
+
+- **Yetadi** — oxirgi hisobot yetib bordi.
+- **Ulangan** — Telegram ulangan, hali hisobot yuborilmagan; oxirgi urinish xato bo'lgan bo'lsa, sabab qatorda yoziladi va u «Yetmaydi» hisobiga kiradi.
+- **Yetmaydi** — xodim botni bloklagan yoki Telegram hisobini o'chirgan. Sabab va sana qatorda yoziladi. Xodim botni blokdan chiqarsa, keyingi xabar yetadi va belgi o'zi o'chadi.
+- **Ulanmagan** — xodim botda `/xodim` orqali ulanishi kerak.
+- **O'chirilgan** — oluvchi o'chirib qo'yilgan, hisobot bormaydi.
+
+«Ulanishni tekshirish» tugmasi xodimga hech narsa ko'rsatmasdan, xabar yetib borishini tekshiradi.
+
+## Qidiruv va namuna
+
+Oluvchilarni ism yoki lavozim bo'yicha qidirish, «Hammasi», «Yetmaydi» yoki «O'chirilgan» deb saralash mumkin. Qatorni bossangiz o'ngda uning sozlamalari ochiladi (tor ekranda jadvalning tagida). «Namunani ko'rish» hisobotni shu oluvchining sozlamasi va hozirgi raqamlar bilan, oddiy matn qilib ko'rsatadi; xodimga hech narsa ketmaydi.
+
+## Botda
+
+Oluvchining xodim menyusida «📊 Hisobot» tugmasi bor (yangi qo'shilgan oluvchi `/start` bosgandan keyin ko'radi). Hisobot tagida filial tugmalari, «🌐 Barchasi» va «🔄 Yangilash» bor: bosilganda o'sha xabarning o'zi yangilanadi. Oluvchiga faqat CEO ruxsat bergan filiallar ko'rinadi.

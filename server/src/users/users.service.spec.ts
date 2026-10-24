@@ -143,6 +143,16 @@ describe('UsersService — updateUser status/isActive sync', () => {
     );
   });
 
+  it('clears the Telegram reach mark when the chat id is written', async () => {
+    await service.updateUser(1, { telegramChatId: '555' } as any, 2);
+
+    const dataArg = updateMock.mock.calls[0][0].data;
+    expect(dataArg).toEqual({
+      telegramChatId: '555',
+      telegramDisconnectedAt: null,
+    });
+  });
+
   it('does not touch isActive when status is not in the dto', async () => {
     await service.updateUser(1, { firstName: 'Renamed' } as any, 2);
 
@@ -609,6 +619,39 @@ describe('UsersService — findAll companyId scoping', () => {
         }),
       }),
     );
+  });
+
+  // ADR-0087: the employee's salary balance goes only to a caller who may
+  // see pay; the controller passes `salary.view` as `includeBalance`.
+  describe('employee balance', () => {
+    const selectOf = () => prisma.user.findMany.mock.calls[0][0].select;
+
+    it('does not select the balance by default', async () => {
+      await service.findAll({} as any, 1001, null);
+      expect(selectOf()).not.toHaveProperty('balance');
+    });
+
+    it('selects the balance for a caller who may see pay', async () => {
+      await service.findAll({} as any, 1001, null, true);
+      expect(selectOf()).toHaveProperty('balance', true);
+    });
+
+    it('findById follows the same rule', async () => {
+      prisma.user.findFirst = jest.fn().mockResolvedValue({
+        id: 7,
+        roles: [],
+        branches: [],
+      });
+
+      await service.findById(7, 1001, null);
+      await service.findById(7, 1001, null, true);
+
+      const [plain, withPay] = prisma.user.findFirst.mock.calls.map(
+        (c: any[]) => c[0].select,
+      );
+      expect(plain).not.toHaveProperty('balance');
+      expect(withPay).toHaveProperty('balance', true);
+    });
   });
 });
 
@@ -1644,5 +1687,95 @@ describe('UsersService — role grant ceiling', () => {
 
       expect(prisma.user.update).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe('UsersService — updateUiSkin', () => {
+  let service: UsersService;
+  const update = jest.fn();
+
+  beforeEach(async () => {
+    update.mockReset();
+    update.mockImplementation(({ data }) =>
+      Promise.resolve({ uiSkin: data.uiSkin }),
+    );
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UsersService,
+        { provide: PrismaService, useValue: { user: { update } } },
+        { provide: UploadService, useValue: { deleteFile: jest.fn() } },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide: RedisService,
+          useValue: { set: jest.fn(), get: jest.fn(), del: jest.fn() },
+        },
+        {
+          provide: EntityHistoryService,
+          useValue: {
+            recordCreate: jest.fn(),
+            recordUpdate: jest.fn(),
+            recordDelete: jest.fn(),
+            recordStatusChange: jest.fn(),
+            recordRestore: jest.fn(),
+          },
+        },
+      ],
+    }).compile();
+    service = module.get(UsersService);
+  });
+
+  it("writes only the caller's own row and returns the stored skin", async () => {
+    const res = await service.updateUiSkin(7, 'gilos');
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 7 },
+      data: { uiSkin: 'gilos' },
+      select: { uiSkin: true },
+    });
+    expect(res).toEqual({ uiSkin: 'gilos' });
+  });
+});
+
+describe('UsersService — updateUiLocale', () => {
+  let service: UsersService;
+  const update = jest.fn();
+
+  beforeEach(async () => {
+    update.mockReset();
+    update.mockImplementation(({ data }) =>
+      Promise.resolve({ uiLocale: data.uiLocale }),
+    );
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UsersService,
+        { provide: PrismaService, useValue: { user: { update } } },
+        { provide: UploadService, useValue: { deleteFile: jest.fn() } },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide: RedisService,
+          useValue: { set: jest.fn(), get: jest.fn(), del: jest.fn() },
+        },
+        {
+          provide: EntityHistoryService,
+          useValue: {
+            recordCreate: jest.fn(),
+            recordUpdate: jest.fn(),
+            recordDelete: jest.fn(),
+            recordStatusChange: jest.fn(),
+            recordRestore: jest.fn(),
+          },
+        },
+      ],
+    }).compile();
+    service = module.get(UsersService);
+  });
+
+  it("writes only the caller's own row and returns the stored language", async () => {
+    const res = await service.updateUiLocale(7, 'de');
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 7 },
+      data: { uiLocale: 'de' },
+      select: { uiLocale: true },
+    });
+    expect(res).toEqual({ uiLocale: 'de' });
   });
 });

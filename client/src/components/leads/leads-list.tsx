@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowRightLeft,
   ChevronLeft,
@@ -48,12 +48,14 @@ import {
   type LeadStatus,
 } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
+import { useT } from "@/i18n/context";
 import {
   LEAD_FILTER_SCHEMA,
   leadDateFieldIsConversion,
   leadHolatiParams,
 } from "./lead-filter-schema";
 import { aylanganSana } from "./aylangan-sana";
+import { ownerName, type LeadOwner } from "./ownership/ownership-format";
 import {
   LEAD_STATS_PERIODS,
   LEAD_STATS_SCHEMA,
@@ -79,6 +81,7 @@ interface LeadListRow {
     lastName: string;
   } | null;
   source: { id: string; name: string } | null;
+  owner: LeadOwner | null;
   section: {
     id: string;
     name: string;
@@ -89,6 +92,12 @@ interface LeadListRow {
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
 
 export function LeadsList() {
+  const t = useT();
+  // The fetch reads t from here: a language switch must not refetch.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
   const { filters, setFilter, setFilters } = useUrlFilters(LEAD_FILTER_SCHEMA);
   const { filters: statsFilters } = useUrlFilters(LEAD_STATS_SCHEMA);
   const period = parseStatsPeriod(statsFilters.period);
@@ -101,8 +110,12 @@ export function LeadsList() {
   const [rows, setRows] = useState<LeadListRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  // Only the newest request may write rows: a quick search or two card clicks
+  // in a row would otherwise let an older, slower answer overwrite a newer one.
+  const requestId = useRef(0);
 
   const fetchLeads = useCallback(async () => {
+    const id = ++requestId.current;
     setLoading(true);
     try {
       const params: Record<string, string | number | undefined> = {
@@ -112,6 +125,7 @@ export function LeadsList() {
       if (filters.search.trim()) params.search = filters.search.trim();
       params.sourceId = listParam(filters.sourceId);
       params.columnId = listParam(filters.columnId);
+      params.owner = listParam(filters.masul);
       // Birlashgan «Holati» filtri: bir guruh ichi YOKI, guruhlar orasi VA.
       Object.assign(params, leadHolatiParams(filters.holati));
       if (filters.startDate) params.startDate = filters.startDate;
@@ -126,12 +140,15 @@ export function LeadsList() {
       }
 
       const { data } = await api.get("/leads", { params });
+      if (id !== requestId.current) return;
       setRows(data.data);
       setTotal(data.total);
     } catch (error) {
-      toast.error(getErrorMessage(error, "Lidlarni yuklashda xatolik"));
+      if (id !== requestId.current) return;
+      const t = tRef.current;
+      toast.error(getErrorMessage(error, t("Lidlarni yuklashda xatolik")));
     } finally {
-      setLoading(false);
+      if (id === requestId.current) setLoading(false);
     }
   }, [
     filters.page,
@@ -140,6 +157,7 @@ export function LeadsList() {
     filters.holati,
     filters.sourceId,
     filters.columnId,
+    filters.masul,
     filters.startDate,
     filters.endDate,
     filters.karta,
@@ -155,13 +173,17 @@ export function LeadsList() {
 
   const cardLabel = STAT_CARD_LABELS[filters.karta as StatCard];
   const periodLabel = LEAD_STATS_PERIODS.find((p) => p.value === period)?.label;
+  const statusLabel = (status: LeadStatus) => {
+    const label = LEAD_STATUS_LABELS[status];
+    return t(label);
+  };
 
   return (
     <div className="space-y-3">
       {filters.karta && cardLabel && (
         <div className="flex items-center gap-2 text-sm">
           <span className="font-medium">
-            «{cardLabel}» · {periodLabel}
+            «{t(cardLabel)}» · {periodLabel ? t(periodLabel) : ""}
           </span>
           <Button
             variant="ghost"
@@ -170,7 +192,7 @@ export function LeadsList() {
             onClick={() => setFilters({ karta: "", page: 1 })}
           >
             <X className="size-4" />
-            Yopish
+            {t("Yopish")}
           </Button>
         </div>
       )}
@@ -179,22 +201,23 @@ export function LeadsList() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>Ism familiya</TableHead>
-              <TableHead>Telefon</TableHead>
-              <TableHead>Holati</TableHead>
-              <TableHead>O&apos;quvchi</TableHead>
-              <TableHead>Manba</TableHead>
-              <TableHead>Joylashuvi</TableHead>
-              <TableHead>Sana</TableHead>
-              <TableHead>Aylangan sana</TableHead>
-              <TableHead className="w-12 text-right">Amal</TableHead>
+              <TableHead>{t("Ism familiya")}</TableHead>
+              <TableHead>{t("Mas'ul")}</TableHead>
+              <TableHead>{t("Telefon")}</TableHead>
+              <TableHead>{t("Holati")}</TableHead>
+              <TableHead>{t("O'quvchi")}</TableHead>
+              <TableHead>{t("Manba")}</TableHead>
+              <TableHead>{t("Joylashuvi")}</TableHead>
+              <TableHead>{t("Sana")}</TableHead>
+              <TableHead>{t("Aylangan sana")}</TableHead>
+              <TableHead className="w-12 text-right">{t("Amal")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 10 }).map((_, c) => (
+                  {Array.from({ length: 11 }).map((_, c) => (
                     <TableCell key={c}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
@@ -204,10 +227,10 @@ export function LeadsList() {
             ) : rows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={10}
+                  colSpan={11}
                   className="h-24 text-center text-muted-foreground"
                 >
-                  Filtrga mos lid topilmadi
+                  {t("Filtrga mos lid topilmadi")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -223,12 +246,15 @@ export function LeadsList() {
                   <TableCell className="font-medium">
                     {lead.firstName} {lead.lastName}
                   </TableCell>
+                  <TableCell className="text-sm">
+                    {lead.owner ? ownerName(lead.owner) : "—"}
+                  </TableCell>
                   <TableCell>{formatPhone(lead.phone)}</TableCell>
                   <TableCell>
                     <Badge variant={lead.deletedAt ? "outline" : "secondary"}>
                       {lead.deletedAt && lead.statusEnum !== "LOST"
-                        ? "Arxivda"
-                        : LEAD_STATUS_LABELS[lead.statusEnum]}
+                        ? t("Arxivda")
+                        : statusLabel(lead.statusEnum)}
                     </Badge>
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
@@ -264,7 +290,7 @@ export function LeadsList() {
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon">
                             <MoreHorizontal className="size-4" />
-                            <span className="sr-only">Amallar</span>
+                            <span className="sr-only">{t("Amallar")}</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -282,8 +308,12 @@ export function LeadsList() {
                             }
                           >
                             <Pencil className="mr-2 size-4" />
-                            Tahrirlash
+                            {t("Tahrirlash")}
                           </DropdownMenuItem>
+                          {/* A converted lead is a student now: the server refuses
+                              moving or deleting it. */}
+                          {lead.statusEnum !== "CONVERTED" && (
+                            <>
                           <DropdownMenuItem
                             onClick={() =>
                               openMoveLead({
@@ -293,7 +323,7 @@ export function LeadsList() {
                             }
                           >
                             <ArrowRightLeft className="mr-2 size-4" />
-                            Ko&apos;chirish
+                            {t("Lidni ko'chirish")}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
@@ -308,8 +338,10 @@ export function LeadsList() {
                             }
                           >
                             <Trash2 className="mr-2 size-4" />
-                            O&apos;chirish
+                            {t("O'chirish")}
                           </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
@@ -323,7 +355,7 @@ export function LeadsList() {
 
       <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Sahifada:</span>
+          <span className="text-sm text-muted-foreground">{t("Sahifada:")}</span>
           <Select
             value={String(filters.pageSize)}
             onValueChange={(value) =>
@@ -341,7 +373,7 @@ export function LeadsList() {
               ))}
             </SelectContent>
           </Select>
-          <p className="text-sm text-muted-foreground">Jami: {total} ta lid</p>
+          <p className="text-sm text-muted-foreground">{t("Jami: {n} ta lid", { n: total })}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -351,7 +383,7 @@ export function LeadsList() {
             onClick={() => setFilter("page", filters.page - 1)}
           >
             <ChevronLeft className="mr-1 size-4" />
-            Oldingi
+            {t("Oldingi")}
           </Button>
           <span className="text-sm">
             {filters.page} / {totalPages}
@@ -362,7 +394,7 @@ export function LeadsList() {
             disabled={filters.page >= totalPages}
             onClick={() => setFilter("page", filters.page + 1)}
           >
-            Keyingi
+            {t("Keyingi")}
             <ChevronRight className="ml-1 size-4" />
           </Button>
         </div>

@@ -1,0 +1,37 @@
+import { useT } from "@/i18n/context";
+import { HEAT_HINT, HEAT_NO_FREE, type HeatDetail } from "./center-activity-format";
+
+/** Under the matrix: the free rooms of the clicked hour, then the busy ones with the groups that hold them. */
+export function CenterActivityHeatDetail({ detail }: { detail: HeatDetail | null }) {
+  const t = useT();
+  return (
+    <div aria-live="polite">
+      {!detail ? (
+        <p className="text-sm text-muted-foreground">{t(HEAT_HINT)}</p>
+      ) : (
+        <div className="flex flex-col gap-2 rounded-md border p-3">
+          <h4 className="text-sm font-medium">{detail.title}</h4>
+          {detail.free.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t(HEAT_NO_FREE)}</p>
+          ) : (
+            <ul className="flex flex-wrap gap-2" aria-label={t("Bo'sh xonalar")}>
+              {detail.free.map((r) => (
+                <li key={r.id} className="rounded-md bg-muted px-2 py-1 text-sm">{r.text}</li>
+              ))}
+            </ul>
+          )}
+          {detail.busy.length > 0 && (
+            <ul className="flex flex-wrap gap-2 text-sm text-muted-foreground" aria-label={t("Band xonalar")}>
+              {detail.busy.map((r) => (
+                <li key={r.id} className="rounded-md border px-2 py-1">
+                  <s>{r.name}</s>
+                  {r.groups && <> — {r.groups}</>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

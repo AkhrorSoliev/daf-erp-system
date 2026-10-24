@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { useT } from "@/i18n/context";
 
 export interface CourseOption {
   id: string;
@@ -32,15 +33,16 @@ export function GroupCourseSelect({
   error,
   emptyState,
 }: GroupCourseSelectProps) {
+  const t = useT();
   return (
     <div className="space-y-2">
-      <Label htmlFor="courseId">Kurs</Label>
+      <Label htmlFor="courseId">{t("Kurs")}</Label>
       {courses.length === 0 && emptyState ? (
         emptyState
       ) : (
         <Select value={value} onValueChange={onChange}>
           <SelectTrigger id="courseId" className="w-full">
-            <SelectValue placeholder="Kursni tanlang" />
+            <SelectValue placeholder={t("Kursni tanlang")} />
           </SelectTrigger>
           <SelectContent
             position="popper"

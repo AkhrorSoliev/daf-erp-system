@@ -18,7 +18,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { TranslatedStatusBadge } from "@/components/shared/translated-status-badge";
+import { useT } from "@/i18n/context";
 import { SettingsPageHeader } from "./settings-page-header";
 import { BranchRowActions } from "./branch-row-actions";
 import { EditBranchDrawer } from "./edit-branch-drawer";
@@ -43,6 +44,7 @@ function formatPhone(phone: string): string {
 }
 
 export function BranchesSettingsClient() {
+  const t = useT();
   const { filters, setFilter } = useUrlFilters(branchesSchema);
   const [searchInput, setSearchInput] = useState(filters.search);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -83,18 +85,18 @@ export function BranchesSettingsClient() {
   return (
     <div className="space-y-4">
       <SettingsPageHeader
-        title="Filiallar"
-        description="Filiallarni boshqarish va yangi filiallar qo'shish"
+        title={t("Filiallar")}
+        description={t("Filiallarni boshqarish va yangi filiallar qo'shish")}
         action={
           isCeo ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button size="sm" onClick={openAddDrawer}>
                   <Plus className="mr-1.5 h-4 w-4" />
-                  Yangi filial
+                  {t("Yangi filial")}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Yangi filial qo&apos;shish</TooltipContent>
+              <TooltipContent>{t("Yangi filial qo'shish")}</TooltipContent>
             </Tooltip>
           ) : undefined
         }
@@ -102,7 +104,7 @@ export function BranchesSettingsClient() {
 
       <div className="flex items-center gap-3">
         <Input
-          placeholder="Filial nomi yoki manzil bo'yicha qidirish..."
+          placeholder={t("Filial nomi yoki manzil bo'yicha qidirish...")}
           value={searchInput}
           onChange={(e) => { setSearchInput(e.target.value); debouncedSetSearch(e.target.value); }}
           className="w-full sm:max-w-sm"
@@ -114,10 +116,10 @@ export function BranchesSettingsClient() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
-              <TableHead>Filial nomi</TableHead>
-              <TableHead>Manzil</TableHead>
-              <TableHead>Telefon</TableHead>
-              <TableHead>Holati</TableHead>
+              <TableHead>{t("Filial nomi")}</TableHead>
+              <TableHead>{t("Manzil")}</TableHead>
+              <TableHead>{t("Telefon")}</TableHead>
+              <TableHead>{t("Holati")}</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -136,7 +138,7 @@ export function BranchesSettingsClient() {
                 >
                   <div className="flex flex-col items-center gap-2">
                     <Building2 className="h-8 w-8 text-muted-foreground/50" />
-                    Filiallar topilmadi
+                    {t("Filiallar topilmadi")}
                   </div>
                 </TableCell>
               </TableRow>
@@ -156,7 +158,7 @@ export function BranchesSettingsClient() {
                     {branch.phone ? formatPhone(branch.phone) : "—"}
                   </TableCell>
                   <TableCell>
-                    <StatusBadge entityType="branches" status={branch.status} />
+                    <TranslatedStatusBadge entityType="branches" status={branch.status} />
                   </TableCell>
                   <TableCell>
                     <BranchRowActions branch={branch} />

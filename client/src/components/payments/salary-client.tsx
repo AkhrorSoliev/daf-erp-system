@@ -8,6 +8,7 @@ import { MonthPicker } from "@/components/ui/month-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCan, usePermissions } from "@/hooks/use-permissions";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useT } from "@/i18n/context";
 import { SalaryMonthlyView } from "./salary-monthly-view";
 import { SalaryAdvancesTab } from "./salary-advances-tab";
 import { SalaryAdvanceDialog } from "./salary-advance-dialog";
@@ -15,7 +16,7 @@ import { SalarySettingsSheet } from "./salary-settings-sheet";
 import { CenterTopUpView } from "./debt/center-topup-view";
 import { resolveSalarySettingsAccess } from "./salary-settings-access";
 import { currentMonthKey } from "./salary-utils";
-import { mln } from "./salary/salary-page-model";
+import { formatBalance } from "@/lib/format-utils";
 import { SalaryPayDialog } from "./salary/salary-pay-dialog";
 import { SalaryRowDrawer } from "./salary/salary-row-drawer";
 import type { SalaryDetail } from "./salary/salary-types";
@@ -38,14 +39,20 @@ const HEADER_SCHEMA = {
   xodim: { type: "number" as const, defaultValue: 0 },
 };
 
-/** «Avanslar · 4,5 mln»; the amount is left out while loading and at 0 (Decision 12). */
-const tabLabel = (name: string, amount: number | undefined) => (amount ? `${name} · ${mln(amount)}` : name);
+/**
+ * «Avanslar · 4 500 000 so'm»; the amount is left out while loading and at 0 (Decision 12).
+ * `name` and `unit` arrive translated.
+ */
+const tabLabel = (name: string, amount: number | undefined, unit: string) =>
+  amount ? `${name} · ${formatBalance(amount, unit)}` : name;
 
 export function SalaryClient() {
+  const t = useT();
   const canClose = useCan("salary.close");
   const canPay = useCan("salary.pay");
-  // An advance is an expense: `POST/PATCH/DELETE /expenses` check `expenses.manage` (spec §2).
-  const canAdvance = useCan("expenses.manage");
+  // An advance is written only with `salary.pay` (CEO 11.10, ADR-0087): `POST/PATCH/DELETE
+  // /expenses` let a TEACHER_ADVANCE through for it and refuse `expenses.manage` alone.
+  const canAdvance = useCan("salary.pay");
   const can = usePermissions((s) => s.can);
   const settingsAccess = resolveSalarySettingsAccess(can);
   const invalidateSalary = useInvalidateSalary();
@@ -81,7 +88,7 @@ export function SalaryClient() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="font-heading text-lg font-semibold tracking-tight">Ish haqi</h2>
+        <h2 className="font-heading text-lg font-semibold tracking-tight">{t("Ish haqi")}</h2>
         <div className="flex flex-wrap items-center gap-2">
           {/* «Markaz qoplagani» has its own picker, where an empty month means the whole period. */}
           {activeTab !== "markaz" && (
@@ -96,13 +103,13 @@ export function SalaryClient() {
           {settingsAccess.canOpen && (
             <Button variant="outline" data-tour="salary-settings" onClick={() => setSettingsOpen(true)}>
               <Settings2 data-icon="inline-start" />
-              Stavkalar
+              {t("Stavkalar")}
             </Button>
           )}
           {canAdvance && (
             <Button onClick={() => setAdvanceOpen(true)}>
               <Plus data-icon="inline-start" />
-              Avans berish
+              {t("Avans berish")}
             </Button>
           )}
         </div>
@@ -110,9 +117,11 @@ export function SalaryClient() {
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col gap-4">
         <TabsList className="max-w-full overflow-x-auto">
-          <TabsTrigger value="oyliklar">Oyliklar</TabsTrigger>
-          <TabsTrigger value="avanslar">{tabLabel("Avanslar", tabTotals.advances)}</TabsTrigger>
-          <TabsTrigger value="markaz">{tabLabel("Markaz qoplagani", tabTotals.centerOutstanding)}</TabsTrigger>
+          <TabsTrigger value="oyliklar">{t("Oyliklar")}</TabsTrigger>
+          <TabsTrigger value="avanslar">{tabLabel(t("Avanslar"), tabTotals.advances, t("so'm"))}</TabsTrigger>
+          <TabsTrigger value="markaz">
+            {tabLabel(t("Markaz qoplagani"), tabTotals.centerOutstanding, t("so'm"))}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="oyliklar">

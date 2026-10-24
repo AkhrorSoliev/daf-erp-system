@@ -80,7 +80,7 @@ export const oquvchilar: QollanmaSahifa[] = [
     sahifa: "oquvchi-kartasi",
     sarlavha: "O'quvchi kartasi",
     qisqacha:
-      "Karta chapda o'quvchi ma'lumotlari, balans va amallarni, o'ngda 11 ta tabni ko'rsatadi. «To'lovlar» tabi o'quvchi qancha to'lagani, har oyning narxi, to'langani va qarzi hamda balans nimadan chiqqanini tushuntiradi.",
+      "Karta chapda o'quvchi ma'lumotlari, balans va amallarni, o'ngda 12 ta tabni ko'rsatadi. «To'lovlar» tabi o'quvchi qancha to'lagani, har oyning narxi, to'langani va qarzi hamda balans nimadan chiqqanini tushuntiradi.",
     rollar: [1, 2, 3],
     adr: ["0004", "0037", "0047", "0062", "0064", "0066", "0070", "0073", "0077"],
     yollar: ["/students/profile/*"],
@@ -126,7 +126,7 @@ export const oquvchilar: QollanmaSahifa[] = [
       "bekor qilingan yozuv",
       "balans tarixi",
     ],
-    yangilangan: "2026-10-10",
+    yangilangan: "2026-10-17",
   },
   {
     bolim: "oquvchilar",
@@ -181,7 +181,7 @@ export const oquvchilar: QollanmaSahifa[] = [
       "muzlatilgan puli",
       "qaytgan kun",
     ],
-    yangilangan: "2026-10-10",
+    yangilangan: "2026-10-18",
   },
   {
     bolim: "oquvchilar",
@@ -217,17 +217,17 @@ export const oquvchilar: QollanmaSahifa[] = [
       "guruhga qaytarilgan",
       "pul qaytarilmaydigan chegara",
     ],
-    yangilangan: "2026-10-10",
+    yangilangan: "2026-10-19",
   },
   {
     bolim: "oquvchilar",
     sahifa: "chetlatish-va-arxiv",
     sarlavha: "Chetlatish, bitirish, arxiv",
     qisqacha:
-      "Chetlatilgan o'quvchining qarzi qoladi va u portal orqali to'lay oladi; bitirish guruh «Tugallangan» qilinganda o'zi bo'ladi. Arxiv faqat xato yoki takroriy yozuv uchun: «O'chirish» belgisi yoki «Statusni o'zgartirish» oynasi orqali qilinadi, kirish hisobi yopiladi, tiklashni faqat CEO qiladi.",
+      "Chetlatilgan o'quvchining qarzi qoladi va u portal orqali to'lay oladi; bitirish guruh «Tugallangan» qilinganda o'zi bo'ladi. Arxiv faqat xato yoki takroriy yozuv uchun: «O'chirish» belgisi yoki «Statusni o'zgartirish» oynasi orqali qilinadi, kirish hisobi yopiladi, tiklashni faqat CEO qiladi. Sozlamalar → Arxivda arxivdagi o'quvchi va guruhni ochib ko'rish, arxivga tushish sababini ko'rish mumkin.",
     rollar: [1, 2, 3],
     adr: ["0033", "0035", "0036", "0044", "0048", "0059", "0060"],
-    yollar: ["/students/profile/*"],
+    yollar: ["/students/profile/*", "/settings/archive"],
     kalitSozlar: [
       "chetlatish",
       "chetlatilgan",
@@ -247,7 +247,7 @@ export const oquvchilar: QollanmaSahifa[] = [
       "o'qimayotganlar qarzi",
       "sinov darsi",
     ],
-    yangilangan: "2026-10-02",
+    yangilangan: "2026-10-18",
   },
   {
     bolim: "oquvchilar",
@@ -277,5 +277,29 @@ export const oquvchilar: QollanmaSahifa[] = [
       "profildagi ma'lumot",
     ],
     yangilangan: "2026-10-11",
+  },
+  {
+    bolim: "oquvchilar",
+    sahifa: "lid-egasi",
+    sarlavha: "Lid egasi",
+    qisqacha:
+      "Administrator lidni «Band qilish» bilan oladi va band qilingan lidni boshqasi ololmaydi. Muddatida qo'ng'iroq, izoh yoki topshiriq bo'lmasa, lid umumiy ro'yxatga o'zi qaytadi; CEO va filial direktori lidni boshqa xodimga beradi.",
+    rollar: [1, 2, 3, 5],
+    adr: ["0093"],
+    yollar: ["/leads", "/settings/leads-kpi"],
+    kalitSozlar: ["lid", "band qilish", "mas'ul", "lid egasi", "muddat", "KPI"],
+    yangilangan: "2026-10-18",
+  },
+  {
+    bolim: "oquvchilar",
+    sahifa: "qatnashganlik-hujjati",
+    sarlavha: "Qatnashganlik hujjati",
+    qisqacha:
+      "O'quvchi darajani tugatgach, «Hujjatlar» tabidan qatnashganlik hujjati beriladi: davomat kamida 80% va kamida 20 ta dars bo'lishi, kech qolish 20% dan oshmasligi, yakuniy sinovlardan o'tgan va qarzi yo'q bo'lishi kerak; ilovada ochiq dars bo'lsa, u ham tugatilgan bo'lishi kerak. Hujjatda QR bor, u hujjat haqiqiyligini ko'rsatadi.",
+    rollar: [1, 2, 3],
+    adr: ["0100", "0104", "0107"],
+    yollar: ["/students/profile/*", "/settings/rules"],
+    kalitSozlar: ["hujjat", "qatnashganlik", "daraja", "davomat", "QR", "PDF", "istisno"],
+    yangilangan: "2026-10-18",
   },
 ];

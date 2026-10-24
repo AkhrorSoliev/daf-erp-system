@@ -4,7 +4,6 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Composer, Context } from 'telegraf';
 import { loadTaskView, staffOfChat } from './task-telegram-view';
 import { TaskTelegramHandler } from './task-telegram.handler';
 import {
@@ -44,6 +43,7 @@ const view = (over: Partial<TgTaskView> = {}): TgTaskView => ({
   entityLabel: null,
   participants: [{ userId: 40, role: 'ASSIGNEE', name: 'Rahimov A.' }],
   steps: [{ id: STEP, title: 'Matn qoralamasi', done: false }],
+  history: [],
   ...over,
 });
 
@@ -104,63 +104,36 @@ beforeEach(() => {
     record: jest.fn(),
   };
   telegram = { getBot: () => ({}), useBeforeScenes: jest.fn() };
-  handler = new TaskTelegramHandler(prisma, tasks, telegram, sender);
+  handler = new TaskTelegramHandler(
+    prisma,
+    tasks,
+    telegram,
+    sender,
+    {} as never,
+  );
   as(40);
   (loadTaskView as jest.Mock).mockResolvedValue(view());
-});
-
-describe('TaskTelegramHandler — registration (before the scenes)', () => {
-  const update = (data: string) =>
-    new Context(
-      {
-        update_id: 1,
-        callback_query: {
-          id: 'q',
-          from: { id: 700, is_bot: false, first_name: 'A' },
-          chat_instance: 'c',
-          data,
-        },
-      } as any,
-      {} as any,
-      { username: 'bot' } as any,
-    ) as any;
-
-  it('one composer through useBeforeScenes: tk:* to onAction, the rest to next()', async () => {
-    const onAction = jest
-      .spyOn(handler, 'onAction')
-      .mockResolvedValue(undefined);
-    handler.onApplicationBootstrap();
-    expect(telegram.useBeforeScenes).toHaveBeenCalledTimes(1);
-    const mw = Composer.unwrap(telegram.useBeforeScenes.mock.calls[0][0]);
-
-    const next = jest.fn().mockResolvedValue(undefined);
-    await mw(update(`tk:start:${TASK}`), next);
-    expect(onAction).toHaveBeenCalledTimes(1);
-    expect(next).not.toHaveBeenCalled();
-
-    await mw(update('menu_password'), next);
-    expect(onAction).toHaveBeenCalledTimes(1);
-    expect(next).toHaveBeenCalledTimes(1);
-  });
-
-  it('without a bot it registers nothing and does not throw', () => {
-    const useBeforeScenes = jest.fn();
-    const off = new TaskTelegramHandler(
-      prisma,
-      tasks,
-      { getBot: () => undefined, useBeforeScenes } as any,
-      sender,
-    );
-    expect(() => off.onApplicationBootstrap()).not.toThrow();
-    expect(useBeforeScenes).not.toHaveBeenCalled();
-  });
 });
 
 describe('TaskTelegramHandler — buttons', () => {
   it("«Boshladim»: through TasksService as the chat's staff, via TELEGRAM; the same message is edited", async () => {
     (loadTaskView as jest.Mock)
       .mockResolvedValueOnce(view())
-      .mockResolvedValueOnce(view({ status: 'IN_PROGRESS' }));
+      .mockResolvedValueOnce(
+        view({
+          status: 'IN_PROGRESS',
+          history: [
+            {
+              type: 'STATUS',
+              to: 'IN_PROGRESS',
+              actorId: 40,
+              actorName: 'Rahimov A.',
+              text: null,
+              at: new Date('2026-10-15T05:00:00.000Z'),
+            },
+          ],
+        }),
+      );
     const ctx = press(`tk:start:${TASK}`);
     await handler.onAction(ctx);
     expect(tasks.changeStatus).toHaveBeenCalledWith(TASK, 'IN_PROGRESS', {
@@ -169,9 +142,20 @@ describe('TaskTelegramHandler — buttons', () => {
     });
     expect(ctx.answerCbQuery).toHaveBeenCalledWith();
     const [text, extra] = ctx.editMessageText.mock.calls[0];
-    expect(text.split('\n')[0]).toBe('<b>Yangi topshiriq · Yuqori</b>');
-    expect(text).toContain('Holat: Jarayonda');
-    expect(labels(extra)).toEqual([['Bajardim'], ['Qadamlar'], ['Ochish']]);
+    // The pressed message becomes the live card (ADR-0089), not the old headline.
+    expect(text.split('\n')).toEqual([
+      '<b>🔄 Jarayonda</b>',
+      '<blockquote><b>Oktabr banneri</b>',
+      'Siz boshladingiz</blockquote>',
+      '👤 Bergan: Soliyev A.',
+      '⚡ Yuqori',
+      '☑️ Kichik qadamlar: 0/1',
+    ]);
+    expect(labels(extra)).toEqual([
+      ['✅ Bajardim'],
+      ['📋 Qadamlar'],
+      ['📂 Ochish'],
+    ]);
     expect(ctx.reply).not.toHaveBeenCalled();
   });
 
@@ -223,9 +207,9 @@ describe('TaskTelegramHandler — buttons', () => {
       show_alert: true,
     });
     expect(labels(ctx.editMessageText.mock.calls[0][1])).toEqual([
-      ['Bajardim'],
-      ['Qadamlar'],
-      ['Ochish'],
+      ['✅ Bajardim'],
+      ['📋 Qadamlar'],
+      ['📂 Ochish'],
     ]);
   });
 
@@ -332,7 +316,7 @@ describe('TaskTelegramHandler — buttons', () => {
     );
     expect(labels(steps.editMessageText.mock.calls[0][1])).toEqual([
       ['1. Matn qoralamasi'],
-      ['Orqaga'],
+      ['⬅️ Orqaga'],
     ]);
 
     (loadTaskView as jest.Mock)
@@ -362,9 +346,12 @@ describe('TaskTelegramHandler — buttons', () => {
 
     const back = press(`tk:back:${TASK}`, 'Kichik qadamlar · 1/1\n…');
     await handler.onAction(back);
-    expect(back.editMessageText.mock.calls[0][0].split('\n')[0]).toBe(
-      '<b>Oktabr banneri</b>',
-    );
+    expect(
+      back.editMessageText.mock.calls[0][0].split('\n').slice(0, 2),
+    ).toEqual([
+      '<b>🆕 Yangi topshiriq</b>',
+      '<blockquote><b>Oktabr banneri</b></blockquote>',
+    ]);
   });
 
   it("a step of somebody else's task: refused before the toggle", async () => {
@@ -418,17 +405,20 @@ describe('TaskTelegramHandler — buttons', () => {
     expect(labels(extra)).toEqual([['1', '2']]);
   });
 
-  it('a number from the list sends the task card and remembers it', async () => {
+  it('a number from the list sends the live card and records it as CARD', async () => {
     const ctx = press(`tk:show:${TASK}`, 'Ochiq topshiriqlar: 1\n…');
     await handler.onAction(ctx);
     const [text] = ctx.reply.mock.calls[0];
-    expect(text.split('\n')[0]).toBe('<b>Oktabr banneri</b>');
+    expect(text.split('\n').slice(0, 2)).toEqual([
+      '<b>🆕 Yangi topshiriq</b>',
+      '<blockquote><b>Oktabr banneri</b></blockquote>',
+    ]);
     expect(sender.record).toHaveBeenCalledWith(
       '700',
       9,
       expect.objectContaining({ id: TASK }),
       40,
-      'NOTICE',
+      'CARD',
     );
     expect(ctx.editMessageText).not.toHaveBeenCalled();
   });

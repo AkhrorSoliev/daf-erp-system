@@ -154,8 +154,8 @@ describe("OverviewPage — the current month (CEO)", () => {
     expect(text).toContain(`Eski qarz — o'qiyotganlar ${money(2_160_000)} ${num(11)} o'quvchi · o'tgan oylardan qolgan`);
     expect(text).toContain(`O'qimayotganlar qarzi ${money(51_390_000)} ${num(305)} kishi · undirish ishi`);
     expect(text).toContain(`guruhsiz · ${num(118)} ${money(19_170_000)}`);
-    expect(text).toContain(`muzlatilgan · ${num(91)} ${money(17_820_000)}`);
-    expect(text).toContain(`ketgan · ${num(96)} ${money(14_400_000)}`);
+    expect(text).toContain(`muzlatilganlar · ${num(91)} ${money(17_820_000)}`);
+    expect(text).toContain(`ketganlar · ${num(96)} ${money(14_400_000)}`);
     expect(text).not.toContain(num(2_160_000 + 51_390_000));
     expect(text).not.toContain(num(39_150_000 + 51_390_000));
   });
@@ -164,6 +164,7 @@ describe("OverviewPage — the current month (CEO)", () => {
     const { text } = render({ seed: seedMonth("2026-10", overview(OCTOBER)) });
 
     expect(text).toContain("Oxirgi to'lovlar");
+    expect(text).toContain("Barcha to'lovlar →");
     expect(text).toContain("#10501 Ali Valiyev A1-07, B1-02");
     expect(text).toContain("#10502 Vali Aliyev —");
   });

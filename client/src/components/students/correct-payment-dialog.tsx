@@ -22,10 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { invalidatePaymentsList } from "@/components/payments/list/payments-queries";
 import { PAYMENT_METHOD_LABELS } from "./student-profile-tabs-utils";
+import { useT } from "@/i18n/context";
 
 export interface CorrectablePayment {
   id: string;
@@ -37,8 +40,8 @@ interface CorrectPaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   payment: CorrectablePayment | null;
-  /** Called after a successful correction with the student's fresh balance. */
-  onCorrected: (newBalance: number | null) => void;
+  /** Called after a successful correction with the student's fresh balance and the new payment's id (null when only the method changed: the payment is updated in place). */
+  onCorrected: (newBalance: number | null, result: { newPaymentId: string | null }) => void;
 }
 
 export function CorrectPaymentDialog({
@@ -51,6 +54,14 @@ export function CorrectPaymentDialog({
   const [method, setMethod] = useState("");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const queryClient = useQueryClient();
+  const t = useT();
+  // A known method code reads in the page language; an unknown one is data and
+  // is shown as it came.
+  const methodText = (code: string) => {
+    const label = PAYMENT_METHOD_LABELS[code];
+    return label ? t(label) : code;
+  };
 
   // Reset the form whenever a new payment is targeted or the dialog reopens.
   // Amount and method are pre-filled with the current values so an admin can
@@ -91,54 +102,55 @@ export function CorrectPaymentDialog({
       });
       toast.success(
         sameAmount
-          ? `To'lov usuli o'zgartirildi: ${
-              PAYMENT_METHOD_LABELS[payment.method] ?? payment.method
-            } → ${PAYMENT_METHOD_LABELS[method] ?? method}`
-          : `To'lov to'g'rilandi: ${formatPrice(payment.amount)} → ${formatPrice(
-              rawAmount,
-            )} so'm`,
+          ? t("To'lov usuli o'zgartirildi: {from} → {to}", {
+              from: methodText(payment.method),
+              to: methodText(method),
+            })
+          : t("To'lov to'g'rilandi: {from} → {to} so'm", {
+              from: formatPrice(payment.amount),
+              to: formatPrice(rawAmount),
+            }),
       );
+      // The open «To'lovlar» page (if any) follows the change at once.
+      invalidatePaymentsList(queryClient);
       onCorrected(
         typeof data?.studentBalance === "number" ? data.studentBalance : null,
+        { newPaymentId: typeof data?.newPayment?.id === "string" ? data.newPayment.id : null },
       );
       onOpenChange(false);
     } catch (err) {
       toast.error(
-        getErrorMessage(err, "To'lovni to'g'rilashda xatolik yuz berdi"),
+        getErrorMessage(err, t("To'lovni to'g'rilashda xatolik yuz berdi")),
       );
     } finally {
       setSubmitting(false);
     }
   };
 
-  const methodLabel =
-    PAYMENT_METHOD_LABELS[payment.method] ?? payment.method;
+  const methodLabel = methodText(payment.method);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !submitting && onOpenChange(o)}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>To&apos;lovni to&apos;g&apos;rilash</DialogTitle>
+          <DialogTitle>{t("To'lovni to'g'rilash")}</DialogTitle>
           <DialogDescription>
-            Noto&apos;g&apos;ri summa yoki to&apos;lov usuli kiritilgan
-            bo&apos;lsa, ularni shu yerda to&apos;g&apos;rilang. Eski to&apos;lov
-            bekor qilinadi va to&apos;g&apos;ri ma&apos;lumotlar bilan qayta qayd
-            etiladi.
+            {t("Noto'g'ri summa yoki to'lov usuli kiritilgan bo'lsa, ularni shu yerda to'g'rilang. Eski to'lov bekor qilinadi va to'g'ri ma'lumotlar bilan qayta qayd etiladi.")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="flex items-center justify-between rounded-lg border bg-muted/40 p-3 text-sm">
             <span className="text-muted-foreground">
-              Joriy summa ({methodLabel})
+              {t("Joriy summa ({method})", { method: methodLabel })}
             </span>
             <span className="font-semibold">
-              {formatPrice(payment.amount)} so&apos;m
+              {formatPrice(payment.amount)} {t("so'm")}
             </span>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="correct-amount">To&apos;g&apos;ri summa</Label>
+            <Label htmlFor="correct-amount">{t("To'g'ri summa")}</Label>
             <PriceInput
               id="correct-amount"
               value={amount}
@@ -147,13 +159,13 @@ export function CorrectPaymentDialog({
             />
             {rawAmount > 0 && rawAmount < 1000 && (
               <p className="text-xs text-destructive">
-                Minimal summa — 1 000 so&apos;m
+                {t("Minimal summa — 1 000 so'm")}
               </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="correct-method">To&apos;lov usuli</Label>
+            <Label htmlFor="correct-method">{t("To'lov usuli")}</Label>
             <Select value={method} onValueChange={setMethod}>
               <SelectTrigger id="correct-method">
                 <SelectValue />
@@ -161,7 +173,7 @@ export function CorrectPaymentDialog({
               <SelectContent>
                 {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => (
                   <SelectItem key={value} value={value}>
-                    {label}
+                    {t(label)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -170,30 +182,29 @@ export function CorrectPaymentDialog({
 
           {noChange && (
             <p className="text-xs text-destructive">
-              Summa va to&apos;lov usuli o&apos;zgarmadi — kamida bittasini
-              o&apos;zgartiring
+              {t("Summa va to'lov usuli o'zgarmadi — kamida bittasini o'zgartiring")}
             </p>
           )}
 
           <div className="space-y-2">
             <Label htmlFor="correct-reason">
-              Sabab{" "}
+              {t("Sabab")}{" "}
               {reasonRequired ? (
                 <span className="text-destructive">*</span>
               ) : (
-                <span className="text-muted-foreground">(ixtiyoriy)</span>
+                <span className="text-muted-foreground">{t("(ixtiyoriy)")}</span>
               )}
             </Label>
             <Textarea
               id="correct-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Masalan: summa ortiqcha kiritilgan (4 000 000 o'rniga 400 000)"
+              placeholder={t("Masalan: summa ortiqcha kiritilgan (4 000 000 o'rniga 400 000)")}
               rows={3}
               maxLength={500}
             />
             <p className="text-xs text-muted-foreground">
-              Sabab o&apos;quvchi tarixiga yoziladi va direktorga bildiriladi.
+              {t("Sabab o'quvchi tarixiga yoziladi va direktorga bildiriladi.")}
             </p>
           </div>
         </div>
@@ -204,11 +215,11 @@ export function CorrectPaymentDialog({
             onClick={() => onOpenChange(false)}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit}>
             {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
-            To&apos;g&apos;rilash
+            {t("To'g'rilash")}
           </Button>
         </DialogFooter>
       </DialogContent>

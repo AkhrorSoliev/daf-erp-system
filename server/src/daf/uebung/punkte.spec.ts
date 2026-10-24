@@ -1,9 +1,14 @@
 import {
+  MAQSAD_BALL,
   PUNKTE_PRO_WORT,
+  maqsadDarajasi,
+  maqsadHolati,
   punkteFuer,
   serieAus,
   stufeFuer,
+  wochenStartTag,
   wochenStartUtc,
+  yangiBajarildi,
 } from './punkte';
 
 describe('punkteFuer', () => {
@@ -109,5 +114,93 @@ describe('serieAus', () => {
     expect(
       serieAus(['2026-09-06', '2026-09-06', '2026-09-05'], '2026-09-06'),
     ).toBe(2);
+  });
+});
+
+describe('wochenStartTag', () => {
+  it('Sunday 23:50 Tashkent still belongs to the week that began on Monday', () => {
+    // 2026-10-18 is a Sunday; 18:50Z = 23:50 Tashkent.
+    expect(wochenStartTag(new Date('2026-10-18T18:50:00Z'))).toBe('2026-10-12');
+  });
+
+  it('Monday 00:10 Tashkent starts the new week', () => {
+    // 2026-10-18T19:10Z = Monday 2026-10-19 00:10 Tashkent.
+    expect(wochenStartTag(new Date('2026-10-18T19:10:00Z'))).toBe('2026-10-19');
+  });
+
+  it('wochenStartUtc is the same Monday at 00:00 Tashkent', () => {
+    const jetzt = new Date('2026-10-15T08:00:00Z');
+    expect(wochenStartUtc(jetzt).toISOString()).toBe(
+      '2026-10-11T19:00:00.000Z',
+    );
+    expect(wochenStartTag(jetzt)).toBe('2026-10-12');
+  });
+});
+
+describe('kunlik maqsad', () => {
+  it('uch daraja: 40 / 80 / 160', () => {
+    expect(MAQSAD_BALL).toEqual({ YENGIL: 40, ORTA: 80, JIDDIY: 160 });
+  });
+
+  it("tanlov yo'q yoki noma'lum qiymat — O'RTA", () => {
+    expect(maqsadDarajasi(null)).toBe('ORTA');
+    expect(maqsadDarajasi(undefined)).toBe('ORTA');
+    expect(maqsadDarajasi('constructor')).toBe('ORTA');
+    expect(maqsadDarajasi('__proto__')).toBe('ORTA');
+    expect(maqsadDarajasi('KATTA')).toBe('ORTA');
+    expect(maqsadDarajasi('JIDDIY')).toBe('JIDDIY');
+  });
+
+  it('aynan maqsadga teng ball — bajarildi; bir ball kam — yo`q', () => {
+    expect(maqsadHolati('ORTA', 80, false)).toEqual({
+      daraja: 'ORTA',
+      ball: 80,
+      hozir: 80,
+      bajarildi: true,
+      bosh: false,
+    });
+    expect(maqsadHolati('ORTA', 79, false).bajarildi).toBe(false);
+  });
+
+  it('bosh + 0 ball — bajarildi (ball topib bo`lmaydi, ayb emas)', () => {
+    expect(maqsadHolati('JIDDIY', 0, true)).toMatchObject({
+      bajarildi: true,
+      bosh: true,
+      hozir: 0,
+    });
+  });
+});
+
+describe('yangiBajarildi', () => {
+  it('seans maqsadni kesib o`tdi', () => {
+    // Oldin 50, seans +40 → 90; maqsad 80.
+    expect(yangiBajarildi(80, 90, 40, false)).toBe(true);
+  });
+
+  it('aynan maqsadga yetdi — yangi', () => {
+    expect(yangiBajarildi(80, 80, 30, false)).toBe(true);
+  });
+
+  it('seansdan oldin ham bajarilgan edi — yangi emas', () => {
+    expect(yangiBajarildi(80, 120, 40, false)).toBe(false);
+    expect(yangiBajarildi(80, 110, 30, false)).toBe(false);
+  });
+
+  it('hali yetmadi — yangi emas', () => {
+    expect(yangiBajarildi(80, 70, 70, false)).toBe(false);
+  });
+
+  it('bir seansda bir necha chegara kesilsa ham faqat tanlangan maqsad hisoblanadi', () => {
+    // 30 → 170: 40, 80 va 160 dan o'tdi; maqsad 80 — bitta «yangi».
+    expect(yangiBajarildi(80, 170, 140, false)).toBe(true);
+    expect(yangiBajarildi(160, 170, 140, false)).toBe(true);
+  });
+
+  it('bosh holatda yutuq ko`rsatilmaydi', () => {
+    expect(yangiBajarildi(80, 90, 40, true)).toBe(false);
+  });
+
+  it('0 balli seans hech narsani kesmaydi', () => {
+    expect(yangiBajarildi(40, 40, 0, false)).toBe(false);
   });
 });

@@ -1,6 +1,8 @@
-import { createElement } from "react";
+import { createElement, type ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { I18nProvider } from "@/i18n/context";
+import ru from "@/i18n/dictionaries/ru";
 import { DepartureMoneyBlock } from "./departure-money-block";
 import type { DeparturePolicy, DeparturePreview } from "./departure-money";
 
@@ -119,6 +121,52 @@ describe("DepartureMoneyBlock", () => {
   it("says the figures could not be loaded instead of guessing", () => {
     expect(render({ preview: undefined, isError: true })).toContain(
       "Pul hisobini yuklab bo&#x27;lmadi",
+    );
+  });
+});
+
+describe("DepartureMoneyBlock in Russian", () => {
+  const inRussian = (
+    props: Partial<Parameters<typeof DepartureMoneyBlock>[0]> = {},
+  ) =>
+    renderToStaticMarkup(
+      createElement(
+        I18nProvider,
+        // `children` is the third argument (react/no-children-prop).
+        { initialLocale: "ru", initialDictionary: ru } as ComponentProps<typeof I18nProvider>,
+        createElement(DepartureMoneyBlock, {
+          preview: preview(),
+          isLoading: false,
+          isError: false,
+          policy: "STUDENT_CANCELLED" as DeparturePolicy,
+          onPolicyChange: () => {},
+          context: "removal",
+          ...props,
+        }),
+      ),
+    )
+      .replace(/&#x27;/g, "'")
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ");
+
+  it("translates the title, the options, the month facts and the consequence", () => {
+    const text = inRussian();
+    expect(text).toContain("Деньги (по договору)");
+    expect(text).toContain("Закончил уровень");
+    expect(text).toContain("Жалоба на качество");
+    expect(text).toContain("Октябрь: занятий — 3, 240");
+    expect(text).toContain("Договор, п. 6.2");
+    expect(text).toContain("Деньги не возвращаются");
+    // The data stays as it came.
+    expect(text).not.toContain("Pul");
+  });
+
+  it("translates the locked note and the failure line", () => {
+    expect(inRussian({ preview: preview({ mayChoosePolicy: false }) })).toContain(
+      "выбирает только директор или CEO",
+    );
+    expect(inRussian({ preview: undefined, isError: true })).toContain(
+      "Не удалось загрузить расчёт денег",
     );
   });
 });

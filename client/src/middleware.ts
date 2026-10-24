@@ -52,6 +52,13 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Teilnahmebestätigung verification pages (the QR on the paper) stay public
+  // on every other host, like the receipt pages above. The QR points at
+  // PUBLIC_BASE_URL (admin.*); the invoice./form. portals above rewrite /t/.
+  if (pathname.startsWith("/t/")) {
+    return NextResponse.next();
+  }
+
   // Public custom form pages — anyone with the slug can fill them out.
   if (pathname.startsWith("/f/")) {
     return NextResponse.next();

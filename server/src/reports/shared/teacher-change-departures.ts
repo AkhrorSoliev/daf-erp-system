@@ -11,7 +11,7 @@ import {
 
 /**
  * Who "left" within 5 lessons of a teacher change — the one reader behind the
- * retention card's count (`ReportsDepartedStudentsService`) and its drill-down
+ * retention card's count (`DepartedOverviewService`) and its drill-down
  * list (`ReportsTeacherChangesService`), so the two cannot disagree.
  *
  * The window runs from the change to the 5th distinct `Attendance` date after
@@ -112,12 +112,27 @@ export interface TeacherChangeDeparture {
 export async function loadTeacherChangeDepartures(
   prisma: PrismaService,
   companyId: number,
-  params: { scope: ReportBranchIds; start: Date; end: Date },
+  params: {
+    scope: ReportBranchIds;
+    start: Date;
+    end: Date;
+    /** Course and teacher filter of the report page; empty lists mean no filter. */
+    groupFilter?: { courseIds?: string[]; teacherIds?: number[] };
+  },
 ): Promise<{ changes: TeacherChange[]; departures: TeacherChangeDeparture[] }> {
+  const { courseIds, teacherIds } = params.groupFilter ?? {};
   const changes = await prisma.groupTeacherHistory.findMany({
     where: {
       createdAt: { gte: params.start, lt: params.end },
-      group: { companyId, deletedAt: null, ...branchIdWhere(params.scope) },
+      group: {
+        companyId,
+        deletedAt: null,
+        ...branchIdWhere(params.scope),
+        ...(courseIds?.length && { courseId: { in: courseIds } }),
+        ...(teacherIds?.length && {
+          teachers: { some: { teacherId: { in: teacherIds } } },
+        }),
+      },
     },
     select: {
       id: true,

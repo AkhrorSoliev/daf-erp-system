@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, ChevronDown, ChevronUp, PartyPopper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/context";
 import { useAuth } from "@/hooks/use-auth";
 import { useBranchReadiness } from "@/hooks/use-branch-readiness";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
@@ -23,6 +24,7 @@ import { canSeeLaunchJourney, resolveLaunchVisibility } from "./resolve-launch-v
  * when the card disappears lives in `resolveLaunchVisibility`, with tests.
  */
 export function BranchLaunchCard() {
+  const t = useT();
   const user = useAuth((s) => s.user);
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
@@ -84,17 +86,17 @@ export function BranchLaunchCard() {
   if (visibility === "celebrate") {
     const close = () => launchFlags.write(user.id, branchId, "celebrated", true);
     return (
-      <section className="rounded-xl border bg-card">
+      <section className="rounded-lg border bg-card">
         <div className="flex items-center gap-3 px-4 py-3">
-          <PartyPopper className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <PartyPopper className="size-5 shrink-0 text-success" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">Filial ishga tushdi</p>
+            <p className="text-sm font-medium">{t("Filial ishga tushdi")}</p>
             <p className="text-sm text-muted-foreground">
-              Guruh ochildi, o&apos;quvchilar yozildi va birinchi to&apos;lov qayd qilindi.
+              {t("Guruh ochildi, o'quvchilar yozildi va birinchi to'lov qayd qilindi.")}
             </p>
           </div>
           <Button size="sm" variant="outline" onClick={close}>
-            Yopish
+            {t("Yopish")}
           </Button>
         </div>
       </section>
@@ -114,8 +116,8 @@ export function BranchLaunchCard() {
       startSpotlight({
         route,
         targets: station.targets,
-        title: station.tourTitle,
-        body: station.tourBody,
+        title: t(station.tourTitle),
+        body: t(station.tourBody),
       });
     }
     router.push(route);
@@ -125,10 +127,10 @@ export function BranchLaunchCard() {
     launchFlags.write(user.id, branchId, "collapsed", !flags.collapsed);
 
   return (
-    <section className="rounded-xl border bg-card" aria-labelledby="launch-title">
+    <section className="rounded-lg border bg-card" aria-labelledby="launch-title">
       <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
         <h2 id="launch-title" className="text-sm font-semibold">
-          Filialni ishga tushirish
+          {t("Filialni ishga tushirish")}
         </h2>
         <div className="flex items-center gap-2">
           <span className="text-sm tabular-nums text-muted-foreground">
@@ -140,7 +142,7 @@ export function BranchLaunchCard() {
             className="size-7"
             onClick={toggleCollapsed}
             aria-expanded={!flags.collapsed}
-            aria-label={flags.collapsed ? "Xaritani ochish" : "Xaritani yig'ish"}
+            aria-label={flags.collapsed ? t("Xaritani ochish") : t("Xaritani yig'ish")}
           >
             {flags.collapsed ? <ChevronDown className="size-4" /> : <ChevronUp className="size-4" />}
           </Button>
@@ -165,13 +167,13 @@ export function BranchLaunchCard() {
             <div className="flex flex-col gap-3 rounded-lg bg-muted/40 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0 text-sm">
                 <p>
-                  <span className="text-muted-foreground">Keyingi: </span>
+                  <span className="text-muted-foreground">{t("Keyingi:")} </span>
                   {journey.current.hint}
                 </p>
                 {journey.current.details.length > 0 && (
                   <p className="mt-1 text-muted-foreground">
                     {journey.current.details
-                      .map((d) => (d.ceoOnly ? `${d.name} (CEO belgilaydi)` : d.name))
+                      .map((d) => (d.ceoOnly ? t("{name} (CEO belgilaydi)", { name: d.name }) : d.name))
                       .join(", ")}
                   </p>
                 )}
@@ -181,13 +183,13 @@ export function BranchLaunchCard() {
                 className="shrink-0"
                 onClick={() => go(journey.current!.station)}
               >
-                {journey.current.station.action}
+                {t(journey.current.station.action)}
               </Button>
             </div>
           )}
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-3 text-sm">
-            <span className="text-muted-foreground">Qo&apos;shimcha:</span>
+            <span className="text-muted-foreground">{t("Qo'shimcha:")}</span>
             {journey.extras.map((x) => (
               <button
                 key={x.station.key}
@@ -197,11 +199,11 @@ export function BranchLaunchCard() {
                 className="inline-flex items-center gap-1.5 hover:underline"
               >
                 {x.ok ? (
-                  <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <Check className="size-3.5 text-success" />
                 ) : (
                   <span className="size-1.5 rounded-full bg-muted-foreground/50" />
                 )}
-                {x.station.short}
+                {t(x.station.short)}
               </button>
             ))}
           </div>
@@ -222,6 +224,7 @@ function StationStop({
   isLast: boolean;
   onClick: () => void;
 }) {
+  const t = useT();
   const { state, station } = item;
   return (
     <li className="relative">
@@ -242,7 +245,7 @@ function StationStop({
           className={cn(
             "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-medium",
             state === "done" &&
-              "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400",
+              "bg-success/10 text-success",
             state === "current" && "bg-primary/10 text-primary ring-2 ring-primary",
             state === "todo" && "border bg-background text-muted-foreground",
           )}
@@ -255,7 +258,7 @@ function StationStop({
             state === "current" ? "font-medium text-foreground" : "text-muted-foreground",
           )}
         >
-          {station.short}
+          {t(station.short)}
         </span>
       </button>
     </li>

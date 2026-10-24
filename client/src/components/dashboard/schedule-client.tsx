@@ -10,10 +10,13 @@
 import { useCallback, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { format, isToday } from "date-fns";
+import { addDays, format, isToday } from "date-fns";
 import {
+  CalendarClock,
   CalendarDays,
   CalendarX,
+  ChevronLeft,
+  ChevronRight,
   DoorOpen,
   GraduationCap,
   LayoutGrid,
@@ -32,9 +35,18 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useAuth } from "@/hooks/use-auth";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
+import { isTeacherOnly } from "@/lib/teacher-only";
 import { DashboardDailySchedule } from "./dashboard-daily-schedule";
+import { TeacherLessonCards } from "./teacher-lesson-cards";
+import { UpcomingGroups } from "./upcoming-groups";
 import type { DashboardLesson } from "./dashboard-daily-schedule";
 import { DashboardRoomOccupancy } from "./dashboard-room-occupancy";
+import {
+  isPlacedPlanned,
+  PlannedGroupsList,
+  type PlannedLesson,
+} from "./dashboard-planned-groups";
 import { DashboardScheduleSkeleton } from "./dashboard-schedule-skeleton";
 
 interface Room {
@@ -45,6 +57,8 @@ interface Room {
 
 interface TodayScheduleResponse {
   lessons: DashboardLesson[];
+  /** Ochilishi rejalashtirilgan guruhlar (dars hisobiga kirmaydi). */
+  plannedLessons?: PlannedLesson[];
   rooms: Room[];
   workingHours: { start: string; end: string };
   isHoliday: boolean;
@@ -53,13 +67,18 @@ interface TodayScheduleResponse {
 }
 
 export function ScheduleClient() {
+  const t = useT();
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
   const branchLoaded = useBranchSwitcher((s) => s.loaded);
   const user = useAuth((s) => s.user);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const scheduleView = searchParams.get("view") === "list" ? "list" : "grid";
+  const isTeacher = isTeacherOnly(user?.roles);
+  // The room grid is for whoever plans rooms. A teacher's day is a list of
+  // their own lessons, so for them the list is the only view.
+  const scheduleView =
+    isTeacher || searchParams.get("view") === "list" ? "list" : "grid";
 
   const handleViewChange = useCallback(
     (view: string) => {
@@ -74,9 +93,16 @@ export function ScheduleClient() {
     },
     [pathname, router, searchParams],
   );
-  const isTeacher =
-    user?.roles.some((r) => r.id === 4) &&
-    !user?.roles.some((r) => [1, 2, 3].includes(r.id));
+
+  // Rejadagi guruhlar standart holatda ko'rinadi; ?rejada=0 — yashirish.
+  const showPlannedParam = searchParams.get("rejada") !== "0";
+  const handlePlannedToggle = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (showPlannedParam) params.set("rejada", "0");
+    else params.delete("rejada");
+    const qs = params.toString();
+    router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+  }, [pathname, router, searchParams, showPlannedParam]);
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const isTodaySelected = isToday(selectedDate);
@@ -114,9 +140,23 @@ export function ScheduleClient() {
     if (!data) return [];
     if (!isTeacher || !user) return data.lessons;
     return data.lessons.filter((l) =>
-      l.teachers.some((t) => t.id === user.id)
+      l.teachers.some((teacher) => teacher.id === user.id)
     );
   }, [data, isTeacher, user]);
+
+  // O'qituvchi rejadagi guruhlarni ko'rmaydi (server ham bermaydi).
+  const allPlanned = useMemo(
+    () => (isTeacher ? [] : (data?.plannedLessons ?? [])),
+    [data, isTeacher],
+  );
+  const planned = useMemo(
+    () => (showPlannedParam ? allPlanned : []),
+    [showPlannedParam, allPlanned],
+  );
+  const unplacedPlanned = useMemo(
+    () => planned.filter((p) => !isPlacedPlanned(p)),
+    [planned],
+  );
 
   // Stats computed from teacher's own lessons or all lessons
   const stats = useMemo(() => {
@@ -133,7 +173,7 @@ export function ScheduleClient() {
       data.lessons.filter((l) => l.roomId).map((l) => l.roomId)
     );
     const teacherIds = new Set(
-      data.lessons.flatMap((l) => l.teachers.map((t) => t.id))
+      data.lessons.flatMap((l) => l.teachers.map((teacher) => teacher.id))
     );
     return {
       busyRooms: busyRoomIds.size,
@@ -144,6 +184,14 @@ export function ScheduleClient() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="Oldingi kun"
+          onClick={() => setSelectedDate((d) => addDays(d, -1))}
+        >
+          <ChevronLeft className="size-4" />
+        </Button>
         {!isTodaySelected && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -155,7 +203,7 @@ export function ScheduleClient() {
                 <RotateCcw className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Bugunga qaytish</TooltipContent>
+            <TooltipContent>{t("Bugunga qaytish")}</TooltipContent>
           </Tooltip>
         )}
         <DatePicker
@@ -163,15 +211,25 @@ export function ScheduleClient() {
           onChange={(d) => d && setSelectedDate(d)}
           className="w-auto"
         />
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="Keyingi kun"
+          onClick={() => setSelectedDate((d) => addDays(d, 1))}
+        >
+          <ChevronRight className="size-4" />
+        </Button>
       </div>
 
       {needsBranchPick && (
         <div className="rounded-lg border border-dashed p-8 text-center">
-          <p className="text-sm font-medium">Kunlik jadval uchun filial tanlang</p>
+          <p className="text-sm font-medium">
+            {t("Kunlik jadval uchun filial tanlang")}
+          </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Jadval bitta filialning xonalari va ish vaqti bo&apos;yicha
-            chiziladi, shuning uchun &laquo;Barcha filiallar&raquo; ko&apos;rinishida
-            ko&apos;rsatilmaydi. Yuqoridagi almashtirgichdan filialni tanlang.
+            {t(
+              "Jadval bitta filialning xonalari va ish vaqti bo'yicha chiziladi, shuning uchun «Barcha filiallar» ko'rinishida ko'rsatilmaydi. Yuqoridagi almashtirgichdan filialni tanlang.",
+            )}
           </p>
         </div>
       )}
@@ -184,8 +242,10 @@ export function ScheduleClient() {
             <div>
               <p className="font-medium text-orange-800 dark:text-orange-300">
                 {isTodaySelected
-                  ? "Bugun dam olish kuni"
-                  : `${format(selectedDate, "dd.MM.yyyy")} — dam olish kuni`}
+                  ? t("Bugun dam olish kuni")
+                  : t("{date} — dam olish kuni", {
+                      date: format(selectedDate, "dd.MM.yyyy"),
+                    })}
               </p>
               {data.holidayName && (
                 <p className="text-sm text-orange-600 dark:text-orange-400">
@@ -209,7 +269,7 @@ export function ScheduleClient() {
                   <CalendarDays className="text-muted-foreground size-4 shrink-0" />
                   <div className="min-w-0">
                     <p className="text-muted-foreground text-xs truncate">
-                      {isTeacher ? "Darslarim" : "Darslar"}
+                      {isTeacher ? t("Darslarim") : t("Darslar")}
                     </p>
                     <p className="text-base sm:text-lg font-semibold">
                       {stats.lessonsCount}
@@ -219,8 +279,8 @@ export function ScheduleClient() {
               </TooltipTrigger>
               <TooltipContent>
                 {isTeacher
-                  ? "Tanlangan kundagi darslaringiz soni"
-                  : "Tanlangan kundagi darslar soni"}
+                  ? t("Tanlangan kundagi darslaringiz soni")
+                  : t("Tanlangan kundagi darslar soni")}
               </TooltipContent>
             </Tooltip>
 
@@ -230,7 +290,7 @@ export function ScheduleClient() {
                   <Users className="text-muted-foreground size-4 shrink-0" />
                   <div className="min-w-0">
                     <p className="text-muted-foreground text-xs truncate">
-                      {isTeacher ? "O'quvchilarim" : "Jami o'quvchilar"}
+                      {isTeacher ? t("O'quvchilarim") : t("Jami o'quvchilar")}
                     </p>
                     <p className="text-base sm:text-lg font-semibold">
                       {stats.studentsCount}
@@ -240,8 +300,8 @@ export function ScheduleClient() {
               </TooltipTrigger>
               <TooltipContent>
                 {isTeacher
-                  ? "Tanlangan kundagi darslaringizdagi jami o'quvchilar"
-                  : "Tanlangan kundagi darslardagi jami o'quvchilar"}
+                  ? t("Tanlangan kundagi darslaringizdagi jami o'quvchilar")
+                  : t("Tanlangan kundagi darslardagi jami o'quvchilar")}
               </TooltipContent>
             </Tooltip>
 
@@ -253,7 +313,7 @@ export function ScheduleClient() {
                       <DoorOpen className="text-muted-foreground size-4 shrink-0" />
                       <div className="min-w-0">
                         <p className="text-muted-foreground text-xs truncate">
-                          Band xonalar
+                          {t("Band xonalar")}
                         </p>
                         <p className="text-base sm:text-lg font-semibold">
                           {adminStats.busyRooms}
@@ -262,7 +322,7 @@ export function ScheduleClient() {
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    Kamida bitta dars rejalashtirilgan xonalar
+                    {t("Kamida bitta dars rejalashtirilgan xonalar")}
                   </TooltipContent>
                 </Tooltip>
 
@@ -272,7 +332,7 @@ export function ScheduleClient() {
                       <GraduationCap className="text-muted-foreground size-4 shrink-0" />
                       <div className="min-w-0">
                         <p className="text-muted-foreground text-xs truncate">
-                          O&apos;qituvchilar
+                          {t("O'qituvchilar")}
                         </p>
                         <p className="text-base sm:text-lg font-semibold">
                           {adminStats.teachersCount}
@@ -281,7 +341,7 @@ export function ScheduleClient() {
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    Tanlangan kunda dars beruvchi o&apos;qituvchilar soni
+                    {t("Tanlangan kunda dars beruvchi o'qituvchilar soni")}
                   </TooltipContent>
                 </Tooltip>
               </>
@@ -298,20 +358,47 @@ export function ScheduleClient() {
               <h2 className="flex items-center gap-2 text-sm font-semibold">
                 <CalendarDays className="size-4 text-muted-foreground" />
                 {isTodaySelected
-                  ? "Bugungi darslar"
-                  : `${format(selectedDate, "dd.MM.yyyy")} darslar`}
+                  ? t("Bugungi darslar")
+                  : t("{date} darslar", {
+                      date: format(selectedDate, "dd.MM.yyyy"),
+                    })}
                 <span className="text-xs font-normal text-muted-foreground">
                   ({myLessons.length})
                 </span>
               </h2>
-              <TabsList>
-                <TabsTrigger value="grid">
-                  <LayoutGrid className="size-3.5 mr-1" /> Grid
-                </TabsTrigger>
-                <TabsTrigger value="list">
-                  <List className="size-3.5 mr-1" /> Ro&apos;yxat
-                </TabsTrigger>
-              </TabsList>
+              {!isTeacher && (
+                <div className="flex items-center gap-2">
+                  {allPlanned.length > 0 && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={showPlannedParam ? "secondary" : "outline"}
+                          aria-pressed={showPlannedParam}
+                          onClick={handlePlannedToggle}
+                        >
+                          <CalendarClock className="size-3.5" />
+                          {t("Rejadagi guruhlar")} ({allPlanned.length})
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {t(
+                          "Ochilishi rejalashtirilgan guruhlarni jadvalda ko'rsatish",
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                <TabsList>
+                  <TabsTrigger value="grid">
+                    <LayoutGrid className="size-3.5 mr-1" /> {t("Grid")}
+                  </TabsTrigger>
+                  <TabsTrigger value="list">
+                    <List className="size-3.5 mr-1" /> {t("Ro'yxat")}
+                  </TabsTrigger>
+                </TabsList>
+                </div>
+              )}
             </div>
             <TabsContent value="grid" className="p-3 mt-0">
               <DashboardRoomOccupancy
@@ -321,18 +408,41 @@ export function ScheduleClient() {
                 isTeacher={isTeacher}
                 isToday={isTodaySelected}
                 date={dateParam}
+                planned={planned}
               />
+              {unplacedPlanned.length > 0 && (
+                <div className="mt-3">
+                  <PlannedGroupsList
+                    items={unplacedPlanned}
+                    title={t("Vaqti yoki xonasi belgilanmagan")}
+                  />
+                </div>
+              )}
             </TabsContent>
             <TabsContent value="list" className="mt-0">
-              <DashboardDailySchedule
-                lessons={myLessons}
-                isToday={isTodaySelected}
-                date={dateParam}
-              />
+              {isTeacher ? (
+                <TeacherLessonCards lessons={myLessons} isToday={isTodaySelected} />
+              ) : (
+                <DashboardDailySchedule
+                  lessons={myLessons}
+                  isToday={isTodaySelected}
+                  date={dateParam}
+                />
+              )}
+              {planned.length > 0 && (
+                <div className="p-3">
+                  <PlannedGroupsList
+                    items={planned}
+                    title={t("Rejadagi guruhlar")}
+                  />
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </>
       )}
+
+      {isTeacher && <UpcomingGroups />}
     </div>
   );
 }

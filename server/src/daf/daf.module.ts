@@ -13,9 +13,16 @@ import { KursSeedService } from './kurs/kurs-seed.service';
 import { InhaltSeedService } from './inhalt/inhalt-seed.service';
 import { UebungService } from './uebung/uebung.service';
 import { FortschrittService } from './fortschritt/fortschritt.service';
+import { LigaCron } from './liga/liga.cron';
+import { MusobaqaUstozController } from './ustoz/musobaqa-ustoz.controller';
+import { MusobaqaUstozService } from './ustoz/musobaqa-ustoz.service';
 
 @Module({
-  controllers: [DafPortalController, DafMediaController],
+  controllers: [
+    DafPortalController,
+    DafMediaController,
+    MusobaqaUstozController,
+  ],
   providers: [
     DafPortalReadService,
     DafAttemptService,
@@ -29,6 +36,8 @@ import { FortschrittService } from './fortschritt/fortschritt.service';
     InhaltSeedService,
     UebungService,
     FortschrittService,
+    LigaCron,
+    MusobaqaUstozService,
   ],
   exports: [DafSeedService, FortschrittService],
 })

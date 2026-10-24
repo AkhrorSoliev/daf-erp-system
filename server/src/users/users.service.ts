@@ -58,7 +58,6 @@ const userSelect = {
   phone: true,
   photo: true,
   gender: true,
-  balance: true,
   login: true,
   position: true,
   companyId: true,
@@ -363,6 +362,7 @@ export class UsersService {
     query: UserQueryDto,
     companyId: number,
     scope: ReportBranchIds,
+    includeBalance = false,
   ) {
     const { user_type, search, active_only, page = 1, pageSize = 10 } = query;
     const skip = (page - 1) * pageSize;
@@ -425,7 +425,7 @@ export class UsersService {
     // enough (hundreds, not thousands) that this stays fast.
     const allRows = await this.prisma.user.findMany({
       where,
-      select: userSelect,
+      select: includeBalance ? { ...userSelect, balance: true } : userSelect,
     });
 
     const teacherIds = allRows
@@ -478,7 +478,12 @@ export class UsersService {
     return { data, total, page, pageSize };
   }
 
-  async findById(id: number, companyId: number, scope: ReportBranchIds) {
+  async findById(
+    id: number,
+    companyId: number,
+    scope: ReportBranchIds,
+    includeBalance = false,
+  ) {
     // `updateUser` was already branch-confined (`assertCallerMayTouchUser`)
     // because it can rewrite a password; the READ beside it was not, so one
     // branch's admin could still open another branch's employee record.
@@ -489,7 +494,7 @@ export class UsersService {
         deletedAt: null,
         AND: [userBranchWhere(scope)],
       },
-      select: userSelect,
+      select: includeBalance ? { ...userSelect, balance: true } : userSelect,
     });
 
     if (!user) {
@@ -530,6 +535,32 @@ export class UsersService {
     });
 
     return formatUser(updated);
+  }
+
+  /**
+   * Your own design skin (ADR-0101). A personal setting: written for the
+   * caller's row only and not recorded in the entity history.
+   */
+  async updateUiSkin(id: number, skin: string) {
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: { uiSkin: skin },
+      select: { uiSkin: true },
+    });
+    return { uiSkin: updated.uiSkin };
+  }
+
+  /**
+   * Your own interface language (ADR-0102). A personal setting: written for
+   * the caller's row only and not recorded in the entity history.
+   */
+  async updateUiLocale(id: number, locale: string) {
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: { uiLocale: locale },
+      select: { uiLocale: true },
+    });
+    return { uiLocale: updated.uiLocale };
   }
 
   /** Journal a password write on the employee record: who did it, and how. */
@@ -868,8 +899,12 @@ export class UsersService {
     if (dto.position !== undefined) updateData.position = dto.position.trim();
     if (dto.gender !== undefined) updateData.gender = dto.gender;
     if (dto.mainBranch !== undefined) updateData.mainBranch = dto.mainBranch;
-    if (dto.telegramChatId !== undefined)
+    if (dto.telegramChatId !== undefined) {
       updateData.telegramChatId = dto.telegramChatId;
+      // A different chat is a fresh start: the old chat's «blocked» mark is not
+      // the new one's (ADR-0097).
+      updateData.telegramDisconnectedAt = null;
+    }
     if (dto.status !== undefined) {
       updateData.status = dto.status;
       updateData.isActive = dto.status === UserStatus.ACTIVE;

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   SIGN_IN_BOUNCE_MS,
   STAFF_CABINET_HOME,
+  TEACHER_CABINET_HOME,
   bouncedAfterSignIn,
   clearMiniAppSignedIn,
   closeMiniApp,
@@ -221,6 +222,34 @@ describe("miniAppAudienceForHost (ADR-0045)", () => {
   });
 });
 
+describe("staffCabinetPath — the home of a role", () => {
+  const teacher = [{ id: 4 }];
+
+  it("opens a teacher's own groups when the bot names no page", () => {
+    expect(staffCabinetPath(null, teacher)).toBe(TEACHER_CABINET_HOME);
+    expect(staffCabinetPath(undefined, teacher)).toBe("/groups");
+    expect(staffCabinetPath("", teacher)).toBe("/groups");
+  });
+
+  it("opens the profile for everyone who is not a plain teacher", () => {
+    expect(staffCabinetPath(null, [{ id: 3 }])).toBe("/profile");
+    expect(staffCabinetPath(null, [{ id: 1 }])).toBe("/profile");
+    // A teacher who also manages is not a teacher-only user.
+    expect(staffCabinetPath(null, [{ id: 4 }, { id: 3 }])).toBe("/profile");
+  });
+
+  it("still opens the page the bot's menu names, whatever the role", () => {
+    expect(staffCabinetPath("/schedule", teacher)).toBe("/schedule");
+    expect(staffCabinetPath("/profile/salary", teacher)).toBe("/profile/salary");
+    expect(staffCabinetPath("/profile", teacher)).toBe("/profile");
+  });
+
+  it("falls back to the teacher's home, not the profile, on a page it will not follow", () => {
+    expect(staffCabinetPath("https://evil.example", teacher)).toBe("/groups");
+    expect(staffCabinetPath("/payments", teacher)).toBe("/groups");
+  });
+});
+
 describe("staffCabinetPath", () => {
   it("opens the profile when the bot names no page", () => {
     expect(staffCabinetPath(null)).toBe(STAFF_CABINET_HOME);
@@ -244,6 +273,22 @@ describe("staffCabinetPath", () => {
     "/payments",
     "/profile/../payments",
   ])("never follows %s — the profile instead", (next) => {
+    expect(staffCabinetPath(next)).toBe("/profile");
+  });
+
+  // «Ochish» on a task's Telegram card (ADR-0089).
+  it("opens one task by its uuid", () => {
+    const p = "/tasks?task=3f2b8c1e-9a4d-4e7b-8c2a-1d5e6f7a8b9c";
+    expect(staffCabinetPath(p)).toBe(p);
+  });
+
+  it.each([
+    "/tasks",
+    "/tasks?task=abc",
+    "/tasks?task=3f2b8c1e-9a4d-4e7b-8c2a-1d5e6f7a8b9c&x=1",
+    "//evil.com/tasks?task=3f2b8c1e-9a4d-4e7b-8c2a-1d5e6f7a8b9c",
+    "https://evil.com/tasks?task=3f2b8c1e-9a4d-4e7b-8c2a-1d5e6f7a8b9c",
+  ])("refuses %s", (next) => {
     expect(staffCabinetPath(next)).toBe("/profile");
   });
 });

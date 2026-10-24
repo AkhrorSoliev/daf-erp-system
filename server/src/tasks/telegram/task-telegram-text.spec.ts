@@ -2,7 +2,6 @@ import {
   dueLabel,
   esc,
   isSelfTask,
-  keptHeadline,
   parseTk,
   renderMyTasks,
   renderStepsMessage,
@@ -43,6 +42,7 @@ const view = (over: Partial<TgTaskView> = {}): TgTaskView => ({
     { userId: 50, role: 'WATCHER', name: 'Karimov B.' },
   ],
   steps,
+  history: [],
   ...over,
 });
 const labels = (m: TgMessage) => m.buttons.map((r) => r.map((b) => b.text));
@@ -50,7 +50,11 @@ const data = (m: TgMessage) =>
   m.buttons
     .flat()
     .map((b) =>
-      'callback_data' in b ? b.callback_data : 'url' in b ? b.url : '',
+      'callback_data' in b
+        ? b.callback_data
+        : 'web_app' in b
+          ? b.web_app.url
+          : '',
     );
 
 describe('renderTaskMessage (mockup s14)', () => {
@@ -61,18 +65,18 @@ describe('renderTaskMessage (mockup s14)', () => {
     });
     expect(m.text).toBe(
       [
-        '<b>Yangi topshiriq · Yuqori</b>',
-        'Oktabr reklama banneri uchun matn',
-        'Bergan: Soliyev A.',
-        'Muddat: 09.10, 18:00',
-        "Bog'liq: A1-3 guruh",
-        'Kichik qadamlar: 0/5',
+        '<b>🆕 Yangi topshiriq</b>',
+        '<blockquote><b>Oktabr reklama banneri uchun matn</b></blockquote>',
+        '👤 Bergan: Soliyev A.',
+        '⏰ 09.10, 18:00 · ⚡ Yuqori',
+        "🔗 Bog'liq: A1-3 guruh",
+        '☑️ Kichik qadamlar: 0/5',
       ].join('\n'),
     );
     expect(labels(m)).toEqual([
-      ['Boshladim', 'Bajardim'],
-      ['Qadamlar'],
-      ['Ochish'],
+      ['▶️ Boshladim', '✅ Bajardim'],
+      ['📋 Qadamlar'],
+      ['📂 Ochish'],
     ]);
     expect(data(m)).toEqual([
       `tk:start:${TASK}`,
@@ -82,34 +86,15 @@ describe('renderTaskMessage (mockup s14)', () => {
     ]);
   });
 
-  it('#1 after «Boshladim» the same headline, «Holat: Jarayonda», no «Boshladim»', () => {
-    const m = renderTaskMessage(
-      view({ status: 'IN_PROGRESS' }),
-      { kind: 'CARD', headline: 'Yangi topshiriq · Yuqori' },
-      40,
-      { now: NOW, openUrl: OPEN },
-    );
-    expect(m.text.split('\n')[0]).toBe('<b>Yangi topshiriq · Yuqori</b>');
-    expect(m.text).toContain('Holat: Jarayonda');
-    expect(labels(m)).toEqual([['Bajardim'], ['Qadamlar'], ['Ochish']]);
-  });
-
-  it('#2 a task confirmed with a photo: «Boshladim» only, and the photo line', () => {
+  it('#2 a task confirmed with a photo: «Bajardim» too (it asks for the photo), and the photo line', () => {
     const m = renderTaskMessage(
       view({ requiresPhoto: true, steps: [] }),
       { kind: 'ASSIGNED' },
       40,
       { now: NOW, openUrl: OPEN },
     );
-    expect(labels(m)).toEqual([['Boshladim'], ['Ochish']]);
-    expect(m.text).toContain('Rasm bilan tasdiqlanadi.');
-    const started = renderTaskMessage(
-      view({ requiresPhoto: true, steps: [], status: 'IN_PROGRESS' }),
-      { kind: 'CARD' },
-      40,
-      { now: NOW, openUrl: OPEN },
-    );
-    expect(labels(started)).toEqual([['Ochish']]);
+    expect(labels(m)).toEqual([['▶️ Boshladim', '✅ Bajardim'], ['📂 Ochish']]);
+    expect(m.text).toContain('📷 Rasm bilan tasdiqlanadi.');
   });
 
   it('#3 review to the author: who did it, «Qabul qilish» · «Qaytarish»', () => {
@@ -120,12 +105,15 @@ describe('renderTaskMessage (mockup s14)', () => {
       { now: NOW, openUrl: OPEN },
     );
     expect(m.text.split('\n').slice(0, 3)).toEqual([
-      '<b>Tekshiruvga keldi</b>',
-      'Oktabr reklama banneri uchun matn',
-      'Ijrochi: Rahimov A.',
+      '<b>📥 Tekshiruvga keldi</b>',
+      '<blockquote><b>Oktabr reklama banneri uchun matn</b>',
+      'Ijrochi: Rahimov A.</blockquote>',
     ]);
     expect(m.text).not.toContain('Bergan:');
-    expect(labels(m)).toEqual([['Qabul qilish', 'Qaytarish'], ['Ochish']]);
+    expect(labels(m)).toEqual([
+      ['✅ Qabul qilish', '↩️ Qaytarish'],
+      ['📂 Ochish'],
+    ]);
   });
 
   it('#4 returned: the reason, «Bajardim» again; accepted: thanks, «Ochish» only', () => {
@@ -141,7 +129,7 @@ describe('renderTaskMessage (mockup s14)', () => {
     );
     expect(back.text).toContain('Azizova M.: «Doska artilmagan, qayta qiling»');
     expect(back.text).toContain('Holat: Jarayonda');
-    expect(labels(back)).toEqual([['Bajardim'], ['Ochish']]);
+    expect(labels(back)).toEqual([['✅ Bajardim'], ['📂 Ochish']]);
     const ok = renderTaskMessage(
       view({ status: 'DONE' }),
       { kind: 'ACCEPTED', by: 'Azizova M.' },
@@ -149,9 +137,9 @@ describe('renderTaskMessage (mockup s14)', () => {
       { now: NOW, openUrl: OPEN },
     );
     expect(ok.text).toBe(
-      '<b>Qabul qilindi</b>\nOktabr reklama banneri uchun matn\nAzizova M. qabul qildi. Rahmat.',
+      '<b>✅ Qabul qilindi</b>\n<blockquote><b>Oktabr reklama banneri uchun matn</b>\nAzizova M. qabul qildi. Rahmat.</blockquote>',
     );
-    expect(labels(ok)).toEqual([['Ochish']]);
+    expect(labels(ok)).toEqual([['📂 Ochish']]);
   });
 
   it('#5 a comment', () => {
@@ -162,9 +150,9 @@ describe('renderTaskMessage (mockup s14)', () => {
       { now: NOW, openUrl: OPEN },
     );
     expect(m.text).toBe(
-      '<b>Yangi izoh</b>\nOktabr reklama banneri uchun matn\nSoliyev A.: «Narx 450 000 qoldimi?»',
+      '<b>💬 Yangi izoh</b>\n<blockquote><b>Oktabr reklama banneri uchun matn</b>\nSoliyev A.: «Narx 450 000 qoldimi?»</blockquote>',
     );
-    expect(labels(m)).toEqual([['Ochish']]);
+    expect(labels(m)).toEqual([['📂 Ochish']]);
   });
 
   it('#6 reminder to the assignee; overdue names the assignees for the author', () => {
@@ -177,16 +165,18 @@ describe('renderTaskMessage (mockup s14)', () => {
       now: new Date('2026-10-07T04:00:00.000Z'),
       openUrl: OPEN,
     });
-    expect(r.text.split('\n')[0]).toBe('<b>1 soatdan keyin muddat tugaydi</b>');
-    expect(r.text).toContain('Muddat: bugun, 10:00');
-    expect(labels(r)).toEqual([['Bajardim'], ['Ochish']]);
+    expect(r.text.split('\n')[0]).toBe(
+      '<b>⏰ 1 soatdan keyin muddat tugaydi</b>',
+    );
+    expect(r.text).toContain('⏰ bugun, 10:00 · ⚡ Yuqori');
+    expect(labels(r)).toEqual([['✅ Bajardim'], ['📂 Ochish']]);
     const late = renderTaskMessage(today, { kind: 'OVERDUE' }, 30, {
       now: NOW,
       openUrl: OPEN,
     });
-    expect(late.text).toContain("<b>Muddati o'tdi</b>");
+    expect(late.text).toContain("<b>⚠️ Muddati o'tdi</b>");
     expect(late.text).toContain('Ijrochi: Rahimov A.');
-    expect(labels(late)).toEqual([['Ochish']]);
+    expect(labels(late)).toEqual([['📂 Ochish']]);
     expect(
       renderTaskMessage(today, { kind: 'OVERDUE' }, 40, { now: NOW }).text,
     ).not.toContain('Ijrochi:');
@@ -200,20 +190,20 @@ describe('renderTaskMessage (mockup s14)', () => {
       renderTaskMessage(today, { kind: 'REMINDER' }, 40, {
         now: new Date(due.getTime() - msBefore),
       }).text.split('\n')[0];
-    expect(head(60 * MIN)).toBe('<b>1 soatdan keyin muddat tugaydi</b>');
-    expect(head(50 * MIN)).toBe('<b>1 soatdan keyin muddat tugaydi</b>');
-    expect(head(49 * MIN)).toBe('<b>Muddat tugashiga 49 daqiqa qoldi</b>');
-    expect(head(5 * MIN)).toBe('<b>Muddat tugashiga 5 daqiqa qoldi</b>');
+    expect(head(60 * MIN)).toBe('<b>⏰ 1 soatdan keyin muddat tugaydi</b>');
+    expect(head(50 * MIN)).toBe('<b>⏰ 1 soatdan keyin muddat tugaydi</b>');
+    expect(head(49 * MIN)).toBe('<b>⏰ Muddat tugashiga 49 daqiqa qoldi</b>');
+    expect(head(5 * MIN)).toBe('<b>⏰ Muddat tugashiga 5 daqiqa qoldi</b>');
     // rounded up, never below 1 (even a hair past the deadline)
-    expect(head(4 * MIN + 1)).toBe('<b>Muddat tugashiga 5 daqiqa qoldi</b>');
-    expect(head(30_000)).toBe('<b>Muddat tugashiga 1 daqiqa qoldi</b>');
-    expect(head(-MIN)).toBe('<b>Muddat tugashiga 1 daqiqa qoldi</b>');
+    expect(head(4 * MIN + 1)).toBe('<b>⏰ Muddat tugashiga 5 daqiqa qoldi</b>');
+    expect(head(30_000)).toBe('<b>⏰ Muddat tugashiga 1 daqiqa qoldi</b>');
+    expect(head(-MIN)).toBe('<b>⏰ Muddat tugashiga 1 daqiqa qoldi</b>');
     // no deadline: the plain headline
     expect(
       renderTaskMessage(view({ dueAt: null }), { kind: 'REMINDER' }, 40, {
         now: NOW,
       }).text.split('\n')[0],
-    ).toBe('<b>1 soatdan keyin muddat tugaydi</b>');
+    ).toBe('<b>⏰ 1 soatdan keyin muddat tugaydi</b>');
   });
 
   it('#7 to a watcher: done and cancelled', () => {
@@ -224,7 +214,7 @@ describe('renderTaskMessage (mockup s14)', () => {
       { now: NOW, openUrl: OPEN },
     );
     expect(done.text).toBe(
-      '<b>Bajarildi</b>\nOktabr reklama banneri uchun matn\nIjrochi: Rahimov A.\nQabul qildi: Soliyev A.',
+      '<b>✅ Bajarildi</b>\n<blockquote><b>Oktabr reklama banneri uchun matn</b>\nIjrochi: Rahimov A.\nQabul qildi: Soliyev A.</blockquote>',
     );
     const off = renderTaskMessage(
       view({ status: 'CANCELLED' }),
@@ -233,7 +223,7 @@ describe('renderTaskMessage (mockup s14)', () => {
       { now: NOW, openUrl: OPEN },
     );
     expect(off.text).toBe(
-      '<b>Bekor qilindi</b>\nOktabr reklama banneri uchun matn\nBekor qildi: Soliyev A.',
+      '<b>❌ Bekor qilindi</b>\n<blockquote><b>Oktabr reklama banneri uchun matn</b>\nBekor qildi: Soliyev A.</blockquote>',
     );
   });
 
@@ -245,9 +235,9 @@ describe('renderTaskMessage (mockup s14)', () => {
       { now: NOW, openUrl: OPEN },
     );
     expect(added.text.split('\n').slice(0, 3)).toEqual([
-      "<b>Siz topshiriqqa qo'shildingiz</b>",
-      'Oktabr reklama banneri uchun matn',
-      "Qo'shdi: Soliyev A.",
+      "<b>➕ Siz topshiriqqa qo'shildingiz</b>",
+      '<blockquote><b>Oktabr reklama banneri uchun matn</b>',
+      "Qo'shdi: Soliyev A.</blockquote>",
     ]);
     const removed = renderTaskMessage(
       view(),
@@ -256,7 +246,7 @@ describe('renderTaskMessage (mockup s14)', () => {
       { now: NOW, openUrl: OPEN },
     );
     expect(removed.text).toBe(
-      '<b>Topshiriqdan olib tashlandingiz</b>\nOktabr reklama banneri uchun matn\nOlib tashladi: Soliyev A.',
+      '<b>🚫 Topshiriqdan olib tashlandingiz</b>\n<blockquote><b>Oktabr reklama banneri uchun matn</b>\nOlib tashladi: Soliyev A.</blockquote>',
     );
     expect(removed.buttons).toEqual([]);
   });
@@ -273,18 +263,9 @@ describe('renderTaskMessage (mockup s14)', () => {
       40,
       { now: NOW, openUrl: OPEN },
     );
-    expect(m.text).toContain('Bergan: Tizim');
+    expect(m.text).toContain('👤 Bergan: Tizim');
     expect(m.text).toContain('Oldingi ijrochi: Azizova M.');
-    expect(labels(m)).toEqual([['Ochish']]);
-  });
-
-  it('a «Topshiriqlarim» card has the title as its headline', () => {
-    const m = renderTaskMessage(view(), { kind: 'CARD' }, 40, { now: NOW });
-    expect(m.text.split('\n')[0]).toBe(
-      '<b>Oktabr reklama banneri uchun matn</b>',
-    );
-    expect(m.text.split('\n')[1]).toBe('Bergan: Soliyev A.');
-    expect(labels(m)).toEqual([['Boshladim', 'Bajardim'], ['Qadamlar']]); // no URL → no «Ochish»
+    expect(labels(m)).toEqual([['📂 Ochish']]);
   });
 
   it('escapes HTML in every text that comes from people', () => {
@@ -314,13 +295,6 @@ describe('renderTaskMessage (mockup s14)', () => {
     );
     expect(done.text).toContain('Ijrochi: As &amp; B');
     expect(done.text).toContain('Qabul qildi: Q &lt;q&gt;');
-    const cardHeadline = renderTaskMessage(
-      view({ title: 'T & <U>' }),
-      { kind: 'CARD' },
-      40,
-      { now: NOW },
-    );
-    expect(cardHeadline.text.split('\n')[0]).toBe('<b>T &amp; &lt;U&gt;</b>');
     expect(esc('<a href="x">&</a>')).toBe('&lt;a href="x"&gt;&amp;&lt;/a&gt;');
   });
 
@@ -361,7 +335,7 @@ describe('renderStepsMessage (mockup s17)', () => {
       ['3. Dizaynerga yuborish'],
       ['4. Dizaynni tasdiqlatish'],
       ['5. Chop etishga berish'],
-      ['Orqaga'],
+      ['⬅️ Orqaga'],
     ]);
     expect(data(m)[0]).toBe('tk:step:step-1');
     expect(data(m)[5]).toBe(`tk:back:${TASK}`);
@@ -481,15 +455,6 @@ describe('helpers', () => {
     );
   });
 
-  it('keptHeadline keeps a notice headline, not a title or the step list', () => {
-    expect(keptHeadline('Yangi topshiriq · Yuqori\nX', 'X')).toBe(
-      'Yangi topshiriq · Yuqori',
-    );
-    expect(keptHeadline('X\nMuddat: …', 'X')).toBeUndefined();
-    expect(keptHeadline('Kichik qadamlar · 2/5\n…', 'X')).toBeUndefined();
-    expect(keptHeadline(undefined, 'X')).toBeUndefined();
-  });
-
   it('shortName, isSelfTask, returnedReply', () => {
     expect(shortName('Ahror', 'Soliyev')).toBe('Soliyev A.');
     expect(shortName('Ahror', '')).toBe('Ahror');
@@ -514,8 +479,11 @@ describe('helpers', () => {
       40,
       { now: NOW, openUrl: OPEN },
     );
-    expect(m.text.split('\n')[0]).toBe("<b>Tizim topshirig'i · Yuqori</b>");
-    expect(m.text).toContain('Bergan: Tizim');
-    expect(m.buttons).toEqual([[expect.objectContaining({ text: 'Ochish' })]]);
+    expect(m.text.split('\n')[0]).toBe("<b>🤖 Tizim topshirig'i</b>");
+    expect(m.text).toContain('👤 Bergan: Tizim');
+    expect(m.text).toContain('⚡ Yuqori');
+    expect(m.buttons).toEqual([
+      [expect.objectContaining({ text: '📂 Ochish' })],
+    ]);
   });
 });

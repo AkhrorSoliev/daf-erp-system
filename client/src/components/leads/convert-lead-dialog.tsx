@@ -29,6 +29,7 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useLeadsBoard, type LeadCard } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
 import { sortWeekdays, WEEKDAY_SHORT } from "@/lib/weekdays";
+import { useT } from "@/i18n/context";
 
 interface GroupTeacher {
   id: number;
@@ -61,6 +62,7 @@ function getDaysList(days: string | null, exactDays: string[]): string[] {
 }
 
 export function ConvertLeadDialog() {
+  const t = useT();
   const convertLead = useLeadsUi((s) => s.convertLead);
   const closeConvertLead = useLeadsUi((s) => s.closeConvertLead);
   const applyLeadRemove = useLeadsBoard((s) => s.applyLeadRemove);
@@ -70,6 +72,8 @@ export function ConvertLeadDialog() {
   const [groupId, setGroupId] = useState<string | null>(null);
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
+  const [groupsFailed, setGroupsFailed] = useState(false);
+  const [groupsReload, setGroupsReload] = useState(0);
   const [groupSearch, setGroupSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -95,6 +99,7 @@ export function ConvertLeadDialog() {
     }
     let cancelled = false;
     setLoadingGroups(true);
+    setGroupsFailed(false);
     (async () => {
       try {
         const { data } = await api.get("/groups", {
@@ -105,7 +110,10 @@ export function ConvertLeadDialog() {
         );
         if (!cancelled) setGroups(enrollable);
       } catch {
-        if (!cancelled) setGroups([]);
+        if (!cancelled) {
+          setGroups([]);
+          setGroupsFailed(true);
+        }
       } finally {
         if (!cancelled) setLoadingGroups(false);
       }
@@ -113,14 +121,14 @@ export function ConvertLeadDialog() {
     return () => {
       cancelled = true;
     };
-  }, [open, branchId]);
+  }, [open, branchId, groupsReload]);
 
   const filteredGroups = useMemo(() => {
     const q = groupSearch.trim().toLowerCase();
     if (!q) return groups;
     return groups.filter((g) => {
       const teacherNames = g.teachers
-        .map((t) => `${t.firstName} ${t.lastName}`)
+        .map((teacher) => `${teacher.firstName} ${teacher.lastName}`)
         .join(" ")
         .toLowerCase();
       return (
@@ -130,6 +138,12 @@ export function ConvertLeadDialog() {
       );
     });
   }, [groups, groupSearch]);
+
+  // Weekday abbreviations are msg() texts; an unknown key prints as it came.
+  function weekdayLabel(day: string): string {
+    const short = WEEKDAY_SHORT[day];
+    return short ? t(short) : day;
+  }
 
   function handleBranchChange(value: string) {
     setBranchId(value);
@@ -152,13 +166,13 @@ export function ConvertLeadDialog() {
       applyLeadRemove(convertLead.sectionId, convertLead.id);
       toast.success(
         groupId
-          ? "Lid o'quvchiga aylantirildi va guruhga qo'shildi"
-          : "Lid o'quvchiga aylantirildi",
+          ? t("Lid o'quvchiga aylantirildi va guruhga qo'shildi")
+          : t("Lid o'quvchiga aylantirildi"),
       );
       closeConvertLead();
     } catch (error) {
       toast.error(
-        getErrorMessage(error, "O'quvchiga aylantirishda xatolik yuz berdi"),
+        getErrorMessage(error, t("O'quvchiga aylantirishda xatolik yuz berdi")),
       );
     } finally {
       setSubmitting(false);
@@ -172,10 +186,11 @@ export function ConvertLeadDialog() {
     >
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
         <DialogHeader className="border-b px-6 py-4">
-          <DialogTitle>O&apos;quvchiga aylantirish</DialogTitle>
+          <DialogTitle>{t("O'quvchiga aylantirish")}</DialogTitle>
           <DialogDescription>
-            Lid ma&apos;lumotlari asosida yangi o&apos;quvchi yaratiladi va lid
-            &laquo;O&apos;quvchiga aylangan&raquo; holatiga o&apos;tadi.
+            {t(
+              "Lid ma'lumotlari asosida yangi o'quvchi yaratiladi va lid «O'quvchiga aylangan» holatiga o'tadi.",
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -183,11 +198,11 @@ export function ConvertLeadDialog() {
           {/* Branch */}
           <div className="space-y-1.5">
             <Label>
-              Filial <span className="text-destructive">*</span>
+              {t("Filial")} <span className="text-destructive">*</span>
             </Label>
             <Select value={branchId} onValueChange={handleBranchChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Filialni tanlang" />
+                <SelectValue placeholder={t("Filialni tanlang")} />
               </SelectTrigger>
               <SelectContent>
                 {branches.map((branch) => (
@@ -198,25 +213,25 @@ export function ConvertLeadDialog() {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Filial majburiy — filialsiz o&apos;quvchi hech bir filial
-              ro&apos;yxatida ko&apos;rinmaydi va undan to&apos;lov qabul qilib
-              bo&apos;lmaydi.
+              {t(
+                "Filial majburiy — filialsiz o'quvchi hech bir filial ro'yxatida ko'rinmaydi va undan to'lov qabul qilib bo'lmaydi.",
+              )}
             </p>
           </div>
 
           {/* Group */}
           <div className="space-y-1.5">
-            <Label>Guruh (ixtiyoriy)</Label>
+            <Label>{t("Guruh (ixtiyoriy)")}</Label>
             {!branchId ? (
               <p className="rounded-md border border-dashed px-3 py-4 text-center text-xs text-muted-foreground">
-                Guruh tanlash uchun avval filialni tanlang.
+                {t("Guruh tanlash uchun avval filialni tanlang.")}
               </p>
             ) : (
               <>
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    placeholder="Guruh nomi yoki ustoz bo'yicha qidirish..."
+                    placeholder={t("Guruh nomi yoki ustoz bo'yicha qidirish...")}
                     value={groupSearch}
                     onChange={(e) => setGroupSearch(e.target.value)}
                     className="pl-9"
@@ -231,11 +246,25 @@ export function ConvertLeadDialog() {
                         <Skeleton className="h-3 w-40" />
                       </div>
                     ))
+                  ) : groupsFailed ? (
+                    <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        {t("Yuklab bo'lmadi")}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setGroupsReload((k) => k + 1)}
+                      >
+                        {t("Qayta urinish")}
+                      </Button>
+                    </div>
                   ) : filteredGroups.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-6 text-center">
                       <Users className="mb-2 size-7 text-muted-foreground/40" />
                       <p className="text-sm text-muted-foreground">
-                        Bu filialda mos guruh topilmadi
+                        {t("Bu filialda mos guruh topilmadi")}
                       </p>
                     </div>
                   ) : (
@@ -283,7 +312,7 @@ export function ConvertLeadDialog() {
                                     key={d}
                                     className="flex size-5 items-center justify-center rounded bg-muted text-[10px] font-semibold"
                                   >
-                                    {WEEKDAY_SHORT[d] ?? d}
+                                    {weekdayLabel(d)}
                                   </span>
                                 ))}
                               </span>
@@ -298,7 +327,7 @@ export function ConvertLeadDialog() {
                           {group.teachers.length > 0 && (
                             <p className="truncate text-xs text-muted-foreground">
                               {group.teachers
-                                .map((t) => `${t.firstName} ${t.lastName}`)
+                                .map((teacher) => `${teacher.firstName} ${teacher.lastName}`)
                                 .join(", ")}
                             </p>
                           )}
@@ -308,9 +337,9 @@ export function ConvertLeadDialog() {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Guruh tanlansa, o&apos;quvchi shu guruhga qo&apos;shiladi.
-                  Tanlanmasa, keyinroq o&apos;quvchi sahifasida qo&apos;shsa
-                  bo&apos;ladi.
+                  {t(
+                    "Guruh tanlansa, o'quvchi shu guruhga qo'shiladi. Tanlanmasa, keyinroq o'quvchi sahifasida qo'shsa bo'ladi.",
+                  )}
                 </p>
               </>
             )}
@@ -324,7 +353,7 @@ export function ConvertLeadDialog() {
             onClick={closeConvertLead}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button
             type="button"
@@ -332,7 +361,7 @@ export function ConvertLeadDialog() {
             disabled={submitting || !branchId}
           >
             {submitting && <Loader2 className="size-4 animate-spin" />}
-            Aylantirish
+            {t("Aylantirish")}
           </Button>
         </DialogFooter>
       </DialogContent>

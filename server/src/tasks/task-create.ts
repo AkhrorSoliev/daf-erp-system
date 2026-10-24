@@ -84,6 +84,7 @@ export async function createCopiesTx(
         entityType: dto.entityType ?? null,
         entityId: dto.entityId ?? null,
         batchId: t.batchId,
+        requiresPhoto: dto.requiresPhoto === true,
         ...(t.recurrenceId ? { recurrenceId: t.recurrenceId } : {}),
         participants: {
           create: [

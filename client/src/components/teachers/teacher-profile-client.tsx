@@ -25,8 +25,10 @@ import { useCan } from "@/hooks/use-permissions";
 import { useEditTeacher, type TeacherData } from "@/hooks/use-edit-teacher";
 import { useIsMobile } from "@/hooks/use-mobile";
 import api from "@/lib/api";
+import { useT } from "@/i18n/context";
 
 export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
+  const t = useT();
   const setName = useBreadcrumbName((s) => s.setName);
   const canManageTeachers = useCan("teachers.manage");
   const canSeeSalary = useCan("salary.view");
@@ -38,7 +40,7 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
   const { openDrawer } = useEditTeacher();
   const [teacher, setTeacher] = useState<TeacherData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const handleTabChange = useCallback(
@@ -61,7 +63,7 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
       setTeacher(data);
       setName(teacherId, `${data.firstName} ${data.lastName}`);
     } catch {
-      setError("O'qituvchi topilmadi");
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -80,9 +82,9 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
   const handleDelete = () => {
     if (!teacher) return;
     router.push("/teachers");
-    toast.success("O'qituvchi muvaffaqiyatli o'chirildi");
+    toast.success(t("O'qituvchi muvaffaqiyatli o'chirildi"));
     api.delete(`/teachers/${teacher.id}`).catch(() => {
-      toast.error("O'chirishda xatolik yuz berdi");
+      toast.error(t("O'chirishda xatolik yuz berdi"));
     });
   };
 
@@ -97,8 +99,7 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
   if (error || !teacher) {
     return (
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold">O&apos;qituvchi topilmadi</h1>
-        <p className="text-muted-foreground">{error}</p>
+        <h1 className="text-2xl font-bold">{t("O'qituvchi topilmadi")}</h1>
       </div>
     );
   }
@@ -109,12 +110,12 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
     ? [
         {
           icon: <Pencil className="size-4" />,
-          label: "Tahrirlash",
+          label: t("Tahrirlash"),
           onClick: () => openDrawer(teacher),
         },
         {
           icon: <Trash2 className="size-4" />,
-          label: "O'chirish",
+          label: t("O'chirish"),
           onClick: () => setDeleteConfirmOpen(true),
           variant: "destructive" as const,
         },
@@ -123,10 +124,10 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
 
   const mobileInfoItems = [
     ...(teacher.gender
-      ? [{ label: "Jinsi", value: teacher.gender === "MALE" ? "Erkak" : "Ayol" }]
+      ? [{ label: t("Jinsi"), value: teacher.gender === "MALE" ? t("Erkak") : t("Ayol") }]
       : []),
-    ...(teacher.login ? [{ label: "Login", value: teacher.login }] : []),
-    { label: "Qo'shilgan", value: format(new Date(teacher.createdAt), "dd.MM.yyyy") },
+    ...(teacher.login ? [{ label: t("Login"), value: teacher.login }] : []),
+    { label: t("Qo'shilgan sana"), value: format(new Date(teacher.createdAt), "dd.MM.yyyy") },
   ];
 
   return (
@@ -178,19 +179,18 @@ export function TeacherProfileClient({ teacherId }: { teacherId: string }) {
           <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>O&apos;qituvchini o&apos;chirish</AlertDialogTitle>
+                <AlertDialogTitle>{t("O'qituvchini o'chirish")}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  &quot;{fullName}&quot; arxivga o&apos;tkaziladi. Keyinchalik
-                  arxivdan tiklash mumkin.
+                  {t("\"{name}\" arxivga o'tkaziladi. Keyinchalik arxivdan tiklash mumkin.", { name: fullName })}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                <AlertDialogCancel>{t("Bekor qilish")}</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleDelete}
                   variant="destructive"
                 >
-                  O&apos;chirish
+                  {t("O'chirish")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

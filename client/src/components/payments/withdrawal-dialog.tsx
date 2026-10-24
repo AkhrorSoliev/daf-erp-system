@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, AlertCircle } from "lucide-react";
 import toast from "react-hot-toast";
@@ -26,6 +26,7 @@ import {
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
+import { useT } from "@/i18n/context";
 import { currentMonthKey, monthLabel } from "./salary-utils";
 import { invalidateRefunds } from "./refunds/refunds-queries";
 import { TransferNote } from "./refunds/transfer-note";
@@ -63,6 +64,12 @@ export function WithdrawalDialog({
   studentName,
   onSuccess,
 }: Props) {
+  const t = useT();
+  // The preview effect reads t from here: a language switch must not refetch.
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
   const queryClient = useQueryClient();
   const [preview, setPreview] = useState<WithdrawalPreview | null>(null);
   const [loading, setLoading] = useState(false);
@@ -87,6 +94,7 @@ export function WithdrawalDialog({
 
   useEffect(() => {
     if (!open) return;
+    const t = tRef.current;
     setLoading(true);
     setLoadError(null);
     api
@@ -100,7 +108,7 @@ export function WithdrawalDialog({
       })
       .catch((err) => {
         setPreview(null);
-        setLoadError(getErrorMessage(err, "Ma'lumotlarni yuklashda xatolik"));
+        setLoadError(getErrorMessage(err, t("Ma'lumotlarni yuklashda xatolik")));
       })
       .finally(() => setLoading(false));
   }, [open, studentId, previewTick]);
@@ -110,12 +118,12 @@ export function WithdrawalDialog({
     mutationFn: (channel: "BOT" | "CALL") =>
       api.post(`/students/${studentId}/balance-notices`, { channel }),
     onSuccess: (_answer, channel) => {
-      toast.success(channel === "BOT" ? "Xabar yuborildi" : "Xabar qayd qilindi");
+      toast.success(channel === "BOT" ? t("Xabar yuborildi") : t("Xabar qayd qilindi"));
       invalidateRefunds(queryClient);
       setPreviewTick((n) => n + 1);
     },
     onError: (err) => {
-      toast.error(getErrorMessage(err, "Xabarni saqlab bo'lmadi"));
+      toast.error(getErrorMessage(err, t("Xabarni saqlab bo'lmadi")));
       invalidateRefunds(queryClient);
     },
   });
@@ -129,10 +137,10 @@ export function WithdrawalDialog({
     if (!preview) return [] as TeacherSuggestion[];
     const seen = new Set<number>();
     const out: TeacherSuggestion[] = [];
-    for (const t of preview.teacherSuggestions) {
-      if (seen.has(t.userId)) continue;
-      seen.add(t.userId);
-      out.push(t);
+    for (const suggestion of preview.teacherSuggestions) {
+      if (seen.has(suggestion.userId)) continue;
+      seen.add(suggestion.userId);
+      out.push(suggestion);
     }
     return out;
   }, [preview]);
@@ -154,14 +162,16 @@ export function WithdrawalDialog({
         reason: reason.trim() || undefined,
       });
       toast.success(
-        `${formatPrice(rawAmount)} so'm muvaffaqiyatli yechib olindi`,
+        t("{amount} so'm muvaffaqiyatli yechib olindi", {
+          amount: formatPrice(rawAmount),
+        }),
       );
       onOpenChange(false);
       resetForm();
       onSuccess?.();
       invalidateRefunds(queryClient);
     } catch (err) {
-      toast.error(getErrorMessage(err, "Yechib olishda xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("Yechib olishda xatolik yuz berdi")));
       invalidateRefunds(queryClient);
     } finally {
       setSubmitting(false);
@@ -179,7 +189,7 @@ export function WithdrawalDialog({
     >
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
         <DialogHeader className="border-b px-6 py-4">
-          <DialogTitle>Yechib olish</DialogTitle>
+          <DialogTitle>{t("Yechib olish")}</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
@@ -192,7 +202,7 @@ export function WithdrawalDialog({
           {loading && (
             <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
               <Loader2 className="size-4 animate-spin" />
-              Yuklanmoqda...
+              {t("Yuklanmoqda...")}
             </div>
           )}
 
@@ -208,16 +218,16 @@ export function WithdrawalDialog({
               <div className="space-y-2 rounded-md border bg-muted/30 p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">
-                    Hozirgi balans:
+                    {t("Hozirgi balans:")}
                   </span>
                   <span className="font-medium">
-                    {formatPrice(preview.currentBalance)} so&apos;m
+                    {formatPrice(preview.currentBalance)} {t("so'm")}
                   </span>
                 </div>
                 <div className="flex items-center justify-between border-t pt-2">
-                  <span className="font-medium">Yechilishi mumkin:</span>
+                  <span className="font-medium">{t("Yechilishi mumkin:")}</span>
                   <span className="text-lg font-bold text-amber-600">
-                    {formatPrice(preview.maxWithdrawable)} so&apos;m
+                    {formatPrice(preview.maxWithdrawable)} {t("so'm")}
                   </span>
                 </div>
               </div>
@@ -233,7 +243,7 @@ export function WithdrawalDialog({
                     disabled={giveNotice.isPending}
                     onClick={() => giveNotice.mutate("BOT")}
                   >
-                    Botga xabar yuborish
+                    {t("Botga xabar yuborish")}
                   </Button>
                   <Button
                     type="button"
@@ -242,7 +252,7 @@ export function WithdrawalDialog({
                     disabled={giveNotice.isPending}
                     onClick={() => giveNotice.mutate("CALL")}
                   >
-                    Qo&apos;ng&apos;iroq qilib aytildi
+                    {t("Qo'ng'iroq qilib aytildi")}
                   </Button>
                 </div>
               )}
@@ -251,13 +261,13 @@ export function WithdrawalDialog({
                 <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3">
                   <AlertCircle className="mt-0.5 size-4 shrink-0 text-amber-600" />
                   <p className="text-sm text-amber-700 dark:text-amber-400">
-                    Bu o&apos;quvchining yechib olishga pul mavjud emas.
+                    {t("Bu o'quvchining yechib olishga pul mavjud emas.")}
                   </p>
                 </div>
               )}
 
               <div className="space-y-2">
-                <Label>Yechib olish summasi</Label>
+                <Label>{t("Yechib olish summasi")}</Label>
                 <PriceInput
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
@@ -265,13 +275,15 @@ export function WithdrawalDialog({
                 />
                 {overMax && (
                   <p className="text-xs text-destructive">
-                    Maksimum {formatPrice(preview.maxWithdrawable)} so&apos;m
-                    yechib olish mumkin
+                    {t("Maksimum {amount} so'm yechib olish mumkin", {
+                      amount: formatPrice(preview.maxWithdrawable),
+                    })}
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Bu pul {monthLabel(currentMonthKey())} foydasiga
-                  qo&apos;shiladi.
+                  {t("Bu pul {month} foydasiga qo'shiladi.", {
+                    month: monthLabel(currentMonthKey(), t),
+                  })}
                 </p>
               </div>
 
@@ -279,10 +291,10 @@ export function WithdrawalDialog({
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label className="text-sm font-medium">
-                      Ustoz balansiga yozilsinmi?
+                      {t("Ustoz balansiga yozilsinmi?")}
                     </Label>
                     <p className="text-xs text-muted-foreground">
-                      Ustozning joriy oy oyligiga yoziladi.
+                      {t("Ustozning joriy oy oyligiga yoziladi.")}
                     </p>
                   </div>
                   <Switch
@@ -293,10 +305,10 @@ export function WithdrawalDialog({
                 </div>
                 {creditTeacher && (
                   <div className="mt-3 space-y-2">
-                    <Label>Ustoz</Label>
+                    <Label>{t("Ustoz")}</Label>
                     {teacherOptions.length === 0 ? (
                       <p className="text-xs text-destructive">
-                        O&apos;quvchining faol guruhlarida ustoz topilmadi.
+                        {t("O'quvchining faol guruhlarida ustoz topilmadi.")}
                       </p>
                     ) : (
                       <Select
@@ -304,15 +316,15 @@ export function WithdrawalDialog({
                         onValueChange={setTeacherUserId}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Ustozni tanlang" />
+                          <SelectValue placeholder={t("Ustozni tanlang")} />
                         </SelectTrigger>
                         <SelectContent>
-                          {teacherOptions.map((t) => (
+                          {teacherOptions.map((option) => (
                             <SelectItem
-                              key={t.userId}
-                              value={String(t.userId)}
+                              key={option.userId}
+                              value={String(option.userId)}
                             >
-                              {t.name} ({t.groupName})
+                              {option.name} ({option.groupName})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -323,9 +335,9 @@ export function WithdrawalDialog({
               </div>
 
               <div className="space-y-2">
-                <Label>Sabab (ixtiyoriy)</Label>
+                <Label>{t("Sabab (ixtiyoriy)")}</Label>
                 <Textarea
-                  placeholder="Yechib olish sababi..."
+                  placeholder={t("Yechib olish sababi...")}
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   rows={2}
@@ -345,7 +357,7 @@ export function WithdrawalDialog({
             }}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -361,7 +373,7 @@ export function WithdrawalDialog({
             }
           >
             {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
-            Yechib olish
+            {t("Yechib olish")}
           </Button>
         </DialogFooter>
       </DialogContent>

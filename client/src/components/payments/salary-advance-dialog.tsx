@@ -28,11 +28,12 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useAuth } from "@/hooks/use-auth";
+import { useT } from "@/i18n/context";
 import {
   EmployeeAdvanceSelect,
   type EmployeeOption,
 } from "./employee-advance-select";
-import { EXPENSE_METHOD_LABELS } from "./expenses-filter-bar";
+import { EXPENSE_METHOD_LABELS, methodLabel } from "./expenses/expenses-labels";
 import type { EditableAdvance } from "./advance-row-actions";
 import { isOwnPayrollLocked } from "./own-payroll";
 
@@ -69,6 +70,7 @@ export function SalaryAdvanceDialog({
   defaultDate,
   advance,
 }: Props) {
+  const t = useT();
   const { selectedBranch } = useBranchSwitcher();
   const user = useAuth((s) => s.user);
   const isEdit = !!advance;
@@ -140,7 +142,7 @@ export function SalaryAdvanceDialog({
           description: description.trim(),
           date: format(date, "yyyy-MM-dd"),
         });
-        toast.success("Avans yangilandi");
+        toast.success(t("Avans yangilandi"));
       } else {
         await api.post("/expenses", {
           category: "TEACHER_ADVANCE",
@@ -151,12 +153,12 @@ export function SalaryAdvanceDialog({
           relatedUserId: parseInt(relatedUserId, 10),
           branchId: selectedBranch?.id,
         });
-        toast.success("Avans qo'shildi");
+        toast.success(t("Avans qo'shildi"));
       }
       onOpenChange(false);
       onSaved();
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err, "Avansni saqlashda xatolik"));
+      toast.error(getErrorMessage(err, t("Avansni saqlashda xatolik")));
     } finally {
       setSubmitting(false);
     }
@@ -172,21 +174,21 @@ export function SalaryAdvanceDialog({
       <DialogContent className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>
-            {isEdit ? "Avansni tahrirlash" : "Avans qo'shish"}
+            {isEdit ? t("Avansni tahrirlash") : t("Avans qo'shish")}
           </DialogTitle>
         </DialogHeader>
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
           <div className="space-y-2">
-            <Label>Xodim</Label>
+            <Label>{t("Xodim")}</Label>
             {isEdit ? (
               <>
                 <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
                   {advance?.employeeName}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Xodim o&apos;zgarmaydi. Avans boshqa odamga yozilgan
-                  bo&apos;lsa — buni o&apos;chirib, to&apos;g&apos;ri xodimga
-                  yangi avans yozing.
+                  {t(
+                    "Xodim o'zgarmaydi. Avans boshqa odamga yozilgan bo'lsa — buni o'chirib, to'g'ri xodimga yangi avans yozing.",
+                  )}
                 </p>
               </>
             ) : (
@@ -200,14 +202,13 @@ export function SalaryAdvanceDialog({
                   loading={employeesLoading}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Avans keyingi oylik hisobida ushbu xodimning oyligidan
-                  avtomatik ushlab qolinadi
+                  {t("Avans keyingi oylik hisobida ushbu xodimning oyligidan avtomatik ushlab qolinadi")}
                 </p>
               </>
             )}
           </div>
           <div className="space-y-2">
-            <Label>To&apos;lov turi</Label>
+            <Label>{t("To'lov turi")}</Label>
             <Select
               value={paymentMethod}
               onValueChange={(v) => setPaymentMethod(v as "CASH" | "CARD")}
@@ -216,16 +217,16 @@ export function SalaryAdvanceDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(EXPENSE_METHOD_LABELS).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>
-                    {v}
+                {Object.keys(EXPENSE_METHOD_LABELS).map((code) => (
+                  <SelectItem key={code} value={code}>
+                    {methodLabel(code, t)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Summa</Label>
+            <Label>{t("Summa")}</Label>
             <div className="relative">
               <Input
                 placeholder="0"
@@ -235,30 +236,31 @@ export function SalaryAdvanceDialog({
                 className="pr-12"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                so&apos;m
+                {t("so'm")}
               </span>
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Izoh</Label>
+            <Label>{t("Izoh")}</Label>
             <Textarea
-              placeholder="Avans haqida..."
+              placeholder={t("Avans haqida...")}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
             />
           </div>
           <div className="space-y-2">
-            <Label>Sana</Label>
+            <Label>{t("Sana")}</Label>
             <DatePicker
               value={date}
               onChange={(d) => setDate(d ?? null)}
-              placeholder="Sanani tanlang"
+              placeholder={t("Sanani tanlang")}
             />
             {isEdit && (
               <p className="text-xs text-muted-foreground">
-                Sana o&apos;zgarsa avans hisobotlarda yangi kunga ko&apos;chadi,
-                Kassa oqimidagi harakat esa kiritilgan kunida qoladi.
+                {t(
+                  "Sana o'zgarsa avans hisobotlarda yangi kunga ko'chadi, Kassa oqimidagi harakat esa kiritilgan kunida qoladi.",
+                )}
               </p>
             )}
           </div>
@@ -269,11 +271,11 @@ export function SalaryAdvanceDialog({
             onClick={() => onOpenChange(false)}
             disabled={submitting}
           >
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit || submitting}>
             {submitting && <Loader2 className="size-4 animate-spin mr-2" />}
-            Saqlash
+            {t("Saqlash")}
           </Button>
         </DialogFooter>
       </DialogContent>

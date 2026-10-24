@@ -1,5 +1,6 @@
-import { PendingClient } from "@/components/payments/pending-client";
+import { redirect } from "next/navigation";
 
-export default function PendingPaymentsPage() {
-  return <PendingClient />;
+// «Kutilyotgan to'lovlar» was a debtor list: it opens «Qarzdorlik» (CEO, 11.10.2026).
+export default function PendingRedirect() {
+  redirect("/payments/debt");
 }

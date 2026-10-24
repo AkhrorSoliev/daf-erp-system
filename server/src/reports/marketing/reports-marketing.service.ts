@@ -15,12 +15,13 @@ import {
 import { DEBT_FLOOR_MONTH, enumerateMonths } from '../debt-history.util';
 import { isMonthlyBillingMonth } from '../month-charges';
 import { ReportsFinancialService } from '../reports-financial.service';
-import { ReportsDepartedStudentsService } from '../reports-departed-students.service';
+import { DepartedOverviewService } from '../departed/departed-overview.service';
 import { ReportsLeadFunnelService } from '../lead-funnel/reports-lead-funnel.service';
 import { FUNNEL_START_DATE } from '../lead-funnel/lead-funnel.math';
 import {
   lifetimeValue,
   marketingMonths,
+  sourceRows,
   type FirstPayment,
 } from './marketing.math';
 
@@ -29,7 +30,7 @@ import {
  * what they paid, the months before it back to the reporting floor, and the
  * lead-source cohort. Every figure comes from its single source — first
  * payments and spend read here once, the month charge from `getMonthCharges`,
- * the study months from `getDepartedStudentsSummary`, the sources from the
+ * the study months from `DepartedOverviewService.averageStudyMonths`, the sources from the
  * lead funnel's own cohort — and the arithmetic is `marketing.math.ts`.
  */
 @Injectable()
@@ -37,7 +38,7 @@ export class ReportsMarketingService {
   constructor(
     private prisma: PrismaService,
     private financial: ReportsFinancialService,
-    private departed: ReportsDepartedStudentsService,
+    private departed: DepartedOverviewService,
     private leadFunnel: ReportsLeadFunnelService,
   ) {}
 
@@ -57,7 +58,7 @@ export class ReportsMarketingService {
     const startDate = `${month}-01`;
     const endDate = addDaysToDateStr(`${addMonthsToMonthKey(month, 1)}-01`, -1);
 
-    const [firstPayments, expenses, departed, charges, sources] =
+    const [firstPayments, expenses, avgStudyMonths, charges, sources] =
       await Promise.all([
         // Every candidate student's FIRST completed payment and everything
         // paid since. A candidate is a live card in scope with at least one
@@ -89,10 +90,13 @@ export class ReportsMarketingService {
             },
             ...branchIdWhere(branchIds),
           },
-          select: { date: true, amount: true },
+          select: {
+            date: true,
+            amount: true,
+            leadSource: { select: { name: true } },
+          },
         }),
-        this.departed.getDepartedStudentsSummary(companyId, {
-          scope: branchIds,
+        this.departed.averageStudyMonths(companyId, branchIds, {
           startDate,
           endDate,
         }),
@@ -110,10 +114,18 @@ export class ReportsMarketingService {
       ]);
 
     const spendByMonth = new Map<string, number>();
+    // The asked month's spend by the channel it names (ADR-0109).
+    // ponytail: joined to the lead cohort by source NAME; give the funnel the
+    // source id if two live sources ever share a name.
+    const spendBySource = new Map<string, number>();
     for (const e of expenses) {
       // A calendar date stored at UTC midnight: its Tashkent day is the same date.
       const key = tashkentMonthKey(e.date);
       spendByMonth.set(key, (spendByMonth.get(key) ?? 0) + e.amount);
+      if (key === month && e.leadSource) {
+        const name = e.leadSource.name;
+        spendBySource.set(name, (spendBySource.get(name) ?? 0) + e.amount);
+      }
     }
     const firsts: FirstPayment[] = firstPayments.flatMap((r) =>
       r._min.createdAt
@@ -131,11 +143,42 @@ export class ReportsMarketingService {
       firstPayments: firsts,
     });
 
+    // What the lead cohort's paying people have paid so far. Not branch-scoped
+    // on purpose: the ids come from the cohort, which the funnel already scoped.
+    const cohortIds = [
+      ...new Set((sources ?? []).flatMap((s) => s.studentIds)),
+    ];
+    const paidByStudent = new Map<number, number>();
+    if (cohortIds.length > 0) {
+      const paidRows = await this.prisma.payment.groupBy({
+        by: ['studentId'],
+        where: {
+          companyId,
+          status: PaymentStatus.COMPLETED,
+          studentId: { in: cohortIds },
+        },
+        _sum: { amount: true },
+      });
+      for (const r of paidRows) {
+        paidByStudent.set(r.studentId, r._sum.amount ?? 0);
+      }
+    }
+    const bySource = sources
+      ? sourceRows({
+          sources,
+          spendBySource,
+          paidByStudent,
+          monthSpend: months[0].spend,
+        })
+      : null;
+
     return {
       ...months[0],
-      ltv: lifetimeValue(departed.avgDurationMonths, charges),
+      ltv: lifetimeValue(avgStudyMonths, charges),
       months,
-      sources,
+      sources: bySource?.rows ?? null,
+      sourcesTotal: bySource?.total ?? null,
+      unassignedSpend: bySource?.unassignedSpend ?? null,
     };
   }
 }

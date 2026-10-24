@@ -14,6 +14,7 @@ import {
 import { formatWeekdays } from "@/lib/weekdays";
 import type { StudentGroup } from "@/data/student-model";
 import { STATUS_MAP } from "./student-profile-tabs-utils";
+import { useT } from "@/i18n/context";
 
 export function StudentGroupCard({
   group,
@@ -22,10 +23,11 @@ export function StudentGroupCard({
   group: StudentGroup;
   onRemove?: (enrollmentId: string) => void;
 }) {
+  const t = useT();
   const status = STATUS_MAP[group.status] ?? STATUS_MAP[2];
 
   const daysLabel =
-    group.exactDays?.length > 0 ? formatWeekdays(group.exactDays) : null;
+    group.exactDays?.length > 0 ? formatWeekdays(group.exactDays, t) : null;
 
   const timeLabel =
     group.lessonStartTime && group.lessonEndTime
@@ -44,7 +46,7 @@ export function StudentGroupCard({
         {/* Row 1: Name + Status */}
         <div className="mb-3 flex items-center justify-between gap-2">
           <h4 className="font-semibold">{group.name}</h4>
-          <Badge variant={status.variant}>{status.label}</Badge>
+          <Badge variant={status.variant}>{t(status.label)}</Badge>
         </div>
 
         {/* Row 2: Course + Teacher */}
@@ -57,7 +59,7 @@ export function StudentGroupCard({
             <span className="flex items-center gap-1 text-muted-foreground">
               <UsersIcon className="size-3.5" />
               {group.teachers
-                .map((t) => `${t.firstName} ${t.lastName}`)
+                .map((teacher) => `${teacher.firstName} ${teacher.lastName}`)
                 .join(", ")}
             </span>
           )}
@@ -84,7 +86,7 @@ export function StudentGroupCard({
         {/* Row 4: Enrolled date + remove */}
         <div className="mt-2 border-t pt-2 flex items-center justify-between">
           <span className="text-xs text-muted-foreground">
-            Qo&apos;shilgan: {format(new Date(group.enrolledAt), "dd.MM.yyyy")}
+            {t("Qo'shilgan: {date}", { date: format(new Date(group.enrolledAt), "dd.MM.yyyy") })}
           </span>
           {onRemove && (
             <Tooltip>
@@ -99,10 +101,10 @@ export function StudentGroupCard({
                   }}
                 >
                   <UserMinus className="mr-1 size-3" />
-                  Chiqarish
+                  {t("Chiqarish")}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Guruhdan chiqarish</TooltipContent>
+              <TooltipContent>{t("Guruhdan chiqarish")}</TooltipContent>
             </Tooltip>
           )}
         </div>

@@ -6,7 +6,7 @@ describe('ReportsMarketingService', () => {
     expense: { findMany: jest.fn() },
   };
   const financial = { getMonthCharges: jest.fn() };
-  const departed = { getDepartedStudentsSummary: jest.fn() };
+  const departed = { averageStudyMonths: jest.fn() };
   const leadFunnel = { getSourceBreakdown: jest.fn() };
   const service = new ReportsMarketingService(
     prisma as never,
@@ -19,31 +19,50 @@ describe('ReportsMarketingService', () => {
     jest.clearAllMocks();
     // 15.10.2026 10:00 in Tashkent.
     jest.useFakeTimers().setSystemTime(new Date('2026-10-15T05:00:00Z'));
-    prisma.payment.groupBy.mockResolvedValue([
-      {
-        studentId: 10001,
-        _min: { createdAt: new Date('2026-10-03T05:00:00Z') },
-        _sum: { amount: 900_000 },
-      },
-      {
-        studentId: 10002,
-        _min: { createdAt: new Date('2026-10-12T05:00:00Z') },
-        _sum: { amount: 450_000 },
-      },
-      {
-        studentId: 10003,
-        _min: { createdAt: new Date('2026-09-05T05:00:00Z') },
-        _sum: { amount: 1_350_000 },
-      },
-      {
-        studentId: 10004,
-        _min: { createdAt: new Date('2026-05-10T05:00:00Z') },
-        _sum: { amount: 2_000_000 },
-      },
-    ]);
+    prisma.payment.groupBy.mockImplementation(
+      (args: { where: { studentId?: unknown } }) =>
+        // The lead cohort's money (by student ids) or every first payment.
+        Promise.resolve(
+          args.where.studentId
+            ? [
+                { studentId: 10001, _sum: { amount: 900_000 } },
+                { studentId: 10002, _sum: { amount: 450_000 } },
+              ]
+            : [
+                {
+                  studentId: 10001,
+                  _min: { createdAt: new Date('2026-10-03T05:00:00Z') },
+                  _sum: { amount: 900_000 },
+                },
+                {
+                  studentId: 10002,
+                  _min: { createdAt: new Date('2026-10-12T05:00:00Z') },
+                  _sum: { amount: 450_000 },
+                },
+                {
+                  studentId: 10003,
+                  _min: { createdAt: new Date('2026-09-05T05:00:00Z') },
+                  _sum: { amount: 1_350_000 },
+                },
+                {
+                  studentId: 10004,
+                  _min: { createdAt: new Date('2026-05-10T05:00:00Z') },
+                  _sum: { amount: 2_000_000 },
+                },
+              ],
+        ),
+    );
     prisma.expense.findMany.mockResolvedValue([
-      { date: new Date('2026-10-01T00:00:00Z'), amount: 300_000 },
-      { date: new Date('2026-10-31T00:00:00Z'), amount: 100_000 },
+      {
+        date: new Date('2026-10-01T00:00:00Z'),
+        amount: 300_000,
+        leadSource: { name: 'Instagram' },
+      },
+      {
+        date: new Date('2026-10-31T00:00:00Z'),
+        amount: 100_000,
+        leadSource: null,
+      },
       { date: new Date('2026-09-15T00:00:00Z'), amount: 450_000 },
       { date: new Date('2026-05-02T00:00:00Z'), amount: 200_000 },
     ]);
@@ -56,11 +75,15 @@ describe('ReportsMarketingService', () => {
       students: 10,
       unpaidStudents: 0,
     });
-    departed.getDepartedStudentsSummary.mockResolvedValue({
-      avgDurationMonths: 3.4,
-    });
+    departed.averageStudyMonths.mockResolvedValue(3.4);
     leadFunnel.getSourceBreakdown.mockResolvedValue([
-      { source: 'Instagram', leads: 12, students: 3, rate: 25 },
+      {
+        source: 'Instagram',
+        leads: 12,
+        students: 2,
+        rate: 16.7,
+        studentIds: [10001, 10002],
+      },
     ]);
   });
 
@@ -89,8 +112,31 @@ describe('ReportsMarketingService', () => {
       roi: 3.38,
       transition: false,
       ltv: { value: 1_530_000, avgMonths: 3.4, monthlyCharge: 450_000 },
-      sources: [{ source: 'Instagram', leads: 12, students: 3, rate: 25 }],
+      // Instagram: 300 000 spent, two paying people who paid 1 350 000 so far.
+      sources: [
+        {
+          source: 'Instagram',
+          spend: 300_000,
+          leads: 12,
+          students: 2,
+          rate: 16.7,
+          cac: 150_000,
+          paid: 1_350_000,
+          roi: 4.5,
+        },
+      ],
+      // The whole month's 400 000, of which 100 000 names no source.
+      sourcesTotal: {
+        spend: 400_000,
+        leads: 12,
+        students: 2,
+        paid: 1_350_000,
+        cac: 200_000,
+        roi: 3.38,
+      },
+      unassignedSpend: 100_000,
     });
+    expect(r.sources?.[0]).not.toHaveProperty('studentIds');
     expect(r.months[1]).toMatchObject({
       month: '2026-09',
       spend: 450_000,
@@ -151,10 +197,13 @@ describe('ReportsMarketingService', () => {
         },
         branchId: { in: [4] },
       },
-      select: { date: true, amount: true },
+      select: {
+        date: true,
+        amount: true,
+        leadSource: { select: { name: true } },
+      },
     });
-    expect(departed.getDepartedStudentsSummary).toHaveBeenCalledWith(1001, {
-      scope: [4],
+    expect(departed.averageStudyMonths).toHaveBeenCalledWith(1001, [4], {
       startDate: '2026-10-01',
       endDate: '2026-10-31',
     });

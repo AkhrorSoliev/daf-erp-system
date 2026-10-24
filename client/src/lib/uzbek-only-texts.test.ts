@@ -2,14 +2,6 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  ATTENDANCE_KPI_TOOLTIPS,
-  ATTENDANCE_TABLE_TOOLTIPS,
-} from "@/components/reports/attendance/metric-helpers";
-import {
-  KPI_TOOLTIPS,
-  TABLE_TOOLTIPS,
-} from "@/components/reports/center-activity/metric-helpers";
-import {
   FIELD_TYPE_LABELS as LEAD_FIELD_TYPE_LABELS,
   customFormSchema,
   defaultFormFields,
@@ -28,25 +20,6 @@ import {
 // Status enum names and the English words the plan replaced.
 const ENGLISH =
   /\b(ACTIVE|FROZEN|DROPPED|TRANSFERRED|COMPLETED|PRESENT|ABSENT|KPI|enrollment|slots?|preview|submission|feature)\b/i;
-
-describe("report tooltips", () => {
-  it.each([
-    ["ATTENDANCE_KPI_TOOLTIPS", ATTENDANCE_KPI_TOOLTIPS],
-    ["ATTENDANCE_TABLE_TOOLTIPS", ATTENDANCE_TABLE_TOOLTIPS],
-    ["KPI_TOOLTIPS", KPI_TOOLTIPS],
-    ["TABLE_TOOLTIPS", TABLE_TOOLTIPS],
-  ])("%s carries no status enum name and no English jargon", (_name, tooltips) => {
-    for (const [key, text] of Object.entries(tooltips)) {
-      expect(text, key).not.toMatch(ENGLISH);
-    }
-  });
-
-  it("the retention tooltip says who counts in a group and who has left, in Uzbek", () => {
-    expect(ATTENDANCE_KPI_TOOLTIPS.retention).toContain(
-      "Guruhda hisoblanadi = faol yoki muzlatilgan. Ketgan = chiqdi, o'tkazildi yoki tugallangan.",
-    );
-  });
-});
 
 // Reads a component's source the way `home-money-cards.test.ts` does for the
 // tooltip a closed card hides. Whitespace is collapsed (JSX wraps its lines)
@@ -206,5 +179,65 @@ describe("the overview and marketing pages (B1)", () => {
 
   it.each(files)("%s carries no LTV, CAC or ROI", (file) => {
     expect(source(file)).not.toMatch(/\b(LTV|CAC|ROI)\b/);
+  });
+});
+
+// «Markaz faoliyati» (B7b): the page is drawn from the server's figures and
+// names none of the English words the old page used on screen.
+describe("the «Markaz faoliyati» page (B7b)", () => {
+  const dir = "reports/center-activity";
+  const files = readdirSync(join(__dirname, "..", "components", dir))
+    .filter((f) => f.endsWith(".tsx"))
+    .map((f) => `${dir}/${f}`);
+
+  it("finds the new files", () => {
+    expect(files.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it.each(files)("%s carries no English jargon", (file) => {
+    expect(source(file)).not.toMatch(ENGLISH);
+  });
+});
+
+// «Davomat» (B7c): the page is drawn from the server's figures and names none
+// of the English words the old page used on screen.
+describe("the «Davomat» page (B7c)", () => {
+  const dir = "reports/attendance";
+  // The components, plus `attendance-format.ts`, where most of the on-screen sentences are built.
+  const files = [
+    ...readdirSync(join(__dirname, "..", "components", dir))
+      .filter((f) => f.endsWith(".tsx"))
+      .map((f) => `${dir}/${f}`),
+    `${dir}/attendance-format.ts`,
+  ];
+
+  it("finds the new files", () => {
+    expect(files.length).toBeGreaterThanOrEqual(9);
+  });
+
+  it.each(files)("%s carries no English jargon", (file) => {
+    // `absent` is the server's field name in two code places (the chip key in attendance-card.tsx,
+    // `r.absent` in the missers dialog), never on screen; the enum name ABSENT and any other
+    // `absent` still fail.
+    expect(source(file).replace(/key: "absent"/g, "").replace(/\.absent\b/g, "")).not.toMatch(ENGLISH);
+  });
+});
+
+// «Bot hisoboti» (B7d): the page names none of the English words the old page used on screen.
+describe("the «Bot hisoboti» page (B7d)", () => {
+  const dir = "reports/bot";
+  const files = [
+    ...readdirSync(join(__dirname, "..", "components", dir))
+      .filter((f) => f.endsWith(".tsx"))
+      .map((f) => `${dir}/${f}`),
+    `${dir}/bot-report-format.ts`,
+  ];
+
+  it("finds the new files", () => {
+    expect(files.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it.each(files)("%s carries no English jargon", (file) => {
+    expect(source(file)).not.toMatch(ENGLISH);
   });
 });
