@@ -354,10 +354,18 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       undefined,
       undefined,
       {
-        schedule: ({ chatId, counter, messageId, delayMs }) => {
+        schedule: ({ chatId, counter, messageId, delayMs, action }) => {
           setTimeout(() => {
             this.bot
-              .handleUpdate(levelTestTimeoutUpdate(chatId, counter, messageId))
+              .handleUpdate(
+                levelTestTimeoutUpdate(
+                  chatId,
+                  counter,
+                  messageId,
+                  Date.now(),
+                  action,
+                ),
+              )
               .catch((err: Error) =>
                 this.logger.warn(
                   `Daraja testi taymeri ishlamadi (chat ${chatId}): ${err.message}`,

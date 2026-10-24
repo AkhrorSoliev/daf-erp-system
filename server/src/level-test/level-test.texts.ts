@@ -1,7 +1,7 @@
 import type { LevelTestResult } from './level-test.types';
 
 export const LEVEL_TEST_INTRO =
-  "📊 Daraja testi\n\nNemis tilidagi bilimingizni aniqlaymiz. Savollar oddiydan murakkabga boradi, har birida bitta to'g'ri javob bor.\n\nHar savolga vaqt beriladi: vaqt tugasa, javob hisobga olinmaydi va keyingi savolga o'tiladi. Bilmasangiz — taxmin qiling, hech narsa yo'qotmaysiz. Testni to'xtatish uchun /cancel yozing.";
+  "📊 Daraja testi\n\nNemis tilidagi bilimingizni aniqlaymiz. 20 ta savol beriladi — A1 dan B2 gacha hamma darajadan, oddiydan murakkabga qarab. Har birida bitta to'g'ri javob bor.\n\nHar savolga vaqt beriladi: vaqt tugasa, javob hisobga olinmaydi va keyingi savolga o'tiladi. Bilmasangiz — taxmin qiling, hech narsa yo'qotmaysiz. Testni to'xtatish uchun /cancel yozing.";
 
 export const LEVEL_TEST_TIMEOUT_NOTE =
   '⏱ Vaqt tugadi — javob hisobga olinmadi.';
@@ -57,19 +57,4 @@ export function levelTestResultText(
     `To'g'ri javoblar: ${correct} / ${asked}.\n\n` +
     "Bu taxminiy natija — aniq darajani markaz o'qituvchisi suhbatda belgilaydi."
   );
-}
-
-export function levelTestQuestionText(
-  n: number,
-  text: string,
-  seconds?: number,
-): string {
-  const timer = seconds ? ` · ⏱ ${seconds} soniya` : '';
-  return `Savol ${n}${timer}\n\n${text}`;
-}
-
-const LETTERS = ['A', 'B', 'C', 'D'] as const;
-
-export function levelTestOptionLabel(index: number, option: string): string {
-  return `${LETTERS[index] ?? '?'}) ${option}`;
 }
