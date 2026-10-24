@@ -6,6 +6,12 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-24",
+    sarlavha: "Botdagi «Darajani aniqlash» testi lid yig'adi",
+    matn: "Telegram botdagi «📊 Darajani aniqlash» tugmasi endi ishlaydi. Odam 20 tagacha savolga javob beradi (A1 dan B2 gacha, darajadan 5 tadan; daraja uchun 5 dan 4 to'g'ri javob kerak) va taxminiy darajasini ko'radi. Har savolga vaqt beriladi (A1 20, A2 30, B1 40, B2 50 soniya): vaqt tugasa javob hisobga olinmaydi va bot keyingi savolga o'zi o'tadi; ketma-ket 3 ta savolga javob berilmasa, test to'xtatiladi. Savollar 200 talik havzadan tasodifiy olinadi, variantlar har safar aralashadi, qayta topshirganga avval ko'rmagan savollar chiqadi. Natijadan keyin bot telefon raqamini (faqat o'zining kontakti) va filialni so'raydi: shundan so'ng lid tanlangan filialning «Yangi» ustunidagi birinchi bo'limga tushadi, manbasi «Telegram bot — daraja testi», daraja natijasi lidning tarixida («darajaTesti») turadi. Shu telefonli lid allaqachon bo'lsa, ikkinchisi ochilmaydi. Raqamni yubormagan odamga lid ochilmaydi. Natija taxminiy: aniq darajani o'qituvchi suhbatda belgilaydi.",
+    rollar: [1, 2, 3],
+  },
+  {
     sana: "2026-10-23",
     sarlavha: "Guruh pauzasi: o'tmagan darslar puli qaytadi",
     matn: "Guruhni «Pauza»ga qo'yishda endi darslar qachondan qayta boshlanishini tanlaysiz (yoki «Hozircha noma'lum»). Pauza markazning qarori, shuning uchun pauza davomida o'tmagan har dars kunining puli shu kuni kechasi o'quvchiga avtomatik qaytadi va guruhning tugash sanasi bitta dars kuniga suriladi. Guruhni «Pauza»dan ochishda darslar qaysi kundan boshlanishini tasdiqlaysiz: bugundan keyingi sana tanlansa guruh o'sha kuni o'zi ochiladi, oylik to'lov esa shu kundan hisoblanadi. Pauza paytida chiqqan o'quvchining puli 40% qoidasisiz qaytadi. O'quvchilarga pauza, qaytish sanasi va ochilish haqida Telegram xabari boradi.",
