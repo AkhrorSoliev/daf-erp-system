@@ -13,9 +13,10 @@ qo'ng'iroq qiladi.
 ```
 /start → «📊 Darajani aniqlash»
   → tanishtiruv + 1-savol
-  → A1 (5 savol) → ≥4 to'g'ri? → A2 (5) → ≥4? → B1 (5) → ≥4? → B2 (5)
-     ↓ (4 dan kam)                                          ↓
-  natija = oxirgi o'tilgan daraja            natija = «B2 yoki yuqori»
+  → A1 (5 savol) → A2 (5) → B1 (5) → B2 (5)      HAMMA daraja so'raladi,
+     oldingi daraja natijasi testni to'xtatmaydi (jami 20 savol)
+  → natija (`judge`): darajalar A1 → B2 tartibida, har birida ≥4 to'g'ri kerak;
+     birinchi o'tilmagan darajadan oldingi daraja = natija
   → natija matni  → «📱 Telefon raqamni yuborish» | «Keyinroq»
   → (o'z kontakti) → [filial tanlash, 2+ filial bo'lsa] → lid ochiladi
 ```
@@ -41,8 +42,43 @@ qo'ng'iroq qiladi.
   o'ziga `ltt:<tartib>` yangilanishini yuboradi, shunda odam hech narsa
   bosmasa ham keyingi savol keladi. Taymer jarayon xotirasida: qayta ishga
   tushsa yo'qoladi, (1) baribir ishlaydi.
-- Orqaga sanash yo'q (Telegram xabarni tez-tez tahrirlashni cheklaydi): vaqt
-  savol matnida bir marta yoziladi.
+- Qolgan vaqt chizig'i (`⏱ ████░░░░░░  14 s`) har 5 soniyada yangilanadi
+  (`TICK_SECONDS`): bot o'ziga `ltk:<tartib>` yangilanishini yuboradi va xabar
+  tahrirlanadi. Har soniya emas — Telegram tez-tez tahrirlashni cheklaydi, 5 s
+  esa A1 uchun 3, B2 uchun 9 tahrir. Tick javob/vaqt tugashi bilan to'qnashsa
+  yoki savol allaqachon yopilgan bo'lsa o'tkazib yuboriladi.
+
+## Xabar ko'rinishi (yagona xabar)
+
+Test davomida bitta xabar tahrirlanib boradi: javob berilgan savollar to'planib,
+tepada ixcham (ochiladigan) blokda turadi, pastda hozirgi savol.
+
+```
+📊 Daraja testi · 7 / 20
+▰▰▰▰▰▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱
+
+┃ 1. Ich ___ Anna. → bin          (ochiladigan blok)
+┃ 2. Wir ___ Kaffee. → trinken
+┃ 3. … → ⏱ javobsiz
+
+Savol 7
+Er ___ jeden Tag Brot.
+
+A  isst
+B  esse
+C  esst
+D  essen
+
+⏱ ██████░░░░  14 s
+              [ A ] [ B ] [ C ] [ D ]
+```
+
+- Variantlar matnda, tugmalar — bitta qatorda harflar (A–D).
+- HTML format (`parse_mode: 'HTML'`), barcha matn `escapeHtml` dan o'tadi.
+- Xabar 3800 belgidan oshsa, eng eski tarix qatorlari yashiriladi.
+- Test tugagach xabar tugmasiz yakuniy ko'rinishga o'tadi (butun tarix), natija
+  esa alohida xabarda. To'g'ri javob hech qayerda ko'rsatilmaydi.
+- Xabar o'chirib yuborilsa (tahrir bo'lmasa), savol yangi xabarda yuboriladi.
 
 ## Ma'lumot
 

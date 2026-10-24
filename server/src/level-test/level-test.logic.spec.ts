@@ -3,15 +3,15 @@ import {
   GRACE_SECONDS,
   isPastDeadline,
   judge,
-  levelPassed,
   nextLevel,
   pickQuestions,
   QUESTIONS_PER_LEVEL,
   SECONDS_PER_LEVEL,
   secondsFor,
   shuffle,
+  TICK_SECONDS,
+  TOTAL_QUESTIONS,
 } from './level-test.logic';
-import { levelTestQuestionText } from './level-test.texts';
 
 describe('savol vaqti', () => {
   it("yuqori darajada vaqt ko'proq", () => {
@@ -32,13 +32,10 @@ describe('savol vaqti', () => {
     );
   });
 
-  it("savol matni vaqtni ko'rsatadi (berilsa)", () => {
-    expect(levelTestQuestionText(3, 'Ich ___ Anna.', 30)).toBe(
-      'Savol 3 · ⏱ 30 soniya\n\nIch ___ Anna.',
-    );
-    expect(levelTestQuestionText(3, 'Ich ___ Anna.')).toBe(
-      'Savol 3\n\nIch ___ Anna.',
-    );
+  it('jami savollar = daraja soni × har darajadagi savol; vaqt yangilash qadami 5 s', () => {
+    expect(TOTAL_QUESTIONS).toBe(LEVEL_TEST_LEVELS.length * 5);
+    expect(TOTAL_QUESTIONS).toBe(20);
+    expect(TICK_SECONDS).toBe(5);
   });
 });
 import { LEVEL_TEST_QUESTIONS } from './level-test-questions';
@@ -76,12 +73,7 @@ describe('judge', () => {
   });
 });
 
-describe('levelPassed / nextLevel', () => {
-  it("4 va undan ko'p — o'tdi", () => {
-    expect(levelPassed(3)).toBe(false);
-    expect(levelPassed(4)).toBe(true);
-  });
-
+describe('nextLevel', () => {
   it("B2 dan keyin daraja yo'q", () => {
     expect(nextLevel('A1')).toBe('A2');
     expect(nextLevel('B1')).toBe('B2');

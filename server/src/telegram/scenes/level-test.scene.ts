@@ -12,12 +12,19 @@ import {
   GRACE_SECONDS,
   isPastDeadline,
   judge,
-  levelPassed,
   MAX_TIMEOUTS_IN_ROW,
   nextLevel,
   pickQuestions,
   secondsFor,
+  TICK_SECONDS,
+  TOTAL_QUESTIONS,
 } from '../../level-test/level-test.logic';
+import {
+  optionLetter,
+  renderQuiz,
+  type QuizCurrent,
+  type QuizLogLine,
+} from '../../level-test/level-test.render';
 import { LEVEL_TEST_QUESTIONS } from '../../level-test/level-test-questions';
 import {
   branchChoices,
@@ -38,8 +45,6 @@ import {
   LEVEL_TEST_PHONE_PROMPT,
   LEVEL_TEST_STALE,
   LEVEL_TEST_TIMEOUT_NOTE,
-  levelTestOptionLabel,
-  levelTestQuestionText,
   levelTestResultText,
 } from '../../level-test/level-test.texts';
 import {
@@ -63,14 +68,19 @@ export const LEVEL_TEST_ACTION = 'menu_level';
 
 const ANSWER_RE = /^lt:(\d+):(\d)$/;
 const TIMEOUT_RE = /^ltt:(\d+)$/;
+const TICK_RE = /^ltk:(\d+)$/;
 const BRANCH_RE = /^ltb:(\d+)$/;
 
-/** Taymerni sahnaga yetkazish: `delayMs` dan keyin `ltt:<counter>` yuboriladi. */
+/**
+ * Taymerni sahnaga yetkazish: `delayMs` dan keyin `ltt:<counter>` (vaqt tugadi)
+ * yoki `ltk:<counter>` (qolgan vaqtni yangilash) yuboriladi.
+ */
 export interface LevelTestTimeoutJob {
   chatId: number;
   counter: number;
   messageId: number;
   delayMs: number;
+  action: 'timeout' | 'tick';
 }
 
 export interface LevelTestTiming {
@@ -91,11 +101,12 @@ export function levelTestTimeoutUpdate(
   counter: number,
   messageId: number,
   nowMs: number = Date.now(),
+  action: 'timeout' | 'tick' = 'timeout',
 ): Update {
   return {
     update_id: nowMs,
     callback_query: {
-      id: `lt-timeout-${chatId}-${counter}`,
+      id: `lt-${action}-${chatId}-${counter}-${nowMs}`,
       chat_instance: 'level-test',
       from: { id: chatId, is_bot: false, first_name: 'Test' },
       message: {
@@ -103,7 +114,7 @@ export function levelTestTimeoutUpdate(
         date: Math.floor(nowMs / 1000),
         chat: { id: chatId, type: 'private', first_name: 'Test' },
       },
-      data: `ltt:${counter}`,
+      data: `${action === 'tick' ? 'ltk' : 'ltt'}:${counter}`,
     },
   } as Update;
 }
@@ -127,8 +138,10 @@ interface LtState {
   current: AskedQuestion | null;
   /** Savol ko'rsatilgan paytdan + daraja vaqti (ms). */
   deadlineAt: number;
-  /** Savol xabari: vaqt tugaganda shu xabar tahrirlanadi. */
+  /** Test davomidagi YAGONA xabar: har savol/javob/vaqt shuni tahrirlaydi. */
   messageId: number;
+  /** Javob berilgan savollar: xabarda yig'ilib boradi. */
+  log: QuizLogLine[];
   /** Ketma-ket nechta savol javobsiz qoldi. */
   timeoutsInRow: number;
   correct: CorrectByLevel;
@@ -191,27 +204,82 @@ export function createLevelTestScene(
     state.counter += 1;
     state.askedIds.push(asked.id);
     const seconds = secondsFor(asked.level);
-    const sent = await ctx.reply(
-      levelTestQuestionText(state.counter, asked.text, seconds),
-      Markup.inlineKeyboard(
-        asked.options.map((option, i) => [
-          Markup.button.callback(
-            levelTestOptionLabel(i, option),
-            `lt:${state.counter}:${i}`,
-          ),
-        ]),
-      ),
-    );
-    state.messageId = sent?.message_id ?? 0;
     state.deadlineAt = now() + seconds * 1000;
-    timing.schedule?.({
+    await draw(ctx, state);
+
+    const job = {
       chatId: ctx.chat!.id,
       counter: state.counter,
       messageId: state.messageId,
+    };
+    // Qolgan vaqt chizig'i har TICK_SECONDS da yangilanadi.
+    for (let t = TICK_SECONDS; t < seconds; t += TICK_SECONDS) {
+      timing.schedule?.({ ...job, delayMs: t * 1000, action: 'tick' });
+    }
+    timing.schedule?.({
+      ...job,
       // Kechikish muhlatidan keyin yarim soniya: odam oxirgi soniyada bossa,
       // avval uning javobi o'tadi.
       delayMs: (seconds + GRACE_SECONDS) * 1000 + 500,
+      action: 'timeout',
     });
+  }
+
+  /** Hozirgi savolning ko'rinishi (qolgan vaqt soatdan hisoblanadi). */
+  function currentView(state: LtState): QuizCurrent | null {
+    const c = state.current;
+    if (!c) return null;
+    return {
+      n: state.counter,
+      text: c.text,
+      options: c.options,
+      seconds: secondsFor(c.level),
+      remaining: Math.max(0, Math.ceil((state.deadlineAt - now()) / 1000)),
+    };
+  }
+
+  /**
+   * Yagona test xabarini chizadi: birinchi marta yangi xabar, keyin shuni
+   * tahrirlaydi. Tahrir bo'lmasa (xabar o'chirilgan) yangisini yuboradi, aks
+   * holda odam savolsiz qolardi. `quiet` (vaqt yangilanishi) xatolarni yutadi.
+   */
+  async function draw(
+    ctx: BotContext,
+    state: LtState,
+    quiet = false,
+  ): Promise<void> {
+    const view = currentView(state);
+    const html = renderQuiz(state.log, view, TOTAL_QUESTIONS);
+    const keyboard = view
+      ? Markup.inlineKeyboard([
+          view.options.map((_, i) =>
+            Markup.button.callback(optionLetter(i), `lt:${state.counter}:${i}`),
+          ),
+        ])
+      : undefined;
+
+    if (!state.messageId) {
+      const sent = await ctx.reply(html, {
+        parse_mode: 'HTML',
+        ...(keyboard ?? {}),
+      });
+      state.messageId = sent?.message_id ?? 0;
+      return;
+    }
+    try {
+      await ctx.editMessageText(html, {
+        parse_mode: 'HTML',
+        ...(keyboard ? { reply_markup: keyboard.reply_markup } : {}),
+      });
+    } catch (error) {
+      const text = (error as Error).message ?? '';
+      if (quiet || text.includes('message is not modified')) return;
+      const sent = await ctx.reply(html, {
+        parse_mode: 'HTML',
+        ...(keyboard ?? {}),
+      });
+      state.messageId = sent?.message_id ?? state.messageId;
+    }
   }
 
   /**
@@ -231,35 +299,27 @@ export function createLevelTestScene(
     state.answeredInLevel += 1;
     state.current = null;
     state.timeoutsInRow = chosen === null ? state.timeoutsInRow + 1 : 0;
-    const shown = levelTestQuestionText(
-      state.counter,
-      asked.text,
-      secondsFor(level),
-    );
-    try {
-      await ctx.editMessageText(
-        `${shown}\n\n${
-          chosen === null
-            ? LEVEL_TEST_TIMEOUT_NOTE
-            : `✅ Javobingiz: ${asked.options[chosen] ?? ''}`
-        }`,
-      );
-    } catch {
-      // Old or already edited message: the answer still counts.
-    }
+    state.log.push({
+      n: state.counter,
+      text: asked.text,
+      picked: chosen === null ? null : (asked.options[chosen] ?? null),
+    });
 
     if (state.timeoutsInRow >= MAX_TIMEOUTS_IN_ROW) {
+      await draw(ctx, state);
       await ctx.scene.leave();
       await ctx.reply(LEVEL_TEST_ABANDONED, Markup.removeKeyboard());
       return;
     }
+    // Hamma daraja so'raladi (A1 → B2): oldingi darajadagi natija testni
+    // to'xtatmaydi. Darajani oxirida `judge` aytadi.
     if (state.queue.length === 0) {
-      if (nextLevel(level) && levelPassed(state.correct[level] ?? 0)) {
-        startLevel(state, state.levelIdx + 1);
-      } else {
+      const next = nextLevel(level);
+      if (!next) {
         await finish(ctx, state);
         return;
       }
+      startLevel(state, state.levelIdx + 1);
     }
     await askNext(ctx, state);
   }
@@ -271,6 +331,8 @@ export function createLevelTestScene(
       0,
     );
     state.current = null;
+    // Xabar yakuniy ko'rinishga o'tadi: butun tarix, tugmalarsiz.
+    await draw(ctx, state);
     try {
       state.attemptId = await saveAttempt(prisma, {
         chatId: String(ctx.chat!.id),
@@ -343,6 +405,7 @@ export function createLevelTestScene(
         current: null,
         deadlineAt: 0,
         messageId: 0,
+        log: [],
         timeoutsInRow: 0,
         correct: {},
         askedIds: [],
@@ -394,6 +457,23 @@ export function createLevelTestScene(
       return;
     }
     await withProcessingLock(ctx, () => settle(ctx, state, null));
+  });
+
+  // Qolgan vaqt chizig'ini yangilash (ichki `ltk:` yangilanishi, tugma emas).
+  // Javob yoki vaqt tugashi bilan to'qnashsa o'tkazib yuboriladi.
+  scene.action(TICK_RE, async (ctx) => {
+    const state = stateOf(ctx);
+    if (
+      !state ||
+      state.phase !== 'quiz' ||
+      !state.current ||
+      Number(ctx.match[1]) !== state.counter ||
+      ctx.session.processing ||
+      now() >= state.deadlineAt
+    ) {
+      return;
+    }
+    await draw(ctx, state, true);
   });
 
   scene.on(message('contact'), async (ctx) => {
