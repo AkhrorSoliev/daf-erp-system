@@ -41,6 +41,7 @@ import { StudentExitReasonsModule } from './student-exit-reasons/student-exit-re
 import { GroupTeacherChangeReasonsModule } from './group-teacher-change-reasons/group-teacher-change-reasons.module';
 import { EnrollmentTransferReasonsModule } from './enrollment-transfer-reasons/enrollment-transfer-reasons.module';
 import { LeadsModule } from './leads/leads.module';
+import { MetaLeadAdsModule } from './meta-lead-ads/meta-lead-ads.module';
 import { CustomFormsModule } from './custom-forms/custom-forms.module';
 import { MockExamsModule } from './mock-exams/mock-exams.module';
 import { TransactionsModule } from './transactions/transactions.module';
@@ -130,6 +131,7 @@ import { validateEnv } from './config/env.validation';
     GroupTeacherChangeReasonsModule,
     EnrollmentTransferReasonsModule,
     LeadsModule,
+    MetaLeadAdsModule,
     CustomFormsModule,
     MockExamsModule,
     TransactionsModule,

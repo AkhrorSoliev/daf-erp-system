@@ -1458,6 +1458,7 @@
     "CEO"
   ],
   "GET /users/sessions": "ANY",
+  "GET /webhooks/meta-leads": "PUBLIC",
   "GET /withdrawals/preview/:studentId": [
     "Administrator",
     "Branch Director",
@@ -2312,6 +2313,7 @@
     "CEO"
   ],
   "POST /users/logout-others": "ANY",
+  "POST /webhooks/meta-leads": "PUBLIC",
   "POST /withdrawals": [
     "Administrator",
     "Branch Director",

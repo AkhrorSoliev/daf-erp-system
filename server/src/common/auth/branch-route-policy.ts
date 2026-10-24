@@ -119,6 +119,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /receipts/payment/:id/verify',
       'GET /receipts/refund/:id.pdf',
       'GET /receipts/refund/:id/verify',
+      'GET /webhooks/meta-leads',
       'POST /auth/forgot-password/request',
       'POST /auth/forgot-password/reset',
       'POST /auth/forgot-password/verify',
@@ -128,6 +129,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /auth/telegram/webapp',
       'POST /auth/telegram/webapp/staff',
       'POST /public/forms/:slug/submit',
+      'POST /webhooks/meta-leads',
     ],
   },
   {

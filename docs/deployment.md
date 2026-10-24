@@ -279,3 +279,10 @@ DNS records managed at Cloudflare for `dafzentrum.uz`:
 | CNAME | `student` | Vercel                    | Proxied  |
 | CNAME | `api`     | `p93259ss.up.railway.app` | DNS only |
 | CNAME | `www`     | Vercel                    | Proxied  |
+
+## Meta Lead Ads webhook (ADR-0120)
+
+Railway env (all four required, otherwise the webhook answers 503):
+`META_APP_SECRET`, `META_VERIFY_TOKEN` (any string, typed into Meta's webhook form), `META_PAGE_TOKEN` (long-lived Page token with `leads_retrieval`), `META_LEAD_SECTION_ID` (lead board section the leads land in).
+
+In developers.facebook.com: Webhooks → Page → callback `https://api.dafzentrum.uz/api/webhooks/meta-leads` + the verify token, subscribe to `leadgen`, and subscribe the app to the Page. Check with Meta's «Lead Ads Testing Tool».

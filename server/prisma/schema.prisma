@@ -865,6 +865,10 @@ model Lead {
 
   formSubmissions CustomFormSubmission[]
 
+  // Meta Lead Ads `leadgen_id`. Meta resends a webhook until it gets a 200, so
+  // the unique key is what keeps a retry from creating the lead twice.
+  metaLeadId String? @unique
+
   // `Lead` carried NEITHER companyId NOR branchId — `getBoard()` was
   // `where: { deletedAt: null }`, i.e. every lead in the database. A Namangan
   // director saw, moved and deleted Fargona's leads.
