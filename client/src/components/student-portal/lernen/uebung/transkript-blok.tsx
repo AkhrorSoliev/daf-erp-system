@@ -47,6 +47,9 @@ export function TranskriptBlok({
     });
   }, []);
 
+  // O'qish matnlarida (jadval, e'lon) so'zlovchi yo'q — "…: " chiqmasin.
+  const suhbatMi = zeilen.some((z) => z.sprecher.trim() !== "");
+
   return (
     <div
       ref={ref}
@@ -54,16 +57,18 @@ export function TranskriptBlok({
     >
       {bild ? <SuhbatRasmi url={bild} alt={titel || "Suhbat rasmi"} /> : null}
       <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">
-        Suhbat matni
+        {suhbatMi ? "Suhbat matni" : "Matn"}
       </p>
       {sahna ? <p className="text-sm italic text-ink-500">{sahna}</p> : null}
       {zeilen.map((z, i) => (
         <div key={i} className="text-base leading-relaxed">
-          <span className="font-semibold text-ink-500">
-            {z.sprecher}
-            {z.izohUz ? <span className="font-normal italic text-ink-400"> ({z.izohUz})</span> : null}
-            {": "}
-          </span>
+          {z.sprecher.trim() !== "" ? (
+            <span className="font-semibold text-ink-500">
+              {z.sprecher}
+              {z.izohUz ? <span className="font-normal italic text-ink-400"> ({z.izohUz})</span> : null}
+              {": "}
+            </span>
+          ) : null}
           <span className="text-ink-900">{z.de}</span>
           <span className="block text-sm text-ink-500">{z.uz}</span>
         </div>
