@@ -43,6 +43,7 @@ import { createStatementScene } from './scenes/statement.scene';
 import {
   LEVEL_TEST_ACTION,
   createLevelTestScene,
+  levelTestTimeoutUpdate,
 } from './scenes/level-test.scene';
 import {
   ACCOUNT_LINK_ACTION,
@@ -343,9 +344,28 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       (ctx) => this.startFlow!(ctx, ''),
     );
 
+    // Daraja testida savol vaqti (ADR-0121): vaqt tugagach bot o'ziga `ltt:`
+    // yangilanishini yuboradi. Taymer jarayon xotirasida: qayta ishga tushsa
+    // yo'qoladi, lekin kech kelgan javobni sahnaning o'zi muddat bo'yicha
+    // rad etadi, shuning uchun test buzilmaydi (avto-o'tish kechikadi xolos).
     const levelTestScene = createLevelTestScene(
       this.prisma,
       this.entityHistoryService,
+      undefined,
+      undefined,
+      {
+        schedule: ({ chatId, counter, messageId, delayMs }) => {
+          setTimeout(() => {
+            this.bot
+              .handleUpdate(levelTestTimeoutUpdate(chatId, counter, messageId))
+              .catch((err: Error) =>
+                this.logger.warn(
+                  `Daraja testi taymeri ishlamadi (chat ${chatId}): ${err.message}`,
+                ),
+              );
+          }, delayMs).unref();
+        },
+      },
     );
 
     const stage = new Scenes.Stage<BotContext>([

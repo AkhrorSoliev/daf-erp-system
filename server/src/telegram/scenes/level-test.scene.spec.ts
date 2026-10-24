@@ -20,7 +20,19 @@ import {
 } from '../../level-test/level-test.types';
 import { DEFAULT_COMPANY_ID } from '../constants';
 import { CONTACT_NOT_OWN } from '../utils/contact-ownership';
-import { createLevelTestScene } from './level-test.scene';
+import {
+  GRACE_SECONDS,
+  MAX_TIMEOUTS_IN_ROW,
+  SECONDS_PER_LEVEL,
+} from '../../level-test/level-test.logic';
+import {
+  LEVEL_TEST_ABANDONED,
+  LEVEL_TEST_TIMEOUT_NOTE,
+} from '../../level-test/level-test.texts';
+import {
+  createLevelTestScene,
+  levelTestTimeoutUpdate,
+} from './level-test.scene';
 
 jest.mock('../../level-test/level-test.store', () => ({
   branchChoices: jest.fn(),
@@ -61,7 +73,7 @@ function withCtx(update: Record<string, unknown>, session: any) {
   const ctx = new Context(update as any, {} as any, BOT_INFO) as any;
   ctx.session = session;
   ctx.scene = { leave: jest.fn().mockResolvedValue(undefined) };
-  ctx.reply = jest.fn().mockResolvedValue(undefined);
+  ctx.reply = jest.fn().mockResolvedValue({ message_id: 55 });
   ctx.answerCbQuery = jest.fn().mockResolvedValue(undefined);
   ctx.editMessageText = jest.fn().mockResolvedValue(undefined);
   ctx.editMessageReplyMarkup = jest.fn().mockResolvedValue(undefined);
@@ -110,7 +122,25 @@ describe('level-test scene («📊 Darajani aniqlash»)', () => {
   const history = { recordCreate: jest.fn() };
   const prisma = {} as any;
   let session: any;
-  const scene = () => createLevelTestScene(prisma, history, POOL, () => 0.5);
+  let clock: number;
+  const schedule = jest.fn();
+  const scene = () =>
+    createLevelTestScene(prisma, history, POOL, () => 0.5, {
+      now: () => clock,
+      schedule,
+    });
+  /** Savol ko'rsatilgandan keyin `seconds` soniya o'tdi. */
+  const wait = (seconds: number) => {
+    clock += seconds * 1000;
+  };
+  const timeoutTick = async (counter: number) => {
+    const ctx = withCtx(
+      levelTestTimeoutUpdate(CHAT, counter, 55, clock) as any,
+      session,
+    );
+    await scene().middleware()(ctx, async () => {});
+    return ctx;
+  };
 
   const enter = async (type = 'private') => {
     const ctx = withCtx(
@@ -146,6 +176,7 @@ describe('level-test scene («📊 Darajani aniqlash»)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    clock = 1_000_000;
     session = { step: 0, data: {}, processing: false };
     seen.mockResolvedValue(new Set());
     save.mockResolvedValue('att-1');
@@ -252,6 +283,128 @@ describe('level-test scene («📊 Darajani aniqlash»)', () => {
     expect(edited).toContain('Javobingiz:');
     expect(edited).not.toContain('to‘g‘ri javob');
     expect(chosen).toBeDefined();
+  });
+
+  describe('savol vaqti', () => {
+    it('savol matnida daraja vaqti turadi va taymer rejalanadi', async () => {
+      const ctx = await enter();
+
+      expect(ctx.reply.mock.calls[1][0]).toContain(
+        `⏱ ${SECONDS_PER_LEVEL.A1} soniya`,
+      );
+      expect(schedule).toHaveBeenCalledWith({
+        chatId: CHAT,
+        counter: 1,
+        messageId: 55,
+        delayMs: (SECONDS_PER_LEVEL.A1 + GRACE_SECONDS) * 1000 + 500,
+      });
+      expect(session.data.lt.deadlineAt).toBe(
+        clock + SECONDS_PER_LEVEL.A1 * 1000,
+      );
+    });
+
+    it("muddat ichida (kechikish muhlatida ham) berilgan javob o'tadi", async () => {
+      await enter();
+      wait(SECONDS_PER_LEVEL.A1 + GRACE_SECONDS);
+      const ctx = await answer(true);
+
+      expect(session.data.lt.correct.A1).toBe(1);
+      expect(ctx.editMessageText.mock.calls[0][0]).toContain('Javobingiz');
+    });
+
+    it('muddatdan keyingi bosish — vaqt tugadi: javob hisobga olinmay, keyingi savol', async () => {
+      await enter();
+      wait(SECONDS_PER_LEVEL.A1 + GRACE_SECONDS + 1);
+      const ctx = await answer(true);
+
+      expect(session.data.lt.correct.A1).toBe(0);
+      expect(ctx.answerCbQuery).toHaveBeenCalledWith(LEVEL_TEST_TIMEOUT_NOTE);
+      expect(ctx.editMessageText.mock.calls[0][0]).toContain(
+        LEVEL_TEST_TIMEOUT_NOTE,
+      );
+      expect(session.data.lt.counter).toBe(2);
+      expect(ctx.reply.mock.calls[0][0]).toContain('Savol 2');
+    });
+
+    it("taymer yangilanishi muddat o'tgach savolni yopadi va keyingisini beradi", async () => {
+      await enter();
+      wait(SECONDS_PER_LEVEL.A1 + GRACE_SECONDS + 1);
+      const ctx = await timeoutTick(1);
+
+      expect(session.data.lt.correct.A1).toBe(0);
+      expect(session.data.lt.timeoutsInRow).toBe(1);
+      expect(ctx.answerCbQuery).not.toHaveBeenCalled();
+      expect(ctx.editMessageText.mock.calls[0][0]).toContain(
+        LEVEL_TEST_TIMEOUT_NOTE,
+      );
+      expect(session.data.lt.counter).toBe(2);
+      expect(schedule).toHaveBeenCalledTimes(2);
+    });
+
+    it("muddat hali o'tmagan bo'lsa, taymer yangilanishi e'tiborsiz", async () => {
+      await enter();
+      wait(SECONDS_PER_LEVEL.A1);
+      await timeoutTick(1);
+
+      expect(session.data.lt.counter).toBe(1);
+      expect(session.data.lt.current).not.toBeNull();
+    });
+
+    it("javob berilgan savolning eski taymeri hech narsani o'zgartirmaydi", async () => {
+      await enter();
+      await answer(true);
+      wait(SECONDS_PER_LEVEL.A1 + GRACE_SECONDS + 1);
+      await timeoutTick(1);
+
+      expect(session.data.lt.counter).toBe(2);
+      expect(session.data.lt.timeoutsInRow).toBe(0);
+      expect(session.data.lt.correct.A1).toBe(1);
+    });
+
+    it("boshqa yangilanish ishlayotgan bo'lsa, taymer aralashmaydi", async () => {
+      await enter();
+      wait(SECONDS_PER_LEVEL.A1 + GRACE_SECONDS + 1);
+      session.processing = true;
+      await timeoutTick(1);
+
+      expect(session.data.lt.counter).toBe(1);
+    });
+
+    it('javob berilsa ketma-ket javobsizlik hisobi nolga qaytadi', async () => {
+      await enter();
+      for (let i = 0; i < MAX_TIMEOUTS_IN_ROW - 1; i++) {
+        wait(SECONDS_PER_LEVEL.A1 + GRACE_SECONDS + 1);
+        await timeoutTick(session.data.lt.counter);
+      }
+      expect(session.data.lt.timeoutsInRow).toBe(MAX_TIMEOUTS_IN_ROW - 1);
+
+      await answer(true);
+
+      expect(session.data.lt.timeoutsInRow).toBe(0);
+    });
+
+    it("ketma-ket 3 ta javobsiz savoldan keyin test to'xtatiladi va saqlanmaydi", async () => {
+      await enter();
+      let last: any;
+      for (let i = 0; i < MAX_TIMEOUTS_IN_ROW; i++) {
+        wait(SECONDS_PER_LEVEL.A1 + GRACE_SECONDS + 1);
+        last = await timeoutTick(session.data.lt.counter);
+      }
+
+      expect(last.scene.leave).toHaveBeenCalled();
+      expect(last.reply.mock.calls[0][0]).toBe(LEVEL_TEST_ABANDONED);
+      expect(save).not.toHaveBeenCalled();
+    });
+
+    it("yuqori darajada vaqt ko'proq", async () => {
+      await enter();
+      for (let i = 0; i < 5; i++) await answer(true);
+
+      expect(session.data.lt.current.level).toBe('A2');
+      expect(session.data.lt.deadlineAt).toBe(
+        clock + SECONDS_PER_LEVEL.A2 * 1000,
+      );
+    });
   });
 
   describe('natijadan keyin', () => {

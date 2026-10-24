@@ -12,7 +12,30 @@ export const QUESTIONS_PER_LEVEL = 5;
 /** Keyingi darajaga o'tish uchun darajadan nechta to'g'ri kerak (5 dan 4). */
 export const PASS_MARK = 4;
 
+/**
+ * Savolga beriladigan vaqt (soniya), daraja bo'yicha: yuqori darajada savol
+ * murakkabroq va o'qishga ko'proq vaqt ketadi. Bitta jadval, o'zgartirish oson.
+ */
+export const SECONDS_PER_LEVEL: Record<LevelTestLevel, number> = {
+  A1: 20,
+  A2: 30,
+  B1: 40,
+  B2: 50,
+};
+/** Tarmoq va Telegram kechikishi uchun: bu soniyada kelgan javob hali o'tadi. */
+export const GRACE_SECONDS = 3;
+/** Ketma-ket shuncha savolga javob berilmasa, odam ketgan deb test to'xtatiladi. */
+export const MAX_TIMEOUTS_IN_ROW = 3;
+
 export type Rng = () => number;
+
+export const secondsFor = (level: LevelTestLevel): number =>
+  SECONDS_PER_LEVEL[level];
+
+/** Savol ko'rsatilgan paytdan `deadlineAt` (ms) va kechikish muhlati o'tdimi. */
+export function isPastDeadline(deadlineAt: number, now: number): boolean {
+  return now > deadlineAt + GRACE_SECONDS * 1000;
+}
 
 /** Fisher–Yates; `rng` berilmasa `Math.random`. Kirishni o'zgartirmaydi. */
 export function shuffle<T>(items: readonly T[], rng: Rng = Math.random): T[] {

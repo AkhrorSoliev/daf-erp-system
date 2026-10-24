@@ -1,7 +1,13 @@
 import type { LevelTestResult } from './level-test.types';
 
 export const LEVEL_TEST_INTRO =
-  "📊 Daraja testi\n\nNemis tilidagi bilimingizni aniqlaymiz. Savollar oddiydan murakkabga boradi, har birida bitta to'g'ri javob bor.\n\nBilmasangiz — taxmin qiling, hech narsa yo'qotmaysiz. Testni to'xtatish uchun /cancel yozing.";
+  "📊 Daraja testi\n\nNemis tilidagi bilimingizni aniqlaymiz. Savollar oddiydan murakkabga boradi, har birida bitta to'g'ri javob bor.\n\nHar savolga vaqt beriladi: vaqt tugasa, javob hisobga olinmaydi va keyingi savolga o'tiladi. Bilmasangiz — taxmin qiling, hech narsa yo'qotmaysiz. Testni to'xtatish uchun /cancel yozing.";
+
+export const LEVEL_TEST_TIMEOUT_NOTE =
+  '⏱ Vaqt tugadi — javob hisobga olinmadi.';
+
+export const LEVEL_TEST_ABANDONED =
+  "Test to'xtatildi: ketma-ket bir necha savolga javob bermadingiz. Qayta urinish uchun /start bosing.";
 
 export const LEVEL_TEST_PHONE_PROMPT =
   "Natijangizni saqlash va sizga mos guruhni tanlashda yordam berish uchun telefon raqamingizni yuboring — administratorimiz siz bilan bog'lanadi.";
@@ -53,8 +59,13 @@ export function levelTestResultText(
   );
 }
 
-export function levelTestQuestionText(n: number, text: string): string {
-  return `Savol ${n}\n\n${text}`;
+export function levelTestQuestionText(
+  n: number,
+  text: string,
+  seconds?: number,
+): string {
+  const timer = seconds ? ` · ⏱ ${seconds} soniya` : '';
+  return `Savol ${n}${timer}\n\n${text}`;
 }
 
 const LETTERS = ['A', 'B', 'C', 'D'] as const;

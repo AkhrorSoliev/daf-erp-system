@@ -1,12 +1,46 @@
 import {
   askQuestion,
+  GRACE_SECONDS,
+  isPastDeadline,
   judge,
   levelPassed,
   nextLevel,
   pickQuestions,
   QUESTIONS_PER_LEVEL,
+  SECONDS_PER_LEVEL,
+  secondsFor,
   shuffle,
 } from './level-test.logic';
+import { levelTestQuestionText } from './level-test.texts';
+
+describe('savol vaqti', () => {
+  it("yuqori darajada vaqt ko'proq", () => {
+    const secs = LEVEL_TEST_LEVELS.map((l) => secondsFor(l));
+    expect(secs).toEqual([20, 30, 40, 50]);
+    expect(secs).toEqual([...secs].sort((a, b) => a - b));
+    expect(SECONDS_PER_LEVEL.B2).toBe(50);
+  });
+
+  it("muddat + kechikish muhlatidan keyin o'tgan hisoblanadi", () => {
+    const deadline = 1_000_000;
+    expect(isPastDeadline(deadline, deadline)).toBe(false);
+    expect(isPastDeadline(deadline, deadline + GRACE_SECONDS * 1000)).toBe(
+      false,
+    );
+    expect(isPastDeadline(deadline, deadline + GRACE_SECONDS * 1000 + 1)).toBe(
+      true,
+    );
+  });
+
+  it("savol matni vaqtni ko'rsatadi (berilsa)", () => {
+    expect(levelTestQuestionText(3, 'Ich ___ Anna.', 30)).toBe(
+      'Savol 3 · ⏱ 30 soniya\n\nIch ___ Anna.',
+    );
+    expect(levelTestQuestionText(3, 'Ich ___ Anna.')).toBe(
+      'Savol 3\n\nIch ___ Anna.',
+    );
+  });
+});
 import { LEVEL_TEST_QUESTIONS } from './level-test-questions';
 import { LEVEL_TEST_LEVELS } from './level-test.types';
 

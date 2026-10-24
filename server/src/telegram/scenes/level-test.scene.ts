@@ -6,12 +6,17 @@ import {
   normalizeSharedPhone,
   SHARED_PHONE_INVALID,
 } from '../../common/utils/phone.util';
+import type { Update } from 'telegraf/types';
 import {
   askQuestion,
+  GRACE_SECONDS,
+  isPastDeadline,
   judge,
   levelPassed,
+  MAX_TIMEOUTS_IN_ROW,
   nextLevel,
   pickQuestions,
+  secondsFor,
 } from '../../level-test/level-test.logic';
 import { LEVEL_TEST_QUESTIONS } from '../../level-test/level-test-questions';
 import {
@@ -22,6 +27,7 @@ import {
   type BranchChoice,
 } from '../../level-test/level-test.store';
 import {
+  LEVEL_TEST_ABANDONED,
   LEVEL_TEST_BRANCH_PROMPT,
   LEVEL_TEST_FAILED,
   LEVEL_TEST_INTRO,
@@ -31,6 +37,7 @@ import {
   LEVEL_TEST_NO_BRANCH,
   LEVEL_TEST_PHONE_PROMPT,
   LEVEL_TEST_STALE,
+  LEVEL_TEST_TIMEOUT_NOTE,
   levelTestOptionLabel,
   levelTestQuestionText,
   levelTestResultText,
@@ -55,7 +62,51 @@ import { withProcessingLock } from '../utils/processing-lock';
 export const LEVEL_TEST_ACTION = 'menu_level';
 
 const ANSWER_RE = /^lt:(\d+):(\d)$/;
+const TIMEOUT_RE = /^ltt:(\d+)$/;
 const BRANCH_RE = /^ltb:(\d+)$/;
+
+/** Taymerni sahnaga yetkazish: `delayMs` dan keyin `ltt:<counter>` yuboriladi. */
+export interface LevelTestTimeoutJob {
+  chatId: number;
+  counter: number;
+  messageId: number;
+  delayMs: number;
+}
+
+export interface LevelTestTiming {
+  now?: () => number;
+  schedule?: (job: LevelTestTimeoutJob) => void;
+}
+
+/**
+ * Savol vaqti tugaganda botning O'ZI yuboradigan yangilanish. Telegram taymer
+ * bermaydi, shuning uchun bu — `ltt:<counter>` tugmasi bosilgandek ko'rinadigan
+ * ichki yangilanish: u sessiya va sahna middleware'laridan odatdagi yo'l bilan
+ * o'tadi (sessiya jonli obyekt sifatida bo'lishilgani uchun poyga yo'q).
+ * Foydalanuvchi bunday tugmani ko'rmaydi; sahna baribir muddat o'tganini
+ * o'zi tekshiradi.
+ */
+export function levelTestTimeoutUpdate(
+  chatId: number,
+  counter: number,
+  messageId: number,
+  nowMs: number = Date.now(),
+): Update {
+  return {
+    update_id: nowMs,
+    callback_query: {
+      id: `lt-timeout-${chatId}-${counter}`,
+      chat_instance: 'level-test',
+      from: { id: chatId, is_bot: false, first_name: 'Test' },
+      message: {
+        message_id: messageId,
+        date: Math.floor(nowMs / 1000),
+        chat: { id: chatId, type: 'private', first_name: 'Test' },
+      },
+      data: `ltt:${counter}`,
+    },
+  } as Update;
+}
 
 const CONTACT_KEYBOARD = Markup.keyboard([
   [Markup.button.contactRequest('📱 Telefon raqamni yuborish')],
@@ -74,6 +125,12 @@ interface LtState {
   /** How many questions were shown: guards a stale tap on an old question. */
   counter: number;
   current: AskedQuestion | null;
+  /** Savol ko'rsatilgan paytdan + daraja vaqti (ms). */
+  deadlineAt: number;
+  /** Savol xabari: vaqt tugaganda shu xabar tahrirlanadi. */
+  messageId: number;
+  /** Ketma-ket nechta savol javobsiz qoldi. */
+  timeoutsInRow: number;
   correct: CorrectByLevel;
   askedIds: string[];
   /** Questions this chat saw in earlier attempts. */
@@ -103,7 +160,9 @@ export function createLevelTestScene(
   history: Pick<EntityHistoryService, 'recordCreate'>,
   pool: readonly LevelTestQuestion[] = LEVEL_TEST_QUESTIONS,
   rng: () => number = Math.random,
+  timing: LevelTestTiming = {},
 ): Scenes.BaseScene<BotContext> {
+  const now = timing.now ?? Date.now;
   const logger = new Logger('LevelTestScene');
   const scene = new Scenes.BaseScene<BotContext>(SCENES.LEVEL_TEST);
   const byId = new Map(pool.map((q) => [q.id, q]));
@@ -131,8 +190,9 @@ export function createLevelTestScene(
     state.current = asked;
     state.counter += 1;
     state.askedIds.push(asked.id);
-    await ctx.reply(
-      levelTestQuestionText(state.counter, asked.text),
+    const seconds = secondsFor(asked.level);
+    const sent = await ctx.reply(
+      levelTestQuestionText(state.counter, asked.text, seconds),
       Markup.inlineKeyboard(
         asked.options.map((option, i) => [
           Markup.button.callback(
@@ -142,6 +202,66 @@ export function createLevelTestScene(
         ]),
       ),
     );
+    state.messageId = sent?.message_id ?? 0;
+    state.deadlineAt = now() + seconds * 1000;
+    timing.schedule?.({
+      chatId: ctx.chat!.id,
+      counter: state.counter,
+      messageId: state.messageId,
+      // Kechikish muhlatidan keyin yarim soniya: odam oxirgi soniyada bossa,
+      // avval uning javobi o'tadi.
+      delayMs: (seconds + GRACE_SECONDS) * 1000 + 500,
+    });
+  }
+
+  /**
+   * Savolni yopadi: `chosen` — tanlangan variant, `null` — vaqt tugadi (xato
+   * hisoblanadi). Keyin yo keyingi savolga o'tadi, yo testni tugatadi, yo
+   * (ketma-ket javobsizlikda) odam ketgan deb to'xtatadi.
+   */
+  async function settle(
+    ctx: BotContext,
+    state: LtState,
+    chosen: number | null,
+  ): Promise<void> {
+    const asked = state.current!;
+    const level = asked.level;
+    state.correct[level] =
+      (state.correct[level] ?? 0) + (chosen === asked.correctIndex ? 1 : 0);
+    state.answeredInLevel += 1;
+    state.current = null;
+    state.timeoutsInRow = chosen === null ? state.timeoutsInRow + 1 : 0;
+    const shown = levelTestQuestionText(
+      state.counter,
+      asked.text,
+      secondsFor(level),
+    );
+    try {
+      await ctx.editMessageText(
+        `${shown}\n\n${
+          chosen === null
+            ? LEVEL_TEST_TIMEOUT_NOTE
+            : `✅ Javobingiz: ${asked.options[chosen] ?? ''}`
+        }`,
+      );
+    } catch {
+      // Old or already edited message: the answer still counts.
+    }
+
+    if (state.timeoutsInRow >= MAX_TIMEOUTS_IN_ROW) {
+      await ctx.scene.leave();
+      await ctx.reply(LEVEL_TEST_ABANDONED, Markup.removeKeyboard());
+      return;
+    }
+    if (state.queue.length === 0) {
+      if (nextLevel(level) && levelPassed(state.correct[level] ?? 0)) {
+        startLevel(state, state.levelIdx + 1);
+      } else {
+        await finish(ctx, state);
+        return;
+      }
+    }
+    await askNext(ctx, state);
   }
 
   async function finish(ctx: BotContext, state: LtState): Promise<void> {
@@ -221,6 +341,9 @@ export function createLevelTestScene(
         answeredInLevel: 0,
         counter: 0,
         current: null,
+        deadlineAt: 0,
+        messageId: 0,
+        timeoutsInRow: 0,
         correct: {},
         askedIds: [],
         seen,
@@ -248,37 +371,29 @@ export function createLevelTestScene(
       await ctx.answerCbQuery();
       return;
     }
-    await ctx.answerCbQuery();
-    await withProcessingLock(ctx, async () => {
-      const asked = state.current!;
-      const chosen = Number(optionIdx);
-      const level = asked.level;
-      if (chosen === asked.correctIndex) {
-        state.correct[level] = (state.correct[level] ?? 0) + 1;
-      } else {
-        state.correct[level] = state.correct[level] ?? 0;
-      }
-      state.answeredInLevel += 1;
-      state.current = null;
-      try {
-        await ctx.editMessageText(
-          `${levelTestQuestionText(state.counter, asked.text)}\n\n✅ Javobingiz: ${asked.options[chosen] ?? ''}`,
-        );
-      } catch {
-        // Old or already edited message: the answer still counts.
-      }
+    // Muddatdan keyin kelgan javob hisobga olinmaydi: vaqt tugagan.
+    const late = isPastDeadline(state.deadlineAt, now());
+    await ctx.answerCbQuery(late ? LEVEL_TEST_TIMEOUT_NOTE : undefined);
+    await withProcessingLock(ctx, () =>
+      settle(ctx, state, late ? null : Number(optionIdx)),
+    );
+  });
 
-      if (state.queue.length === 0) {
-        const next = nextLevel(level);
-        if (next && levelPassed(state.correct[level] ?? 0)) {
-          startLevel(state, state.levelIdx + 1);
-        } else {
-          await finish(ctx, state);
-          return;
-        }
-      }
-      await askNext(ctx, state);
-    });
+  // Taymer yuborgan ichki yangilanish (`levelTestTimeoutUpdate`): tugma emas,
+  // shuning uchun `answerCbQuery` chaqirilmaydi.
+  scene.action(TIMEOUT_RE, async (ctx) => {
+    const state = stateOf(ctx);
+    if (
+      !state ||
+      state.phase !== 'quiz' ||
+      !state.current ||
+      Number(ctx.match[1]) !== state.counter ||
+      ctx.session.processing ||
+      !isPastDeadline(state.deadlineAt, now())
+    ) {
+      return;
+    }
+    await withProcessingLock(ctx, () => settle(ctx, state, null));
   });
 
   scene.on(message('contact'), async (ctx) => {

@@ -15,10 +15,13 @@ Bitta qat'iy 15 savolli test ikki joyda yaroqsiz: qayta topshirgan odamga bir xi
 1. **Savollar havzasi — kodda, qo'lda yozilgan:** `level-test-questions.ts`, 200 ta (A1, A2, B1, B2 — har biri 50). Har savol: barqaror `id` (`a1-007`), daraja, matn, 1 to'g'ri va 3 xato variant. Manba va ko'rik hujjati — `…-savollar.md`. Xato savol shu ro'yxatdan o'chiriladi; qolganlarning `id`'si o'zgarmaydi va o'chirilgani qayta ishlatilmaydi.
 2. **Har urinishda 20 tagacha savol:** darajadan 5 tadan, A1 → B2 tartibida. Tanlash tasodifiy, variantlar tartibi har safar aralashadi. Shu chat avvalgi 10 urinishda ko'rgan savollar (`LevelTestAttempt.questionIds`) avval chiqmaydi; havza tugasa, ko'rilganlardan to'ldiriladi.
 3. **Natija qoidasi — bitta sof funksiya `judge`:** darajada `PASS_MARK = 4` (5 dan) to'g'ri javob bo'lsa, keyingi darajaga o'tiladi, bo'lmasa test shu yerda tugaydi. Natija — oxirgi o'tilgan daraja: `BEGINNER` (A1 dan o'tmagan), `A1`, `A2`, `B1`, `B2` («B2 yoki yuqori»).
-4. **Urinish test tugaganda yoziladi** (`LevelTestAttempt`): yarim tashlab ketilgani yozilmaydi. Savollar sessiyada (Redis) turadi.
-5. **Lid ixtiyoriy va odamning o'z raqami bilan:** natija ko'rsatilgach bot raqam so'raydi («📱 Telefon raqamni yuborish» yoki «Keyinroq»). Faqat o'zining kontakti qabul qilinadi (`contactBelongsToSender`). Raqamni yuborgan odamdan **bot filialni so'raydi** (faol filiallar tugma bo'lib; bitta filial bo'lsa so'ralmaydi). Lid tanlangan filialning «Yangi» ustunidagi birinchi bo'limga tushadi, manbasi — «Telegram bot — daraja testi». Natija lidning tarixida (`darajaTesti`) turadi.
-6. **Takroriy lid yaratilmaydi:** shu telefonli jonli lid bor bo'lsa, urinish unga bog'lanadi (`LevelTestAttempt.leadId`), yangi lid ochilmaydi.
-7. **`LeadsService` chaqirilmaydi.** U `TelegramModule` dan import qilinsa halqa yasaydi; `StudentLeadOriginService` ham shu sabab `prisma.lead` ga to'g'ridan yozadi. Lid, uning `EntityHistory` yozuvi (`tx` bilan) va urinishga bog'lanish bitta tranzaksiyada.
+4. **Har savolga vaqt beriladi, daraja bo'yicha:** A1 20 s, A2 30 s, B1 40 s, B2 50 s (`SECONDS_PER_LEVEL`), savol matnida ko'rsatiladi. Vaqt tugasa savol xato hisoblanadi ("javob hisobga olinmadi") va bot keyingisini beradi. Ketma-ket 3 ta savol javobsiz qolsa (`MAX_TIMEOUTS_IN_ROW`), odam ketgan deb test to'xtatiladi va urinish SAQLANMAYDI. Tarmoq kechikishi uchun 3 soniya muhlat (`GRACE_SECONDS`).
+   - **Muddat bot xotirasida emas, sessiyada** (`deadlineAt`): savolga bosilgan tugma muddatdan keyin kelsa, sahnaning o'zi uni rad etib, vaqt tugagan deb hisoblaydi. Bu asosiy kafolat.
+   - **Odam hech narsa bosmasa, keyingi savolga o'tishi uchun** `TelegramService` jarayon ichida `setTimeout` qo'yadi va muddat o'tgach botning O'ZIGA `ltt:<tartib>` yangilanishini yuboradi (`bot.handleUpdate`), shu sabab u sessiya va sahna middleware'laridan odatdagi yo'l bilan o'tadi. Telegraf bir kalitli sessiyani bir vaqtdagi yangilanishlar orasida bitta obyekt sifatida bo'lishadi, shuning uchun poyga yo'q; tartib raqami va `processing` bayrog'i ikki marta o'tishni to'sadi. Taymer qayta ishga tushirishda yo'qoladi: shunda avto-o'tish kechikadi, test buzilmaydi.
+5. **Urinish test tugaganda yoziladi** (`LevelTestAttempt`): yarim tashlab ketilgani yozilmaydi. Savollar sessiyada (Redis) turadi.
+6. **Lid ixtiyoriy va odamning o'z raqami bilan:** natija ko'rsatilgach bot raqam so'raydi («📱 Telefon raqamni yuborish» yoki «Keyinroq»). Faqat o'zining kontakti qabul qilinadi (`contactBelongsToSender`). Raqamni yuborgan odamdan **bot filialni so'raydi** (faol filiallar tugma bo'lib; bitta filial bo'lsa so'ralmaydi). Lid tanlangan filialning «Yangi» ustunidagi birinchi bo'limga tushadi, manbasi — «Telegram bot — daraja testi». Natija lidning tarixida (`darajaTesti`) turadi.
+7. **Takroriy lid yaratilmaydi:** shu telefonli jonli lid bor bo'lsa, urinish unga bog'lanadi (`LevelTestAttempt.leadId`), yangi lid ochilmaydi.
+8. **`LeadsService` chaqirilmaydi.** U `TelegramModule` dan import qilinsa halqa yasaydi; `StudentLeadOriginService` ham shu sabab `prisma.lead` ga to'g'ridan yozadi. Lid, uning `EntityHistory` yozuvi (`tx` bilan) va urinishga bog'lanish bitta tranzaksiyada.
 
 ## Taqiqlanadi
 
@@ -26,6 +29,8 @@ Bitta qat'iy 15 savolli test ikki joyda yaroqsiz: qayta topshirgan odamga bir xi
 - Test uchun to'g'ri javobni foydalanuvchiga ko'rsatish (javobdan keyin faqat tanlangani yoziladi).
 - Havzadagi savolning `id`'sini o'zgartirish yoki qayta ishlatish.
 - Lid yaratishda raqamni kontaktdan emas, matndan olish: begonaning raqami bilan lid ochilmasligi kerak.
+- Muddatni faqat taymerga ishonib hal qilish: kech kelgan javob sahnada `deadlineAt` bo'yicha tekshiriladi, taymer esa faqat "odam hech narsa bosmadi" holati uchun.
+- Vaqt tugagan savolga javobsiz o'tilganda "to'g'ri javob"ni ko'rsatish.
 
 ## Muqobillar
 

@@ -28,6 +28,22 @@ qo'ng'iroq qiladi.
   (umumiy middleware).
 - Faqat shaxsiy chatda.
 
+## Savol vaqti
+
+- Daraja bo'yicha: A1 20 s, A2 30 s, B1 40 s, B2 50 s (`SECONDS_PER_LEVEL` — bitta
+  jadval). Savol matnida: «Savol 3 · ⏱ 30 soniya».
+- Vaqt tugasa: xabar «⏱ Vaqt tugadi — javob hisobga olinmadi» ga o'zgaradi, savol
+  xato hisoblanadi, keyingisi beriladi. To'g'ri javob ko'rsatilmaydi.
+- Tarmoq kechikishi uchun 3 s muhlat: shu vaqt ichida bosilgan javob o'tadi.
+- Ketma-ket 3 ta savol javobsiz — test to'xtatiladi, urinish saqlanmaydi.
+- Ikki qatlam: (1) sahna muddatni sessiyada (`deadlineAt`) saqlaydi va kech
+  bosilgan tugmani o'zi rad etadi; (2) `TelegramService` muddat o'tgach botning
+  o'ziga `ltt:<tartib>` yangilanishini yuboradi, shunda odam hech narsa
+  bosmasa ham keyingi savol keladi. Taymer jarayon xotirasida: qayta ishga
+  tushsa yo'qoladi, (1) baribir ishlaydi.
+- Orqaga sanash yo'q (Telegram xabarni tez-tez tahrirlashni cheklaydi): vaqt
+  savol matnida bir marta yoziladi.
+
 ## Ma'lumot
 
 `LevelTestAttempt { id, chatId, questionIds[], correctByLevel (Json), result,
