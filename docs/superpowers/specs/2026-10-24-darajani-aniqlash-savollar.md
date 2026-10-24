@@ -15,7 +15,9 @@ kifoya: qolganlari ishlayveradi.
 
 ## Natija qoidasi
 
-Savollar A1 → A2 → B1 → B2 tartibida beriladi, har darajada 5 tadan.
+Savollar A1 → A2 → B1 → B2 tartibida beriladi, har darajada 5 tadan; hamma 20
+savol har doim so'raladi. Natija test tugagach shu qoida bilan hisoblanadi
+(yuqoridagi darajalardagi javoblar o'tilmagan darajadan keyin hisobga olinmaydi):
 
 - A1 dan 4 tadan kam to'g'ri → «A1 (boshlang'ich)».
 - A1 dan 4+, A2 dan 4 tadan kam → «A1».

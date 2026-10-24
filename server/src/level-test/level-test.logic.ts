@@ -9,8 +9,12 @@ import {
 
 /** Har darajadan nechta savol beriladi. */
 export const QUESTIONS_PER_LEVEL = 5;
-/** Keyingi darajaga o'tish uchun darajadan nechta to'g'ri kerak (5 dan 4). */
+/** Darajadan o'tilgan hisoblanishi uchun nechta to'g'ri kerak (5 dan 4). */
 export const PASS_MARK = 4;
+/** Bir urinishdagi savollar soni: hamma 4 darajadan 5 tadan. */
+export const TOTAL_QUESTIONS = LEVEL_TEST_LEVELS.length * QUESTIONS_PER_LEVEL;
+/** Qolgan vaqt chizig'i shuncha soniyada bir yangilanadi (Telegram tahrir cheklovi). */
+export const TICK_SECONDS = 5;
 
 /**
  * Savolga beriladigan vaqt (soniya), daraja bo'yicha: yuqori darajada savol
@@ -88,9 +92,11 @@ export function askQuestion(
 }
 
 /**
- * Natija qoidasi: darajalar A1 → B2 tartibida, har birida `PASS_MARK` to'g'ri
- * kerak. Birinchi o'tmagan darajadan oldingi daraja — natija; A1 dan o'tmagan
- * bo'lsa — BEGINNER.
+ * Natija qoidasi. Test HAMMA darajadan so'raydi (A1 → B2), natija esa oxirida
+ * shu yerda aytiladi: darajalar tartibida, har birida `PASS_MARK` to'g'ri kerak.
+ * Birinchi o'tilmagan darajadan oldingi daraja — natija, A1 dan o'tilmagan
+ * bo'lsa — BEGINNER. Undan yuqoridagi darajalardagi to'g'ri javoblar hisobga
+ * olinmaydi: taxmin bilan tasodifan topilgan javob darajani ko'tarmasligi uchun.
  */
 export function judge(correct: CorrectByLevel): LevelTestResult {
   let result: LevelTestResult = 'BEGINNER';
@@ -99,11 +105,6 @@ export function judge(correct: CorrectByLevel): LevelTestResult {
     result = level;
   }
   return result;
-}
-
-/** Daraja tugagach: keyingisiga o'tish mumkinmi (aks holda test tugaydi). */
-export function levelPassed(correctInLevel: number): boolean {
-  return correctInLevel >= PASS_MARK;
 }
 
 export function nextLevel(level: LevelTestLevel): LevelTestLevel | null {
