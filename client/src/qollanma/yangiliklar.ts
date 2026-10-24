@@ -32,6 +32,12 @@ export const yangiliklar: Yangilik[] = [
     sahifa: { bolim: "guruhlar", sahifa: "jadval" },
   },
   {
+    sana: "2026-10-20",
+    sarlavha: "Guruh sahifasida «Musobaqa» tabi",
+    matn: "Guruh sahifasida yangi «Musobaqa» tabi bor. Tepada guruhning markaz bo'yicha shu haftadagi o'rni va o'rtacha bali, oxirgi 8 haftaning o'rinlari (bosilsa o'sha haftaga o'tadi). Pastda har o'quvchining haftalik bali, faol kunlari, seriyasi, bugungi maqsad bajarilishi, ligasi va nishonlari. «Shu hafta mashq qilmaganlar» ro'yxati o'quvchiga o'zingiz bog'lanishingiz uchun; tizim hech kimga xabar yubormaydi. Ustoz faqat o'z guruhini ko'radi.",
+    rollar: [1, 2, 3, 4],
+  },
+  {
     sana: "2026-10-19",
     sarlavha: "Chiqarishda oy puli ushlansa, topshiriq tushadi",
     matn: "O'quvchi guruhdan chiqarilganda oyning 40% idan ko'pi o'tgan va oy puli ushlab qolingan bo'lsa, filial administratorlariga «Oy puli ushlab qolindi» topshirig'i tushadi. Unda o'quvchi, guruh va ushlangan summa bor. Sabab «Boshqa guruhga ko'chdi» tanlansa, tizim buni o'tkazish deb hisoblaydi va o'tmagan darslar pulini o'zi balansga qaytaradi. Boshqa sabab bilan chiqarilgan o'quvchi aslida o'tgan bo'lsa, rahbarga ayting. Haqiqatan ketgan bo'lsa, topshiriqni ko'rib chiqib «Bajarildi» bilan yoping. O'quvchi qayta yozilsa yoki pul qaytarilsa, topshiriq o'zi yopiladi.",

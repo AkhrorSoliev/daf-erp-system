@@ -53,7 +53,7 @@ export const boshlash: QollanmaSahifa[] = [
     adr: ["0076", "0101", "0102"],
     yollar: ["/", "/notifications"],
     kalitSozlar: ["menyu", "filial", "qidiruv", "bildirishnoma", "bildirishnomalar", "qo'ng'iroqcha", "kutilmoqda", "o'qilgan", "mavzu", "ko'rinish", "profil", "chiqish", "foydalanuvchi menyusi", "dizayn", "dizayn uslubi", "uslub", "shrift", "til", "tilni almashtirish", "русский", "texnik yordam", "yangilangan"],
-    yangilangan: "2026-10-17",
+    yangilangan: "2026-10-20",
   },
   {
     bolim: "boshlash",

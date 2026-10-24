@@ -600,7 +600,7 @@ describe('StudentEnrollmentService', () => {
       expect(prisma.enrollment.update).not.toHaveBeenCalled();
     });
 
-    describe('a reason that says the student moved (ADR-0124)', () => {
+    describe('a reason that says the student moved (ADR-0125)', () => {
       const reasonNamed = (name: string) =>
         prisma.studentExitReason.findFirst.mockResolvedValueOnce({
           id: 'reason-1',

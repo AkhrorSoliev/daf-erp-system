@@ -354,7 +354,7 @@ export interface WithheldWarning {
 /**
  * Removal only: contract 6.2 keeps the month's money when the student leaves
  * after more than 40% of the lessons. A reason that says the student moved to
- * another group («ko'chdi») is settled as a transfer on the server (ADR-0124):
+ * another group («ko'chdi») is settled as a transfer on the server (ADR-0125):
  * the unheld lessons come back, and the box says so. Otherwise it warns that a
  * move done through «Chiqarish» would lose the money. Blocks nothing.
  */
