@@ -6,12 +6,12 @@ import {
   normalizeSharedPhone,
   SHARED_PHONE_INVALID,
 } from '../../common/utils/phone.util';
-import type { Update } from 'telegraf/types';
 import {
   askQuestion,
   GRACE_SECONDS,
   isPastDeadline,
   judge,
+  judgeStopped,
   MAX_TIMEOUTS_IN_ROW,
   nextLevel,
   pickQuestions,
@@ -29,9 +29,14 @@ import { LEVEL_TEST_QUESTIONS } from '../../level-test/level-test-questions';
 import {
   branchChoices,
   createLeadFromTest,
-  saveAttempt,
+  finishAttempt,
+  linkedStudent,
+  recordStudentResult,
+  saveProgress,
   seenQuestionIds,
+  startAttempt,
   type BranchChoice,
+  type LinkedStudent,
 } from '../../level-test/level-test.store';
 import {
   LEVEL_TEST_ABANDONED,
@@ -44,6 +49,11 @@ import {
   LEVEL_TEST_NO_BRANCH,
   LEVEL_TEST_PHONE_PROMPT,
   LEVEL_TEST_STALE,
+  LEVEL_TEST_STOP_BUTTON,
+  LEVEL_TEST_STOP_CONFIRM,
+  LEVEL_TEST_STOP_NO,
+  LEVEL_TEST_STOP_YES,
+  LEVEL_TEST_STUDENT_DONE,
   LEVEL_TEST_TIMEOUT_NOTE,
   levelTestResultText,
 } from '../../level-test/level-test.texts';
@@ -62,6 +72,7 @@ import {
   contactBelongsToSender,
 } from '../utils/contact-ownership';
 import { withProcessingLock } from '../utils/processing-lock';
+import type { LevelTestTiming } from './level-test-timer';
 
 /** The /start menu button «📊 Darajani aniqlash». */
 export const LEVEL_TEST_ACTION = 'menu_level';
@@ -69,55 +80,10 @@ export const LEVEL_TEST_ACTION = 'menu_level';
 const ANSWER_RE = /^lt:(\d+):(\d)$/;
 const TIMEOUT_RE = /^ltt:(\d+)$/;
 const TICK_RE = /^ltk:(\d+)$/;
+const STOP_ASK_RE = /^ltx:(\d+)$/;
+const STOP_YES_RE = /^lty:(\d+)$/;
+const STOP_NO_RE = /^ltn:(\d+)$/;
 const BRANCH_RE = /^ltb:(\d+)$/;
-
-/**
- * Taymerni sahnaga yetkazish: `delayMs` dan keyin `ltt:<counter>` (vaqt tugadi)
- * yoki `ltk:<counter>` (qolgan vaqtni yangilash) yuboriladi.
- */
-export interface LevelTestTimeoutJob {
-  chatId: number;
-  counter: number;
-  messageId: number;
-  delayMs: number;
-  action: 'timeout' | 'tick';
-}
-
-export interface LevelTestTiming {
-  now?: () => number;
-  schedule?: (job: LevelTestTimeoutJob) => void;
-}
-
-/**
- * Savol vaqti tugaganda botning O'ZI yuboradigan yangilanish. Telegram taymer
- * bermaydi, shuning uchun bu — `ltt:<counter>` tugmasi bosilgandek ko'rinadigan
- * ichki yangilanish: u sessiya va sahna middleware'laridan odatdagi yo'l bilan
- * o'tadi (sessiya jonli obyekt sifatida bo'lishilgani uchun poyga yo'q).
- * Foydalanuvchi bunday tugmani ko'rmaydi; sahna baribir muddat o'tganini
- * o'zi tekshiradi.
- */
-export function levelTestTimeoutUpdate(
-  chatId: number,
-  counter: number,
-  messageId: number,
-  nowMs: number = Date.now(),
-  action: 'timeout' | 'tick' = 'timeout',
-): Update {
-  return {
-    update_id: nowMs,
-    callback_query: {
-      id: `lt-${action}-${chatId}-${counter}-${nowMs}`,
-      chat_instance: 'level-test',
-      from: { id: chatId, is_bot: false, first_name: 'Test' },
-      message: {
-        message_id: messageId,
-        date: Math.floor(nowMs / 1000),
-        chat: { id: chatId, type: 'private', first_name: 'Test' },
-      },
-      data: `${action === 'tick' ? 'ltk' : 'ltt'}:${counter}`,
-    },
-  } as Update;
-}
 
 const CONTACT_KEYBOARD = Markup.keyboard([
   [Markup.button.contactRequest('📱 Telefon raqamni yuborish')],
@@ -148,6 +114,12 @@ interface LtState {
   askedIds: string[];
   /** Questions this chat saw in earlier attempts. */
   seen: string[];
+  /** Yakuniy natija: lid ochishda ishlatiladi (to'xtatilganda ham to'g'ri). */
+  result?: LevelTestResult;
+  /** «Natijani bilish» bosildi, tasdiq kutilmoqda (tugmalar o'zgargan). */
+  confirmStop?: boolean;
+  /** Chat bitta o'quvchi kartasiga bog'langan bo'lsa: lid emas, profil. */
+  student?: LinkedStudent;
   attemptId?: string;
   phone?: string;
   firstName?: string;
@@ -250,12 +222,24 @@ export function createLevelTestScene(
   ): Promise<void> {
     const view = currentView(state);
     const html = renderQuiz(state.log, view, TOTAL_QUESTIONS);
+    const n = state.counter;
+    // «Natijani bilish» tasdig'i kutilayotganda javob tugmalari o'rniga Ha/Yo'q.
     const keyboard = view
-      ? Markup.inlineKeyboard([
-          view.options.map((_, i) =>
-            Markup.button.callback(optionLetter(i), `lt:${state.counter}:${i}`),
-          ),
-        ])
+      ? Markup.inlineKeyboard(
+          state.confirmStop
+            ? [
+                [
+                  Markup.button.callback(LEVEL_TEST_STOP_YES, `lty:${n}`),
+                  Markup.button.callback(LEVEL_TEST_STOP_NO, `ltn:${n}`),
+                ],
+              ]
+            : [
+                view.options.map((_, i) =>
+                  Markup.button.callback(optionLetter(i), `lt:${n}:${i}`),
+                ),
+                [Markup.button.callback(LEVEL_TEST_STOP_BUTTON, `ltx:${n}`)],
+              ],
+        )
       : undefined;
 
     if (!state.messageId) {
@@ -298,6 +282,7 @@ export function createLevelTestScene(
       (state.correct[level] ?? 0) + (chosen === asked.correctIndex ? 1 : 0);
     state.answeredInLevel += 1;
     state.current = null;
+    state.confirmStop = false;
     state.timeoutsInRow = chosen === null ? state.timeoutsInRow + 1 : 0;
     state.log.push({
       n: state.counter,
@@ -307,10 +292,12 @@ export function createLevelTestScene(
 
     if (state.timeoutsInRow >= MAX_TIMEOUTS_IN_ROW) {
       await draw(ctx, state);
+      await close(state, 'TIMED_OUT', null);
       await ctx.scene.leave();
       await ctx.reply(LEVEL_TEST_ABANDONED, Markup.removeKeyboard());
       return;
     }
+    await persist(state);
     // Hamma daraja so'raladi (A1 → B2): oldingi darajadagi natija testni
     // to'xtatmaydi. Darajani oxirida `judge` aytadi.
     if (state.queue.length === 0) {
@@ -324,30 +311,88 @@ export function createLevelTestScene(
     await askNext(ctx, state);
   }
 
-  async function finish(ctx: BotContext, state: LtState): Promise<void> {
-    const result: LevelTestResult = judge(state.correct);
+  const progressOf = (state: LtState) => ({
+    questionIds: state.askedIds,
+    answered: state.log.length,
+    correctByLevel: state.correct,
+  });
+
+  /** Har javobdan keyin: yarim qolsa ham qancha yechgani ma'lum bo'lsin. */
+  async function persist(state: LtState): Promise<void> {
+    if (!state.attemptId) return;
+    try {
+      await saveProgress(prisma, state.attemptId, progressOf(state));
+    } catch (error) {
+      logger.warn(`Daraja testi jarayonini yozib bo'lmadi: ${error}`);
+    }
+  }
+
+  /** Urinishni yopadi (xato testni to'xtatmaydi, faqat logga yoziladi). */
+  async function close(
+    state: LtState,
+    status: 'COMPLETED' | 'STOPPED' | 'TIMED_OUT' | 'CANCELLED',
+    result: LevelTestResult | null,
+  ): Promise<void> {
+    if (!state.attemptId) return;
+    try {
+      await finishAttempt(prisma, state.attemptId, {
+        ...progressOf(state),
+        status,
+        result,
+      });
+    } catch (error) {
+      logger.error("Daraja testi urinishini yopib bo'lmadi", error as Error);
+    }
+  }
+
+  /**
+   * Testni yakunlaydi. `STOPPED` — odam «Natijani bilish» ni bosgan: natija
+   * hozirgacha javob berilganlar bo'yicha (`judgeStopped`), "kamida shu".
+   */
+  async function finish(
+    ctx: BotContext,
+    state: LtState,
+    status: 'COMPLETED' | 'STOPPED' = 'COMPLETED',
+  ): Promise<void> {
+    const stopped = status === 'STOPPED';
+    const answered = state.log.length;
+    const result: LevelTestResult = stopped
+      ? judgeStopped(state.correct, answered)
+      : judge(state.correct);
     const correctTotal = Object.values(state.correct).reduce(
       (sum, n) => sum + (n ?? 0),
       0,
     );
     state.current = null;
+    state.confirmStop = false;
+    state.result = result;
     // Xabar yakuniy ko'rinishga o'tadi: butun tarix, tugmalarsiz.
     await draw(ctx, state);
-    try {
-      state.attemptId = await saveAttempt(prisma, {
-        chatId: String(ctx.chat!.id),
-        questionIds: state.askedIds,
-        correctByLevel: state.correct,
-        result,
-        companyId: DEFAULT_COMPANY_ID,
-      });
-    } catch (error) {
-      logger.error("Daraja testi urinishini saqlab bo'lmadi", error as Error);
-    }
+    await close(state, status, result);
     await ctx.reply(
-      levelTestResultText(result, correctTotal, state.askedIds.length),
+      levelTestResultText(
+        result,
+        correctTotal,
+        answered,
+        stopped ? TOTAL_QUESTIONS : undefined,
+      ),
     );
-    if (!state.attemptId) {
+
+    // Chat o'quvchi kartasiga bog'langan: natija profilda, lid ochilmaydi.
+    if (state.student) {
+      if (result !== 'UNKNOWN') {
+        try {
+          await recordStudentResult(history, state.student, {
+            status,
+            result,
+            answered,
+            correct: correctTotal,
+          });
+        } catch (error) {
+          logger.error('Tarixga daraja natijasi yozilmadi', error as Error);
+        }
+      }
+      await ctx.reply(LEVEL_TEST_STUDENT_DONE);
       await ctx.scene.leave();
       return;
     }
@@ -368,7 +413,7 @@ export function createLevelTestScene(
         phone: state.phone!,
         branchId,
         companyId: DEFAULT_COMPANY_ID,
-        result: judge(state.correct),
+        result: state.result ?? judge(state.correct),
       });
       if (outcome.kind === 'no-section') {
         logger.warn(
@@ -412,6 +457,25 @@ export function createLevelTestScene(
         seen,
       };
       ctx.session.data = { lt: state };
+      // Urinish BOSHLANGANDA yoziladi: yarim qoldirgani ham hisobotda ko'rinadi.
+      // Yozib bo'lmasa testni boshlamaymiz: hisobda yo'q test bo'lmasin.
+      try {
+        const student = await linkedStudent(prisma, chatId);
+        state.student = student ?? undefined;
+        state.attemptId = await startAttempt(prisma, {
+          chatId,
+          studentId: student?.id ?? null,
+          companyId: DEFAULT_COMPANY_ID,
+        });
+      } catch (error) {
+        logger.error(
+          "Daraja testi urinishini boshlab bo'lmadi",
+          error as Error,
+        );
+        await ctx.reply(LEVEL_TEST_FAILED, Markup.removeKeyboard());
+        await ctx.scene.leave();
+        return;
+      }
       startLevel(state, 0);
       await ctx.reply(LEVEL_TEST_INTRO, Markup.removeKeyboard());
       await askNext(ctx, state);
@@ -474,6 +538,46 @@ export function createLevelTestScene(
       return;
     }
     await draw(ctx, state, true);
+  });
+
+  // «🏁 Natijani bilish»: qiyinlashganda testni shu yerda to'xtatish. Tasodifiy
+  // bosilib ketmasligi uchun avval Ha/Yo'q so'raladi.
+  const stoppable = (state: LtState | undefined, counter: string) =>
+    !!state &&
+    state.phase === 'quiz' &&
+    !!state.current &&
+    Number(counter) === state.counter;
+
+  scene.action(STOP_ASK_RE, async (ctx) => {
+    const state = stateOf(ctx);
+    if (!stoppable(state, ctx.match[1]) || ctx.session.processing) {
+      await ctx.answerCbQuery(LEVEL_TEST_STALE);
+      return;
+    }
+    state!.confirmStop = true;
+    await ctx.answerCbQuery(LEVEL_TEST_STOP_CONFIRM);
+    await draw(ctx, state!, true);
+  });
+
+  scene.action(STOP_NO_RE, async (ctx) => {
+    const state = stateOf(ctx);
+    if (!stoppable(state, ctx.match[1]) || ctx.session.processing) {
+      await ctx.answerCbQuery(LEVEL_TEST_STALE);
+      return;
+    }
+    state!.confirmStop = false;
+    await ctx.answerCbQuery();
+    await draw(ctx, state!, true);
+  });
+
+  scene.action(STOP_YES_RE, async (ctx) => {
+    const state = stateOf(ctx);
+    if (!stoppable(state, ctx.match[1]) || ctx.session.processing) {
+      await ctx.answerCbQuery(LEVEL_TEST_STALE);
+      return;
+    }
+    await ctx.answerCbQuery();
+    await withProcessingLock(ctx, () => finish(ctx, state!, 'STOPPED'));
   });
 
   scene.on(message('contact'), async (ctx) => {
@@ -555,6 +659,9 @@ export function createLevelTestScene(
     const text = ctx.message.text.trim();
     const state = stateOf(ctx);
     if (text === '/cancel') {
+      // Test hali davom etayotgan bo'lsa urinish "bekor qilingan" deb yopiladi
+      // (natija tugagan bo'lsa, holati o'zgarmaydi).
+      if (state?.phase === 'quiz') await close(state, 'CANCELLED', null);
       await ctx.scene.leave();
       await ctx.reply(
         'Bekor qilindi. Qayta boshlash uchun /start bosing.',

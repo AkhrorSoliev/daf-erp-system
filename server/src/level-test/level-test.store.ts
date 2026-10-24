@@ -1,4 +1,4 @@
-import { LeadStatus, Prisma } from '@prisma/client';
+import { LeadStatus, LevelTestStatus, Prisma } from '@prisma/client';
 import type { EntityHistoryService } from '../common/entity-history';
 import type { PrismaService } from '../prisma/prisma.service';
 import { LEVEL_TEST_RESULT_LABEL } from './level-test.texts';
@@ -34,27 +34,121 @@ export async function seenQuestionIds(
   return new Set(rows.flatMap((r) => r.questionIds));
 }
 
-export async function saveAttempt(
+/** Bot chati aynan BITTA o'quvchi kartasiga bog'langan bo'lsa — shu o'quvchi. */
+export interface LinkedStudent {
+  id: number;
+  firstName: string;
+  lastName: string;
+  companyId: number;
+}
+
+/**
+ * Chat bitta o'quvchi kartasiga bog'langanmi? Bir nechta kartaga (ota-onaning
+ * chati, aka-ukalar) bog'langan chatda test kimniki ekanini bilmaymiz, shuning
+ * uchun u oddiy (lid) oqimida qoladi.
+ */
+export async function linkedStudent(
+  prisma: Pick<PrismaService, 'student'>,
+  chatId: string,
+): Promise<LinkedStudent | null> {
+  const rows = await prisma.student.findMany({
+    where: { telegramChatId: chatId, deletedAt: null },
+    select: { id: true, firstName: true, lastName: true, companyId: true },
+    take: 2,
+  });
+  return rows.length === 1 && rows[0].companyId !== null
+    ? (rows[0] as LinkedStudent)
+    : null;
+}
+
+/** Test BOSHLANGANDA yoziladi, shuning uchun yarim qoldirgani ham hisobda. */
+export async function startAttempt(
   prisma: Pick<PrismaService, 'levelTestAttempt'>,
-  data: {
-    chatId: string;
-    questionIds: string[];
-    correctByLevel: CorrectByLevel;
-    result: LevelTestResult;
-    companyId: number;
-  },
+  data: { chatId: string; studentId: number | null; companyId: number },
 ): Promise<string> {
   const row = await prisma.levelTestAttempt.create({
     data: {
       chatId: data.chatId,
-      questionIds: data.questionIds,
-      correctByLevel: data.correctByLevel as Prisma.InputJsonObject,
-      result: data.result,
+      studentId: data.studentId,
       companyId: data.companyId,
+      questionIds: [],
+      correctByLevel: {},
+      status: LevelTestStatus.IN_PROGRESS,
     },
     select: { id: true },
   });
   return row.id;
+}
+
+export interface AttemptProgress {
+  questionIds: string[];
+  answered: number;
+  correctByLevel: CorrectByLevel;
+}
+
+/** Har javobdan keyin: yarim qolsa ham qancha yechgani ma'lum bo'ladi. */
+export async function saveProgress(
+  prisma: Pick<PrismaService, 'levelTestAttempt'>,
+  id: string,
+  p: AttemptProgress,
+): Promise<void> {
+  await prisma.levelTestAttempt.update({
+    where: { id },
+    data: {
+      questionIds: p.questionIds,
+      answered: p.answered,
+      correctByLevel: p.correctByLevel as Prisma.InputJsonObject,
+    },
+  });
+}
+
+/** Urinishni yopadi. `result` — null: natija chiqarilmagan (bekor, javobsiz). */
+export async function finishAttempt(
+  prisma: Pick<PrismaService, 'levelTestAttempt'>,
+  id: string,
+  p: AttemptProgress & {
+    status: Exclude<LevelTestStatus, 'IN_PROGRESS'>;
+    result: LevelTestResult | null;
+  },
+): Promise<void> {
+  await prisma.levelTestAttempt.update({
+    where: { id },
+    data: {
+      questionIds: p.questionIds,
+      answered: p.answered,
+      correctByLevel: p.correctByLevel as Prisma.InputJsonObject,
+      status: p.status,
+      result: p.result,
+      finishedAt: new Date(),
+    },
+  });
+}
+
+/**
+ * Chat bog'langan o'quvchining tarixiga yozuv: natija profilda ko'rinadi.
+ * Faqat natija chiqqan urinish (tugatgan yoki o'zi to'xtatgan) yoziladi.
+ */
+export async function recordStudentResult(
+  history: Pick<EntityHistoryService, 'recordCreate'>,
+  student: LinkedStudent,
+  p: {
+    status: 'COMPLETED' | 'STOPPED';
+    result: LevelTestResult;
+    answered: number;
+    correct: number;
+  },
+): Promise<void> {
+  await history.recordCreate({
+    entityType: 'Student',
+    entityId: student.id,
+    companyId: student.companyId,
+    newValues: {
+      action: 'DARAJA_TESTI',
+      daraja: LEVEL_TEST_RESULT_LABEL[p.result],
+      javoblar: `${p.correct} / ${p.answered}`,
+      holat: p.status === 'COMPLETED' ? 'Tugatdi' : "O'zi to'xtatdi",
+    },
+  });
 }
 
 /** Odam tanlashi mumkin bo'lgan filiallar: faol, o'chirilmagan. */

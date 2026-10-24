@@ -2,8 +2,12 @@ import {
   branchChoices,
   createLeadFromTest,
   LEVEL_TEST_SOURCE_NAME,
-  saveAttempt,
+  finishAttempt,
+  linkedStudent,
+  recordStudentResult,
+  saveProgress,
   seenQuestionIds,
+  startAttempt,
 } from './level-test.store';
 
 const PARAMS = {
@@ -68,16 +72,14 @@ describe('level-test store', () => {
     });
   });
 
-  describe('saveAttempt', () => {
-    it('urinishni yozadi va id qaytaradi', async () => {
+  describe('attempt lifecycle', () => {
+    it("startAttempt: IN_PROGRESS, bo'sh jarayon, o'quvchi bog'lanishi bilan", async () => {
       const { prisma } = makePrisma();
       prisma.levelTestAttempt.create.mockResolvedValue({ id: 'att-9' });
 
-      const id = await saveAttempt(prisma as any, {
+      const id = await startAttempt(prisma as any, {
         chatId: '777',
-        questionIds: ['a1-1'],
-        correctByLevel: { A1: 1 },
-        result: 'BEGINNER',
+        studentId: 12345,
         companyId: 1001,
       });
 
@@ -85,12 +87,118 @@ describe('level-test store', () => {
       expect(prisma.levelTestAttempt.create).toHaveBeenCalledWith({
         data: {
           chatId: '777',
-          questionIds: ['a1-1'],
-          correctByLevel: { A1: 1 },
-          result: 'BEGINNER',
+          studentId: 12345,
           companyId: 1001,
+          questionIds: [],
+          correctByLevel: {},
+          status: 'IN_PROGRESS',
         },
         select: { id: true },
+      });
+    });
+
+    it('saveProgress: faqat jarayon maydonlarini yangilaydi (holatsiz)', async () => {
+      const { prisma } = makePrisma();
+
+      await saveProgress(prisma as any, 'att-1', {
+        questionIds: ['a1-1', 'a1-2'],
+        answered: 2,
+        correctByLevel: { A1: 1 },
+      });
+
+      expect(prisma.levelTestAttempt.update).toHaveBeenCalledWith({
+        where: { id: 'att-1' },
+        data: {
+          questionIds: ['a1-1', 'a1-2'],
+          answered: 2,
+          correctByLevel: { A1: 1 },
+        },
+      });
+    });
+
+    it('finishAttempt: holat, natija va tugash vaqti yoziladi', async () => {
+      const { prisma } = makePrisma();
+
+      await finishAttempt(prisma as any, 'att-1', {
+        questionIds: ['a1-1'],
+        answered: 1,
+        correctByLevel: { A1: 1 },
+        status: 'STOPPED',
+        result: 'UNKNOWN',
+      });
+
+      const arg = prisma.levelTestAttempt.update.mock.calls[0][0];
+      expect(arg.where).toEqual({ id: 'att-1' });
+      expect(arg.data).toMatchObject({
+        status: 'STOPPED',
+        result: 'UNKNOWN',
+        answered: 1,
+      });
+      expect(arg.data.finishedAt).toBeInstanceOf(Date);
+    });
+
+    it('finishAttempt: natijasiz yopish (bekor, javobsiz) result null', async () => {
+      const { prisma } = makePrisma();
+      await finishAttempt(prisma as any, 'att-1', {
+        questionIds: [],
+        answered: 0,
+        correctByLevel: {},
+        status: 'CANCELLED',
+        result: null,
+      });
+      expect(
+        prisma.levelTestAttempt.update.mock.calls[0][0].data.result,
+      ).toBeNull();
+    });
+  });
+
+  describe('linkedStudent', () => {
+    const prismaWith = (rows: any[]) =>
+      ({ student: { findMany: jest.fn().mockResolvedValue(rows) } }) as any;
+    const row = { id: 1, firstName: 'A', lastName: 'B', companyId: 1001 };
+
+    it("aynan bitta kartaga bog'langan chat — shu o'quvchi", async () => {
+      const prisma = prismaWith([row]);
+      await expect(linkedStudent(prisma, '777')).resolves.toEqual(row);
+      expect(prisma.student.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { telegramChatId: '777', deletedAt: null },
+          take: 2,
+        }),
+      );
+    });
+
+    it("kartasi yo'q yoki bir nechta (aka-uka) bo'lsa — null", async () => {
+      await expect(linkedStudent(prismaWith([]), '777')).resolves.toBeNull();
+      await expect(
+        linkedStudent(prismaWith([row, { ...row, id: 2 }]), '777'),
+      ).resolves.toBeNull();
+    });
+  });
+
+  describe('recordStudentResult', () => {
+    it("o'quvchi tarixiga daraja natijasini yozadi", async () => {
+      await recordStudentResult(
+        history,
+        { id: 7, firstName: 'A', lastName: 'B', companyId: 1001 },
+        {
+          status: 'STOPPED',
+          result: 'B1',
+          answered: 12,
+          correct: 10,
+        },
+      );
+
+      expect(history.recordCreate).toHaveBeenCalledWith({
+        entityType: 'Student',
+        entityId: 7,
+        companyId: 1001,
+        newValues: {
+          action: 'DARAJA_TESTI',
+          daraja: 'B1',
+          javoblar: '10 / 12',
+          holat: "O'zi to'xtatdi",
+        },
       });
     });
   });

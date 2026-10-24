@@ -9,6 +9,7 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useT } from "@/i18n/context";
 import { BotReportCards, BotReportCardsSkeleton } from "./bot-report-cards";
 import { useBotSummary } from "./bot-report-queries";
+import { BotLevelTests } from "./bot-level-tests";
 import { BotReportTable } from "./bot-report-table";
 import { BOT_FIRST_MONTH, BOT_SCHEMA, listParams, pageMonth, type BotFilters } from "./bot-report-url";
 
@@ -62,6 +63,8 @@ export function BotReportClient() {
       ) : (
         <BotReportCardsSkeleton />
       )}
+
+      <BotLevelTests month={month} />
 
       <BotReportTable
         params={listParams(filters, current)}

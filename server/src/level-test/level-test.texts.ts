@@ -33,6 +33,8 @@ export const LEVEL_TEST_FAILED =
 const RESULT_LINE: Record<LevelTestResult, string> = {
   BEGINNER:
     "A1 dan past (boshlang'ich). Nemis tilini noldan boshlash sizga mos.",
+  UNKNOWN:
+    'hali aniqlanmadi — daraja uchun kamida birinchi 5 ta savolga javob berish kerak.',
   A1: "taxminan A1 (boshlang'ich daraja).",
   A2: 'taxminan A2 (elementar daraja).',
   B1: "taxminan B1 (o'rta daraja).",
@@ -41,6 +43,7 @@ const RESULT_LINE: Record<LevelTestResult, string> = {
 
 export const LEVEL_TEST_RESULT_LABEL: Record<LevelTestResult, string> = {
   BEGINNER: 'A1 dan past',
+  UNKNOWN: 'Aniqlanmadi',
   A1: 'A1',
   A2: 'A2',
   B1: 'B1',
@@ -51,10 +54,25 @@ export function levelTestResultText(
   result: LevelTestResult,
   correct: number,
   asked: number,
+  total?: number,
 ): string {
+  // `total` berilsa — test oxirigacha yetkazilmagan (odam o'zi to'xtatgan).
+  const stopped =
+    total !== undefined && result !== 'UNKNOWN'
+      ? `Siz testni oxiriga yetkazmadingiz (${asked} / ${total}), shuning uchun daraja kamida shu — haqiqiysi yuqoriroq bo'lishi mumkin.\n\n`
+      : '';
   return (
     `📊 Natija: ${RESULT_LINE[result]}\n` +
     `To'g'ri javoblar: ${correct} / ${asked}.\n\n` +
+    stopped +
     "Bu taxminiy natija — aniq darajani markaz o'qituvchisi suhbatda belgilaydi."
   );
 }
+
+export const LEVEL_TEST_STOP_BUTTON = '🏁 Natijani bilish';
+export const LEVEL_TEST_STOP_CONFIRM = "Testni shu yerda to'xtatamizmi?";
+export const LEVEL_TEST_STOP_YES = "Ha, natijani ko'rsat";
+export const LEVEL_TEST_STOP_NO = 'Yo‘q, davom etaman';
+
+export const LEVEL_TEST_STUDENT_DONE =
+  "✅ Natijangiz saqlandi. U o'qituvchingizga va administratorga ko'rinadi — darajangizni ular bilan muhokama qilishingiz mumkin.";
