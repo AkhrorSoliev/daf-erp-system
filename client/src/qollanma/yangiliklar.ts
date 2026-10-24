@@ -32,6 +32,12 @@ export const yangiliklar: Yangilik[] = [
     sahifa: { bolim: "guruhlar", sahifa: "jadval" },
   },
   {
+    sana: "2026-10-20",
+    sarlavha: "Guruh sahifasida «Musobaqa» tabi",
+    matn: "Guruh sahifasida yangi «Musobaqa» tabi bor. Tepada guruhning markaz bo'yicha shu haftadagi o'rni va o'rtacha bali, oxirgi 8 haftaning o'rinlari (bosilsa o'sha haftaga o'tadi). Pastda har o'quvchining haftalik bali, faol kunlari, seriyasi, bugungi maqsad bajarilishi, ligasi va nishonlari. «Shu hafta mashq qilmaganlar» ro'yxati o'quvchiga o'zingiz bog'lanishingiz uchun; tizim hech kimga xabar yubormaydi. Ustoz faqat o'z guruhini ko'radi.",
+    rollar: [1, 2, 3, 4],
+  },
+  {
     sana: "2026-10-19",
     sarlavha: "O'quvchilarga Telegram eslatmasi va dushanba xulosasi",
     matn: "CEO yoqqan kundan boshlab Ta'lim ilovasida mashq qiladigan o'quvchilar botdan ikki xil yumshoq xabar oladi. Kechki eslatma (19:30, dushanba–shanba) — oxirgi 14 kunda mashq qilgan, lekin bugun hali mashq qilmagan o'quvchiga: ketma-ket ikki kun va haftada 4 tadan ko'p yuborilmaydi, yakshanba va bayram kunida yo'q. Dushanba xulosasi (09:00) — o'tgan haftada ball topganlarga: ball, liga o'rni, guruh o'rni, yangi nishonlar. O'quvchi ikkalasini «Reyting → Darajam» dagi «Telegram eslatmalari» almashtirgichi yoki xabar tagidagi «Eslatmalarni to'xtatish» tugmasi bilan o'chiradi. Botni bloklagan o'quvchiga eslatma yuborilmaydi. Yuborilgan xabarlar o'quvchi kartasining «SMS» tabida ko'rinadi.",
