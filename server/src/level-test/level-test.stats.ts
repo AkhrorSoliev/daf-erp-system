@@ -71,6 +71,10 @@ export interface LevelTestStats {
    * yechgan urinishlar (to'xtatgan, javobsiz, bekor qilgan, tashlab ketgan).
    */
   dropOff: { to5: number; to10: number; to15: number; to19: number };
+  /** To'xtamagan urinishlar: vaqt tugagan, bekor qilingan va tashlab ketilgan. */
+  quit: number;
+  /** Eng ko'p odam ketgan oraliq; hech kim ketmagan bo'lsa null. */
+  topDropOff: keyof LevelTestStats['dropOff'] | null;
   /** O'quvchilar (chat kartaga bog'langan) va boshqalar (lid oqimi). */
   students: number;
   others: number;
@@ -101,6 +105,8 @@ export function summarize(rows: StatRow[], now: Date): LevelTestStats {
     running: 0,
     byResult: emptyByResult(),
     dropOff: { to5: 0, to10: 0, to15: 0, to19: 0 },
+    quit: 0,
+    topDropOff: null,
     students: 0,
     others: 0,
     leads: 0,
@@ -130,5 +136,12 @@ export function summarize(rows: StatRow[], now: Date): LevelTestStats {
     else stats.others += 1;
     if (r.leadId !== null) stats.leads += 1;
   }
+  stats.quit = stats.timedOut + stats.cancelled + stats.abandoned;
+  const buckets = Object.entries(stats.dropOff) as [
+    keyof LevelTestStats['dropOff'],
+    number,
+  ][];
+  const top = buckets.reduce((a, b) => (b[1] > a[1] ? b : a));
+  stats.topDropOff = top[1] > 0 ? top[0] : null;
   return stats;
 }
