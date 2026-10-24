@@ -9,9 +9,10 @@ import { cn } from "@/lib/utils";
 type SetLocale = (next: UiLocale, options?: { save?: boolean }) => Promise<boolean>;
 
 /**
- * The only way the portal changes its language. A student has no account
- * language (`PATCH /users/ui-locale` is a staff route), so the pick lives on
- * the device alone: the cookie, never a save.
+ * The only way the portal and the public pages (receipt, certificate, form)
+ * change their language. A student or a visitor has no account language
+ * (`PATCH /users/ui-locale` is a staff route), so the pick lives on the device
+ * alone: the cookie, never a save.
  */
 export function pickPortalLocale(next: string, current: UiLocale, setLocale: SetLocale): void {
   if (!isUiLocale(next) || next === current) return;
@@ -30,8 +31,11 @@ export function radioKeyTarget(key: string, current: UiLocale, ids: readonly UiL
 }
 
 export interface LanguagePickerProps {
-  /** "list" — a row per language (Settings), "compact" — a small menu (sign-in page). */
-  variant?: "list" | "compact";
+  /**
+   * "list" — a row per language (Settings), "compact" — a small Lumio menu
+   * (sign-in page), "plain" — the same menu in the page's own theme (public pages).
+   */
+  variant?: "list" | "compact" | "plain";
   className?: string;
 }
 
@@ -52,16 +56,24 @@ export function LanguagePicker({ variant = "list", className }: LanguagePickerPr
     e.currentTarget.parentElement?.querySelector<HTMLButtonElement>(`[lang="${next}"]`)?.focus();
   };
 
-  if (variant === "compact") {
-    // A native select: on a phone it opens the system's own list.
+  if (variant === "compact" || variant === "plain") {
+    // A native select: on a phone it opens the system's own list. "plain" uses
+    // the page's own theme tokens (the public receipt, certificate and form
+    // pages have no `.lumio` scope, so the Lumio classes would draw nothing).
+    const plain = variant === "plain";
+    const icon = plain ? "text-muted-foreground" : "text-ink-500";
     return (
       <span className={cn("relative inline-flex items-center", className)}>
-        <Translate size={16} weight="bold" aria-hidden className="pointer-events-none absolute left-3 text-ink-500" />
+        <Translate size={16} weight="bold" aria-hidden className={cn("pointer-events-none absolute left-3", icon)} />
         <select
           aria-label={t("Til")}
           value={locale}
           onChange={(e) => pick(e.target.value)}
-          className="h-9 appearance-none rounded-pill border border-line bg-surface pl-9 pr-8 font-display text-sm font-bold text-ink-700 shadow-lumio-sm outline-none focus-visible:ring-4 focus-visible:ring-coral-500/30"
+          className={
+            plain
+              ? "h-9 appearance-none rounded-full border border-border bg-background pl-9 pr-8 text-sm font-medium text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              : "h-9 appearance-none rounded-pill border border-line bg-surface pl-9 pr-8 font-display text-sm font-bold text-ink-700 shadow-lumio-sm outline-none focus-visible:ring-4 focus-visible:ring-coral-500/30"
+          }
         >
           {LOCALES.map(({ id, label }) => (
             <option key={id} value={id} lang={id}>
@@ -69,7 +81,7 @@ export function LanguagePicker({ variant = "list", className }: LanguagePickerPr
             </option>
           ))}
         </select>
-        <CaretDown size={12} weight="bold" aria-hidden className="pointer-events-none absolute right-3 text-ink-500" />
+        <CaretDown size={12} weight="bold" aria-hidden className={cn("pointer-events-none absolute right-3", icon)} />
       </span>
     );
   }

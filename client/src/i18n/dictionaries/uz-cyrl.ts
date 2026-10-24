@@ -6,6 +6,12 @@ import type { Dictionary } from "../translate";
  * in `t("…")` / `msg("…")`.
  */
 const uzCyrl: Dictionary = {
+  // Public pages: «квитанция» (not «квитансия»), «email» stays Latin, «public» is «оммавий».
+  "Tekshirilayotgan kvitansiya identifikatori noto'g'ri yoki hujjat o'chirib tashlangan bo'lishi mumkin.":
+    "Текширилаётган квитанция идентификатори нотўғри ёки ҳужжат ўчириб ташланган бўлиши мумкин.",
+  "DaF Sprachzentrum kvitansiyasini tekshirish": "DaF Sprachzentrum квитанциясини текшириш",
+  "DaF Sprachzentrum public formasi": "DaF Sprachzentrum оммавий формаси",
+  "To'g'ri email kiriting": "Тўғри email киритинг",
   // The rules give «Профил»; this loanword keeps its soft sign.
   "Profil": "Профиль",
   // An all-caps word reads as an acronym and stays Latin; this one is Uzbek.
