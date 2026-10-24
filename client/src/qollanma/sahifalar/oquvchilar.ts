@@ -190,7 +190,7 @@ export const oquvchilar: QollanmaSahifa[] = [
     qisqacha:
       "Guruhdan chiqarishda pulni qaytarish tartibi tanlanadi. 01.10.2026 dan beri o'quvchi o'zi to'xtatsa va oyning 40% idan ko'pi o'tgan bo'lsa, oylik puli qaytmaydi; hamma guruhda ko'pi bilan 1 ta darsga kelgan o'quvchiga esa oyning to'liq puli qaytadi (sinov darsi). Qaytgan pul balansga tushadi, naqd berilmaydi.",
     rollar: [1, 2, 3],
-    adr: ["0043", "0044", "0048", "0060", "0062", "0064", "0077"],
+    adr: ["0043", "0044", "0048", "0060", "0062", "0064", "0077", "0125"],
     yollar: ["/students/profile/*"],
     kalitSozlar: [
       "guruhdan chiqarish",

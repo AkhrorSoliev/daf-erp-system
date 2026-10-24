@@ -39,6 +39,13 @@ export const yangiliklar: Yangilik[] = [
   },
   {
     sana: "2026-10-19",
+    sarlavha: "Chiqarishda oy puli ushlansa, topshiriq tushadi",
+    matn: "O'quvchi guruhdan chiqarilganda oyning 40% idan ko'pi o'tgan va oy puli ushlab qolingan bo'lsa, filial administratorlariga «Oy puli ushlab qolindi» topshirig'i tushadi. Unda o'quvchi, guruh va ushlangan summa bor. Sabab «Boshqa guruhga ko'chdi» tanlansa, tizim buni o'tkazish deb hisoblaydi va o'tmagan darslar pulini o'zi balansga qaytaradi. Boshqa sabab bilan chiqarilgan o'quvchi aslida o'tgan bo'lsa, rahbarga ayting. Haqiqatan ketgan bo'lsa, topshiriqni ko'rib chiqib «Bajarildi» bilan yoping. O'quvchi qayta yozilsa yoki pul qaytarilsa, topshiriq o'zi yopiladi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "oquvchilar", sahifa: "guruhdan-chiqarish" },
+  },
+  {
+    sana: "2026-10-19",
     sarlavha: "O'quvchilarga Telegram eslatmasi va dushanba xulosasi",
     matn: "CEO yoqqan kundan boshlab Ta'lim ilovasida mashq qiladigan o'quvchilar botdan ikki xil yumshoq xabar oladi. Kechki eslatma (19:30, dushanba–shanba) — oxirgi 14 kunda mashq qilgan, lekin bugun hali mashq qilmagan o'quvchiga: ketma-ket ikki kun va haftada 4 tadan ko'p yuborilmaydi, yakshanba va bayram kunida yo'q. Dushanba xulosasi (09:00) — o'tgan haftada ball topganlarga: ball, liga o'rni, guruh o'rni, yangi nishonlar. O'quvchi ikkalasini «Reyting → Darajam» dagi «Telegram eslatmalari» almashtirgichi yoki xabar tagidagi «Eslatmalarni to'xtatish» tugmasi bilan o'chiradi. Botni bloklagan o'quvchiga eslatma yuborilmaydi. Yuborilgan xabarlar o'quvchi kartasining «SMS» tabida ko'rinadi.",
     rollar: [1, 2, 3, 4],

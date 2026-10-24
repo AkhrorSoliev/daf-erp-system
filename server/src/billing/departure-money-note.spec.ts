@@ -15,6 +15,7 @@ describe('departureMoneyNote (ADR-0043)', () => {
         policy: 'STUDENT_CANCELLED',
         share,
         withheld: true,
+        withheldAmount: 0,
         trial: false,
       }),
     ).toBe(
@@ -30,6 +31,7 @@ describe('departureMoneyNote (ADR-0043)', () => {
         policy: 'STUDENT_CANCELLED',
         share: { held: 5, covered: 13, percent: 38 },
         withheld: false,
+        withheldAmount: 0,
         trial: false,
       }),
     ).toBe("O'tmagan 8 dars puli qaytarildi — 640 000 so'm");
@@ -43,6 +45,7 @@ describe('departureMoneyNote (ADR-0043)', () => {
         policy: 'LEVEL_COMPLETED',
         share,
         withheld: false,
+        withheldAmount: 0,
         trial: false,
       }),
     ).toBe("Darajani tugatdi: o'tmagan 7 dars puli qaytarildi — 560 000 so'm");
@@ -56,6 +59,7 @@ describe('departureMoneyNote (ADR-0043)', () => {
         policy: 'CENTER_INITIATIVE',
         share,
         withheld: false,
+        withheldAmount: 0,
         trial: false,
       }),
     ).toBe("Markaz tashabbusi: o'tmagan 7 dars puli qaytarildi — 560 000 so'm");
@@ -69,6 +73,7 @@ describe('departureMoneyNote (ADR-0043)', () => {
         policy: 'QUALITY_CLAIM',
         share,
         withheld: false,
+        withheldAmount: 0,
         trial: false,
       }),
     ).toBe(
@@ -84,6 +89,7 @@ describe('departureMoneyNote (ADR-0043)', () => {
         policy: 'STUDENT_CANCELLED',
         share: { held: 1, covered: 13, percent: 8 },
         withheld: false,
+        withheldAmount: 0,
         trial: true,
       }),
     ).toBe("Sinov darsi (3.5): oyning puli to'liq qaytarildi — 450 000 so'm");

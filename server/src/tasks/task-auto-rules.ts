@@ -27,11 +27,16 @@ type Db = Prisma.TransactionClient;
  * neither is an AutoKind. Adding a kind = an entry in AUTO_RULES, its text
  * below, its creator in `task-auto*.service.ts`.
  */
-export type AutoKind = 'BROKEN_PROMISE' | 'CALLBACK' | 'UNCALLED_LEAD';
+export type AutoKind =
+  | 'BROKEN_PROMISE'
+  | 'CALLBACK'
+  | 'UNCALLED_LEAD'
+  | 'HELD_MONTH';
 export const AUTO_KINDS: readonly AutoKind[] = [
   'BROKEN_PROMISE',
   'CALLBACK',
   'UNCALLED_LEAD',
+  'HELD_MONTH',
 ];
 
 interface AutoRule {
@@ -39,7 +44,7 @@ interface AutoRule {
   /** What the task links to: the «Topshiriqlar» panel and the source card read it. */
   entityType: 'Student' | 'Lead';
   /** `sourceKey` = `<prefix>:<id>`; one OPEN task per key (`task_open_source_unique`). */
-  sourcePrefix: 'promise' | 'calllog' | 'lead';
+  sourcePrefix: 'promise' | 'calllog' | 'lead' | 'held';
   /**
    * The events that close it (`TaskAutoCloseListener`). Nothing else does.
    * A `payment.received` closes a BROKEN_PROMISE only when
@@ -68,6 +73,14 @@ export const AUTO_RULES: Record<AutoKind, AutoRule> = {
     sourcePrefix: 'lead',
     closesOn: [LEAD_CALLED, 'entity.status.changed'],
   },
+  // A student back in a group means an administrator already dealt with the move;
+  // a released month (a correction) is closed by the hourly sweep.
+  HELD_MONTH: {
+    priority: 'HIGH',
+    entityType: 'Student',
+    sourcePrefix: 'held',
+    closesOn: ['student.enrolled'],
+  },
 };
 
 export const sourceKeyOf = (kind: AutoKind, id: string): string =>
@@ -92,7 +105,9 @@ export type AutoCloseReason =
   | 'LEAD_STATUS_CHANGED'
   | 'LEAD_GONE'
   | 'STUDENT_GONE'
-  | 'DEBT_CLEARED';
+  | 'DEBT_CLEARED'
+  | 'STUDENT_ENROLLED'
+  | 'MONTH_RELEASED';
 
 // ---------- when ----------
 
@@ -240,5 +255,31 @@ export function uncalledLeadText(a: { name: string }): {
   return {
     title: `Lidga qo'ng'iroq qilinmagan: ${a.name}`,
     description: null,
+  };
+}
+
+/**
+ * «Pul ushlab qolindi»: a removal kept the month's money (contract 6.2). A
+ * group MOVE done as a removal looks the same, and only the administrator
+ * knows which it was — the text says what to do for each.
+ */
+export function heldMonthText(a: {
+  name: string;
+  groupName: string;
+  amount: number;
+  held: number;
+  covered: number;
+  percent: number;
+  reason: string;
+}): { title: string; description: string } {
+  return {
+    title: `Oy puli ushlab qolindi: ${a.name} — ${formatSom(a.amount)} so'm`,
+    description: [
+      `Guruh: ${a.groupName}`,
+      `Sabab: ${a.reason}`,
+      `Oyning ${a.percent}% i o'tgan (${a.held}/${a.covered} dars), shuning uchun shartnoma 6.2 bo'yicha o'tmagan darslar puli (${formatSom(a.amount)} so'm) qaytarilmadi.`,
+      "O'quvchi aslida boshqa guruhga o'tgan bo'lsa: pul qaytarilishi kerak, buni rahbarga ayting.",
+      "Haqiqatan ketgan bo'lsa: ko'rib chiqib «Bajarildi» ni bosing (o'quvchi qayta yozilsa yoki pul qaytarilsa, topshiriq o'zi yopiladi).",
+    ].join('\n'),
   };
 }

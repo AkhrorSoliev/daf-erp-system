@@ -293,3 +293,67 @@ describe('claim — the first administrator to act takes a system task', () => {
     ).toEqual({ ok: false, message: SYSTEM_CLOSES_MESSAGE });
   });
 });
+
+describe('TaskAutoService — «Pul ushlab qolindi»', () => {
+  const payload = {
+    companyId: 1,
+    branchId: 2,
+    studentId: 10149,
+    enrollmentId: 'enr-1',
+    groupName: '#005',
+    amount: 242_305,
+    held: 6,
+    covered: 13,
+    percent: 46,
+    departureDay: '2026-10-14',
+    reason: 'Boshqa guruhga ko‘chdi',
+  };
+
+  it('opens one HIGH task per enrollment for the branch administrators, due today 18:00', async () => {
+    const { service, prisma, tx, emitter } = setup();
+    prisma.student.findFirst.mockResolvedValue({
+      firstName: 'Sherzodbek',
+      lastName: 'Ruziev',
+    });
+    await service.onDepartureWithheld(payload, MON_0900);
+    await service.onDepartureWithheld(payload, MON_0900);
+
+    expect(tx.task.create).toHaveBeenCalledTimes(1);
+    expect(tx.task.create.mock.calls[0][0].data).toMatchObject({
+      kind: 'HELD_MONTH',
+      priority: 'HIGH',
+      authorId: null,
+      branchId: 2,
+      entityType: 'Student',
+      entityId: '10149',
+      sourceKey: 'held:enr-1',
+      title: "Oy puli ushlab qolindi: Ruziev Sherzodbek — 242 305 so'm",
+    });
+    expect(emitter.emit).toHaveBeenCalledTimes(1);
+  });
+
+  it('nothing held, nothing to look at', async () => {
+    const { service, tx } = setup();
+    await service.onDepartureWithheld({ ...payload, amount: 0 }, MON_0900);
+    expect(tx.task.create).not.toHaveBeenCalled();
+  });
+
+  it('the assignee may close it, nobody else may close a system task', () => {
+    const base = {
+      from: 'NEW',
+      to: 'DONE',
+      selfTask: false,
+      requiresPhoto: false,
+      hasFreshPhoto: true,
+    } as const;
+    expect(
+      checkTransition({ ...base, by: 'ASSIGNEE', kind: 'HELD_MONTH' }),
+    ).toEqual({ ok: true });
+    expect(
+      checkTransition({ ...base, by: 'ASSIGNEE', kind: 'CALLBACK' }),
+    ).toEqual({ ok: false, message: SYSTEM_CLOSES_MESSAGE });
+    expect(
+      checkTransition({ ...base, by: 'MANAGER', kind: 'HELD_MONTH' }),
+    ).toEqual({ ok: false, message: SYSTEM_CLOSES_MESSAGE });
+  });
+});

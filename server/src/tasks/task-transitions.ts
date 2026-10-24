@@ -35,6 +35,15 @@ export function checkTransition(
     return no('Yopilgan topshiriq qayta ochilmaydi');
 
   if (a.kind !== 'MANUAL') {
+    // «Pul ushlab qolindi»: only the administrator knows whether the student
+    // moved or left, so the assignee closes it once they have looked.
+    if (
+      a.kind === 'HELD_MONTH' &&
+      a.by === 'ASSIGNEE' &&
+      a.to === 'DONE' &&
+      (a.from === 'NEW' || a.from === 'IN_PROGRESS')
+    )
+      return { ok: true };
     if (a.by === 'ASSIGNEE' && a.from === 'NEW' && a.to === 'IN_PROGRESS')
       return { ok: true };
     return no(SYSTEM_CLOSES_MESSAGE);

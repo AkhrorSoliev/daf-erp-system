@@ -236,12 +236,10 @@ function ConsequenceBox({ consequence }: { consequence: Consequence }) {
 
 function WithheldBox({ warning }: { warning: WithheldWarning }) {
   const box =
-    warning.tone === "danger"
-      ? "border-red-300 bg-red-50 text-red-900 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200"
-      : TONES.warning.box;
+    warning.tone === "success" ? TONES.success.box : TONES.warning.box;
   return (
     <div role="alert" className={cn("flex items-start gap-2 rounded-md border p-3", box)}>
-      <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+      {warning.tone === "success" ? <Undo2 className="mt-0.5 size-4 shrink-0" /> : <AlertTriangle className="mt-0.5 size-4 shrink-0" />}
       <div className="flex flex-col gap-0.5">
         <p className="text-sm font-medium">{warning.title}</p>
         <p className="text-xs leading-relaxed">{warning.body}</p>

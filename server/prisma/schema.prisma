@@ -170,6 +170,7 @@ enum TaskKind {
   BROKEN_PROMISE
   UNCALLED_LEAD
   JOIN_REQUEST
+  HELD_MONTH
 }
 
 enum TaskParticipantRole {

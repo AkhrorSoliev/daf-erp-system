@@ -213,7 +213,42 @@ export class TaskAutoLeadsService {
       'DEBT_CLEARED',
       cleared.length,
     );
-    return gone + paid;
+    return gone + paid + (await this.closeReleasedMonths(companyId));
+  }
+
+  /**
+   * A «Pul ushlab qolindi» task whose month was given back since (a
+   * correction frees the unheld lessons into `frozenOutDates`): nothing is held
+   * any more (`MONTH_RELEASED`).
+   */
+  private async closeReleasedMonths(companyId: number): Promise<number> {
+    const open = await this.prisma.task.findMany({
+      where: { companyId, kind: 'HELD_MONTH', status: { in: OPEN } },
+      select: { sourceKey: true },
+    });
+    const enrollmentIds = open
+      .map((t) => t.sourceKey?.slice(t.sourceKey.indexOf(':') + 1))
+      .filter((id): id is string => !!id);
+    if (enrollmentIds.length === 0) return 0;
+    const released = await this.prisma.enrollmentMonthlyCharge.findMany({
+      where: {
+        enrollmentId: { in: enrollmentIds },
+        companyId,
+        status: 'CHARGED',
+        NOT: { frozenOutDates: { equals: [] } },
+      },
+      select: { enrollmentId: true },
+    });
+    const ids = [...new Set(released.map((c) => c.enrollmentId))];
+    return this.closeAndTell(
+      companyId,
+      {
+        kind: 'HELD_MONTH',
+        sourceKey: { in: ids.map((id) => sourceKeyOf('HELD_MONTH', id)) },
+      },
+      'MONTH_RELEASED',
+      ids.length,
+    );
   }
 
   private async closeAndTell(

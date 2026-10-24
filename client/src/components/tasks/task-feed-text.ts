@@ -28,6 +28,8 @@ const CLOSE_REASON: Record<string, string> = {
   LEAD_GONE: msg("lid endi qo'ng'iroq kutmaydi"),
   STUDENT_GONE: msg("o'quvchi arxivlandi"),
   DEBT_CLEARED: msg("qarz yopildi"),
+  STUDENT_ENROLLED: msg("o'quvchi qayta guruhga yozildi"),
+  MONTH_RELEASED: msg("oy puli qaytarildi"),
 };
 
 function closeReason(meta: TaskEvent["meta"], t: Translate): string {
