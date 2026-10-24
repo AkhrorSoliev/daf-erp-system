@@ -4,9 +4,14 @@ import { TelegramChannelReportController } from './telegram-channel-report.contr
 import { TelegramService } from './telegram.service';
 import { TelegramChannelGateStatsService } from './telegram-channel-gate-stats.service';
 import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
+import { LevelTestResultsService } from '../level-test/level-test-results.service';
 
 describe('TelegramChannelReportController', () => {
   let controller: TelegramChannelReportController;
+
+  const levelTests = {
+    stats: jest.fn().mockResolvedValue({ started: 7, finished: 3 }),
+  };
 
   const gateStats = {
     getSummary: jest.fn().mockResolvedValue({
@@ -33,6 +38,7 @@ describe('TelegramChannelReportController', () => {
       providers: [
         { provide: TelegramService, useValue: telegram },
         { provide: TelegramChannelGateStatsService, useValue: gateStats },
+        { provide: LevelTestResultsService, useValue: levelTests },
       ],
     }).compile();
 
@@ -44,7 +50,7 @@ describe('TelegramChannelReportController', () => {
   });
 
   describe('route access', () => {
-    it.each(['summary', 'list'] as const)(
+    it.each(['summary', 'list', 'levelTestStats'] as const)(
       '%s is gated by the student reports capability',
       (method) => {
         expect(routeAccess(TelegramChannelReportController, method)).toEqual({
@@ -56,7 +62,7 @@ describe('TelegramChannelReportController', () => {
 
     // The Administrator is refused ON PURPOSE: the /reports section is closed
     // to them in the menu too.
-    it.each(['summary', 'list'] as const)(
+    it.each(['summary', 'list', 'levelTestStats'] as const)(
       '%s admits the CEO and the Branch Director by default, nobody else',
       (method) => {
         expect(defaultRolesOf(TelegramChannelReportController, method)).toEqual(
@@ -106,6 +112,32 @@ describe('TelegramChannelReportController', () => {
         new BadRequestException(message),
       );
       expect(gateStats.getSummary).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('levelTestStats', () => {
+    it('reads the given month and echoes it back', async () => {
+      const res = await controller.levelTestStats('2026-07');
+      expect(levelTests.stats).toHaveBeenCalledWith(
+        expect.any(Number),
+        '2026-07',
+      );
+      expect(res).toEqual({ started: 7, finished: 3, month: '2026-07' });
+    });
+
+    it('no month means the current Tashkent month', async () => {
+      await controller.levelTestStats();
+      expect(levelTests.stats).toHaveBeenCalledWith(
+        expect.any(Number),
+        '2026-09',
+      );
+    });
+
+    it('refuses a bad month before reading anything', async () => {
+      await expect(controller.levelTestStats('2026-04')).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(levelTests.stats).not.toHaveBeenCalled();
     });
   });
 

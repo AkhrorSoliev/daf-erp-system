@@ -3,6 +3,8 @@ import { Can } from '../common/permissions/access.decorators';
 import { TelegramService } from './telegram.service';
 import { TelegramChannelGateStatsService } from './telegram-channel-gate-stats.service';
 import { parseGateMonth } from './gate-cohort';
+import { DEFAULT_COMPANY_ID } from './constants';
+import { LevelTestResultsService } from '../level-test/level-test-results.service';
 
 /**
  * "Bot hisoboti" sahifasining ma'lumot manbai (`/reports/bot` frontendda).
@@ -26,6 +28,7 @@ export class TelegramChannelReportController {
   constructor(
     private readonly telegram: TelegramService,
     private readonly gateStats: TelegramChannelGateStatsService,
+    private readonly levelTests: LevelTestResultsService,
   ) {}
 
   /**
@@ -47,6 +50,19 @@ export class TelegramChannelReportController {
       channel: this.telegram.getRequiredChannel(),
       month: key,
     };
+  }
+
+  /**
+   * Daraja testi statistikasi (ADR-0122): oy bo'yicha nechta boshlangan,
+   * nechtasi tugatgan, nechtasi yarmida qolgan va hokazo. Bot hisobotining
+   * o'zi kabi butun kompaniya bo'yicha (`DEFAULT_COMPANY_ID`): test filialni
+   * bilmaydigan odamni ham qamraydi.
+   */
+  @Get('level-tests')
+  async levelTestStats(@Query('month') month?: string) {
+    const key = parseGateMonth(month, new Date());
+    const stats = await this.levelTests.stats(DEFAULT_COMPANY_ID, key);
+    return { ...stats, month: key };
   }
 
   @Get('list')

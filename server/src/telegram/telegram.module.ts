@@ -14,6 +14,7 @@ import { MockExamsModule } from '../mock-exams/mock-exams.module';
 import { PaymentLinksModule } from '../payment-gateways/payment-links.module';
 import { StatementsModule } from '../statements/statements.module';
 import { StudentJoinRequestsModule } from '../student-join-requests/student-join-requests.module';
+import { LevelTestModule } from '../level-test/level-test.module';
 
 @Module({
   // PaymentLinksModule is the small leaf module that owns
@@ -27,6 +28,7 @@ import { StudentJoinRequestsModule } from '../student-join-requests/student-join
     PaymentLinksModule,
     StatementsModule,
     StudentJoinRequestsModule,
+    LevelTestModule,
   ],
   controllers: [
     TelegramController,

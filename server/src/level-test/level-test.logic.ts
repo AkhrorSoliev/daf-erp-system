@@ -107,6 +107,23 @@ export function judge(correct: CorrectByLevel): LevelTestResult {
   return result;
 }
 
+/**
+ * Odam testni O'ZI to'xtatganda natija: `judge` ning o'sha qoidasi, faqat
+ * hozirgacha javob berilganlar bo'yicha (yetkazilmagan daraja o'tilmagan
+ * hisoblanadi, shuning uchun natija "kamida shu daraja" bo'ladi). Birinchi
+ * darajaning 5 savoli tugamagan bo'lsa va 4 ta to'g'ri javob ham yo'q bo'lsa,
+ * "A1 dan past" deb aytib bo'lmaydi — UNKNOWN.
+ */
+export function judgeStopped(
+  correct: CorrectByLevel,
+  answered: number,
+): LevelTestResult {
+  const result = judge(correct);
+  return result === 'BEGINNER' && answered < QUESTIONS_PER_LEVEL
+    ? 'UNKNOWN'
+    : result;
+}
+
 export function nextLevel(level: LevelTestLevel): LevelTestLevel | null {
   const i = LEVEL_TEST_LEVELS.indexOf(level);
   return LEVEL_TEST_LEVELS[i + 1] ?? null;

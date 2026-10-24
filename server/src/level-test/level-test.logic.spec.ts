@@ -3,6 +3,7 @@ import {
   GRACE_SECONDS,
   isPastDeadline,
   judge,
+  judgeStopped,
   nextLevel,
   pickQuestions,
   QUESTIONS_PER_LEVEL,
@@ -70,6 +71,34 @@ describe('judge', () => {
   it("pastdagi daraja o'tmasa, yuqoridagi to'g'rilar hisobga olinmaydi", () => {
     expect(judge({ A1: 2, A2: 5, B1: 5, B2: 5 })).toBe('BEGINNER');
     expect(judge({ A1: 5, A2: 3, B1: 5, B2: 5 })).toBe('A1');
+  });
+});
+
+describe('judgeStopped (odam testni o‘zi to‘xtatganda)', () => {
+  it("birinchi daraja tugamagan va 4 ta to'g'ri yo'q — aniqlanmadi", () => {
+    expect(judgeStopped({ A1: 2 }, 2)).toBe('UNKNOWN');
+    expect(judgeStopped({ A1: 3 }, 4)).toBe('UNKNOWN');
+    expect(judgeStopped({}, 0)).toBe('UNKNOWN');
+  });
+
+  it('A1 ning 5 savoli tugagan va 4 dan kam — A1 dan past (BEGINNER)', () => {
+    expect(judgeStopped({ A1: 3 }, 5)).toBe('BEGINNER');
+    expect(judgeStopped({ A1: 2, A2: 4 }, 9)).toBe('BEGINNER');
+  });
+
+  it("A1 da 4 ta to'g'ri bo'lsa, tugamasa ham o'tilgan (kamida A1)", () => {
+    expect(judgeStopped({ A1: 4 }, 4)).toBe('A1');
+    expect(judgeStopped({ A1: 4 }, 5)).toBe('A1');
+  });
+
+  it("yetkazilmagan daraja o'tilmagan: natija — kamida shu", () => {
+    expect(judgeStopped({ A1: 5, A2: 5, B1: 1 }, 11)).toBe('A2');
+    expect(judgeStopped({ A1: 5, A2: 3 }, 8)).toBe('A1');
+  });
+
+  it('to‘liq tugagan test uchun judge bilan bir xil', () => {
+    const full = { A1: 5, A2: 5, B1: 5, B2: 4 };
+    expect(judgeStopped(full, 20)).toBe(judge(full));
   });
 });
 

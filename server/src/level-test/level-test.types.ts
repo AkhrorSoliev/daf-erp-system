@@ -1,8 +1,11 @@
 export const LEVEL_TEST_LEVELS = ['A1', 'A2', 'B1', 'B2'] as const;
 export type LevelTestLevel = (typeof LEVEL_TEST_LEVELS)[number];
 
-/** BEGINNER — A1 dan ham past: birinchi darajadan o'tmagan. */
-export type LevelTestResult = 'BEGINNER' | LevelTestLevel;
+/**
+ * BEGINNER — A1 dan ham past: birinchi darajadan o'tmagan.
+ * UNKNOWN — natija chiqarib bo'lmaydi: odam A1 ni tugatmasdan testni to'xtatgan.
+ */
+export type LevelTestResult = 'BEGINNER' | 'UNKNOWN' | LevelTestLevel;
 
 export interface LevelTestQuestion {
   /** Barqaror id: `a1-007`. Qayta ishlatilmaydi, o'zgartirilmaydi. */
