@@ -220,5 +220,77 @@
     "sfx": "a plastic shopping bag rustling",
     "sek": 1.5,
     "loop": false
+  },
+  "0c3ddd4712c88236": {
+    "key": "daf/sfx/1a81975a990a5124983f43bbbed48a87.mp3",
+    "sfx": "short bright radio station jingle sting, upbeat synth and chime, clean, about three seconds",
+    "sek": 3,
+    "loop": false
+  },
+  "7a75a55b26265947": {
+    "key": "daf/sfx/4210701217f54195a998242ac0881447.mp3",
+    "sfx": "short radio station outro sting, soft rising synth chime, about two seconds",
+    "sek": 2,
+    "loop": false
+  },
+  "b3f91ae2e9ba3134": {
+    "key": "daf/sfx/694a4a10074d70a3201fcc4c863bcc10.mp3",
+    "sfx": "quiet murmur of a theater audience in a large foyer before a festival, soft chatter and footsteps, no clear words",
+    "sek": 15,
+    "loop": true
+  },
+  "4486a9819fd1cd2e": {
+    "key": "daf/sfx/b0e0034ff658be327f6ca9681a7fba22.mp3",
+    "sfx": "two-tone ding-dong loudspeaker announcement chime in a public hall, clean, about two seconds",
+    "sek": 2,
+    "loop": false
+  },
+  "11cd4c1955a492f9": {
+    "key": "daf/sfx/5b825e2b24b244e6e3e38bb985cd7d3f.mp3",
+    "sfx": "sports hall ambience, distant ball bouncing and shoes squeaking on a gym floor, soft echoing room tone, no clear words",
+    "sek": 8,
+    "loop": true
+  },
+  "3e3ef0a2d12403f7": {
+    "key": "daf/sfx/63c70475d4a3fcebf3eb76ea3cd64b69.mp3",
+    "sfx": "steady rain falling on a window and a roof, soft calm indoor room tone, no clear words",
+    "sek": 15,
+    "loop": true
+  },
+  "a583266ae1440730": {
+    "key": "daf/sfx/01dfe97168ab854a4f8711dbf3b68575.mp3",
+    "sfx": "old-fashioned telephone ringing twice, then the receiver is picked up with a click, about three seconds",
+    "sek": 3,
+    "loop": false
+  },
+  "1f8ef4fdb6a3fa57": {
+    "key": "daf/sfx/67d858b5cdaff7412c373b684d48fed5.mp3",
+    "sfx": "busy university canteen at lunchtime, cutlery and trays clinking, many indistinct voices far away",
+    "sek": 10,
+    "loop": true
+  },
+  "cb2e6ec333a94764": {
+    "key": "daf/sfx/2035703c939e501966bfb30ce183057b.mp3",
+    "sfx": "quiet living room at home in the evening, a clock ticking softly, faint street sounds, no clear words",
+    "sek": 10,
+    "loop": true
+  },
+  "5a8f4df3549d37fd": {
+    "key": "daf/sfx/03a2e2d12d9bed5e61773a269959e8e3.mp3",
+    "sfx": "quiet sports club reception area, soft murmur of people and a ball bouncing far away in the gym, no clear words",
+    "sek": 10,
+    "loop": true
+  },
+  "91b51389c77f3dbc": {
+    "key": "daf/sfx/4f8f6488b67e34dff9aa9640a6443cdb.mp3",
+    "sfx": "city park bench, birds singing, a light breeze in the trees, faint distant voices",
+    "sek": 10,
+    "loop": true
+  },
+  "a30056c01b98eecf": {
+    "key": "daf/sfx/f447084061d97e76d44e4bd5e49e5e10.mp3",
+    "sfx": "quiet office during lunch break, distant keyboard typing and murmuring colleagues, no clear words",
+    "sek": 10,
+    "loop": true
   }
 }

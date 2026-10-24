@@ -37,14 +37,17 @@ export const POLSTER_KENNUNG = `${POLSTER.vorneMs}/${POLSTER.hintenMs}`;
  * `adelay=700:all=1` — boshiga 700 ms jimlik (`all=1` HAMMA kanalga
  * qo'llanadi; aks holda stereo faylda faqat bitta kanal kechikib, ikki
  * kanal orasida fazoviy siljish paydo bo'lardi). `apad=pad_dur=1` —
- * oxiriga 1 s (=`POLSTER.hintenMs / 1000`) jimlik.
+ * oxiriga 1 s (=`POLSTER.hintenMs / 1000`) jimlik. `asetnsamples` — ffmpeg 9 da
+ * ba'zi uzunlikdagi fayllarda libmp3lame «inadequate AVFrame plane padding»
+ * bilan yiqilardi (24.10.2026, u06-d9); kadrlarni 1152 namunaga tenglaydi.
  */
 export function polsterFfmpegArgs(eingabe: string, ausgabe: string): string[] {
   return [
     '-i',
     eingabe,
     '-af',
-    `adelay=${POLSTER.vorneMs}:all=1,apad=pad_dur=${POLSTER.hintenMs / 1000}`,
+    `adelay=${POLSTER.vorneMs}:all=1,apad=pad_dur=${POLSTER.hintenMs / 1000},` +
+      'asetnsamples=n=1152:p=1',
     '-c:a',
     'libmp3lame',
     '-q:a',

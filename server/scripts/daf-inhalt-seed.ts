@@ -17,6 +17,7 @@ import type { AudioManifest } from '../src/daf/media/audio-keys';
 import type {
   DialogeFile,
   GrammatikFile,
+  LesetexteFile,
   RedemittelFile,
   SaetzeFile,
   WoerterFile,
@@ -89,6 +90,10 @@ async function main(): Promise<void> {
     woerter: read<WoerterFile>('woerter.json'),
     saetze: read<SaetzeFile>('saetze.json'),
     dialoge: read<DialogeFile>('dialoge.json'),
+    // Plakat, chat, e-mail, jadval — hamma unitda yo'q: fayl bo'lmasa seed unga tegmaydi.
+    lesetexte: existsSync(join(dir, 'lesetexte.json'))
+      ? read<LesetexteFile>('lesetexte.json')
+      : undefined,
     grammatik: read<GrammatikFile>('grammatik.json'),
     redemittel: read<RedemittelFile>('redemittel.json'),
     audio,

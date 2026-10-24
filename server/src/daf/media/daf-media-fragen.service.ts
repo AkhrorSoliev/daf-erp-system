@@ -10,8 +10,9 @@ import type {
   MaterialUhrzeit,
   MaterialWort,
 } from '../uebung/frage.types';
-import { dialogLuecke } from '../uebung/dialog-fragen';
+import { dialogLuecke, istSuhbat } from '../uebung/dialog-fragen';
 import { hoerenWahl } from '../uebung/hoer-fragen';
+import { lesenWahl } from '../uebung/lese-fragen';
 import { uhrHoeren, uhrLesen, uhrTippen } from '../uebung/uhr-fragen';
 import {
   luecke,
@@ -172,18 +173,20 @@ export const VORSCHAU_BAUER: Record<
   },
   DIALOG_LUECKE: (m, r) =>
     m.dialoge
+      .filter(istSuhbat)
       .map((d) => {
         // Chalg'ituvchilar FAQAT boshqa dialoglardan — qarang
         // `dialog-fragen.ts`dagi izoh: shu dialogning o'z satri kontekstga
         // haqiqatda mos kelib qolishi mumkin.
         const andere = m.dialoge
-          .filter((o) => o.id !== d.id)
+          .filter((o) => o.id !== d.id && istSuhbat(o))
           .flatMap((o) => o.zeilen);
         return dialogLuecke(d, andere, r);
       })
       .filter(nichtNull),
   HOEREN_WAHL: (m, r) =>
     m.dialoge.map((d) => hoerenWahl(d, r, m.mediaUrl)).filter(nichtNull),
+  LESEN_WAHL: (m, r) => m.dialoge.map((d) => lesenWahl(d, r)).filter(nichtNull),
   BILD_WORT: (m, r) =>
     m.woerter
       .map((w) => bildWort(w, m.woerter, r, m.mediaUrl))
@@ -288,6 +291,7 @@ export class DafMediaFragenService {
             uz: true,
             akzeptiert: true,
             audioKey: true,
+            kontextUz: true,
           },
         } as any),
         this.prisma.dafPhrase.findMany({
@@ -330,6 +334,7 @@ export class DafMediaFragenService {
       uz: string;
       akzeptiert: string[];
       audioKey?: string | null;
+      kontextUz?: string | null;
     }
     interface PhraseRow {
       id: number;
@@ -340,6 +345,7 @@ export class DafMediaFragenService {
     interface DialogRow {
       id: number;
       titelDe: string;
+      art?: string;
       zeilen: Array<{ id: number; sprecher: string; de: string; uz: string }>;
       audioKey: string | null;
       fragen: Array<{
@@ -380,6 +386,7 @@ export class DafMediaFragenService {
       sectionCode: '',
       akzeptiert: s.akzeptiert,
       audioKey: s.audioKey ?? null,
+      kontextUz: s.kontextUz ?? null,
     }));
 
     const phrasen: MaterialPhrase[] = (phrasenRows as PhraseRow[]).map((p) => ({
@@ -399,6 +406,7 @@ export class DafMediaFragenService {
       (d) => ({
         id: d.id,
         titelDe: d.titelDe,
+        art: d.art ?? 'DIALOG',
         sectionCode: '',
         zeilen: d.zeilen.map((z) => ({
           id: z.id,

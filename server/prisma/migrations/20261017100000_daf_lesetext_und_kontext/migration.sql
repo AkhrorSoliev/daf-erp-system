@@ -1,0 +1,3 @@
+-- Matn turi (DIALOG, ANSAGE, CHAT, TEXT, TABELLE) va gapning sahna konteksti.
+ALTER TABLE "DafDialog" ADD COLUMN IF NOT EXISTS "art" TEXT NOT NULL DEFAULT 'DIALOG';
+ALTER TABLE "DafSentence" ADD COLUMN IF NOT EXISTS "kontextUz" TEXT;

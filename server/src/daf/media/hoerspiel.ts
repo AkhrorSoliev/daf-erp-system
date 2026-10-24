@@ -37,7 +37,14 @@ export interface HoerspielRegie {
    * dialogs — slowed locally, not by asking the model to speak slower.
    */
   tempo?: number;
+  /**
+   * Sound of the place where the voice is heard, applied to every voice clip:
+   * a radio broadcast, a loudspeaker announcement, a telephone line.
+   */
+  stimmfilter?: Stimmfilter;
 }
+
+export type Stimmfilter = 'funk' | 'karnay' | 'telefon';
 
 export const TEMPO_MIN_DIALOG = 0.8;
 export const TEMPO_MAX_DIALOG = 1;
@@ -50,6 +57,17 @@ export interface Spanne {
 /** Heard in sample 1 (06.10): another room, behind a door. */
 export const FERN_FILTER =
   'highpass=f=250,lowpass=f=2300,aecho=0.8:0.7:40|80:0.35|0.25,volume=0.45';
+/**
+ * 'funk' — radio: slightly narrowed band, compressed and present.
+ * 'karnay' — loudspeaker in a hall: narrow band and a short echo.
+ * 'telefon' — telephone line: 300–3400 Hz.
+ */
+export const STIMMFILTER: Record<Stimmfilter, string> = {
+  funk: 'highpass=f=150,lowpass=f=7000,equalizer=f=3000:t=q:w=1:g=3,acompressor=threshold=-20dB:ratio=3:attack=5:release=60:makeup=3',
+  karnay:
+    'highpass=f=350,lowpass=f=3200,aecho=0.8:0.75:80|160:0.35|0.2,volume=0.9',
+  telefon: 'highpass=f=300,lowpass=f=3400',
+};
 export const ATMO_LAUTSTAERKE = 0.12;
 export const GERAEUSCH_LAUTSTAERKE = 0.7;
 /** Same lead-in and tail as every course dialog (`audio-polster.ts`). */
@@ -107,6 +125,9 @@ export function pruefeHoerspiel(h: HoerspielRegie, zeilen: number): string[] {
     !(h.tempo >= TEMPO_MIN_DIALOG && h.tempo <= TEMPO_MAX_DIALOG)
   ) {
     probleme.push(`tempo ${h.tempo} (${TEMPO_MIN_DIALOG}–${TEMPO_MAX_DIALOG})`);
+  }
+  if (h.stimmfilter !== undefined && !(h.stimmfilter in STIMMFILTER)) {
+    probleme.push(`stimmfilter «${h.stimmfilter}» (funk, karnay, telefon)`);
   }
   return probleme;
 }
@@ -254,6 +275,8 @@ export interface Clip {
   bis: number;
   at: number;
   fern: boolean;
+  /** Voice filter for the whole recording (`Stimmfilter`). */
+  filter?: string;
   lautstaerke: number;
 }
 
@@ -297,6 +320,7 @@ export function mischPlan(input: {
       bis: grenzen[k],
       at: r3(t),
       fern: fern.has(k),
+      ...(regie.stimmfilter ? { filter: STIMMFILTER[regie.stimmfilter] } : {}),
       lautstaerke: 1,
     });
     t += grenzen[k] - grenzen[k - 1];
@@ -350,6 +374,7 @@ export function mischFfmpegArgs(
       `atrim=start=${c.von}:end=${c.bis}`,
       'asetpts=PTS-STARTPTS',
       fmt,
+      ...(c.filter ? [c.filter] : []),
       ...(c.fern ? [FERN_FILTER] : []),
       ...(c.lautstaerke !== 1 ? [`volume=${c.lautstaerke}`] : []),
       `adelay=${ms}|${ms}`,

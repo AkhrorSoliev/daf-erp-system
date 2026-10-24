@@ -39,6 +39,7 @@ const ALLE_FRAGE_FORMATLAR: Record<FrageFormat, true> = {
   AUDIO_WORT: true,
   WORT_TIPPEN: true,
   HOEREN_WAHL: true,
+  LESEN_WAHL: true,
   BILD_WORT: true,
   AUDIO_BILD: true,
   BILD_TIPPEN: true,

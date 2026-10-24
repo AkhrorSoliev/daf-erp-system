@@ -59,10 +59,11 @@ const MANIFEST_PATH = join(
 );
 
 /**
- * Character limit of one run. The largest unit, u04, has 149 sentences =
- * 3 863 characters; 5 000 ($0.05) stops a wrong input before it is paid for.
+ * Character limit of one run. u04 has 149 sentences = 3 863 characters and u06
+ * (situation texts, 24.10.2026) 195 sentences = 5 105; 5 500 ($0.055) stops a
+ * wrong input before it is paid for.
  */
-export const SATZ_BELGI_CHEGARASI = 5000;
+export const SATZ_BELGI_CHEGARASI = 5500;
 
 /** Inworld TTS price on fal: $0.01 per 1 000 characters. */
 const NARX_1000_BELGI = 0.01;

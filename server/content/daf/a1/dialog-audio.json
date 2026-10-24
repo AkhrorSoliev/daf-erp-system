@@ -234,5 +234,147 @@
     "modell": "google/gemini-3.8-flash-tts",
     "rohKey": "daf/audio/6619daa99326041688dab3e60ea88658.mp3",
     "hoerspiel": "64c394d5f3067f90"
+  },
+  "u06-d1": {
+    "key": "daf/audio/a6099f07a10e19338eae9ab6f07bf5b5.mp3",
+    "textHash": "39b9b2520510dd82",
+    "polster": "700/1000",
+    "modell": "google/gemini-3.8-flash-tts",
+    "basisKey": "daf/audio/b4f4df2c0a312337a87aa1f3db87272a.mp3",
+    "ambient": "1f8ef4fdb6a3fa57@0.12"
+  },
+  "u06-d2": {
+    "key": "daf/audio/fd2a01e52195fca543d21215d15d1a6b.mp3",
+    "textHash": "40298fa2566dc6a3",
+    "polster": "700/1000",
+    "modell": "google/gemini-3.8-flash-tts",
+    "basisKey": "daf/audio/6e16ce9ddfdb19595d1377056da1241b.mp3",
+    "ambient": "cb2e6ec333a94764@0.12"
+  },
+  "u06-d3": {
+    "key": "daf/audio/2dbfc0b063a055745c88660a44b70144.mp3",
+    "textHash": "692019a794d97fd8",
+    "polster": "700/1000",
+    "modell": "google/gemini-3.8-flash-tts",
+    "basisKey": "daf/audio/1781afaa8c0c0e289a1f3285ae0bb275.mp3",
+    "ambient": "5a8f4df3549d37fd@0.12"
+  },
+  "u06-d4": {
+    "key": "daf/audio/1c88c88a6d1fab8caeaff80a46847d98.mp3",
+    "textHash": "7bfe72864767353e",
+    "polster": "700/1000",
+    "modell": "google/gemini-3.8-flash-tts",
+    "basisKey": "daf/audio/3ca7fb2d0e94df2e1aea153993651fe0.mp3",
+    "ambient": "5a8f4df3549d37fd@0.12"
+  },
+  "u06-d5": {
+    "key": "daf/audio/4a29e6388a302485dc6b6ec079ad6f51.mp3",
+    "textHash": "f241a8143e70153a",
+    "polster": "700/1000",
+    "modell": "google/gemini-3.8-flash-tts",
+    "basisKey": "daf/audio/c96b4f8a499f4e27fe8b4f01a005dd94.mp3",
+    "ambient": "5a8f4df3549d37fd@0.12"
+  },
+  "u06-d7": {
+    "key": "daf/audio/346624d0bc90cc521eb56d223cc661b2.mp3",
+    "textHash": "eca47b7f67866294",
+    "polster": "700/1000",
+    "modell": "google/gemini-3.8-flash-tts"
+  },
+  "u06-d9": {
+    "key": "daf/audio/ab21d4aa64f063ee48bb7cd0d1cd9ccd.mp3",
+    "textHash": "ee2eff53d2e1a619",
+    "polster": "700/1000",
+    "modell": "google/gemini-3.8-flash-tts",
+    "basisKey": "daf/audio/55a9641c17045b0547cd19d3ea7774a7.mp3",
+    "ambient": "91b51389c77f3dbc@0.12"
+  },
+  "u06-d10": {
+    "key": "daf/audio/fe7af455ce6f36cd9c57d1cefaac8f02.mp3",
+    "textHash": "2ff12a893fff82a3",
+    "polster": "700/1000",
+    "modell": "google/gemini-3.8-flash-tts",
+    "basisKey": "daf/audio/8d0c7a3fa7988e01c6ab8af712d3477c.mp3",
+    "ambient": "a30056c01b98eecf@0.12"
+  },
+  "u06-d11": {
+    "key": "daf/audio/8bda570eadac08c9f33c8728816d5317.mp3",
+    "textHash": "e35959f95887cce0",
+    "polster": "700/1000",
+    "modell": "google/gemini-3.8-flash-tts",
+    "basisKey": "daf/audio/4a64e483b3d13b48b058eaa918293c63.mp3",
+    "ambient": "b3f91ae2e9ba3134@0.12"
+  },
+  "u06-d8": {
+    "key": "daf/audio/a44c5966a25b0ddd983c565c0a89473f.mp3",
+    "textHash": "284ffea26a0dc08e",
+    "polster": "700/1000",
+    "modell": "google/gemini-3.8-flash-tts",
+    "rohKey": "daf/audio/54ed590d8845d01a7c72ef3cd614d25c.mp3",
+    "hoerspiel": "3a1fe2db1dfb7fdb"
+  },
+  "u06-d12": {
+    "key": "daf/audio/6d8899fccb7b1f289230c7b114374b99.mp3",
+    "textHash": "763fed1b7256c093",
+    "polster": "700/1000",
+    "modell": "google/gemini-3.8-flash-tts",
+    "rohKey": "daf/audio/91c60bb5b3ef536f78c0ee3f28f996e9.mp3",
+    "hoerspiel": "205c83ba89a8a6c0"
+  },
+  "u06-d6": {
+    "key": "daf/audio/b85fef5c4a73cb7a46e6090cfa699282.mp3",
+    "textHash": "aabc448bc20aafda",
+    "polster": "700/1000",
+    "modell": "google/gemini-3.8-flash-tts",
+    "rohKey": "daf/audio/d1f89a77c443dc290aaba32a84739a83.mp3",
+    "hoerspiel": "df99c3e53d3c6856"
+  },
+  "u06-d17": {
+    "key": "daf/audio/1955c4fdfb4dc4b14e5586220aa719f3.mp3",
+    "textHash": "0c6be1522b7b07ff",
+    "polster": "700/1000",
+    "modell": "google/gemini-3.8-flash-tts",
+    "rohKey": "daf/audio/743932314577ea95b966d0add3b79628.mp3",
+    "hoerspiel": "a16c982ba895d037"
+  },
+  "u06-d13": {
+    "key": "daf/audio/947afac09415baec488e42da23cb1987.mp3",
+    "textHash": "a67d5ee9ddc91555",
+    "polster": "700/1000",
+    "modell": "google/gemini-3.8-flash-tts",
+    "rohKey": "daf/audio/fe54b9d2f48bc5433014e51eb7ba67fc.mp3",
+    "hoerspiel": "3f6aa60dc4f8ff56"
+  },
+  "u06-d14": {
+    "key": "daf/audio/6af607ab4695642f935fed3e4b738cd1.mp3",
+    "textHash": "868c22a7752819d6",
+    "polster": "700/1000",
+    "modell": "google/gemini-3.8-flash-tts",
+    "rohKey": "daf/audio/751c21e53c6c85996cc40ecfa752106e.mp3",
+    "hoerspiel": "3a1fe2db1dfb7fdb"
+  },
+  "u06-d15": {
+    "key": "daf/audio/bbdbfa1ac9e3f1244582fd40d5fca077.mp3",
+    "textHash": "15f921faf46925b5",
+    "polster": "700/1000",
+    "modell": "google/gemini-3.8-flash-tts",
+    "rohKey": "daf/audio/bee7b892536d934190a3cbf645235130.mp3",
+    "hoerspiel": "ed9f03133389a7cf"
+  },
+  "u06-d16": {
+    "key": "daf/audio/cd3aa577e454aa6e9d2818f2195dd1dd.mp3",
+    "textHash": "ea427f9a8e3741c2",
+    "polster": "700/1000",
+    "modell": "google/gemini-3.8-flash-tts",
+    "rohKey": "daf/audio/cd7eaa1f6b00ec78f4c0701b79ab83c5.mp3",
+    "hoerspiel": "b15bf418a66157c0"
+  },
+  "u06-d18": {
+    "key": "daf/audio/2ff17ffc8235f59f18b4e765bf060e18.mp3",
+    "textHash": "e8d99d7ceca717b0",
+    "polster": "700/1000",
+    "modell": "google/gemini-3.8-flash-tts",
+    "rohKey": "daf/audio/d5226e72803d451d61d6215ebe7c1670.mp3",
+    "hoerspiel": "b15bf418a66157c0"
   }
 }

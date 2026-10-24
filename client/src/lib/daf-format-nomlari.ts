@@ -21,6 +21,7 @@ export const FORMAT_NOMLARI: Record<FrageFormat, string> = {
   AUDIO_WORT: "Eshitilgan so'zni topish",
   WORT_TIPPEN: "Eshitilgan so'zni yozish",
   HOEREN_WAHL: "Suhbatni eshitib savolga javob berish",
+  LESEN_WAHL: "Matnni o'qib savolga javob berish",
   BILD_WORT: "So'zga mos rasmni topish",
   AUDIO_BILD: "Eshitilgan so'zning rasmini topish",
   BILD_TIPPEN: "Rasmga qarab so'zni yozish",

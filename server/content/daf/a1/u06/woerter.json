@@ -1475,6 +1475,44 @@
    "uz": "tasodif",
    "core": true,
    "order": 29
+  },
+  {
+   "sourceId": "u06-s1-kurs",
+   "section": "u06-s1",
+   "de": "Kurs",
+   "artikel": "der",
+   "plural": "Kurse",
+   "uz": "kurs",
+   "core": true,
+   "order": 36
+  },
+  {
+   "sourceId": "u06-s3-karte",
+   "section": "u06-s3",
+   "de": "Karte",
+   "artikel": "die",
+   "plural": "Karten",
+   "uz": "chipta; karta",
+   "core": true,
+   "order": 30
+  },
+  {
+   "sourceId": "u06-s3-liebe",
+   "section": "u06-s3",
+   "de": "liebe",
+   "uz": "aziz, qadrli (murojaatda: «Liebe Anna»)",
+   "core": true,
+   "order": 31
+  },
+  {
+   "sourceId": "u06-s5-gruss",
+   "section": "u06-s5",
+   "de": "Gruß",
+   "artikel": "der",
+   "plural": "Grüße",
+   "uz": "salom, hurmat (xat oxirida: «Viele Grüße»)",
+   "core": true,
+   "order": 30
   }
  ]
 }

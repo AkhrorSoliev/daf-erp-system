@@ -1,0 +1,1000 @@
+{
+  "unit": "u06",
+  "texte": [
+    {
+      "id": "u06-t1",
+      "section": "u06-s1",
+      "art": "TABELLE",
+      "titelDe": "Was machst du in der Freizeit?",
+      "titelUz": "Bo'sh vaqtingda nima qilasan?",
+      "sahnaUz": "Lukas so'rovnoma natijalarini jadvalga yozgan",
+      "zeilen": [
+        {
+          "sprecher": "",
+          "de": "Name | lesen | fotografieren | zeichnen | tanzen | Fernsehen",
+          "uz": "Ism | o'qish | suratga olish | chizish | raqs | televizor"
+        },
+        {
+          "sprecher": "",
+          "de": "Julia | manchmal | nie | manchmal | selten | meistens",
+          "uz": "Julia | ba'zan | hech qachon | ba'zan | kam | asosan"
+        },
+        {
+          "sprecher": "",
+          "de": "Lukas | selten | oft | nie | manchmal | manchmal",
+          "uz": "Lukas | kam | tez-tez | hech qachon | ba'zan | ba'zan"
+        },
+        {
+          "sprecher": "",
+          "de": "Jonas | oft | selten | manchmal | nie | selten",
+          "uz": "Jonas | tez-tez | kam | ba'zan | hech qachon | kam"
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wer fotografiert oft?",
+          "frageUz": "Kim tez-tez suratga oladi?",
+          "richtig": "Lukas",
+          "falsch": [
+            "Julia",
+            "Jonas"
+          ]
+        },
+        {
+          "frageDe": "Wie oft fotografiert Julia?",
+          "frageUz": "Julia qanchalik tez-tez suratga oladi?",
+          "richtig": "nie",
+          "falsch": [
+            "oft",
+            "meistens"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u06-t2",
+      "section": "u06-s1",
+      "art": "TEXT",
+      "titelDe": "Hobbys und Freizeitaktivitäten",
+      "titelUz": "Hobbilar va bo'sh vaqt mashg'ulotlari",
+      "sahnaUz": "Kurs forumida hamma o'z hobbisini yozgan",
+      "zeilen": [
+        {
+          "sprecher": "",
+          "de": "Lukas: Ich fotografiere sehr gern. Meine Kamera ist cool!",
+          "uz": "Lukas: Men suratga olishni juda yaxshi ko'raman. Mening kameram zo'r!"
+        },
+        {
+          "sprecher": "",
+          "de": "Mia: Ich male gern und ich wandere am Sonntag. Wandern macht viel Spaß.",
+          "uz": "Mia: Men rasm chizishni yoqtiraman va yakshanba kuni sayohat qilaman. Sayohat juda qiziqarli."
+        },
+        {
+          "sprecher": "",
+          "de": "Anna: Ich zeichne gern. Meine Zeichnungen sind nicht immer gut, aber ich habe viel Fantasie.",
+          "uz": "Anna: Men chizishni yoqtiraman. Chizmalarim doim ham yaxshi emas, lekin xayolim boy."
+        },
+        {
+          "sprecher": "",
+          "de": "Jonas: Ich sammle Comics. Comics sind sehr beliebt.",
+          "uz": "Jonas: Men komikslar yig'aman. Komikslar juda mashhur."
+        },
+        {
+          "sprecher": "",
+          "de": "Thomas: Ich lese gern Bücher. Besonders Bücher interessieren mich.",
+          "uz": "Thomas: Men kitob o'qishni yoqtiraman. Ayniqsa kitoblar meni qiziqtiradi."
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wer sammelt Comics?",
+          "frageUz": "Kim komikslar yig'adi?",
+          "richtig": "Jonas",
+          "falsch": [
+            "Lukas",
+            "Anna"
+          ]
+        },
+        {
+          "frageDe": "Was macht Anna gern?",
+          "frageUz": "Anna nimani yoqtiradi?",
+          "richtig": "Sie zeichnet gern.",
+          "falsch": [
+            "Sie wandert gern.",
+            "Sie fotografiert gern."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u06-t3",
+      "section": "u06-s1",
+      "art": "TABELLE",
+      "titelDe": "Samstag und Sonntag",
+      "titelUz": "Shanba va yakshanba",
+      "sahnaUz": "Hafta oxiri rejasi, kim qachon nima qiladi",
+      "zeilen": [
+        {
+          "sprecher": "",
+          "de": "Tag | Uhr | Was? | Wer?",
+          "uz": "Kun | Soat | Nima? | Kim?"
+        },
+        {
+          "sprecher": "",
+          "de": "Samstag | 15 Uhr | Fahrradtour mit dem Verein | Lukas und Julia",
+          "uz": "Shanba | 15:00 | Klub bilan velosiped sayohati | Lukas va Julia"
+        },
+        {
+          "sprecher": "",
+          "de": "Samstag | 19 Uhr | Pantomime | Mia, Jonas und Lena",
+          "uz": "Shanba | 19:00 | Pantomima | Mia, Jonas va Lena"
+        },
+        {
+          "sprecher": "",
+          "de": "Sonntag | 11 Uhr | Oma besuchen | Mia und Jonas",
+          "uz": "Yakshanba | 11:00 | Buvijonni ziyorat qilish | Mia va Jonas"
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wer macht am Samstag eine Fahrradtour?",
+          "frageUz": "Shanba kuni kim velosiped sayohati qiladi?",
+          "richtig": "Lukas und Julia",
+          "falsch": [
+            "Mia und Jonas",
+            "Oma"
+          ]
+        },
+        {
+          "frageDe": "Was machen Mia und Jonas am Sonntag?",
+          "frageUz": "Mia va Jonas yakshanba kuni nima qiladi?",
+          "richtig": "Sie besuchen Oma.",
+          "falsch": [
+            "Sie machen einen Ausflug.",
+            "Sie lesen ein Buch."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u06-t4",
+      "section": "u06-s1",
+      "art": "CHAT",
+      "titelDe": "Der Ausflug",
+      "titelUz": "Sayohat",
+      "sahnaUz": "Lukas Julia'ni klubining sayohatiga taklif qilyapti",
+      "zeilen": [
+        {
+          "sprecher": "Lukas",
+          "de": "Hallo Julia! Am Samstag macht mein Verein einen Ausflug.",
+          "uz": "Salom, Julia! Shanba kuni klubim sayohat qiladi."
+        },
+        {
+          "sprecher": "Julia",
+          "de": "Einen Ausflug? Was macht ihr?",
+          "uz": "Sayohatmi? Nima qilasizlar?"
+        },
+        {
+          "sprecher": "Lukas",
+          "de": "Wir machen eine Fahrradtour. Ich bin Mitglied im Verein.",
+          "uz": "Biz velosiped sayohati qilamiz. Men klubning a'zosiman."
+        },
+        {
+          "sprecher": "Julia",
+          "de": "Cool! Ich habe auch ein Fahrrad. Ist das okay?",
+          "uz": "Zo'r! Mening ham velosipedim bor. Bu mumkinmi?"
+        },
+        {
+          "sprecher": "Lukas",
+          "de": "Ja, gern! Dann bis Samstag, Julia!",
+          "uz": "Ha, albatta! Unda shanbagacha, Julia!"
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wer macht am Samstag einen Ausflug?",
+          "frageUz": "Shanba kuni kim sayohat qiladi?",
+          "richtig": "der Verein",
+          "falsch": [
+            "Julia",
+            "Oma"
+          ]
+        },
+        {
+          "frageDe": "Was macht der Verein am Samstag?",
+          "frageUz": "Klub shanba kuni nima qiladi?",
+          "richtig": "Er macht eine Fahrradtour.",
+          "falsch": [
+            "Er macht Pantomime.",
+            "Er besucht Oma."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u06-t5",
+      "section": "u06-s2",
+      "art": "TEXT",
+      "titelDe": "Sportclub „Eins“ – Kurse",
+      "titelUz": "Sport klubi «Eins» — kurslar",
+      "sahnaUz": "Klub eshigidagi e'lon",
+      "zeilen": [
+        {
+          "sprecher": "",
+          "de": "Yoga: Montag, 18 Uhr",
+          "uz": "Yoga: dushanba, 18:00"
+        },
+        {
+          "sprecher": "",
+          "de": "Karate: Mittwoch, 17 Uhr",
+          "uz": "Karate: chorshanba, 17:00"
+        },
+        {
+          "sprecher": "",
+          "de": "Basketball: Dienstag und Donnerstag, 19 Uhr",
+          "uz": "Basketbol: seshanba va payshanba, 19:00"
+        },
+        {
+          "sprecher": "",
+          "de": "Tennis: Samstag, 15 Uhr",
+          "uz": "Tennis: shanba, 15:00"
+        },
+        {
+          "sprecher": "",
+          "de": "Mitglied: 20 Euro",
+          "uz": "A'zolik: 20 yevro"
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wann ist der Tennis-Kurs?",
+          "frageUz": "Tennis kursi qachon?",
+          "richtig": "am Samstag um 15 Uhr",
+          "falsch": [
+            "am Montag um 18 Uhr",
+            "am Mittwoch um 17 Uhr"
+          ]
+        },
+        {
+          "frageDe": "Was ist am Mittwoch?",
+          "frageUz": "Chorshanba kuni nima bor?",
+          "richtig": "Karate",
+          "falsch": [
+            "Yoga",
+            "Tennis"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u06-t6",
+      "section": "u06-s2",
+      "art": "CHAT",
+      "titelDe": "Tennis am Samstag",
+      "titelUz": "Shanba kuni tennis",
+      "sahnaUz": "Julia Thomas'ni o'z sport klubiga chaqiryapti",
+      "zeilen": [
+        {
+          "sprecher": "Julia",
+          "de": "Hallo Thomas! Hast du am Samstag Zeit?",
+          "uz": "Salom, Thomas! Shanba kuni vaqting bormi?"
+        },
+        {
+          "sprecher": "Thomas",
+          "de": "Hallo Julia! Ja, ich habe Zeit.",
+          "uz": "Salom, Julia! Ha, vaqtim bor."
+        },
+        {
+          "sprecher": "Julia",
+          "de": "Ich bin jetzt Mitglied im Sportclub „Eins“. Am Samstag spiele ich Tennis. Möchtest du auch?",
+          "uz": "Men hozir «Eins» sport klubining a'zosiman. Shanba kuni tennis o'ynayman. Sen ham xohlaysanmi?"
+        },
+        {
+          "sprecher": "Thomas",
+          "de": "Tennis? Das kann ich nicht! Aber ich möchte gern Sport machen.",
+          "uz": "Tennismi? Buni bilmayman! Lekin sport bilan shug'ullanishni xohlayman."
+        },
+        {
+          "sprecher": "Julia",
+          "de": "Dann kannst du einmal mitmachen! Der Tennis-Kurs ist um drei Uhr.",
+          "uz": "Unda bir marta qatnasha olasan! Tennis kursi soat uchda."
+        },
+        {
+          "sprecher": "Thomas",
+          "de": "Um drei Uhr? Gut. Wo ist der Club?",
+          "uz": "Soat uchdami? Yaxshi. Klub qayerda?"
+        },
+        {
+          "sprecher": "Julia",
+          "de": "Gleich am Café.",
+          "uz": "Aynan kafe yonida."
+        },
+        {
+          "sprecher": "Thomas",
+          "de": "Gut, dann bis Samstag!",
+          "uz": "Yaxshi, unda shanbagacha!"
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wer ist Mitglied im Sportclub?",
+          "frageUz": "Sport klubining a'zosi kim?",
+          "richtig": "Julia",
+          "falsch": [
+            "Thomas",
+            "Mia"
+          ]
+        },
+        {
+          "frageDe": "Wo ist der Club?",
+          "frageUz": "Klub qayerda?",
+          "richtig": "am Café",
+          "falsch": [
+            "am Kino",
+            "zu Hause"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u06-t7",
+      "section": "u06-s2",
+      "art": "TEXT",
+      "titelDe": "Marathon und Halbmarathon am Sonntag",
+      "titelUz": "Yakshanba kuni marafon va yarim marafon",
+      "sahnaUz": "Shahar yugurishi e'lonida",
+      "zeilen": [
+        {
+          "sprecher": "",
+          "de": "Marathon: Start 9 Uhr, 40 Euro",
+          "uz": "Marafon: start 9:00, 40 yevro"
+        },
+        {
+          "sprecher": "",
+          "de": "Halbmarathon: Start 10 Uhr, 30 Euro",
+          "uz": "Yarim marafon: start 10:00, 30 yevro"
+        },
+        {
+          "sprecher": "",
+          "de": "Mitmachen kann jeder! Gewinnen kann auch jeder.",
+          "uz": "Hamma qatnasha oladi! Hamma yutishi ham mumkin."
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wann ist der Start für den Halbmarathon?",
+          "frageUz": "Yarim marafon starti qachon?",
+          "richtig": "um 10 Uhr",
+          "falsch": [
+            "um 9 Uhr",
+            "um 22 Uhr"
+          ]
+        },
+        {
+          "frageDe": "Was kostet der Marathon?",
+          "frageUz": "Marafon qancha turadi?",
+          "richtig": "40 Euro",
+          "falsch": [
+            "30 Euro",
+            "8 Euro"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u06-t8",
+      "section": "u06-s2",
+      "art": "TABELLE",
+      "titelDe": "Wer macht was gern?",
+      "titelUz": "Kim nimani yoqtiradi?",
+      "sahnaUz": "Anna va Jonas sport turlarini yoqtirishi jadvalda",
+      "zeilen": [
+        {
+          "sprecher": "",
+          "de": "Name | Das macht er / sie gern",
+          "uz": "Ism | Buni yoqtiradi"
+        },
+        {
+          "sprecher": "",
+          "de": "Anna | laufen, klettern und Rad fahren",
+          "uz": "Anna | yugurish, toqqa chiqish va velosiped haydash"
+        },
+        {
+          "sprecher": "",
+          "de": "Jonas | Fußball spielen und Ski fahren",
+          "uz": "Jonas | futbol o'ynash va chang'i uchish"
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wer fährt gern Ski?",
+          "frageUz": "Kim chang'i uchishni yoqtiradi?",
+          "richtig": "Jonas",
+          "falsch": [
+            "Anna",
+            "Anna und Jonas"
+          ]
+        },
+        {
+          "frageDe": "Wer klettert gern?",
+          "frageUz": "Kim toqqa chiqishni yoqtiradi?",
+          "richtig": "Anna",
+          "falsch": [
+            "Jonas",
+            "Anna und Jonas"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u06-t9",
+      "section": "u06-s2",
+      "art": "TABELLE",
+      "titelDe": "Musikgruppe „Blaue Töne“",
+      "titelUz": "«Blaue Töne» musiqa guruhi",
+      "sahnaUz": "Musiqa guruhi a'zolari va ular nima qilishi",
+      "zeilen": [
+        {
+          "sprecher": "",
+          "de": "Name | Das macht er / sie",
+          "uz": "Ism | Bu nima qiladi"
+        },
+        {
+          "sprecher": "",
+          "de": "Max | spielt Trompete",
+          "uz": "Max | karnay chaladi"
+        },
+        {
+          "sprecher": "",
+          "de": "Eva | spielt Saxofon",
+          "uz": "Eva | saksofon chaladi"
+        },
+        {
+          "sprecher": "",
+          "de": "Anna | spielt Geige",
+          "uz": "Anna | skripka chaladi"
+        },
+        {
+          "sprecher": "",
+          "de": "Tim | singt und hört viel Musik",
+          "uz": "Tim | kuylaydi va ko'p musiqa tinglaydi"
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wer spielt Saxofon?",
+          "frageUz": "Kim saksofon chaladi?",
+          "richtig": "Eva",
+          "falsch": [
+            "Max",
+            "Tim"
+          ]
+        },
+        {
+          "frageDe": "Was spielt Max?",
+          "frageUz": "Max nima chaladi?",
+          "richtig": "Trompete",
+          "falsch": [
+            "Geige",
+            "Saxofon"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u06-t10",
+      "section": "u06-s2",
+      "art": "TEXT",
+      "titelDe": "Chor „Cantate“",
+      "titelUz": "«Cantate» xori",
+      "sahnaUz": "Xor e'loni",
+      "zeilen": [
+        {
+          "sprecher": "",
+          "de": "Wir singen: jeden Dienstag, 19 Uhr",
+          "uz": "Biz kuylaymiz: har seshanba, 19:00"
+        },
+        {
+          "sprecher": "",
+          "de": "Auf der Bühne: am Sonntag, 17 Uhr",
+          "uz": "Sahnada: yakshanba, 17:00"
+        },
+        {
+          "sprecher": "",
+          "de": "Kommt zu uns! Ein Lied singen wir immer zusammen.",
+          "uz": "Bizga keling! Bir qo'shiqni doim birga kuylaymiz."
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wann singt der Chor auf der Bühne?",
+          "frageUz": "Xor sahnada qachon kuylaydi?",
+          "richtig": "am Sonntag um 17 Uhr",
+          "falsch": [
+            "am Dienstag um 19 Uhr",
+            "am Sonntag um 19 Uhr"
+          ]
+        },
+        {
+          "frageDe": "Wann singen sie jeden Dienstag?",
+          "frageUz": "Ular har seshanba qachon kuylaydi?",
+          "richtig": "um 19 Uhr",
+          "falsch": [
+            "um 17 Uhr",
+            "um 20 Uhr"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u06-t11",
+      "section": "u06-s3",
+      "art": "TABELLE",
+      "titelDe": "Veranstaltungen am Freitag – Programm",
+      "titelUz": "Juma kuni tadbirlar dasturi",
+      "sahnaUz": "Shaharning juma kuni dasturi plakatda",
+      "zeilen": [
+        {
+          "sprecher": "",
+          "de": "Wo? | Was? | Uhr | Eintritt",
+          "uz": "Qayerda? | Nima? | Soat | Kirish"
+        },
+        {
+          "sprecher": "",
+          "de": "Kino | Film mit viel Musik | 20 Uhr | 8 Euro",
+          "uz": "Kino | Musiqali film | 20:00 | 8 yevro"
+        },
+        {
+          "sprecher": "",
+          "de": "Theater | Theater-Festival | 19 Uhr | 20 Euro",
+          "uz": "Teatr | Teatr festivali | 19:00 | 20 yevro"
+        },
+        {
+          "sprecher": "",
+          "de": "Konzert | Musikgruppe „Blaue Töne“ | 20 Uhr | voll",
+          "uz": "Konsert | «Blaue Töne» musiqa guruhi | 20:00 | joy yo'q"
+        },
+        {
+          "sprecher": "",
+          "de": "Oper | „Carmen“ | 19 Uhr | 40 Euro",
+          "uz": "Opera | «Carmen» | 19:00 | 40 yevro"
+        },
+        {
+          "sprecher": "",
+          "de": "Disco | Musik und Tanzen | 22 Uhr | 5 Euro",
+          "uz": "Diskoteka | Musiqa va raqs | 22:00 | 5 yevro"
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Was kostet der Eintritt im Kino?",
+          "frageUz": "Kinoga kirish qancha turadi?",
+          "richtig": "8 Euro",
+          "falsch": [
+            "5 Euro",
+            "20 Euro"
+          ]
+        },
+        {
+          "frageDe": "Wann ist die Disco?",
+          "frageUz": "Diskoteka qachon?",
+          "richtig": "um 22 Uhr",
+          "falsch": [
+            "um 19 Uhr",
+            "um 20 Uhr"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u06-t12",
+      "section": "u06-s3",
+      "art": "TEXT",
+      "titelDe": "Freitag, Samstag, Sonntag",
+      "titelUz": "Juma, shanba, yakshanba",
+      "sahnaUz": "Shahar tadbirlari haqida qisqa maslahatlar",
+      "zeilen": [
+        {
+          "sprecher": "",
+          "de": "Theater-Festival, Freitag, 19 Uhr: Theater und Orchester spielen zusammen. Das ist ein besonderes Event. Ein Ticket kostet 20 Euro.",
+          "uz": "Teatr festivali, juma, 19:00: teatr va orkestr birga o'ynaydi. Bu alohida tadbir. Bir chipta 20 yevro turadi."
+        },
+        {
+          "sprecher": "",
+          "de": "Film-Festival, Samstag, 20 Uhr: Zehn Filme für Filmfans. Viele Zuschauer sind da. Der Eintritt kostet 8 Euro.",
+          "uz": "Film festivali, shanba, 20:00: film ixlosmandlari uchun o'nta film. Ko'p tomoshabin keladi. Kirish 8 yevro turadi."
+        },
+        {
+          "sprecher": "",
+          "de": "Disco-Abend, Sonntag, 22 Uhr: Das Publikum tanzt. Die Atmosphäre ist sehr gut. Der Eintritt kostet 5 Euro.",
+          "uz": "Diskoteka kechasi, yakshanba, 22:00: tomoshabinlar raqsga tushadi. Muhit juda yaxshi. Kirish 5 yevro turadi."
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Was kostet der Eintritt im Film-Festival?",
+          "frageUz": "Film festivaliga kirish qancha turadi?",
+          "richtig": "8 Euro",
+          "falsch": [
+            "5 Euro",
+            "20 Euro"
+          ]
+        },
+        {
+          "frageDe": "Wann ist der Disco-Abend?",
+          "frageUz": "Diskoteka kechasi qachon?",
+          "richtig": "am Sonntag",
+          "falsch": [
+            "am Freitag",
+            "am Samstag"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u06-t13",
+      "section": "u06-s4",
+      "art": "TABELLE",
+      "titelDe": "Wetterbericht für heute",
+      "titelUz": "Bugungi ob-havo ma'lumoti",
+      "sahnaUz": "Bugungi ob-havo ma'lumoti jadvalda",
+      "zeilen": [
+        {
+          "sprecher": "",
+          "de": "Wo? | Wetter | Grad",
+          "uz": "Qayerda? | Ob-havo | Daraja"
+        },
+        {
+          "sprecher": "",
+          "de": "Hamburg | Regen und Wind | 8 Grad",
+          "uz": "Gamburg | yomg'ir va shamol | 8 daraja"
+        },
+        {
+          "sprecher": "",
+          "de": "München | Schnee | 0 Grad",
+          "uz": "Myunxen | qor | 0 daraja"
+        },
+        {
+          "sprecher": "",
+          "de": "Berlin | bewölkt | 10 Grad",
+          "uz": "Berlin | bulutli | 10 daraja"
+        },
+        {
+          "sprecher": "",
+          "de": "Köln | sonnig | 18 Grad",
+          "uz": "Keln | quyoshli | 18 daraja"
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wo regnet es?",
+          "frageUz": "Qayerda yomg'ir yog'yapti?",
+          "richtig": "in Hamburg",
+          "falsch": [
+            "in München",
+            "in Köln"
+          ]
+        },
+        {
+          "frageDe": "Wie viel Grad sind es in Köln?",
+          "frageUz": "Kelnda necha daraja?",
+          "richtig": "18 Grad",
+          "falsch": [
+            "0 Grad",
+            "10 Grad"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u06-t14",
+      "section": "u06-s4",
+      "art": "TABELLE",
+      "titelDe": "Jahreszeiten in Deutschland",
+      "titelUz": "Germaniyada fasllar",
+      "sahnaUz": "Germaniyada fasllar va ob-havo jadvalda",
+      "zeilen": [
+        {
+          "sprecher": "",
+          "de": "Jahreszeit | Wetter",
+          "uz": "Fasl | Ob-havo"
+        },
+        {
+          "sprecher": "",
+          "de": "Frühling (Frühjahr) | warm, Wind, oft Regen",
+          "uz": "Bahor | iliq, shamol, tez-tez yomg'ir"
+        },
+        {
+          "sprecher": "",
+          "de": "Sommer | heiß, die Sonne scheint",
+          "uz": "Yoz | issiq, quyosh charaqlaydi"
+        },
+        {
+          "sprecher": "",
+          "de": "Herbst | kalt, bewölkt und windig",
+          "uz": "Kuz | sovuq, bulutli va shamolli"
+        },
+        {
+          "sprecher": "",
+          "de": "Winter | sehr kalt, Schnee",
+          "uz": "Qish | juda sovuq, qor"
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wann ist es heiß?",
+          "frageUz": "Qachon issiq bo'ladi?",
+          "richtig": "im Sommer",
+          "falsch": [
+            "im Frühling",
+            "im Winter"
+          ]
+        },
+        {
+          "frageDe": "Wann schneit es?",
+          "frageUz": "Qachon qor yog'adi?",
+          "richtig": "im Winter",
+          "falsch": [
+            "im Herbst",
+            "im Frühling"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u06-t15",
+      "section": "u06-s4",
+      "art": "TEXT",
+      "titelDe": "Meine Jahreszeit",
+      "titelUz": "Mening faslim",
+      "sahnaUz": "Forumda hamma o'z sevimli faslini yozgan",
+      "zeilen": [
+        {
+          "sprecher": "",
+          "de": "Anna: Im Frühling ist es warm und sonnig. Ich genieße die Natur draußen.",
+          "uz": "Anna: Bahorda iliq va quyoshli. Men tashqarida tabiatdan zavqlanaman."
+        },
+        {
+          "sprecher": "",
+          "de": "Jonas: Ich mag den Sommer. Im Sommer ist es heiß, und ich bin immer draußen.",
+          "uz": "Jonas: Men yozni yoqtiraman. Yozda issiq va men doim tashqarida bo'laman."
+        },
+        {
+          "sprecher": "",
+          "de": "Julia: Im Herbst ist es kalt und windig. Es gibt viele Wolken. Ich glaube, das ist eine gute Zeit für ein Buch.",
+          "uz": "Julia: Kuzda sovuq va shamolli. Bulutlar ko'p. Menimcha, bu kitob uchun yaxshi vaqt."
+        },
+        {
+          "sprecher": "",
+          "de": "Thomas: Im Winter schneit es. Ich fahre Ski!",
+          "uz": "Thomas: Qishda qor yog'adi. Men chang'i uchaman!"
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wer mag den Sommer?",
+          "frageUz": "Yozni kim yoqtiradi?",
+          "richtig": "Jonas",
+          "falsch": [
+            "Anna",
+            "Mia"
+          ]
+        },
+        {
+          "frageDe": "Was macht Thomas im Winter?",
+          "frageUz": "Thomas qishda nima qiladi?",
+          "richtig": "Er fährt Ski.",
+          "falsch": [
+            "Er geht schwimmen.",
+            "Er fotografiert."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u06-t16",
+      "section": "u06-s4",
+      "art": "TEXT",
+      "titelDe": "Himmelsrichtungen",
+      "titelUz": "Dunyo tomonlari",
+      "sahnaUz": "Nemis shaharlari xaritada qayerda joylashgani",
+      "zeilen": [
+        {
+          "sprecher": "",
+          "de": "Hamburg ist im Norden, München ist im Süden.",
+          "uz": "Gamburg shimolda, Myunxen janubda."
+        },
+        {
+          "sprecher": "",
+          "de": "Köln ist im Westen, Berlin ist im Osten.",
+          "uz": "Keln g'arbda, Berlin sharqda."
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wo ist München?",
+          "frageUz": "Myunxen qayerda?",
+          "richtig": "im Süden",
+          "falsch": [
+            "im Norden",
+            "im Westen"
+          ]
+        },
+        {
+          "frageDe": "Wo ist Berlin?",
+          "frageUz": "Berlin qayerda?",
+          "richtig": "im Osten",
+          "falsch": [
+            "im Westen",
+            "im Norden"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u06-t17",
+      "section": "u06-s5",
+      "art": "TEXT",
+      "titelDe": "Einladung zum Geburtstag",
+      "titelUz": "Tug'ilgan kunga taklifnoma",
+      "sahnaUz": "Julia Lukas'ga elektron xat yozgan",
+      "zeilen": [
+        {
+          "sprecher": "",
+          "de": "Von: Julia, An: Lukas",
+          "uz": "Kimdan: Julia, Kimga: Lukas"
+        },
+        {
+          "sprecher": "",
+          "de": "Hallo Lukas, am Samstag habe ich Geburtstag! Ich feiere im Stadtpark, mit Picknick. Hast du Lust? Kannst du mitkommen?",
+          "uz": "Salom, Lukas, shanba kuni mening tug'ilgan kunim! Men bog'da, piknik bilan nishonlayman. Xohlaysanmi? Birga kela olasanmi?"
+        },
+        {
+          "sprecher": "",
+          "de": "Der Treffpunkt ist um vier Uhr am Café. Du kannst Kuchen mitbringen, aber kein Geschenk! Mia und Jonas sind auch Gäste. Anna kommt auch, das ist eine Überraschung für Mia!",
+          "uz": "Uchrashuv joyi soat to'rtda kafe yonida. Tort olib kelishing mumkin, lekin sovg'a emas! Mia va Jonas ham mehmon. Anna ham keladi, bu Mia uchun syurpriz!"
+        },
+        {
+          "sprecher": "",
+          "de": "Reagiere bitte bald auf die Einladung. Viele Grüße, Julia",
+          "uz": "Iltimos, taklifga tezroq javob ber. Hurmat bilan, Julia"
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wann ist der Treffpunkt?",
+          "frageUz": "Uchrashuv qachon?",
+          "richtig": "um vier Uhr",
+          "falsch": [
+            "um drei Uhr",
+            "um fünf Uhr"
+          ]
+        },
+        {
+          "frageDe": "Was kann Lukas mitbringen?",
+          "frageUz": "Lukas nima olib kelishi mumkin?",
+          "richtig": "Kuchen",
+          "falsch": [
+            "ein Geschenk",
+            "eine CD"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u06-t18",
+      "section": "u06-s5",
+      "art": "CHAT",
+      "titelDe": "Das Geschenk",
+      "titelUz": "Sovg'a",
+      "sahnaUz": "Mia va Jonas Julia'ning tug'ilgan kuni uchun sovg'a haqida kelishadi",
+      "zeilen": [
+        {
+          "sprecher": "Mia",
+          "de": "Hallo Jonas! Julia hat am Samstag Geburtstag.",
+          "uz": "Salom, Jonas! Julianing shanba kuni tug'ilgan kuni."
+        },
+        {
+          "sprecher": "Jonas",
+          "de": "Stimmt! Hast du schon ein Geschenk?",
+          "uz": "To'g'ri! Sovg'ang tayyormi?"
+        },
+        {
+          "sprecher": "Mia",
+          "de": "Nein. Mein Vorschlag: Wir schenken zusammen ein Buch.",
+          "uz": "Yo'q. Mening taklifim: birga kitob sovg'a qilamiz."
+        },
+        {
+          "sprecher": "Jonas",
+          "de": "Gute Idee! Wo treffen wir uns?",
+          "uz": "Yaxshi fikr! Qayerda uchrashamiz?"
+        },
+        {
+          "sprecher": "Mia",
+          "de": "Am Café im Stadtpark, um halb vier. Dann gehen wir zusammen zur Party.",
+          "uz": "Bog'dagi kafe yonida, soat uch yarimda. Keyin birga ziyofatga boramiz."
+        },
+        {
+          "sprecher": "Jonas",
+          "de": "Schade, ich bin erst um vier Uhr da. Geht auch vier Uhr?",
+          "uz": "Afsus, men faqat soat to'rtda bo'laman. Soat to'rt ham bo'ladimi?"
+        },
+        {
+          "sprecher": "Mia",
+          "de": "Okay, dann um vier. Bis Samstag!",
+          "uz": "Bo'pti, unda to'rtda. Shanbagacha!"
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Was schenken Mia und Jonas?",
+          "frageUz": "Mia va Jonas nima sovg'a qiladi?",
+          "richtig": "ein Buch",
+          "falsch": [
+            "Kuchen",
+            "eine CD"
+          ]
+        },
+        {
+          "frageDe": "Wann treffen sich Mia und Jonas?",
+          "frageUz": "Mia va Jonas qachon uchrashadi?",
+          "richtig": "um vier",
+          "falsch": [
+            "um halb vier",
+            "um fünf"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u06-t19",
+      "section": "u06-s5",
+      "art": "TABELLE",
+      "titelDe": "Kultur-Nacht in der Stadt",
+      "titelUz": "Shaharda madaniyat kechasi",
+      "sahnaUz": "Madaniyat kechasi plakati",
+      "zeilen": [
+        {
+          "sprecher": "",
+          "de": "Was? | Tag | Uhr | Eintritt",
+          "uz": "Nima? | Kun | Soat | Kirish"
+        },
+        {
+          "sprecher": "",
+          "de": "Museumsnacht | Samstag | 19 Uhr | 10 Euro",
+          "uz": "Muzey kechasi | shanba | 19:00 | 10 yevro"
+        },
+        {
+          "sprecher": "",
+          "de": "Open-Air-Kino | Sonntag | 21 Uhr | 5 Euro",
+          "uz": "Ochiq havoda kino | yakshanba | 21:00 | 5 yevro"
+        },
+        {
+          "sprecher": "",
+          "de": "Konzert im Stadtpark | Freitag | 20 Uhr | 12 Euro",
+          "uz": "Bog'da konsert | juma | 20:00 | 12 yevro"
+        }
+      ],
+      "fragen": [
+        {
+          "frageDe": "Wann ist die Museumsnacht?",
+          "frageUz": "Muzey kechasi qachon?",
+          "richtig": "am Samstag",
+          "falsch": [
+            "am Freitag",
+            "am Sonntag"
+          ]
+        },
+        {
+          "frageDe": "Was kostet der Eintritt im Open-Air-Kino?",
+          "frageUz": "Ochiq havoda kinoga kirish qancha turadi?",
+          "richtig": "5 Euro",
+          "falsch": [
+            "10 Euro",
+            "12 Euro"
+          ]
+        }
+      ]
+    }
+  ]
+}

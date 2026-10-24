@@ -249,6 +249,7 @@ describe('InhaltSeedService', () => {
       woerter: 1,
       saetze: 1,
       dialoge: 1,
+      lesetexte: 0,
       zeilen: 2,
       regeln: 1,
       phrasen: 1,
@@ -800,5 +801,112 @@ describe('InhaltSeedService', () => {
       (c: any[]) => c[0].where.order?.gt !== undefined,
     );
     expect(call[0].where.order.gt).toBe(2);
+  });
+
+  describe('matn turi (art) va o`qish matnlari', () => {
+    const chat = (): NonNullable<InhaltFiles['lesetexte']> => ({
+      unit: 'u01',
+      texte: [
+        {
+          id: 'u01-t1',
+          section: 'u01-s1',
+          art: 'CHAT',
+          titelDe: 'Chat',
+          titelUz: 'Chat',
+          zeilen: [
+            { sprecher: 'Anna', de: 'Hallo Jonas!', uz: 'Salom Jonas!' },
+            { sprecher: 'Jonas', de: 'Hallo Anna!', uz: 'Salom Anna!' },
+          ],
+          fragen: [
+            {
+              frageDe: 'Wer schreibt?',
+              frageUz: 'Kim yozyapti?',
+              richtig: 'Anna',
+              falsch: ['Mia', 'Walter'],
+            },
+            {
+              frageDe: 'Wer antwortet?',
+              frageUz: 'Kim javob beryapti?',
+              richtig: 'Jonas',
+              falsch: ['Mia', 'Walter'],
+            },
+          ],
+        },
+      ],
+    });
+
+    it('dialogning art ustuni standart DIALOG, ANSAGE o`z qiymatini oladi', async () => {
+      const prisma = fakePrisma();
+      const f = files();
+      f.dialoge.dialoge.push({
+        ...f.dialoge.dialoge[0],
+        id: 'u01-d2',
+        art: 'ANSAGE',
+      });
+      await new InhaltSeedService(prisma as any).seed('u01', f);
+      const arts = prisma.dafDialog.upsert.mock.calls.map(
+        (c) => c[0].create.art,
+      );
+      expect(arts).toEqual(['DIALOG', 'ANSAGE']);
+    });
+
+    it('lesetexte DafDialog ga art bilan yoziladi, audiosiz', async () => {
+      const prisma = fakePrisma();
+      const f = files();
+      f.lesetexte = chat();
+      const r = await new InhaltSeedService(prisma as any).seed('u01', f);
+      const row = prisma.dafDialog.upsert.mock.calls[1][0];
+      expect(row.create).toMatchObject({
+        code: 'u01-t1',
+        art: 'CHAT',
+        audioKey: null,
+      });
+      // Dialog hisobotiga o'qish matni kirmaydi, lekin savollari kiradi.
+      expect(r.dialoge).toBe(1);
+      expect(r.lesetexte).toBe(1);
+      expect(r.hoerFragen).toBe(4);
+      expect([...prisma.rows.hoerFrage.values()].map((x) => x.code)).toContain(
+        'u01-t1-f2',
+      );
+    });
+
+    it('o`qish matnining kaliti dialoglarni tozalashda o`chib ketmaydi', async () => {
+      const prisma = fakePrisma();
+      const f = files();
+      f.lesetexte = chat();
+      await new InhaltSeedService(prisma as any).seed('u01', f);
+      await new InhaltSeedService(prisma as any).seed('u01', f);
+      expect([...prisma.rows.dialog.values()].map((d) => d.code)).toEqual([
+        'u01-d1',
+        'u01-t1',
+      ]);
+    });
+
+    it('fayldan olib tashlangan o`qish matni bazadan ham ketadi', async () => {
+      const prisma = fakePrisma();
+      const f = files();
+      f.lesetexte = chat();
+      await new InhaltSeedService(prisma as any).seed('u01', f);
+      const yana = files();
+      yana.lesetexte = { unit: 'u01', texte: [] };
+      await new InhaltSeedService(prisma as any).seed('u01', yana);
+      expect([...prisma.rows.dialog.values()].map((d) => d.code)).toEqual([
+        'u01-d1',
+      ]);
+    });
+  });
+
+  it('gapning sahna konteksti saqlanadi; yo`q bo`lsa null', async () => {
+    const prisma = fakePrisma();
+    const f = files();
+    f.saetze.saetze[0].kontextUz = 'Kassada. Claudia aytadi';
+    await new InhaltSeedService(prisma as any).seed('u01', f);
+    expect(prisma.dafSentence.upsert.mock.calls[0][0].create.kontextUz).toBe(
+      'Kassada. Claudia aytadi',
+    );
+    await new InhaltSeedService(prisma as any).seed('u01', files());
+    expect(
+      prisma.dafSentence.upsert.mock.calls[1][0].update.kontextUz,
+    ).toBeNull();
   });
 });

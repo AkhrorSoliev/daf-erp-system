@@ -653,189 +653,346 @@
     }
   },
   "u06-d1": {
-    "szene": "Mittags in der Mensa einer Universität. Julia und Lukas sprechen über Hobbys. Julia hat kein Hobby, Lukas lädt sie zu einer Fahrradtour seines Vereins ein.",
+    "szene": "Mittags in der Mensa. Lukas macht eine Umfrage für den Deutschkurs und fragt Julia nach ihren Hobbys. Julia hat kaum welche, aber die beiden mögen sich.",
     "toene": [
+      "friendly",
+      "relaxed",
       "curious",
-      "enthusiastic",
       "a little embarrassed",
-      "surprised",
+      "encouraging",
       "shy",
-      "inviting",
-      "delighted",
-      "happy"
-    ],
-    "hoerspiel": {
-      "atmo": {
-        "sfx": "a busy university canteen at lunchtime, cutlery and trays clinking, many indistinct voices far away",
-        "sek": 15
-      },
-      "geraeusche": [],
-      "tempo": 0.9
-    }
+      "cheerful"
+    ]
   },
   "u06-d2": {
-    "szene": "Samstagabend im Wohnzimmer. Mia möchte mit Jonas und der kleinen Lena Pantomime spielen. Jonas will zuerst nicht, dann macht es ihm Spaß.",
+    "szene": "Samstagabend zu Hause. Mia und Jonas wollen mit Lena ein Spiel machen. Jonas ist erst skeptisch, dann macht er mit.",
     "toene": [
       "cheerful",
-      "relaxed",
+      "easygoing",
       "playful",
-      "reluctant",
+      "skeptical",
       "encouraging",
-      "giving in",
-      "guessing",
-      "laughing"
-    ],
-    "hoerspiel": {
-      "atmo": {
-        "sfx": "a quiet living room in the evening, faint traffic far outside, no voices",
-        "sek": 15
-      },
-      "geraeusche": [
-        {
-          "vor": 2,
-          "sfx": "a dice rolling on a wooden table",
-          "sek": 1.5
-        }
-      ],
-      "tempo": 0.9
-    }
+      "hesitant",
+      "amused",
+      "delighted"
+    ]
   },
   "u06-d3": {
-    "szene": "An der Rezeption eines Sportclubs. Thomas möchte Sport machen. Sabine erklärt das Angebot; Schwimmen gibt es nicht, also wählt er Yoga.",
+    "szene": "Samstag am Empfang eines Sportclubs. Thomas möchte Mitglied werden und fragt nach Preis und Kursen. Sabine am Empfang hilft freundlich.",
     "toene": [
       "friendly",
       "polite",
       "helpful",
-      "honest",
-      "apologetic",
+      "interested",
+      "helpful",
       "hopeful",
-      "friendly",
-      "satisfied"
-    ],
-    "hoerspiel": {
-      "atmo": {
-        "sfx": "a sports club reception, a basketball bouncing far away in a gym, no voices",
-        "sek": 15
-      },
-      "geraeusche": [],
-      "tempo": 0.9
-    }
+      "sorry",
+      "a little disappointed"
+    ]
   },
   "u06-d4": {
-    "szene": "In einem Probenraum vor der Chorprobe. Helga lernt Anna kennen, die neu im Chor ist und Geige spielt.",
+    "szene": "Am Empfang des Sportclubs geht es weiter. Am Dienstag ist noch ein Platz frei. Sabine schreibt Thomas auf und lässt sich seinen Namen buchstabieren.",
     "toene": [
+      "pleased",
+      "relieved",
+      "friendly",
+      "clear",
+      "polite",
+      "slow"
+    ]
+  },
+  "u06-d5": {
+    "szene": "Am Empfang des Sportclubs, am Ende des Gesprächs. Sabine fragt nach der Telefonnummer und wiederholt sie zur Kontrolle. Dann verabschieden sich beide freundlich.",
+    "toene": [
+      "friendly",
+      "slow",
+      "careful",
+      "confident",
       "warm",
-      "shy",
-      "interested",
-      "proud",
-      "excited",
-      "frightened",
-      "encouraging",
-      "giving in with a laugh"
+      "cheerful"
+    ]
+  },
+  "u06-d6": {
+    "szene": "Abendliche Lautsprecherdurchsage im Sportclub. Die Sprecherin informiert freundlich, ruhig und sehr klar über die Kurse.",
+    "toene": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
     ],
     "hoerspiel": {
+      "stimmfilter": "karnay",
       "atmo": {
-        "sfx": "a quiet rehearsal room, a few people chatting softly far away, a piano tuning note",
-        "sek": 15
+        "sfx": "sports hall ambience, distant ball bouncing and shoes squeaking on a gym floor, soft echoing room tone, no clear words",
+        "sek": 8
       },
       "geraeusche": [
         {
-          "vor": 9,
-          "sfx": "a short violin melody being played softly",
-          "sek": 3
+          "vor": 1,
+          "sfx": "two-tone ding-dong loudspeaker announcement chime in a public hall, clean, about two seconds",
+          "sek": 2,
+          "lautstaerke": 0.8
         }
-      ],
-      "tempo": 0.9
-    }
-  },
-  "u06-d5": {
-    "szene": "Mittagspause im Büro. Thomas und Mia planen den Freitagabend: Kino, Konzert oder Theater.",
-    "toene": [
-      "inviting",
-      "pleased",
-      "reading",
-      "unconvinced",
-      "disappointed",
-      "hopeful",
-      "pleased",
-      "happy"
-    ],
-    "hoerspiel": {
-      "atmo": {
-        "sfx": "a quiet office during lunch break, soft keyboard typing far away, no voices",
-        "sek": 15
-      },
-      "geraeusche": [],
-      "tempo": 0.9
-    }
-  },
-  "u06-d6": {
-    "szene": "Abends an der Theaterkasse. Thomas kauft zwei Tickets für das Theater-Festival bei der Kassiererin Claudia.",
-    "toene": [
-      "friendly",
-      "polite",
-      "informative",
-      "surprised",
-      "enthusiastic",
-      "hopeful",
-      "friendly",
-      "decided"
-    ],
-    "hoerspiel": {
-      "atmo": {
-        "sfx": "a theatre foyer in the evening, people talking softly in the distance, no clear words",
-        "sek": 15
-      },
-      "geraeusche": [],
-      "tempo": 0.9
+      ]
     }
   },
   "u06-d7": {
-    "szene": "Samstagmorgen in der Wohnung am Fenster. Es regnet stark. Jonas und Mia wollten eine Fahrradtour machen und verschieben sie auf morgen.",
+    "szene": "Telefongespräch am Nachmittag. Jonas nimmt ab, Anna ruft an und erzählt vom Halbmarathon am Sonntag. Jonas macht lieber Fußball, aber zum Klettern sagt er gern ja.",
     "toene": [
-      "disappointed",
-      "annoyed",
-      "sad",
-      "firm",
-      "hopeful",
+      "friendly",
+      "excited",
+      "modest",
+      "encouraging",
+      "proud",
+      "eager",
       "pleased",
-      "relieved",
-      "cheerful"
-    ],
-    "hoerspiel": {
-      "atmo": {
-        "sfx": "heavy rain pouring against a window, inside a quiet flat, no voices",
-        "sek": 15
-      },
-      "geraeusche": [],
-      "tempo": 0.9
-    }
+      "happy"
+    ]
   },
   "u06-d8": {
-    "szene": "Am Telefon. Julia lädt Lukas zu ihrem Geburtstags-Picknick im Stadtpark ein.",
+    "szene": "Sportnachrichten im Radio Eins. Die Moderatorin spricht lebendig, freundlich und sehr klar.",
     "toene": [
-      "cheerful",
-      "pleased",
-      "inviting",
-      "delighted",
-      "helpful",
-      "polite",
-      "friendly",
-      "happy"
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
     ],
     "hoerspiel": {
+      "stimmfilter": "funk",
+      "geraeusche": [
+        {
+          "vor": 1,
+          "sfx": "short bright radio station jingle sting, upbeat synth and chime, clean, about three seconds",
+          "sek": 3,
+          "lautstaerke": 0.8
+        },
+        {
+          "vor": 7,
+          "sfx": "short radio station outro sting, soft rising synth chime, about two seconds",
+          "sek": 2,
+          "lautstaerke": 0.8
+        }
+      ]
+    }
+  },
+  "u06-d9": {
+    "szene": "Auf einer Bank im Park. Mia hört mit Kopfhörern Musik und erzählt Lukas begeistert von der CD ihrer Lieblingsgruppe. Lukas wird neugierig.",
+    "toene": [
+      "curious",
+      "delighted",
+      "interested",
+      "enthusiastic",
+      "curious",
+      "informative",
+      "excited",
+      "cheerful"
+    ]
+  },
+  "u06-d10": {
+    "szene": "Mittagspause bei der Arbeit. Thomas und Mia planen den Freitagabend. Thomas hat das Programm der Stadt in der Hand, Mia ist wählerisch.",
+    "toene": [
+      "friendly",
+      "delighted",
+      "helpful",
+      "unconvinced",
+      "apologetic",
+      "disappointed",
+      "hopeful",
+      "happy"
+    ]
+  },
+  "u06-d11": {
+    "szene": "Abends an der Theaterkasse. Thomas möchte zwei Tickets für Freitag kaufen. Claudia an der Kasse ist freundlich und stolz auf das Festival.",
+    "toene": [
+      "polite",
+      "professional",
+      "surprised",
+      "proud",
+      "hopeful",
+      "helpful",
+      "pleased",
+      "warm"
+    ]
+  },
+  "u06-d12": {
+    "szene": "Durchsage im Theater vor Beginn des Festivals. Die Sprecherin begrüßt das Publikum freundlich, festlich und sehr klar.",
+    "toene": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "hoerspiel": {
+      "stimmfilter": "karnay",
       "atmo": {
-        "sfx": "a quiet flat in the afternoon, faint birds outside the window, no voices",
+        "sfx": "quiet murmur of a theater audience in a large foyer before a festival, soft chatter and footsteps, no clear words",
         "sek": 15
       },
       "geraeusche": [
         {
           "vor": 1,
-          "sfx": "a phone ringing twice and being picked up",
-          "sek": 2.5
+          "sfx": "two-tone ding-dong loudspeaker announcement chime in a public hall, clean, about two seconds",
+          "sek": 2,
+          "lautstaerke": 0.8
         }
-      ],
-      "tempo": 0.9
+      ]
+    }
+  },
+  "u06-d17": {
+    "szene": "Veranstaltungstipps im Radio Eins. Die Moderatorin spricht lebendig, freundlich und sehr klar und nennt Tage, Uhrzeiten und Preise.",
+    "toene": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "hoerspiel": {
+      "stimmfilter": "funk",
+      "geraeusche": [
+        {
+          "vor": 1,
+          "sfx": "short bright radio station jingle sting, upbeat synth and chime, clean, about three seconds",
+          "sek": 3,
+          "lautstaerke": 0.8
+        },
+        {
+          "vor": 6,
+          "sfx": "short radio station outro sting, soft rising synth chime, about two seconds",
+          "sek": 2,
+          "lautstaerke": 0.8
+        }
+      ]
+    }
+  },
+  "u06-d13": {
+    "szene": "Samstagmorgen zu Hause am Fenster. Es regnet stark. Jonas und Mia wollten eine Fahrradtour machen und sind enttäuscht, dann finden sie eine Lösung.",
+    "toene": [
+      "disappointed",
+      "annoyed",
+      "resigned",
+      "grumbling",
+      "hopeful",
+      "optimistic",
+      "relieved",
+      "cheerful"
+    ],
+    "hoerspiel": {
+      "atmo": {
+        "sfx": "steady rain falling on a window and a roof, soft calm indoor room tone, no clear words",
+        "sek": 15
+      }
+    }
+  },
+  "u06-d14": {
+    "szene": "Wetterbericht im Radio Eins. Die Moderatorin spricht lebendig, freundlich und sehr klar und nennt Orte und Temperaturen.",
+    "toene": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "hoerspiel": {
+      "stimmfilter": "funk",
+      "geraeusche": [
+        {
+          "vor": 1,
+          "sfx": "short bright radio station jingle sting, upbeat synth and chime, clean, about three seconds",
+          "sek": 3,
+          "lautstaerke": 0.8
+        },
+        {
+          "vor": 7,
+          "sfx": "short radio station outro sting, soft rising synth chime, about two seconds",
+          "sek": 2,
+          "lautstaerke": 0.8
+        }
+      ]
+    }
+  },
+  "u06-d15": {
+    "szene": "Radio Eins, eine Hörersendung über Jahreszeiten. Der Moderator begrüßt die Anruferin Mia. Mia erzählt begeistert, warum sie den Winter mag.",
+    "toene": [
+      "welcoming",
+      "excited",
+      "surprised",
+      "enthusiastic",
+      "curious",
+      "proud",
+      "cheerful"
+    ],
+    "hoerspiel": {
+      "stimmfilter": "funk",
+      "geraeusche": [
+        {
+          "vor": 1,
+          "sfx": "short bright radio station jingle sting, upbeat synth and chime, clean, about three seconds",
+          "sek": 3,
+          "lautstaerke": 0.8
+        },
+        {
+          "vor": 8,
+          "sfx": "short radio station outro sting, soft rising synth chime, about two seconds",
+          "sek": 2,
+          "lautstaerke": 0.8
+        }
+      ]
+    }
+  },
+  "u06-d16": {
+    "szene": "Telefongespräch am Nachmittag. Julia hat am Samstag Geburtstag und lädt ihren Freund Lukas zu einem Picknick ein. Beide freuen sich.",
+    "toene": [
+      "cheerful",
+      "grateful",
+      "excited",
+      "interested",
+      "clear",
+      "helpful",
+      "playful",
+      "happy"
+    ],
+    "hoerspiel": {
+      "stimmfilter": "telefon",
+      "geraeusche": [
+        {
+          "vor": 1,
+          "sfx": "old-fashioned telephone ringing twice, then the receiver is picked up with a click, about three seconds",
+          "sek": 3,
+          "lautstaerke": 0.7
+        }
+      ]
+    }
+  },
+  "u06-d18": {
+    "szene": "Telefongespräch am Abend. Mia und Jonas verabreden sich für die Kultur-Nacht am Wochenende. Beide haben Lust und planen den Treffpunkt.",
+    "toene": [
+      "cheerful",
+      "curious",
+      "excited",
+      "enthusiastic",
+      "pleased",
+      "planning",
+      "clear",
+      "satisfied"
+    ],
+    "hoerspiel": {
+      "stimmfilter": "telefon",
+      "geraeusche": [
+        {
+          "vor": 1,
+          "sfx": "old-fashioned telephone ringing twice, then the receiver is picked up with a click, about three seconds",
+          "sek": 3,
+          "lautstaerke": 0.7
+        }
+      ]
     }
   }
 }

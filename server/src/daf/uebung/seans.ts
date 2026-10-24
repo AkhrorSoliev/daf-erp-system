@@ -10,6 +10,8 @@ export const MIN_FORMATE = 5;
  */
 export const FORMAT_CAP: Partial<Record<FrageFormat, number>> = {
   HOEREN_WAHL: 1,
+  // Matnni o'qish ham vaqt oladi (~20 soniya): ikkitadan ko'p emas.
+  LESEN_WAHL: 2,
 };
 
 export function capFuer(format: FrageFormat): number {

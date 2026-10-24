@@ -24,13 +24,13 @@ const satz = (sourceId: string, de: string): Satz => ({
 });
 
 describe('pruefeSatzBudget', () => {
-  it('the limit is exactly 5000 characters', () => {
-    expect(SATZ_BELGI_CHEGARASI).toBe(5000);
+  it('the limit is exactly 5500 characters', () => {
+    expect(SATZ_BELGI_CHEGARASI).toBe(5500);
   });
 
   it('stops above the limit, passes at it', () => {
-    expect(() => pruefeSatzBudget(5001)).toThrow(/5000/);
-    expect(() => pruefeSatzBudget(5000)).not.toThrow();
+    expect(() => pruefeSatzBudget(5501)).toThrow(/5500/);
+    expect(() => pruefeSatzBudget(5500)).not.toThrow();
   });
 
   it('unit 4 fits: 149 sentences, 3 863 characters', () => {

@@ -25,7 +25,7 @@ describe('polsterFfmpegArgs', () => {
       '-i',
       '/tmp/kirish.mp3',
       '-af',
-      'adelay=700:all=1,apad=pad_dur=1',
+      'adelay=700:all=1,apad=pad_dur=1,asetnsamples=n=1152:p=1',
       '-c:a',
       'libmp3lame',
       '-q:a',

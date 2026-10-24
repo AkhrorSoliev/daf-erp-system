@@ -157,7 +157,8 @@ export async function mischeHoerspiel(input: {
  * like any other dialog's.
  */
 export async function setzeZusammen(input: {
-  haupt: Buffer;
+  /** absent when every line was voiced alone */
+  haupt?: Buffer;
   /** spoken text of the main take's lines, in order */
   hauptZeilen: string[];
   /** 0-based dialog line → its single-voice recording */
@@ -167,9 +168,13 @@ export async function setzeZusammen(input: {
   const dir = await mkdtemp(join(tmpdir(), 'daf-mehrstimmig-'));
   try {
     const haupt = join(dir, 'haupt.mp3');
-    await writeFile(haupt, input.haupt);
-    const dauer = await dauerSek(haupt);
-    const schnitte = await findeSchnitte(dir, haupt, dauer, input.hauptZeilen);
+    let dauer = 0;
+    let schnitte: number[] = [];
+    if (input.haupt) {
+      await writeFile(haupt, input.haupt);
+      dauer = await dauerSek(haupt);
+      schnitte = await findeSchnitte(dir, haupt, dauer, input.hauptZeilen);
+    }
     const einzeln = new Map<number, string>();
     for (const [i, bytes] of input.einzeln) {
       const datei = join(dir, `e${i}.mp3`);

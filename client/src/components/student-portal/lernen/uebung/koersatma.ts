@@ -21,6 +21,7 @@ const MATN: Record<FrageFormat, string> = {
   AUDIO_WORT: "Eshiting va to'g'ri so'zni tanlang",
   WORT_TIPPEN: "Eshiting va so'zni yozing",
   HOEREN_WAHL: "Suhbatni tinglang va savolga javob bering",
+  LESEN_WAHL: "Matnni o'qing va savolga javob bering",
   BILD_WORT: "Mos rasmni tanlang",
   AUDIO_BILD: "Eshiting va mos rasmni tanlang",
   BILD_TIPPEN: "Rasmda nima? Artikli bilan yozing",

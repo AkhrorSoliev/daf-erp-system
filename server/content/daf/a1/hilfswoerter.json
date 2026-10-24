@@ -544,7 +544,7 @@
   {
    "wort": "über",
    "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-   "abSection": "u09-s2"
+   "abSection": "u06-s2"
   },
   {
    "wort": "viel",
@@ -904,7 +904,7 @@
   {
    "wort": "jeden",
    "grund": "yordamchi so'z: gap ichida o'rgatiladi, alohida so'ralmaydi (ADR-0071)",
-   "abSection": "u11-s4"
+   "abSection": "u06-s2"
   },
   {
    "wort": "Fall",
@@ -1430,6 +1430,151 @@
    "wort": "reagierst",
    "grund": "'reagieren' fe'lining du shakli (u06-s5)",
    "abSection": "u06-s5"
+  },
+  {
+   "wort": "frage",
+   "grund": "reja bo'yicha u01-s2 da o'rgatiladi, so'z hali yozilmagan (nachtrag); yozilgach bu yozuv olib tashlanadi",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "telefonnummer",
+   "grund": "reja bo'yicha u01-s4 da o'rgatiladi, so'z hali yozilmagan (nachtrag); yozilgach bu yozuv olib tashlanadi",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "fotografierst",
+   "grund": "'fotografieren' fe'lining du shakli (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "zeichnet",
+   "grund": "'zeichnen' fe'lining er shakli (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "wandere",
+   "grund": "'wandern' fe'lining ich shakli (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "wandert",
+   "grund": "'wandern' fe'lining er shakli (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "sammle",
+   "grund": "'sammeln' fe'lining ich shakli (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "besucht",
+   "grund": "'besuchen' fe'lining er shakli (u06-s1)",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "klettert",
+   "grund": "'klettern' fe'lining er shakli (u06-s2)",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "hört",
+   "grund": "'hören' fe'lining er shakli (u06-s2)",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "buchstabiert",
+   "grund": "'buchstabieren' fe'lining er shakli (u06-s2)",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "genieße",
+   "grund": "'genießen' fe'lining ich shakli (u06-s4)",
+   "abSection": "u06-s4"
+  },
+  {
+   "wort": "feiere",
+   "grund": "'feiern' fe'lining ich shakli (u06-s5)",
+   "abSection": "u06-s5"
+  },
+  {
+   "wort": "reagiere",
+   "grund": "'reagieren' fe'lining ich shakli (u06-s5)",
+   "abSection": "u06-s5"
+  },
+  {
+   "wort": "viele",
+   "grund": "'viel' sifatdoshining ko'plik shakli: «viele CDs», «Viele Grüße»",
+   "abSection": "u06-s1"
+  },
+  {
+   "wort": "ihre",
+   "grund": "'Sie' egalik artikli (Ihr/Ihre) — hurmat shakli: «Ihre Telefonnummer» (CEO 17.10.2026)",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "radio",
+   "grund": "'Radiosendung' (u05-s3) so'zining asosi va radio stansiya nomi: «Radio Eins»",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "max",
+   "grund": "atoqli ot (ism)",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "eva",
+   "grund": "atoqli ot (ism)",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "tim",
+   "grund": "atoqli ot (ism)",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "blaue",
+   "grund": "atoqli ot: musiqa guruhi nomi «Blaue Töne»",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "töne",
+   "grund": "atoqli ot: musiqa guruhi nomi «Blaue Töne»",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "cantate",
+   "grund": "atoqli ot: xor nomi «Cantate»",
+   "abSection": "u06-s2"
+  },
+  {
+   "wort": "carmen",
+   "grund": "atoqli ot: opera nomi «Carmen»",
+   "abSection": "u06-s3"
+  },
+  {
+   "wort": "hamburg",
+   "grund": "atoqli ot: shahar nomi",
+   "abSection": "u06-s4"
+  },
+  {
+   "wort": "münchen",
+   "grund": "atoqli ot: shahar nomi",
+   "abSection": "u06-s4"
+  },
+  {
+   "wort": "berlin",
+   "grund": "atoqli ot: shahar nomi",
+   "abSection": "u06-s4"
+  },
+  {
+   "wort": "köln",
+   "grund": "atoqli ot: shahar nomi",
+   "abSection": "u06-s4"
+  },
+  {
+   "wort": "madrid",
+   "grund": "atoqli ot: shahar nomi",
+   "abSection": "u06-s4"
   }
  ]
 }

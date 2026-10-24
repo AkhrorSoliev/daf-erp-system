@@ -38,6 +38,8 @@ const XARITA: Record<string, FrageFormat[]> = {
     'WORT_TIPPEN',
     'BILD_TIPPEN',
     'UHR_TIPPEN',
+    // Chat, e-mail, plakat: gap va yozish bilan bir qatorda (B qismi).
+    'LESEN_WAHL',
   ],
   BRIDGE: [],
   // Yakuniy sinov (2026-09-14 dan dvigatelda): vaziyatga suyangan formatlar
@@ -49,6 +51,7 @@ const XARITA: Record<string, FrageFormat[]> = {
     'DIALOG_LUECKE',
     'SATZ_UEBERSETZEN',
     'HOEREN_WAHL',
+    'LESEN_WAHL',
     'SATZ_HOEREN',
   ],
 };

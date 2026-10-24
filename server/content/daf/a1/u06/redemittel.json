@@ -140,6 +140,20 @@
    "funktionUz": "taklif uchun rahmat aytish",
    "de": "Danke für die Einladung!",
    "uz": "Taklif uchun rahmat!"
+  },
+  {
+   "section": "u06-s5",
+   "funktion": "einen Brief oder eine Nachricht beginnen",
+   "funktionUz": "tanish kishiga xat yoki xabarni boshlash",
+   "de": "Liebe Anna,",
+   "uz": "Aziz Anna,"
+  },
+  {
+   "section": "u06-s5",
+   "funktion": "einen Brief oder eine Nachricht beenden",
+   "funktionUz": "xat yoki xabarni yakunlash",
+   "de": "Viele Grüße!",
+   "uz": "Hurmat bilan!"
   }
  ]
 }
