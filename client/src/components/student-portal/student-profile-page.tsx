@@ -20,6 +20,7 @@ import { StudentExtraPhoneDialog } from "./student-extra-phone-dialog";
 import { extraPhoneRowState } from "./extra-phone-row-state";
 import { useExtraPhone, useStudentProfile } from "./lib/queries";
 import type { StudentProfile } from "./lib/types";
+import { useT } from "@/i18n/context";
 
 function InfoRow({
   label,
@@ -44,6 +45,7 @@ function InfoRow({
 }
 
 export function StudentProfilePage() {
+  const t = useT();
   const { data: profile, isLoading } = useStudentProfile();
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -54,7 +56,7 @@ export function StudentProfilePage() {
   // fades out (a remove dialog must not flash the add form on close).
   const [extraPhoneOpen, setExtraPhoneOpen] = useState(false);
   const [extraPhoneMode, setExtraPhoneMode] = useState<"set" | "remove">("set");
-  const extraRow = extraPhoneRowState(extraPhone);
+  const extraRow = extraPhoneRowState(extraPhone, t);
   function openExtraPhone(mode: "set" | "remove") {
     setExtraPhoneMode(mode);
     setExtraPhoneOpen(true);
@@ -74,9 +76,9 @@ export function StudentProfilePage() {
         ["student-portal", "profile"],
         (old) => (old ? { ...old, photo: res.data.photo } : old),
       );
-      toast.success("Rasm muvaffaqiyatli yangilandi");
+      toast.success(t("Rasm muvaffaqiyatli yangilandi"));
     } catch (err) {
-      toast.error(getErrorMessage(err, "Rasmni yuklashda xatolik"));
+      toast.error(getErrorMessage(err, t("Rasmni yuklashda xatolik")));
     } finally {
       setBusy(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -91,9 +93,9 @@ export function StudentProfilePage() {
         ["student-portal", "profile"],
         (old) => (old ? { ...old, photo: null } : old),
       );
-      toast.success("Rasm o'chirildi");
+      toast.success(t("Rasm o'chirildi"));
     } catch (err) {
-      toast.error(getErrorMessage(err, "Rasmni o'chirishda xatolik"));
+      toast.error(getErrorMessage(err, t("Rasmni o'chirishda xatolik")));
     } finally {
       setBusy(false);
     }
@@ -102,7 +104,7 @@ export function StudentProfilePage() {
   if (isLoading) {
     return (
       <Screen narrow>
-        <StackHeader title="Profil" backHref="/portal/more" />
+        <StackHeader title={t("Profil")} backHref="/portal/more" />
         <LoadingCards count={2} />
       </Screen>
     );
@@ -113,7 +115,7 @@ export function StudentProfilePage() {
 
   return (
     <Screen narrow>
-      <StackHeader title="Profil" backHref="/portal/more" />
+      <StackHeader title={t("Profil")} backHref="/portal/more" />
 
       <input
         ref={fileRef}
@@ -130,7 +132,7 @@ export function StudentProfilePage() {
             onClick={() => fileRef.current?.click()}
             disabled={busy}
             className="relative"
-            aria-label="Rasmni o'zgartirish"
+            aria-label={t("Rasmni o'zgartirish")}
           >
             <Avatar src={profile.photo} name={name} size={96} />
             <span className="absolute bottom-0 right-0 flex size-8 items-center justify-center rounded-full border-2 border-surface bg-coral-500 text-white">
@@ -149,7 +151,7 @@ export function StudentProfilePage() {
             <button
               type="button"
               onClick={() => setNameOpen(true)}
-              aria-label="Ism va familiyani o'zgartirish"
+              aria-label={t("Ism va familiyani o'zgartirish")}
               className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink-700 transition-colors hover:bg-tint"
             >
               <PencilSimple size={15} weight="bold" />
@@ -166,17 +168,17 @@ export function StudentProfilePage() {
               className="inline-flex items-center gap-1.5 text-sm font-bold text-danger disabled:opacity-50"
             >
               <Trash size={16} weight="bold" />
-              Rasmni o&apos;chirish
+              {t("Rasmni o'chirish")}
             </button>
           ) : null}
 
           <div className="w-full">
-            <InfoRow label="Telefon" value={formatPhone(profile.phone)} />
+            <InfoRow label={t("Telefon")} value={formatPhone(profile.phone)} />
             {extraRow ? (
               <div className="border-b border-line py-3">
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-sm font-semibold text-ink-500">
-                    Zaxira raqam
+                    {t("Zaxira raqam")}
                   </span>
                   <span className="flex min-w-0 flex-1 items-center justify-end gap-2">
                     <span className="truncate text-right font-display font-bold text-ink-900">
@@ -186,7 +188,7 @@ export function StudentProfilePage() {
                       <button
                         type="button"
                         onClick={() => openExtraPhone("set")}
-                        aria-label="Zaxira raqam qo'shish"
+                        aria-label={t("Zaxira raqam qo'shish")}
                         className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink-700 transition-colors hover:bg-tint"
                       >
                         <Plus size={15} weight="bold" />
@@ -196,7 +198,7 @@ export function StudentProfilePage() {
                       <button
                         type="button"
                         onClick={() => openExtraPhone("set")}
-                        aria-label="Zaxira raqamni o'zgartirish"
+                        aria-label={t("Zaxira raqamni o'zgartirish")}
                         className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink-700 transition-colors hover:bg-tint"
                       >
                         <PencilSimple size={15} weight="bold" />
@@ -206,7 +208,7 @@ export function StudentProfilePage() {
                       <button
                         type="button"
                         onClick={() => openExtraPhone("remove")}
-                        aria-label="Zaxira raqamni o'chirish"
+                        aria-label={t("Zaxira raqamni o'chirish")}
                         className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-danger transition-colors hover:bg-tint"
                       >
                         <Trash size={15} weight="bold" />
@@ -221,9 +223,9 @@ export function StudentProfilePage() {
                 ) : null}
               </div>
             ) : null}
-            <InfoRow label="Login" value={profile.login} />
-            <InfoRow label="Telegram" value={profile.telegram} />
-            <InfoRow label="Filial" value={branchNames} last />
+            <InfoRow label={t("Login")} value={profile.login} />
+            <InfoRow label={t("Telegram")} value={profile.telegram} />
+            <InfoRow label={t("Filial")} value={branchNames} last />
           </div>
         </Card>
       ) : null}

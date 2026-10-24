@@ -99,6 +99,7 @@ const makeTx = (rows: ReturnType<typeof row>[]) => {
     );
   };
   const tx = {
+    groupPause: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
     enrollment: {
       findMany: jest.fn(({ where }: { where: FakeWhere }) =>
         Promise.resolve(rows.filter((e) => matches(e, where))),
@@ -159,6 +160,10 @@ describe('StatusCascadeService', () => {
       room: {
         updateMany: jest.fn().mockResolvedValue({ count: 2 }),
         findMany: jest.fn().mockResolvedValue([]),
+      },
+      groupPause: {
+        createMany: jest.fn().mockResolvedValue({ count: 0 }),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
       student: {
         findFirst: jest.fn().mockResolvedValue(null),
@@ -272,6 +277,38 @@ describe('StatusCascadeService', () => {
       expect(prisma.enrollment.updateMany).not.toHaveBeenCalled();
       expect(prisma.room.updateMany).not.toHaveBeenCalled();
       expect(results).toHaveLength(1);
+    });
+
+    it('INACTIVE: opens a BRANCH pause with no restart day for each group it pauses (ADR-0119)', async () => {
+      prisma.group.findMany.mockResolvedValue([
+        { id: 'g1', companyId: 1001, statusEnum: 'ACTIVE' },
+        { id: 'g2', companyId: 1001, statusEnum: 'ACTIVE' },
+      ]);
+
+      await service.cascade('Branch', '1', 'INACTIVE', 1);
+
+      expect(prisma.groupPause.createMany).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({
+            groupId: 'g1',
+            companyId: 1001,
+            source: 'BRANCH',
+            startedById: 1,
+          }),
+          expect.objectContaining({ groupId: 'g2', source: 'BRANCH' }),
+        ],
+      });
+      const data = prisma.groupPause.createMany.mock.calls[0][0].data[0];
+      expect(data.plannedResumeOn).toBeUndefined();
+    });
+
+    it('CLOSED: closes the open pauses of the groups it cancels (ADR-0119)', async () => {
+      await service.cascade('Branch', '1', 'CLOSED', 1);
+
+      expect(prisma.groupPause.updateMany).toHaveBeenCalledWith({
+        where: { endedAt: null, group: expect.any(Object) },
+        data: { endedAt: expect.any(Date), endedById: 1 },
+      });
     });
 
     it('ACTIVE: no cascade', async () => {

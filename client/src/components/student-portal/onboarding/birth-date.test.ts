@@ -22,6 +22,17 @@ describe("onboarding birth date", () => {
     expect(birthDateProblem("1900-01-01", TODAY)).toMatch(/Yosh/);
   });
 
+  it("reads its message through the page's t, ages as placeholders", () => {
+    const t = (source: string, params?: Record<string, string | number>) =>
+      `${source}|${JSON.stringify(params ?? {})}`;
+    expect(birthDateProblem("1900-01-01", TODAY, t)).toBe(
+      `Yosh {min} dan {max} gacha bo'lishi kerak|{"min":5,"max":100}`,
+    );
+    expect(birthDateProblem("1900-01-01", TODAY)).toBe(
+      "Yosh 5 dan 100 gacha bo'lishi kerak",
+    );
+  });
+
   it("bounds the picker to the accepted ages", () => {
     const { min, max } = birthDateBounds(TODAY);
     expect(max).toBe("2021-09-27");

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { bottomNavItems, moreRoutes } from "@/lib/student-nav-items";
+import { useT } from "@/i18n/use-t";
 
 // Floating glass bottom-nav pill — mobile only (hidden at md, where the side
 // rail takes over; the shell passes that class in). Active
@@ -18,6 +19,7 @@ import { bottomNavItems, moreRoutes } from "@/lib/student-nav-items";
 // They still clear 4.5:1 with a coral card scrolled behind the glass, which
 // the old 85% pill did not. (Were: ink-400 2.5:1, coral-600 3.5:1.)
 export function LumioBottomNav({ className }: { className?: string }) {
+  const t = useT();
   const pathname = usePathname();
 
   function isActive(url: string) {
@@ -34,7 +36,7 @@ export function LumioBottomNav({ className }: { className?: string }) {
         "fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+14px)] z-50",
         className,
       )}
-      aria-label="Asosiy navigatsiya"
+      aria-label={t("Asosiy navigatsiya")}
     >
       <div className="glass mx-auto flex h-[68px] max-w-[520px] items-center justify-around rounded-[34px] border border-line/70 bg-surface/95 px-2 shadow-lumio-pop">
         {bottomNavItems.map((item) => {
@@ -56,11 +58,14 @@ export function LumioBottomNav({ className }: { className?: string }) {
               <Icon size={24} weight={active ? "fill" : "regular"} />
               <span
                 className={cn(
-                  "text-[11px] leading-none",
+                  // A longer ru/de label («Расписание», «Stundenplan») wraps
+                  // and hyphenates (<html lang> is set) into a second line;
+                  // the 68px pill has room for two.
+                  "w-full break-words text-center text-[10px] leading-tight hyphens-auto min-[380px]:text-[11px]",
                   active ? "font-extrabold" : "font-bold",
                 )}
               >
-                {item.title}
+                {t(item.title)}
               </span>
             </Link>
           );

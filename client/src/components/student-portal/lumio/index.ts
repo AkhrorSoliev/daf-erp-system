@@ -42,6 +42,11 @@ export {
   type ThemeSegmentedProps,
   type ThemeMode,
 } from "./theme-segmented";
+export {
+  LanguagePicker,
+  pickPortalLocale,
+  type LanguagePickerProps,
+} from "./language-picker";
 export { EmptyState, type EmptyStateProps } from "./empty-state";
 export { Screen, ScreenHeader, StackHeader, type ScreenProps } from "./screen";
 export { Section, type SectionProps } from "./section";

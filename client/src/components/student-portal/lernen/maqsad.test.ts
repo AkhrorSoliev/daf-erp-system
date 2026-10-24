@@ -68,4 +68,14 @@ describe("maqsadKartasi", () => {
       "bajarildi",
     );
   });
+
+  it("the title, the points line and the level go through the page's t", () => {
+    const t = (s: string, p?: Record<string, string | number>) =>
+      `[${s.replace(/\{(\w+)\}/g, (_, k: string) => String(p?.[k]))}]`;
+    expect(maqsadKartasi(m({}), t)).toMatchObject({
+      sarlavha: "[Bugungi maqsad]",
+      ballMatni: "[40 / 80 ball]",
+      darajaNomi: "[O'rta]",
+    });
+  });
 });

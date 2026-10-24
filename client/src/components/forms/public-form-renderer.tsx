@@ -8,6 +8,8 @@ import { z } from "zod";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { COMPANY } from "@/lib/company";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/use-t";
 import type { FormFieldShape } from "@/lib/schemas/custom-form-schema";
 import { FieldError, FieldRow } from "./public-form-fields";
 import { firstInvalidId } from "./public-form-scroll";
@@ -27,6 +29,32 @@ interface Props {
   source?: string;
 }
 
+// The schema keeps its Uzbek messages; the form translates them when drawn
+// (`fieldError`). Any other text (a Zod default) is shown as it is.
+const PHONE_9 = msg("Telefon — 9 raqam");
+const EMAIL = msg("To'g'ri email kiriting");
+const NUMBER = msg("Son kiriting");
+const MUST_CHECK = msg("Bu maydon belgilanishi kerak");
+const REQUIRED = msg("To'ldirilishi shart");
+const OWN_MESSAGES: ReadonlySet<string> = new Set([PHONE_9, EMAIL, NUMBER, MUST_CHECK, REQUIRED]);
+
+const SUBMIT_FAILED = msg("Yuborishda xatolik. Qayta urinib ko'ring.");
+const RECEIVED = msg("Ma'lumotlaringiz qabul qilindi.");
+const NO_SERVER = msg("Server bilan aloqa o'rnatib bo'lmadi");
+
+interface ShownText {
+  text: string;
+  own?: boolean;
+}
+
+const shown = (t: (source: string) => string, s: ShownText) => (s.own ? t(s.text) : s.text);
+
+/** A validation message in the page language; only the schema's own texts go through `t`. */
+export function fieldError(t: (source: string) => string, message: unknown): string | undefined {
+  if (typeof message !== "string" || !message) return undefined;
+  return OWN_MESSAGES.has(message) ? t(message) : message;
+}
+
 // Build a per-form zod schema from the field definitions.
 function buildZodSchema(fields: FormFieldShape[]) {
   const shape: Record<string, z.ZodTypeAny> = {};
@@ -34,11 +62,11 @@ function buildZodSchema(fields: FormFieldShape[]) {
     let base: z.ZodTypeAny;
     if (f.type === "phone") {
       // 9 raw digits
-      base = z.string().regex(/^\d{9}$/, "Telefon — 9 raqam");
+      base = z.string().regex(/^\d{9}$/, PHONE_9);
     } else if (f.type === "email") {
-      base = z.string().email("To'g'ri email kiriting");
+      base = z.string().email(EMAIL);
     } else if (f.type === "number") {
-      base = z.coerce.number({ message: "Son kiriting" });
+      base = z.coerce.number({ message: NUMBER });
     } else if (f.type === "checkbox") {
       base = z.boolean().default(false);
     } else if (f.type === "date") {
@@ -65,7 +93,7 @@ function buildZodSchema(fields: FormFieldShape[]) {
     } else {
       if (f.type === "checkbox") {
         // a required checkbox must be true
-        shape[f.id] = z.literal(true, { message: "Bu maydon belgilanishi kerak" });
+        shape[f.id] = z.literal(true, { message: MUST_CHECK });
       } else {
         shape[f.id] = z.preprocess(
           (v) => (v === "" ? undefined : v),
@@ -73,7 +101,7 @@ function buildZodSchema(fields: FormFieldShape[]) {
           // check (which would otherwise emit "expected string, received
           // undefined") so the friendly Uzbek message is shown instead.
           base.optional().refine((v) => v !== undefined && v !== null, {
-            message: "To'ldirilishi shart",
+            message: REQUIRED,
           }),
         );
       }
@@ -82,10 +110,13 @@ function buildZodSchema(fields: FormFieldShape[]) {
   return z.object(shape);
 }
 export function PublicFormRenderer({ slug, schema, source }: Props) {
+  const t = useT();
   const zodSchema = useMemo(() => buildZodSchema(schema.fields), [schema.fields]);
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  // `own` = our Uzbek source text, translated when drawn so a language switch
+  // reaches it; a text the server sent has no flag and is shown as sent.
+  const [done, setDone] = useState<ShownText | null>(null);
+  const [submitError, setSubmitError] = useState<ShownText | null>(null);
 
   const defaultValues = useMemo(() => {
     const out: Record<string, unknown> = {};
@@ -120,15 +151,17 @@ export function PublicFormRenderer({ slug, schema, source }: Props) {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const msg = Array.isArray(body?.message)
+        const serverMessage = Array.isArray(body?.message)
           ? body.message[0]
           : body?.message;
-        setSubmitError(msg || "Yuborishda xatolik. Qayta urinib ko'ring.");
+        // The server's text is shown as sent; only our own fallback is translated.
+        setSubmitError(serverMessage ? { text: serverMessage } : { text: SUBMIT_FAILED, own: true });
         return;
       }
-      setDone(body?.message || "Ma'lumotlaringiz qabul qilindi.");
+      // The success text the staff wrote (or the server's) is data, never `t()`.
+      setDone(body?.message ? { text: body.message } : { text: RECEIVED, own: true });
     } catch {
-      setSubmitError("Server bilan aloqa o'rnatib bo'lmadi");
+      setSubmitError({ text: NO_SERVER, own: true });
     } finally {
       setSubmitting(false);
     }
@@ -136,11 +169,11 @@ export function PublicFormRenderer({ slug, schema, source }: Props) {
 
   useEffect(() => {
     if (done === null) return;
-    const t = setTimeout(
+    const timer = setTimeout(
       () => window.location.assign(COMPANY.websiteHref),
       REDIRECT_AFTER_MS,
     );
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [done]);
 
   // A phone shows only a slice of a long form: after a failed submit, take
@@ -162,18 +195,18 @@ export function PublicFormRenderer({ slug, schema, source }: Props) {
           <div className="flex size-20 items-center justify-center rounded-full bg-[#2BB673]/10">
             <CheckCircle2 className="size-11 text-[#2BB673]" aria-hidden />
           </div>
-          <h1 className="mt-6 text-3xl font-bold">Rahmat!</h1>
+          <h1 className="mt-6 text-3xl font-bold">{t("Rahmat!")}</h1>
           <p
             role="status"
             className="mx-auto mt-2 max-w-xs text-base leading-relaxed text-muted-foreground"
           >
-            {done}
+            {shown(t, done)}
           </p>
           <a
             href={COMPANY.websiteHref}
             className="mt-6 text-[15px] font-semibold text-primary underline-offset-4 hover:underline"
           >
-            {COMPANY.website} saytiga o&apos;tish
+            {t("{site} saytiga o'tish", { site: COMPANY.website })}
           </a>
         </div>
       </FormShell>
@@ -195,7 +228,7 @@ export function PublicFormRenderer({ slug, schema, source }: Props) {
             field={f}
             control={control}
             register={register}
-            error={errors[f.id]?.message as string | undefined}
+            error={fieldError(t, errors[f.id]?.message)}
           />
         ))}
 
@@ -203,7 +236,7 @@ export function PublicFormRenderer({ slug, schema, source }: Props) {
             scrolls under it; from sm up it is an ordinary last row. */}
         <div className="sticky bottom-0 z-10 -mx-5 space-y-3 border-t border-border bg-card px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:static sm:mx-0 sm:border-0 sm:p-0 sm:pt-2">
           {submitError && (
-            <FieldError id="submit-error" error={submitError} />
+            <FieldError id="submit-error" error={shown(t, submitError)} />
           )}
           <Button
             type="submit"
@@ -211,7 +244,7 @@ export function PublicFormRenderer({ slug, schema, source }: Props) {
             className="clay-btn h-14 w-full rounded-[22px] text-base font-bold"
           >
             {submitting && <Loader2 className="size-5 animate-spin" />}
-            Yuborish
+            {t("Yuborish")}
           </Button>
         </div>
       </form>

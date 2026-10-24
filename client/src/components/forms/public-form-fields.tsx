@@ -16,6 +16,7 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/use-t";
 import type { FormFieldShape } from "@/lib/schemas/custom-form-schema";
 
 type FormApi = ReturnType<typeof useForm<Record<string, unknown>>>;
@@ -76,6 +77,7 @@ export function FieldRow({
   register: FormApi["register"];
   error?: string;
 }) {
+  const t = useT();
   const errId = `${field.id}-error`;
   const invalid = Boolean(error);
   const described = invalid ? errId : undefined;
@@ -218,7 +220,7 @@ export function FieldRow({
               aria-describedby={described}
               className="w-full rounded-2xl bg-card px-4 text-base"
             >
-              <SelectValue placeholder={field.placeholder ?? "Tanlang"} />
+              <SelectValue placeholder={field.placeholder ?? t("Tanlang")} />
             </SelectTrigger>
             <SelectContent>
               {field.options?.map((o) => (

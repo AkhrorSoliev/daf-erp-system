@@ -1540,6 +1540,10 @@ model Group {
   statusChangedById  Int?
   statusChangeReason String?
 
+  /// The day the group last came back from a pause (ADR-0119). The monthly
+  /// charge of a group that resumes mid-month starts here, not at the join date.
+  lastResumedOn DateTime? @db.Date
+
   deletedAt       DateTime?
   deletedById     Int?
   deletedBy       User?     @relation("GroupDeletedBy", fields: [deletedById], references: [id])
@@ -1566,6 +1570,7 @@ model Group {
   unmarkedLessons        UnmarkedLesson[]          @relation("UnmarkedLessonGroup")
   lessonRatings          LessonRating[]
   dafWeeks               DafGroupWeek[]
+  pauses                 GroupPause[]
 
   @@unique([name, branchId])
   @@index([deletedAt])
@@ -4796,4 +4801,45 @@ model TelegramReportRecipient {
 
   @@unique([companyId, userId])
   @@index([isActive, sendTime])
+}
+
+enum GroupPauseSource {
+  MANUAL
+  BRANCH
+}
+
+/// One pause of a group (ADR-0119). The centre pauses a group, not the
+/// student, so every lesson day that passes during the pause is cancelled the
+/// same night and its money goes back (ADR-0053). Rows are written by
+/// `GroupPausesService` only; an open row has `endedAt` NULL.
+model GroupPause {
+  id        String @id @default(uuid())
+  groupId   String
+  group     Group  @relation(fields: [groupId], references: [id])
+  companyId Int
+
+  startedAt DateTime
+  /// The day lessons are planned to restart, as the admin said when pausing.
+  /// NULL = not known yet.
+  plannedResumeOn DateTime? @db.Date
+  /// The day lessons restart, as confirmed when the group is resumed. A day
+  /// still ahead keeps the group PAUSED until the morning of that day.
+  resumeOn DateTime? @db.Date
+  endedAt  DateTime?
+
+  reason      String?
+  source      GroupPauseSource @default(MANUAL)
+  startedById Int?
+  endedById   Int?
+
+  /// How many pause lessons moved `Group.endDate`, and what it was before,
+  /// so a pause that ends in a cancelled group can undo the move.
+  extendedLessons Int       @default(0)
+  endDateBefore   DateTime? @db.Date
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([groupId, startedAt])
+  @@index([companyId, endedAt])
 }

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/use-t";
 import { CaretLeft } from "@phosphor-icons/react";
 
 export interface ScreenProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -80,12 +81,13 @@ export function StackHeader({
   backHref = "/portal",
   className,
 }: StackHeaderProps) {
+  const t = useT();
   const router = useRouter();
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <button
         type="button"
-        aria-label="Orqaga"
+        aria-label={t("Orqaga")}
         onClick={() => {
           if (window.history.length > 1) router.back();
           else router.push(backHref);

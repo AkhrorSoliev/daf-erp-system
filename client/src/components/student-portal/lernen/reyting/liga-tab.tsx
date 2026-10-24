@@ -5,8 +5,15 @@ import { Trophy } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { tashkentNow } from "@/lib/tashkent-time";
 import { Button, Card, EmptyState, Skeleton } from "../../lumio";
+import { useT } from "@/i18n/use-t";
 import { useLiga } from "../queries";
-import { haftaMatni, kotarilishMatni, otganHaftaMatni, zonadami } from "../liga";
+import {
+  haftaMatni,
+  kotarilishMatni,
+  ligaSarlavhasi,
+  otganHaftaMatni,
+  zonadami,
+} from "../liga";
 import { ReytingJadvali, ReytingQatori } from "./reyting-jadvali";
 import { loadState } from "../../lib/load-state";
 import { LoadFailed } from "../../load-failed";
@@ -42,6 +49,7 @@ export function LigaSkelet() {
  * tugmasi `LigaTab`da, liga so'rovidan mustaqil. Hech narsa yozmaydi.
  */
 function LigaXonasi() {
+  const t = useT();
   const query = useLiga();
   const { data } = query;
 
@@ -55,9 +63,9 @@ function LigaXonasi() {
       {otganHafta ? (
         <Card className="space-y-1">
           <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-ink-500">
-            O&apos;tgan hafta
+            {t("O'tgan hafta")}
           </p>
-          <p className="font-semibold text-ink-900">{otganHaftaMatni(otganHafta, daraja)}</p>
+          <p className="font-semibold text-ink-900">{otganHaftaMatni(otganHafta, daraja, t)}</p>
         </Card>
       ) : null}
 
@@ -71,9 +79,9 @@ function LigaXonasi() {
           <Trophy size={26} weight="fill" aria-hidden />
         </span>
         <div className="min-w-0">
-          <p className="font-display text-lg font-extrabold text-ink-900">{daraja.nomi} ligasi</p>
+          <p className="font-display text-lg font-extrabold text-ink-900">{ligaSarlavhasi(daraja.nomi, t)}</p>
           <p className="text-xs font-semibold text-ink-500">
-            {haftaMatni(data.haftaOxiri, tashkentNow().dateStr, xona?.hajmi ?? null)}
+            {haftaMatni(data.haftaOxiri, tashkentNow().dateStr, xona?.hajmi ?? null, t)}
           </p>
         </div>
       </Card>
@@ -86,9 +94,9 @@ function LigaXonasi() {
               xona.kotarilishZonasi.faol ? "text-ink-700" : "text-ink-500",
             )}
           >
-            {kotarilishMatni(xona.kotarilishZonasi)}
+            {kotarilishMatni(xona.kotarilishZonasi, t)}
           </p>
-          <ul className="space-y-2" aria-label="Liga xonasi jadvali">
+          <ul className="space-y-2" aria-label={t("Liga xonasi jadvali")}>
             {xona.qatorlar.map((q) => (
               <ReytingQatori
                 key={q.studentId}
@@ -101,8 +109,10 @@ function LigaXonasi() {
       ) : (
         <EmptyState
           icon={<Trophy size={28} weight="bold" />}
-          title="Liga: birinchi seansdan keyin"
-          description="Bu haftaning birinchi mashqini tugating — o'z ligangizdagi xonaga qo'shilasiz."
+          title={t("Liga: birinchi seansdan keyin")}
+          description={t(
+            "Bu haftaning birinchi mashqini tugating — o'z ligangizdagi xonaga qo'shilasiz.",
+          )}
         />
       )}
     </div>
@@ -110,6 +120,7 @@ function LigaXonasi() {
 }
 
 export function LigaTab() {
+  const t = useT();
   const [markaz, setMarkaz] = React.useState(false);
 
   return (
@@ -122,7 +133,7 @@ export function LigaTab() {
         aria-controls={markaz ? "butun-markaz" : undefined}
         onClick={() => setMarkaz((v) => !v)}
       >
-        Butun markaz
+        {t("Butun markaz")}
       </Button>
       {markaz ? (
         <div id="butun-markaz">

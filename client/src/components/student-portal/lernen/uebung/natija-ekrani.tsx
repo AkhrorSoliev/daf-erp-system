@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/i18n/use-t";
 import { cn } from "@/lib/utils";
 import { Clock, Fire, Star, Trophy } from "@phosphor-icons/react";
 import { Button, Card, FadeIn, StatChip } from "../../lumio";
@@ -100,6 +101,7 @@ function useSanaladiganBall(maqsad: number | null): number | null {
  *    qarang).
  */
 function XatoQatori({ xato }: { xato: SeansXato }) {
+  const t = useT();
   if (xato.format === "ZUORDNEN" || xato.format === "PAAR") {
     // Re-review topilmasi (Minor): `pruefeZuordnen`ning fail-closed yo'li
     // (`funktionUz` kolliziyasi) `richtig: ''` qaytarishi mumkin edi —
@@ -135,7 +137,7 @@ function XatoQatori({ xato }: { xato: SeansXato }) {
     return (
       <div className="flex items-center justify-between gap-3">
         <span className="font-semibold text-ink-800">
-          {xato.titel ?? "Dialog"}
+          {xato.titel ?? t("Dialog")}
         </span>
         <span className="text-sm font-bold text-danger">{xato.richtig}</span>
       </div>
@@ -154,7 +156,7 @@ function XatoQatori({ xato }: { xato: SeansXato }) {
             className="size-10 shrink-0 rounded-lg bg-white object-cover"
           />
         ) : null}
-        <DeWort text={xatoYorligi(xato.format, xato.prompt)} />
+        <DeWort text={xatoYorligi(xato.format, xato.prompt, t)} />
       </span>
       <DeWort text={xato.richtig} className="text-sm font-bold text-danger" />
     </div>
@@ -181,13 +183,14 @@ export function NatijaEkrani({
   sinov,
   onNatijaQaytaYubor,
 }: NatijaEkraniProps) {
+  const t = useT();
   const router = useRouter();
   const davomHref = unitId
     ? `/portal/lernen/units/${unitId}`
     : "/portal/lernen";
-  const korinish = sinov ? sinovKorinishi(sinov) : null;
+  const korinish = sinov ? sinovKorinishi(sinov, t) : null;
 
-  const qator = natijaQatorlari(natija);
+  const qator = natijaQatorlari(natija, t);
   const sanaladiganBall = useSanaladiganBall(qator.ball);
   const yutuqlarBormi =
     qator.ball != null ||
@@ -234,14 +237,14 @@ export function NatijaEkrani({
             {qator.ball != null && sanaladiganBall != null ? (
               <StatChip
                 icon={<Star weight="fill" className="text-amber-500" />}
-                value={`+${sanaladiganBall} ball`}
+                value={t("+{n} ball", { n: sanaladiganBall })}
               />
             ) : null}
             {qator.serie != null ? (
               <StatChip
                 icon={<Fire weight="fill" className="text-coral-500" />}
-                value={`${qator.serie} kun`}
-                label="seriya"
+                value={t("{n} kun ketma-ket", { n: qator.serie })}
+                label={t("seriya")}
               />
             ) : null}
             {qator.orin ? (
@@ -263,12 +266,12 @@ export function NatijaEkrani({
         <Card className="space-y-3">
           {xatolar.length === 0 ? (
             <p className="text-center font-semibold text-ink-700">
-              Hammasi to&apos;g&apos;ri — ajoyib natija!
+              {t("Hammasi to'g'ri — ajoyib natija!")}
             </p>
           ) : (
             <>
               <p className="font-display text-sm font-bold uppercase tracking-wide text-ink-500">
-                Qaytarib ko&apos;ring · {xatolar.length}
+                {t("Qaytarib ko'ring · {n}", { n: xatolar.length })}
               </p>
               <ul className="space-y-2">
                 {xatolar.map((x, i) => (
@@ -292,10 +295,10 @@ export function NatijaEkrani({
                 className="flex-1"
                 onClick={() => router.push(davomHref)}
               >
-                Chiqish
+                {t("Mashqdan chiqish")}
               </Button>
               <Button className="flex-1" onClick={onNatijaQaytaYubor}>
-                Qayta yuborish
+                {t("Qayta yuborish")}
               </Button>
             </>
           ) : korinish?.asosiy === "qayta" ? (
@@ -305,10 +308,10 @@ export function NatijaEkrani({
                 className="flex-1"
                 onClick={() => router.push(davomHref)}
               >
-                Yo&apos;lga qaytish
+                {t("Yo'lga qaytish")}
               </Button>
               <Button className="flex-1" onClick={onQayta}>
-                Qayta urinish
+                {t("Qayta urinish")}
               </Button>
             </>
           ) : korinish?.asosiy === null ? (
@@ -322,19 +325,19 @@ export function NatijaEkrani({
                 className="flex-1"
                 onClick={() => router.push(davomHref)}
               >
-                Chiqish
+                {t("Mashqdan chiqish")}
               </Button>
               <Button className="flex-1" disabled>
-                Davom etish
+                {t("Davom etish")}
               </Button>
             </>
           ) : (
             <>
               <Button variant="secondary" className="flex-1" onClick={onQayta}>
-                {korinish ? "Qayta urinish" : "Qayta o'tish"}
+                {korinish ? t("Qayta urinish") : t("Qayta o'tish")}
               </Button>
               <Button className="flex-1" onClick={() => router.push(davomHref)}>
-                Davom etish
+                {t("Davom etish")}
               </Button>
             </>
           )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   useQuery,
   useQueryClient,
@@ -17,6 +17,8 @@ import {
   openOutsideMiniApp,
 } from "@/lib/telegram-mini-app";
 import { cn } from "@/lib/utils";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/context";
 import { Clock, CircleNotch } from "@phosphor-icons/react";
 import {
   Screen,
@@ -62,15 +64,24 @@ function refreshBalance(queryClient: QueryClient) {
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  PAYMENT: "To'lov",
-  LESSON_DEDUCTION: "Dars uchun",
-  REFUND: "Qaytarildi",
-  ADJUSTMENT: "Tuzatish",
-  INITIAL_BALANCE: "Boshlang'ich balans",
-  BALANCE_WITHDRAWAL: "Yechildi",
+  PAYMENT: msg("To'lov"),
+  LESSON_DEDUCTION: msg("Dars uchun"),
+  REFUND: msg("Qaytarildi"),
+  ADJUSTMENT: msg("Tuzatish"),
+  INITIAL_BALANCE: msg("Boshlang'ich balans"),
+  BALANCE_WITHDRAWAL: msg("Yechildi"),
 };
 
+const CHECKING_BALANCE = msg("Balansingiz tekshirilmoqda...");
+
 export function StudentPaymentSummary() {
+  const t = useT();
+  // The return-from-gateway effect toasts through a ref copy, so a language
+  // switch never re-runs it (it would reset the redirect timeout).
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
   const queryClient = useQueryClient();
   const profileQuery = useStudentProfile();
   const { data: profile } = profileQuery;
@@ -96,7 +107,7 @@ export function StudentPaymentSummary() {
       setRedirecting(false);
       setHandoff(null);
       refreshBalance(queryClient);
-      toast.success("Balansingiz tekshirilmoqda...");
+      toast.success(tRef.current(CHECKING_BALANCE));
     };
     const onVisible = () => {
       if (document.visibilityState === "visible") onReturn();
@@ -118,7 +129,11 @@ export function StudentPaymentSummary() {
   async function pay(provider: Provider) {
     const val = Number(amount);
     if (!val || val < MIN_PAYMENT) {
-      toast.error(`Minimal summa: ${formatNumber(MIN_PAYMENT)} so'm`);
+      toast.error(
+        t("Minimal summa: {amount}", {
+          amount: formatBalance(MIN_PAYMENT, t("so'm")),
+        }),
+      );
       return;
     }
     setRedirecting(true);
@@ -144,7 +159,7 @@ export function StudentPaymentSummary() {
       // "go here" rather than "change this property".
       window.location.assign(data.checkoutUrl);
     } catch (err) {
-      toast.error(getErrorMessage(err, "To'lov tizimida xatolik yuz berdi"));
+      toast.error(getErrorMessage(err, t("To'lov tizimida xatolik yuz berdi")));
       setRedirecting(false);
     }
   }
@@ -164,7 +179,7 @@ export function StudentPaymentSummary() {
   if (loadState(profileQuery) === "loading") {
     return (
       <Screen>
-        <ScreenHeader title="To'lovlar" />
+        <ScreenHeader title={t("To'lovlar")} />
         <LoadingCards count={2} />
       </Screen>
     );
@@ -175,7 +190,7 @@ export function StudentPaymentSummary() {
   if (!profile) {
     return (
       <Screen>
-        <ScreenHeader title="To'lovlar" />
+        <ScreenHeader title={t("To'lovlar")} />
         <LoadFailed query={profileQuery} />
       </Screen>
     );
@@ -187,7 +202,7 @@ export function StudentPaymentSummary() {
 
   return (
     <Screen>
-      <ScreenHeader title="To'lovlar" />
+      <ScreenHeader title={t("To'lovlar")} />
 
       {/*
         `grid-cols-1`, not a bare `grid`: an implicit column is sized to its
@@ -200,15 +215,15 @@ export function StudentPaymentSummary() {
           <FadeIn index={0}>
             <Card clay tone="neutral" className="space-y-1">
               <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-ink-500">
-                Joriy balans
+                {t("Joriy balans")}
               </p>
               <p
                 className={`font-display text-[26px] font-extrabold leading-none tabular-nums sm:text-[30px] ${inDebt ? "text-danger" : "text-success"}`}
               >
-                {formatBalance(balance)}
+                {formatBalance(balance, t("so'm"))}
               </p>
               <Badge tone={inDebt ? "danger" : "success"} size="sm">
-                {inDebt ? "Qarzdorlik mavjud" : "Balans ijobiy"}
+                {inDebt ? t("Qarzdorlik mavjud") : t("Balans ijobiy")}
               </Badge>
             </Card>
           </FadeIn>
@@ -223,14 +238,14 @@ export function StudentPaymentSummary() {
           <FadeIn index={2}>
             <Card className="@container space-y-4">
               <h2 className="font-display text-lg font-bold text-ink-900">
-                Balansni to&apos;ldirish
+                {t("Balansni to'ldirish")}
               </h2>
 
               <div className="inset-well flex items-center justify-center gap-2 rounded-md bg-sunk px-4 py-3">
                 <input
                   type="text"
                   inputMode="numeric"
-                  aria-label="To'lov summasi"
+                  aria-label={t("To'lov summasi")}
                   value={amount ? formatNumber(Number(amount)) : ""}
                   onChange={(e) =>
                     setAmount(e.target.value.replace(/\D/g, "").slice(0, 9))
@@ -240,7 +255,7 @@ export function StudentPaymentSummary() {
                   className="w-full bg-transparent text-center font-display text-2xl font-extrabold text-ink-900 outline-none placeholder:text-ink-400"
                 />
                 <span className="shrink-0 font-display font-bold text-ink-500">
-                  so&apos;m
+                  {t("so'm")}
                 </span>
               </div>
 
@@ -276,7 +291,9 @@ export function StudentPaymentSummary() {
 
               {belowMin ? (
                 <p className="text-center text-xs font-bold text-danger">
-                  Minimal summa: {formatNumber(MIN_PAYMENT)} so&apos;m
+                  {t("Minimal summa: {amount}", {
+                    amount: formatBalance(MIN_PAYMENT, t("so'm")),
+                  })}
                 </p>
               ) : null}
 
@@ -296,7 +313,7 @@ export function StudentPaymentSummary() {
                       disabled={redirecting}
                       // While redirecting the logo becomes a spinner, which
                       // would leave the button with no name at all.
-                      aria-label={`${p.name} orqali to'lash`}
+                      aria-label={t("{name} orqali to'lash", { name: p.name })}
                       onClick={() => pay(p)}
                       className="clay-white clay-btn flex h-14 items-center justify-center overflow-hidden rounded-card border border-line bg-white px-3 disabled:opacity-60"
                     >
@@ -329,7 +346,7 @@ export function StudentPaymentSummary() {
                   className="h-5 object-contain grayscale dark:invert"
                 />
                 <Badge tone="neutral" size="sm">
-                  Tez kunda
+                  {t("Tez kunda")}
                 </Badge>
               </div>
 
@@ -340,14 +357,13 @@ export function StudentPaymentSummary() {
                     weight="bold"
                     className="animate-spin"
                   />
-                  To&apos;lov sahifasiga o&apos;tkazilmoqda...
+                  {t("To'lov sahifasiga o'tkazilmoqda...")}
                 </p>
               ) : null}
 
               <div className="flex flex-col items-center gap-2 border-t border-line pt-4 text-center">
                 <p className="text-xs font-semibold text-ink-500">
-                  Payme yoki Click ilovasidan to&apos;lasangiz, shu raqamni
-                  kiriting:
+                  {t("Payme yoki Click ilovasidan to'lasangiz, shu raqamni kiriting:")}
                 </p>
                 <StudentIdCopy id={profile.id} />
               </div>
@@ -364,6 +380,7 @@ export function StudentPaymentSummary() {
 }
 
 function PaymentHistory() {
+  const t = useT();
   const history = useQuery<PaymentHistoryData>({
     queryKey: ["student-portal", "payments"],
     queryFn: () => api.get("/student-portal/payments").then((r) => r.data),
@@ -375,7 +392,7 @@ function PaymentHistory() {
   return (
     <div className="space-y-2.5">
       <h2 className="px-1 font-display text-lg font-bold text-ink-900">
-        Balans tarixi
+        {t("Balans tarixi")}
       </h2>
       {state === "loading" ? (
         <LoadingCards count={3} />
@@ -385,23 +402,25 @@ function PaymentHistory() {
       ) : transactions.length === 0 ? (
         <EmptyState
           icon={<Clock weight="bold" />}
-          title="Hali tranzaksiya yo'q"
-          description="To'lov qilganingizdan so'ng bu yerda ko'rinadi."
+          title={t("Hali tranzaksiya yo'q")}
+          description={t("To'lov qilganingizdan so'ng bu yerda ko'rinadi.")}
         />
       ) : (
-        transactions.map((t) => {
-          const positive = t.amount >= 0;
-          const reversal = t.reversal ?? null;
+        transactions.map((tx) => {
+          const positive = tx.amount >= 0;
+          const reversal = tx.reversal ?? null;
+          // The description is the server's text; the type label is ours.
+          const typeLabel = TYPE_LABELS[tx.type];
           // A cancelled row stays (the balance under it is a running total)
           // but is struck through; the row that cancelled it says so.
           const cancelled = reversal?.kind === "reversed";
           const title =
             reversal?.kind === "undo"
-              ? reversalNote(reversal, { withReason: false })
-              : t.description || TYPE_LABELS[t.type] || t.type;
+              ? reversalNote(reversal, { withReason: false, t })
+              : tx.description || (typeLabel ? t(typeLabel) : tx.type);
           return (
             <Card
-              key={t.id}
+              key={tx.id}
               className="flex items-center justify-between gap-3"
             >
               <div className="min-w-0 flex-1">
@@ -416,10 +435,10 @@ function PaymentHistory() {
                   {title}
                 </p>
                 <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold text-ink-500">
-                  {format(new Date(t.createdAt), "dd.MM.yyyy, HH:mm")}
+                  {format(new Date(tx.createdAt), "dd.MM.yyyy, HH:mm")}
                   {cancelled && (
                     <Badge tone="neutral" size="sm">
-                      {reversalNote(reversal, { withReason: false })}
+                      {reversalNote(reversal, { withReason: false, t })}
                     </Badge>
                   )}
                 </p>
@@ -436,10 +455,10 @@ function PaymentHistory() {
                   )}
                 >
                   {positive ? "+" : ""}
-                  {formatNumber(t.amount)} so&apos;m
+                  {formatNumber(tx.amount)} {t("so'm")}
                 </p>
                 <p className="text-xs font-semibold tabular-nums text-ink-500">
-                  {formatNumber(t.balanceAfter)} so&apos;m
+                  {formatNumber(tx.balanceAfter)} {t("so'm")}
                 </p>
               </div>
             </Card>

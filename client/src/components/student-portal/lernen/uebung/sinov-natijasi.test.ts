@@ -62,3 +62,18 @@ describe("sinovKorinishi", () => {
     });
   });
 });
+
+describe("the page's t", () => {
+  const tr = (s: string, p?: Record<string, string | number>) =>
+    `[${s.replace(/\{(\w+)\}/g, (_, k: string) => String(p?.[k]))}]`;
+
+  it("translates every caption, the figures filled in", () => {
+    expect(sinovKorinishi({ tur: "tayyor", natija: natija({}) }, tr)).toEqual({
+      sarlavha: "[Hali o'tmadingiz]",
+      matn: "[12 / 15 — o'tish uchun kamida 14 ta to'g'ri javob kerak.]",
+      ohang: "xavf",
+      asosiy: "qayta",
+    });
+    expect(sinovKorinishi({ tur: "xato" }, tr).sarlavha).toBe("[Natijani tekshirib bo'lmadi]");
+  });
+});

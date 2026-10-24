@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useT } from "@/i18n/use-t";
 import { cn } from "@/lib/utils";
 import { Eye, EyeSlash } from "@phosphor-icons/react";
 
@@ -19,6 +20,7 @@ export const Input = React.forwardRef<HTMLInputElement, LumioInputProps>(
     { className, iconBefore, addon, type = "text", ...rest },
     ref,
   ) {
+    const t = useT();
     const isPassword = type === "password";
     const [show, setShow] = React.useState(false);
     const resolvedType = isPassword ? (show ? "text" : "password") : type;
@@ -47,7 +49,7 @@ export const Input = React.forwardRef<HTMLInputElement, LumioInputProps>(
           <button
             type="button"
             tabIndex={-1}
-            aria-label={show ? "Parolni yashirish" : "Parolni ko'rsatish"}
+            aria-label={show ? t("Parolni yashirish") : t("Parolni ko'rsatish")}
             onClick={() => setShow((s) => !s)}
             className="shrink-0 text-xl text-ink-400 transition-colors hover:text-ink-700"
           >

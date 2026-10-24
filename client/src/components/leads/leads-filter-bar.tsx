@@ -77,14 +77,18 @@ export function LeadsFilterBar() {
       .catch(() => {});
   }, [revision]);
 
-  // The last search this box wrote to the URL. Any other change of `search`
-  // came from outside (a stats card, «Tozalash», Back), and the box follows it;
-  // comparing with the typed text instead would drop keys typed while the
-  // debounced write was landing.
+  // The last search this box wrote to the URL. router.replace lands later than
+  // the write, so the box follows `filters.search` only when it CHANGES to
+  // something this box did not write (a stats card, «Tozalash», Back). Comparing
+  // on every render wiped the typed text while the URL still held the old value.
   const [writtenSearch, setWrittenSearch] = useState(filters.search);
-  if (filters.search !== writtenSearch) {
-    setWrittenSearch(filters.search);
-    setSearchInput(filters.search);
+  const [seenSearch, setSeenSearch] = useState(filters.search);
+  if (filters.search !== seenSearch) {
+    setSeenSearch(filters.search);
+    if (filters.search !== writtenSearch) {
+      setWrittenSearch(filters.search);
+      setSearchInput(filters.search);
+    }
   }
 
   const debouncedSearch = useDebouncedCallback((value: string) => {

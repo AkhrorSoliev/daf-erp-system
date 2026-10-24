@@ -2,6 +2,8 @@ import { create } from "zustand";
 
 export interface GroupData {
   id: string;
+  /** The pause the group is in now, when it is paused (ADR-0119). */
+  pause?: { plannedResumeOn: string | null; resumeOn: string | null } | null;
   name: string;
   groupNumber: number | null;
   level: string | null;
