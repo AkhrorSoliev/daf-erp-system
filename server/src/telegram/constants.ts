@@ -6,6 +6,7 @@ export const SCENES = {
   STATEMENT: 'statement',
   STAFF_LINK: 'staff-link',
   ACCOUNT_LINK: 'account-link',
+  LEVEL_TEST: 'level-test',
 } as const;
 
 export const TEACHER_DEEP_LINK_PREFIX = 'teacher_';

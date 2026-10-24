@@ -1,4 +1,4 @@
-# ADR-0121 — Chiqarishda oy puli ushlab qolinsa, administratorga topshiriq tushadi
+# ADR-0122 — Chiqarishda oy puli ushlab qolinsa, administratorga topshiriq tushadi
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-19

@@ -864,7 +864,8 @@ model Lead {
   // stage 2 (the backfill restores the ones since KPI_START).
   conversionKind LeadConversionKind?
 
-  formSubmissions CustomFormSubmission[]
+  formSubmissions   CustomFormSubmission[]
+  levelTestAttempts LevelTestAttempt[]
 
   // `Lead` carried NEITHER companyId NOR branchId — `getBoard()` was
   // `where: { deletedAt: null }`, i.e. every lead in the database. A Namangan
@@ -887,6 +888,34 @@ model Lead {
   @@index([sectionId])
   @@index([sourceId])
   @@index([ownerId])
+}
+
+/// Botdagi «📊 Darajani aniqlash» testining bitta tugagan urinishi (ADR-0121).
+///
+/// Urinish test TUGAGANDA yoziladi: yarim tashlab ketilgani yozilmaydi.
+/// `questionIds` — berilgan savollar (`level-test-questions.ts` dagi barqaror
+/// id'lar): keyingi urinishda shu chatga avval ko'rmagan savollar beriladi.
+/// `leadId` — odam telefonini yuborib lid bo'lgach to'ldiriladi; yubormasa
+/// null qoladi.
+model LevelTestAttempt {
+  id          String   @id @default(uuid())
+  chatId      String
+  questionIds String[]
+  /// `{ "A1": 5, "A2": 4 }` — darajalar bo'yicha to'g'ri javoblar.
+  correctByLevel Json
+  /// BEGINNER | A1 | A2 | B1 | B2
+  result    String
+  createdAt DateTime @default(now())
+
+  leadId String?
+  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
+
+  @@index([chatId, createdAt])
+  @@index([leadId])
+  @@index([companyId])
 }
 
 enum LeadOwnershipKind {
@@ -1971,6 +2000,7 @@ model Company {
   leadColumns                 LeadColumn[]
   leadSections                LeadSection[]
   leadSources                 LeadSource[]
+  levelTestAttempts           LevelTestAttempt[]
   mockExamSections            MockExamSection[]
   mockExams                   MockExam[]
   mockExamParticipants        MockExamParticipant[]
