@@ -157,4 +157,25 @@ describe('summarize', () => {
     expect(s.people).toBe(3);
     expect(s.started).toBe(4);
   });
+
+  it("tashlab ketilganlar va eng ko'p ketgan oraliq", () => {
+    const s = summarize(
+      [
+        row({ status: 'TIMED_OUT', result: null, answered: 3 }),
+        row({ status: 'CANCELLED', result: null, answered: 2 }),
+        row({ status: 'STOPPED', result: 'A1', answered: 12 }),
+        row({
+          status: 'IN_PROGRESS',
+          result: null,
+          answered: 1,
+          createdAt: ago(3 * IDLE_AFTER_MS),
+        }),
+      ],
+      NOW,
+    );
+    expect(s.quit).toBe(3);
+    expect(s.stopped).toBe(1);
+    expect(s.topDropOff).toBe('to5');
+    expect(summarize([row()], NOW).topDropOff).toBeNull();
+  });
 });
