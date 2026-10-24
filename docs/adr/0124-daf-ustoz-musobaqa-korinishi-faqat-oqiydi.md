@@ -1,4 +1,4 @@
-# ADR-0118 — DaF ustoz musobaqa ko'rinishi: guruh sahifasidagi «Musobaqa» tabi faqat o'qiydi, yangi jadval yo'q
+# ADR-0124 — DaF ustoz musobaqa ko'rinishi: guruh sahifasidagi «Musobaqa» tabi faqat o'qiydi, yangi jadval yo'q
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-20

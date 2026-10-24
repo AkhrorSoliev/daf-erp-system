@@ -119,6 +119,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /receipts/payment/:id/verify',
       'GET /receipts/refund/:id.pdf',
       'GET /receipts/refund/:id/verify',
+      'GET /webhooks/meta-leads',
       'POST /auth/forgot-password/request',
       'POST /auth/forgot-password/reset',
       'POST /auth/forgot-password/verify',
@@ -128,6 +129,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /auth/telegram/webapp',
       'POST /auth/telegram/webapp/staff',
       'POST /public/forms/:slug/submit',
+      'POST /webhooks/meta-leads',
     ],
   },
   {
@@ -214,6 +216,15 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /participation-certificates/:id/pdf',
       'POST /participation-certificates/:id/revoke',
     ],
+  },
+  {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      "O'quvchi profilidagi daraja testi natijalari (ADR-0122). Marshrut " +
+      "o'quvchining filialini aniqlab, chaqiruvchini `assertCallerMayTouchStudent` " +
+      'bilan tekshiradi; sarlavhadagi filial o‘qilmaydi: natija o‘quvchining ' +
+      'o‘z filialiga tegishli.',
+    routes: ['GET /students/:id/level-tests'],
   },
   {
     policy: 'COMPANY_WIDE',
@@ -440,6 +451,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /groups',
       'PATCH /groups/:id',
       'PATCH /groups/:id/status',
+      'PATCH /groups/:id/pause',
       'DELETE /groups/:id',
     ],
   },
@@ -570,7 +582,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       "qolganlar uchun filial; yon oyna qo'shimcha ravishda o'quvchi shu " +
       "guruhning faol a'zosi ekanini tekshiradi. Profil route'i " +
       '`assertCallerMayTouchStudent`. ' +
-      '«Musobaqa» tabi (S5, ADR-0118) shu qorovulni qayta ishlatadi.',
+      '«Musobaqa» tabi (S5, ADR-0124) shu qorovulni qayta ishlatadi.',
     routes: [
       'GET /groups/:id/app-activity',
       'GET /groups/:id/app-activity/students/:studentId',
@@ -1227,6 +1239,16 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /telegram/channel-report/list',
       'GET /telegram/channel-report/summary',
     ],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
+      '«Bot hisoboti», daraja testi statistikasi (ADR-0122): oyiga nechta test ' +
+      'boshlangan, tugagan, yarmida qolgan va hokazo. Bu sonlar butun markaz ' +
+      'bo‘yicha: test filialni bilmaydigan odamni ham qamraydi (lid oqimi), ' +
+      'shuning uchun cheklanadigan filial yo‘q. Marshrut `DEFAULT_COMPANY_ID` ' +
+      'ni o‘qiydi, `reports.students` ni talab qiladi.',
+    routes: ['GET /telegram/channel-report/level-tests'],
   },
   {
     policy: 'COMPANY_WIDE',

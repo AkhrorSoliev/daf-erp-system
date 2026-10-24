@@ -175,7 +175,7 @@ o'quvchi yo'q».
 
 ## 8. Hujjat va deploy
 
-- ADR-0118 («Ustoz musobaqa ko'rinishi: faqat o'qiydigan, mavjud
+- ADR-0124 («Ustoz musobaqa ko'rinishi: faqat o'qiydigan, mavjud
   hisoblardan»), `docs/adr/README.md` qatori.
 - `server/CLAUDE.md` DaF bandi (ingliz tilida).
 - Xodimlar yangiligi: bitta yozuv (ustozlar yangi tabdan xabardor bo'lsin).

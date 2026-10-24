@@ -1,16 +1,29 @@
 import type { Metadata } from "next";
+import { PublicPageI18n } from "@/components/public-page-i18n";
+import { LanguagePicker } from "@/components/student-portal/lumio/language-picker";
+import { serverTranslator } from "@/i18n/server";
 
-export const metadata: Metadata = {
-  title: "Hujjatni tekshirish",
-  description: "DaF Sprachzentrum qatnashganlik hujjatini tekshirish",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await serverTranslator();
+  return {
+    title: t("Hujjatni tekshirish"),
+    description: t("DaF Sprachzentrum qatnashganlik hujjatini tekshirish"),
+    robots: { index: false, follow: false },
+  };
+}
 
 /** Public verification route — no app shell, no sidebar, no auth. The QR on the paper lands here. */
 export default function CertificateVerifyLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">{children}</div>
-    </div>
+    <PublicPageI18n>
+      <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="mb-3 flex justify-end">
+            <LanguagePicker variant="plain" />
+          </div>
+          {children}
+        </div>
+      </div>
+    </PublicPageI18n>
   );
 }

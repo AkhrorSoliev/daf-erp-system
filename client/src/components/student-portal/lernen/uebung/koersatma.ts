@@ -1,3 +1,4 @@
+import { msg } from "@/i18n/msg";
 import type { FrageFormat } from "../types";
 
 /**
@@ -7,26 +8,26 @@ import type { FrageFormat } from "../types";
  * qo'yilsa, matnni o'zgartirish uchun backend deploy kerak bo'lardi.
  */
 const MATN: Record<FrageFormat, string> = {
-  WORT_UZ: "Bu so'z nimani anglatadi?",
-  UZ_WORT: "Nemischasini tanlang",
-  PAAR: "So'zlarni tarjimasi bilan juftlang",
-  ARTIKEL: "Artiklni tanlang",
-  LUECKE: "Bo'sh joyni to'ldiring",
-  SATZ_BAUEN: "So'zlardan gap tuzing",
-  SATZ_HOEREN: "Eshitgan gapingizni so'zlardan tuzing",
-  SATZ_UEBERSETZEN: "Gapning tarjimasini tanlang",
-  REAKTION: "Nima deb javob berasiz?",
-  ZUORDNEN: "Vaziyatni mos ibora bilan juftlang",
-  DIALOG_LUECKE: "Suhbatda nima aytilgan?",
-  AUDIO_WORT: "Eshiting va to'g'ri so'zni tanlang",
-  WORT_TIPPEN: "Eshiting va so'zni yozing",
-  HOEREN_WAHL: "Suhbatni tinglang va savolga javob bering",
-  BILD_WORT: "Mos rasmni tanlang",
-  AUDIO_BILD: "Eshiting va mos rasmni tanlang",
-  BILD_TIPPEN: "Rasmda nima? Artikli bilan yozing",
-  UHR_LESEN: "Soat nechani ko'rsatyapti?",
-  UHR_HOEREN: "Eshitgan vaqtingizga mos soatni tanlang",
-  UHR_TIPPEN: "Soatga qarab vaqtni nemischa yozing",
+  WORT_UZ: msg("Bu so'z nimani anglatadi?"),
+  UZ_WORT: msg("Nemischasini tanlang"),
+  PAAR: msg("So'zlarni tarjimasi bilan juftlang"),
+  ARTIKEL: msg("Artiklni tanlang"),
+  LUECKE: msg("Bo'sh joyni to'ldiring"),
+  SATZ_BAUEN: msg("So'zlardan gap tuzing"),
+  SATZ_HOEREN: msg("Eshitgan gapingizni so'zlardan tuzing"),
+  SATZ_UEBERSETZEN: msg("Gapning tarjimasini tanlang"),
+  REAKTION: msg("Nima deb javob berasiz?"),
+  ZUORDNEN: msg("Vaziyatni mos ibora bilan juftlang"),
+  DIALOG_LUECKE: msg("Suhbatda nima aytilgan?"),
+  AUDIO_WORT: msg("Eshiting va to'g'ri so'zni tanlang"),
+  WORT_TIPPEN: msg("Eshiting va so'zni yozing"),
+  HOEREN_WAHL: msg("Suhbatni tinglang va savolga javob bering"),
+  BILD_WORT: msg("Mos rasmni tanlang"),
+  AUDIO_BILD: msg("Eshiting va mos rasmni tanlang"),
+  BILD_TIPPEN: msg("Rasmda nima? Artikli bilan yozing"),
+  UHR_LESEN: msg("Soat nechani ko'rsatyapti?"),
+  UHR_HOEREN: msg("Eshitgan vaqtingizga mos soatni tanlang"),
+  UHR_TIPPEN: msg("Soatga qarab vaqtni nemischa yozing"),
 };
 
 export function koersatma(format: FrageFormat): string {

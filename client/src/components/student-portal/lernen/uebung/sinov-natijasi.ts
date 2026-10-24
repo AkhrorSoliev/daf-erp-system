@@ -1,3 +1,5 @@
+import { interpolate } from "@/i18n/translate";
+import type { Translate } from "../liga";
 import type { YakuniySinovNatijasi } from "../types";
 
 /**
@@ -20,19 +22,22 @@ export interface SinovKorinishi {
   asosiy: "davom" | "qayta" | "qayta-yubor" | null;
 }
 
-export function sinovKorinishi(holat: SinovHolati): SinovKorinishi {
+export function sinovKorinishi(
+  holat: SinovHolati,
+  t: Translate = interpolate,
+): SinovKorinishi {
   if (holat.tur === "kutilmoqda") {
     return {
-      sarlavha: "Natija tekshirilmoqda",
-      matn: "Bir necha soniya kuting.",
+      sarlavha: t("Natija tekshirilmoqda"),
+      matn: t("Bir necha soniya kuting."),
       ohang: "neytral",
       asosiy: null,
     };
   }
   if (holat.tur === "xato") {
     return {
-      sarlavha: "Natijani tekshirib bo'lmadi",
-      matn: "Internetni tekshirib, natijani qayta yuboring.",
+      sarlavha: t("Natijani tekshirib bo'lmadi"),
+      matn: t("Internetni tekshirib, natijani qayta yuboring."),
       ohang: "xavf",
       asosiy: "qayta-yubor",
     };
@@ -40,23 +45,27 @@ export function sinovKorinishi(holat: SinovHolati): SinovKorinishi {
   const { bestanden, avvalOtilgan, togri, jami, kerak } = holat.natija;
   if (bestanden) {
     return {
-      sarlavha: "Yakuniy sinovdan o'tdingiz!",
-      matn: `${togri} / ${jami} — keyingi unit ochildi.`,
+      sarlavha: t("Yakuniy sinovdan o'tdingiz!"),
+      matn: t("{togri} / {jami} — keyingi unit ochildi.", { togri, jami }),
       ohang: "muvaffaqiyat",
       asosiy: "davom",
     };
   }
   if (avvalOtilgan) {
     return {
-      sarlavha: `Bu safar ${togri} / ${jami}`,
-      matn: "Sinovdan avval o'tgansiz — keyingi unit ochiq.",
+      sarlavha: t("Bu safar {togri} / {jami}", { togri, jami }),
+      matn: t("Sinovdan avval o'tgansiz — keyingi unit ochiq."),
       ohang: "neytral",
       asosiy: "davom",
     };
   }
   return {
-    sarlavha: "Hali o'tmadingiz",
-    matn: `${togri} / ${jami} — o'tish uchun kamida ${kerak} ta to'g'ri javob kerak.`,
+    sarlavha: t("Hali o'tmadingiz"),
+    matn: t("{togri} / {jami} — o'tish uchun kamida {kerak} ta to'g'ri javob kerak.", {
+      togri,
+      jami,
+      kerak,
+    }),
     ohang: "xavf",
     asosiy: "qayta",
   };

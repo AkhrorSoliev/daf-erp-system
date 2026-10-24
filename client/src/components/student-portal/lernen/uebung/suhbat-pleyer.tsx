@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Pause, Play, ArrowClockwise } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/use-t";
 import { registerMedia } from "../../lib/media-registry";
 import { ovozXatosiMi } from "./oynatish-xatosi";
 import { formatVaqt } from "./pleyer-vaqt";
@@ -23,6 +24,7 @@ const TEZLIKLAR = [1, 0.8] as const;
  * hodisalari yangi savolga tegmaydi.
  */
 export function SuhbatPleyer({ url }: { url: string }) {
+  const t = useT();
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   // Faollik hisobi: bu audio ijro etilayotganda o'quvchi ekranga tegmasa ham
   // faol (dizayn 4.5). `<audio key={url}>` url almashganda qayta yaratiladi —
@@ -109,7 +111,11 @@ export function SuhbatPleyer({ url }: { url: string }) {
           type="button"
           onClick={togla}
           aria-label={
-            xato ? "Ovozni qayta yuklash" : oynayapti ? "Pauza" : "Eshitish"
+            xato
+              ? t("Ovozni qayta yuklash")
+              : oynayapti
+                ? t("Pauza qilish")
+                : t("Eshitish")
           }
           className="flex size-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-95 motion-reduce:transition-none"
         >
@@ -129,7 +135,7 @@ export function SuhbatPleyer({ url }: { url: string }) {
             step={0.1}
             value={Math.min(vaqt, davomiylik || 0)}
             onChange={sur}
-            aria-label="Suhbatning joyi"
+            aria-label={t("Suhbatning joyi")}
             className="w-full accent-primary"
           />
           <div className="flex items-center justify-between text-xs tabular-nums text-ink-500">
@@ -139,26 +145,26 @@ export function SuhbatPleyer({ url }: { url: string }) {
         </div>
       </div>
       <div className="flex items-center gap-2">
-        {TEZLIKLAR.map((t) => (
+        {TEZLIKLAR.map((tz) => (
           <button
-            key={t}
+            key={tz}
             type="button"
-            onClick={() => setTezlik(t)}
-            aria-pressed={tezlik === t}
+            onClick={() => setTezlik(tz)}
+            aria-pressed={tezlik === tz}
             className={cn(
               "rounded-full px-3 py-1 text-sm font-semibold transition-colors",
-              tezlik === t
+              tezlik === tz
                 ? "bg-coral-500/10 text-coral-500"
                 : "bg-tint text-ink-600",
             )}
           >
-            {t === 1 ? "1×" : "🐢 0.8×"}
+            {tz === 1 ? "1×" : "🐢 0.8×"}
           </button>
         ))}
       </div>
       {xato ? (
         <p className="text-sm text-muted-foreground">
-          Ovoz yuklanmadi — qayta urinib ko&apos;ring
+          {t("Ovoz yuklanmadi — qayta urinib ko'ring")}
         </p>
       ) : null}
     </div>

@@ -10,9 +10,33 @@ import {
   bahoMatni,
   haftaMatni,
   kotarilishMatni,
+  ligaSarlavhasi,
   otganHaftaMatni,
   zonadami,
 } from "./liga";
+
+// A marking `t`: every text it receives comes back in brackets, filled in.
+const t = (s: string, p?: Record<string, string | number>) =>
+  `[${s.replace(/\{(\w+)\}/g, (_, k: string) => String(p?.[k]))}]`;
+
+describe("the page's t", () => {
+  it("translates the client's words, never the data", () => {
+    expect(haftaMatni("2026-10-25", "2026-10-19", 22, t)).toBe("[Hafta tugashiga 7 kun] · [22 kishi]");
+    expect(kotarilishMatni({ soni: 0, faol: false }, t)).toBe(
+      "[Eng yuqori liga — bu yerdan ko'tarilish yo'q]",
+    );
+    expect(
+      otganHaftaMatni(
+        { daraja: { tier: 0, nomi: "Bronza" }, orin: 3, kotarildi: true, hajmi: 22 },
+        { tier: 1, nomi: "Kumush" },
+        t,
+      ),
+    ).toBe("[Siz 3-o'rin · [Kumush] ligasiga ko'tarildingiz]");
+    // A league name this client does not know prints as sent.
+    expect(ligaSarlavhasi("Temir", t)).toBe("[Temir ligasi]");
+    expect(bahoMatni(12.5, t)).toBe("[12,5 ball]");
+  });
+});
 
 // The client cannot import server code; names and limits must still be the server's.
 const server = readFileSync(

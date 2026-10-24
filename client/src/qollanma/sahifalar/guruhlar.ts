@@ -49,7 +49,7 @@ export const guruhlar: QollanmaSahifa[] = [
     qisqacha:
       "Guruh «Boshlanmagan» bo'lib ochiladi, «Faol» bo'ladi, keyin «Pauza»ga tushishi, «Tugallangan» yoki «Bekor qilingan» bo'lishi mumkin; oxirgi ikki holatdan qaytish yo'q. Tugallanganda faol o'quvchilarning yozilishi tugaydi (boshqa faol guruhi yo'q o'quvchi «Bitirgan» bo'ladi), muzlatilganlar chiqariladi; bekor qilinganda hammasi chiqariladi, pul balansga qaytadi; o'zgarish yo to'liq bajariladi, yo umuman.",
     rollar: [1, 2, 3],
-    adr: ["0036", "0041"],
+    adr: ["0036", "0041", "0119"],
     yollar: ["/groups/*"],
     kalitSozlar: [
       "guruh holati",
@@ -78,7 +78,7 @@ export const guruhlar: QollanmaSahifa[] = [
       "filial yopilsa",
       "arxivdan tiklash",
     ],
-    yangilangan: "2026-10-03",
+    yangilangan: "2026-10-23",
   },
   {
     bolim: "guruhlar",
@@ -179,7 +179,10 @@ export const guruhlar: QollanmaSahifa[] = [
       "boshlanmagan guruhlarim",
       "oldingi kun",
       "keyingi kun",
+      "rejadagi guruhlar",
+      "ochilishi rejalashtirilgan",
+      "boshlanmagan guruh",
     ],
-    yangilangan: "2026-10-17",
+    yangilangan: "2026-10-21",
   },
 ];

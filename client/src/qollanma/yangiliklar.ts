@@ -6,6 +6,32 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-24",
+    sarlavha: "Daraja testi natijalari o'quvchi kartasida va hisobotda",
+    matn: "Botdagi «Darajani aniqlash» testida endi «🏁 Natijani bilish» tugmasi bor: savollar qiyinlashganda odam testni shu joyida to'xtatib, yetgan darajasini bilib oladi. Test boshlangan zahoti yoziladi, shuning uchun yarmida qolganlar ham hisobga olinadi. Allaqachon o'qiyotgan o'quvchi (chatiga bitta karta bog'langan) testni yechsa, bot telefon va filialni so'ramaydi, lid ochilmaydi, natija o'quvchi kartasining «Guruhlar» yorlig'idagi «Daraja testi» blokida va tarixida ko'rinadi. Umumiy statistika — Hisobotlar → «Bot hisoboti» sahifasidagi «Daraja testi» bloki: oyda nechta urinish boshlangan, nechtasi oxirigacha yechilgan, nechtasi yarmida qolgan va nechanchi savolda, natijalar darajalar bo'yicha. Bir soatdan ortiq tugatilmagan urinish «yarmida qoldi» deb sanaladi.",
+    rollar: [1, 2, 3],
+  },
+  {
+    sana: "2026-10-24",
+    sarlavha: "Botdagi «Darajani aniqlash» testi lid yig'adi",
+    matn: "Telegram botdagi «📊 Darajani aniqlash» tugmasi endi ishlaydi. Odam hamma darajadan 20 ta savolga javob beradi (A1, A2, B1, B2 — har biridan 5 tadan) va oxirida taxminiy darajasini ko'radi (darajadan o'tish uchun 5 dan 4 to'g'ri javob kerak). Har savolga vaqt beriladi (A1 20, A2 30, B1 40, B2 50 soniya): vaqt tugasa javob hisobga olinmaydi va bot keyingi savolga o'zi o'tadi; qolgan vaqt xabarda har 5 soniyada kamayib boradi, savollar va javoblar esa bitta xabarda to'planib boradi; ketma-ket 3 ta savolga javob berilmasa, test to'xtatiladi. Savollar 200 talik havzadan tasodifiy olinadi, variantlar har safar aralashadi, qayta topshirganga avval ko'rmagan savollar chiqadi. Natijadan keyin bot telefon raqamini (faqat o'zining kontakti) va filialni so'raydi: shundan so'ng lid tanlangan filialning «Yangi» ustunidagi birinchi bo'limga tushadi, manbasi «Telegram bot — daraja testi», daraja natijasi lidning tarixida («darajaTesti») turadi. Shu telefonli lid allaqachon bo'lsa, ikkinchisi ochilmaydi. Raqamni yubormagan odamga lid ochilmaydi. Natija taxminiy: aniq darajani o'qituvchi suhbatda belgilaydi.",
+    rollar: [1, 2, 3],
+  },
+  {
+    sana: "2026-10-23",
+    sarlavha: "Guruh pauzasi: o'tmagan darslar puli qaytadi",
+    matn: "Guruhni «Pauza»ga qo'yishda endi darslar qachondan qayta boshlanishini tanlaysiz (yoki «Hozircha noma'lum»). Pauza markazning qarori, shuning uchun pauza davomida o'tmagan har dars kunining puli shu kuni kechasi o'quvchiga avtomatik qaytadi va guruhning tugash sanasi bitta dars kuniga suriladi. Guruhni «Pauza»dan ochishda darslar qaysi kundan boshlanishini tasdiqlaysiz: bugundan keyingi sana tanlansa guruh o'sha kuni o'zi ochiladi, oylik to'lov esa shu kundan hisoblanadi. Pauza paytida chiqqan o'quvchining puli 40% qoidasisiz qaytadi. O'quvchilarga pauza, qaytish sanasi va ochilish haqida Telegram xabari boradi.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "guruhlar", sahifa: "guruh-holatlari" },
+  },
+  {
+    sana: "2026-10-21",
+    sarlavha: "Jadvalda ochilishi rejalashtirilgan guruhlar",
+    matn: "«Jadval»da endi hali ochilmagan («Boshlanmagan») guruhlar ham ko'rinadi: gridda o'z xonasi va vaqtida punktir chiziqli kartada «Ochiladi 03.11.2026» yozuvi bilan, ro'yxatda esa alohida «Rejadagi guruhlar» blokida. Xonasi yoki vaqti kiritilmagan guruh gridning tagidagi alohida qatorda turadi. Bunday guruh dars, o'quvchi va xona hisobiga qo'shilmaydi. «Rejadagi guruhlar» tugmasi ularni yashiradi.",
+    rollar: [1, 2, 3, 5],
+    sahifa: { bolim: "guruhlar", sahifa: "jadval" },
+  },
+  {
     sana: "2026-10-20",
     sarlavha: "Guruh sahifasida «Musobaqa» tabi",
     matn: "Guruh sahifasida yangi «Musobaqa» tabi bor. Tepada guruhning markaz bo'yicha shu haftadagi o'rni va o'rtacha bali, oxirgi 8 haftaning o'rinlari (bosilsa o'sha haftaga o'tadi). Pastda har o'quvchining haftalik bali, faol kunlari, seriyasi, bugungi maqsad bajarilishi, ligasi va nishonlari. «Shu hafta mashq qilmaganlar» ro'yxati o'quvchiga o'zingiz bog'lanishingiz uchun; tizim hech kimga xabar yubormaydi. Ustoz faqat o'z guruhini ko'radi.",

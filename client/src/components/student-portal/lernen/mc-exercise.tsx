@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { CheckCircle, XCircle } from "@phosphor-icons/react";
+import { useT } from "@/i18n/use-t";
 import { cn } from "@/lib/utils";
 import { Button, Card } from "../lumio";
 import { useRecordAttempt } from "./queries";
@@ -25,6 +26,7 @@ export interface McExerciseProps {
  * uchtasi bir-biriga to'g'ri kelmay qolardi.
  */
 export function McExercise({ exercise, index }: McExerciseProps) {
+  const t = useT();
   const [picked, setPicked] = React.useState<string | null>(null);
   const [startedAt] = React.useState(() => Date.now());
   const record = useRecordAttempt();
@@ -88,7 +90,9 @@ export function McExercise({ exercise, index }: McExerciseProps) {
             result.isCorrect ? "text-success" : "text-danger",
           )}
         >
-          {result.isCorrect ? "To'g'ri!" : "Xato — to'g'ri javob belgilandi"}
+          {result.isCorrect
+            ? t("To'g'ri!")
+            : t("Xato — to'g'ri javob belgilandi")}
         </p>
       ) : (
         <Button
@@ -96,13 +100,13 @@ export function McExercise({ exercise, index }: McExerciseProps) {
           disabled={!picked || record.isPending}
           className="w-full"
         >
-          {record.isPending ? "Tekshirilmoqda…" : "Tekshirish"}
+          {record.isPending ? t("Tekshirilmoqda…") : t("Javobni tekshirish")}
         </Button>
       )}
 
       {record.isError ? (
         <p className="text-sm font-semibold text-danger">
-          Javobni yuborib bo&apos;lmadi. Qayta urinib ko&apos;ring.
+          {t("Javobni yuborib bo'lmadi. Qayta urinib ko'ring.")}
         </p>
       ) : null}
     </Card>

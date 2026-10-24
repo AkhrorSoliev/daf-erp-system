@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import uzCyrl from "./dictionaries/uz-cyrl";
 import { interpolate, translate } from "./translate";
+import { toCyrillic } from "./translit-cyrl";
 
 const ru = { "Bosh sahifa": "Главная", "{n} ta o'quvchi": "{n} учеников" };
 
@@ -62,6 +63,36 @@ describe("translate", () => {
     expect(translate("uz-Cyrl", uzCyrl, "Bu {n} ta xodim uchun mavjud **umumiy** qoidani bekor qiladi (per-group qoidalar tegmaydi).", { n: 3 })).toBe(
       "Бу 3 та ходим учун мавжуд **умумий** қоидани бекор қилади (per-group қоидалар тегмайди).",
     );
+  });
+
+  it("writes the radio loanwords «хит» and «альтернатив» as Cyrillic Uzbek does", () => {
+    const radio = [
+      "Pop va hitlar",
+      "Eski hitlar va schlager — sekin, tushunarli qo'shiqlar",
+      "Bavariya hitlari va ertalabki jonli suhbatlar.",
+      "Hit musiqa va kun davomida yangiliklar.",
+      "Frankfurt hitlari, yengil kundalik so'zlashuv.",
+      "Nemis schlageri va eski hitlar — so'zlari sekin va aniq.",
+      "60-90 yillar xalqaro hitlari.",
+      "Zamonaviy so'zlashuv tili va alternativ musiqa",
+      "Alternativ musiqa, nemis va ingliz tillari aralash.",
+    ].map((s) => translate("uz-Cyrl", uzCyrl, s));
+    expect(radio).toEqual([
+      "Поп ва хитлар",
+      "Эски хитлар ва schlager — секин, тушунарли қўшиқлар",
+      "Бавария хитлари ва эрталабки жонли суҳбатлар.",
+      "Хит мусиқа ва кун давомида янгиликлар.",
+      "Франкфурт хитлари, енгил кундалик сўзлашув.",
+      "Немис schlageri ва эски хитлар — сўзлари секин ва аниқ.",
+      "60-90 йиллар халқаро хитлари.",
+      "Замонавий сўзлашув тили ва альтернатив мусиқа",
+      "Альтернатив мусиқа, немис ва инглиз тиллари аралаш.",
+    ]);
+    for (const s of radio) expect(s).not.toMatch(/ҳит|алтер/i);
+    // In the overrides without a Latin genre word only those two words differ from the rules.
+    const fixLoanwords = (s: string) => s.replace(/ҳит/g, "хит").replace(/Ҳит/g, "Хит").replace(/лтернатив/g, "льтернатив");
+    const plain = Object.keys(uzCyrl).filter((k) => /hit|alternativ/i.test(k) && !/schlager/.test(k));
+    expect(plain.map((k) => fixLoanwords(toCyrillic(k)))).toEqual(plain.map((k) => uzCyrl[k]));
   });
 
   it("writes «тс» across a suffix boundary in the mock exams texts, not «ц»", () => {

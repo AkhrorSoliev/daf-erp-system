@@ -1278,6 +1278,11 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /students/:id/level-tests": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "GET /students/:id/participation-certificates/preview": [
     "Administrator",
     "Branch Director",
@@ -1417,6 +1422,10 @@
   "GET /telegram-report/recipients/:id/preview": [
     "CEO"
   ],
+  "GET /telegram/channel-report/level-tests": [
+    "Branch Director",
+    "CEO"
+  ],
   "GET /telegram/channel-report/list": [
     "Branch Director",
     "CEO"
@@ -1464,6 +1473,7 @@
     "CEO"
   ],
   "GET /users/sessions": "ANY",
+  "GET /webhooks/meta-leads": "PUBLIC",
   "GET /withdrawals/preview/:studentId": [
     "Administrator",
     "Branch Director",
@@ -1527,6 +1537,11 @@
     "CEO"
   ],
   "PATCH /groups/:id": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "PATCH /groups/:id/pause": [
     "Administrator",
     "Branch Director",
     "CEO"
@@ -2313,6 +2328,7 @@
     "CEO"
   ],
   "POST /users/logout-others": "ANY",
+  "POST /webhooks/meta-leads": "PUBLIC",
   "POST /withdrawals": [
     "Administrator",
     "Branch Director",

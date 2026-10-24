@@ -39,6 +39,7 @@ import {
   DEPARTURE_POLICIES,
   DeparturePolicy,
   HeldShare,
+  policyForPausedGroup,
   policyRelease,
   trialAwaitsAnswerText,
   TRIAL_LESSON_MAX_HELD,
@@ -67,6 +68,8 @@ export interface ChargeableEnrollment {
     statusEnum: GroupStatus;
     /** A charge never covers lessons before the group opened. */
     startDate: Date | null;
+    /** The day the group last came back from a pause (ADR-0119). */
+    lastResumedOn?: Date | null;
     exactDays: string[];
     course: { price: number; paymentModel: PaymentModel };
   };
@@ -145,6 +148,7 @@ const CHARGEABLE_ENROLLMENT_SELECT = {
       companyId: true,
       statusEnum: true,
       startDate: true,
+      lastResumedOn: true,
       exactDays: true,
       course: { select: { price: true, paymentModel: true } },
     },
@@ -849,9 +853,12 @@ export class MonthlyChargeService {
       );
     }
 
-    const policy = params.policy ?? 'CENTER_INITIATIVE';
     const loaded = await this.loadDepartureInput(tx, params.enrollmentId, day);
     if (!loaded) return null;
+    const policy = policyForPausedGroup(
+      params.policy ?? 'CENTER_INITIATIVE',
+      loaded.enr.group.statusEnum === GroupStatus.PAUSED,
+    );
     const threshold =
       policy === 'STUDENT_CANCELLED'
         ? await this.settingsService.get(
@@ -1033,10 +1040,14 @@ export class MonthlyChargeService {
     );
     const outcomes = {} as DepartureOutcomesPreview['outcomes'];
     let share: HeldShare | null = null;
+    const groupPaused = loaded.enr.group.statusEnum === GroupStatus.PAUSED;
     for (const policy of DEPARTURE_POLICIES) {
-      const r = policyRelease(loaded.input, policy, threshold, {
-        trialLesson: verdict.trial,
-      });
+      const r = policyRelease(
+        loaded.input,
+        policyForPausedGroup(policy, groupPaused),
+        threshold,
+        { trialLesson: verdict.trial },
+      );
       share = r.share;
       outcomes[policy] = {
         lessons: r.release?.lessons ?? 0,
@@ -1257,7 +1268,9 @@ export class MonthlyChargeService {
       select: {
         studentId: true,
         startDate: true,
-        group: { select: { branchId: true, exactDays: true } },
+        group: {
+          select: { branchId: true, exactDays: true, statusEnum: true },
+        },
       },
     });
     if (!enr) return null;
@@ -1620,6 +1633,79 @@ export class MonthlyChargeService {
   }
 
   /**
+   * Charges this Tashkent month to every enrollment of a group that is being
+   * opened (FORMING/PAUSED → ACTIVE), on the CALLER's transaction, so the
+   * status change and its charges commit together or not at all (ADR-0041).
+   *
+   * `createChargeForEnrollment` refuses an enrollment whose group is not
+   * ACTIVE, and every enrollment door (admin, self-registration) charges at
+   * write time. A student enrolled while the group was still FORMING was
+   * therefore left without a charge, and opening the group did not make one:
+   * only the next 04:00 run did (21.10.2026, #084: seven students, no bill
+   * for a day of lessons). The group row is written AFTER the cascade, so the
+   * enrollments are charged as the ACTIVE group they are about to join.
+   *
+   * Same filter as `createChargesForPeriod`, narrowed to one group; an
+   * enrollment with a standing charge this month is not selected, so a second
+   * call writes nothing. A failure is NOT swallowed: it aborts the caller's
+   * transaction, and the group stays as it was.
+   */
+  async chargeActivatedGroup(
+    tx: Prisma.TransactionClient,
+    params: { groupId: string; performedById?: number },
+  ): Promise<{ created: number; skipped: number }> {
+    const today = tashkentDateStr(new Date());
+    const periodYear = Number(today.slice(0, 4));
+    const periodMonth = Number(today.slice(5, 7));
+
+    const enrollments = await tx.enrollment.findMany({
+      where: {
+        groupId: params.groupId,
+        status: EnrollmentStatus.ACTIVE,
+        deletedAt: null,
+        student: { status: StudentStatus.ACTIVE, deletedAt: null },
+        group: {
+          deletedAt: null,
+          course: { paymentModel: PaymentModel.MONTHLY, deletedAt: null },
+        },
+        monthlyCharges: {
+          // A REVERSED charge does not count: its month is written again.
+          none: {
+            periodYear,
+            periodMonth,
+            status: MonthlyChargeStatus.CHARGED,
+          },
+        },
+      },
+      select: { ...CHARGEABLE_ENROLLMENT_SELECT, statusChangedAt: true },
+    });
+
+    let created = 0;
+    let skipped = 0;
+    for (const enr of enrollments) {
+      // On an ACTIVE enrollment `statusChangedAt` is when it last came back
+      // to ACTIVE — the instant the daily run reads a return from.
+      const { statusChangedAt, student, ...enrollment } = enr;
+      const charge = await this.createChargeForEnrollment(tx, {
+        enrollment: {
+          ...enrollment,
+          status: EnrollmentStatus.ACTIVE,
+          returnedAt: statusChangedAt,
+          group: { ...enrollment.group, statusEnum: GroupStatus.ACTIVE },
+        },
+        periodYear,
+        periodMonth,
+        companyId: enrollment.group.companyId,
+        performedById: params.performedById,
+        discountPercent: student.discountPercent,
+      });
+      if (charge) created++;
+      else skipped++;
+    }
+    return { created, skipped };
+  }
+
+  /**
    * Bir kompaniyaning barcha oylik yozilishlariga bir davr uchun hisob yozadi.
    *
    * Ikki chaqiruvchi bor: oy boshi cron'i (`MonthlyBillingCronService`, har
@@ -1693,6 +1779,7 @@ export class MonthlyChargeService {
             companyId: true,
             statusEnum: true,
             startDate: true,
+            lastResumedOn: true,
             exactDays: true,
             course: { select: { price: true, paymentModel: true } },
           },

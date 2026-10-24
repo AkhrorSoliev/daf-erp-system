@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { formatBalance } from "@/lib/format-utils";
 import { formatWeekdays } from "@/lib/weekdays";
+import { useT } from "@/i18n/context";
 import {
   CaretRight,
   Clock,
@@ -44,6 +45,7 @@ function percentColor(p: number): string {
 }
 
 function GroupCard({ group }: { group: ProfileGroup }) {
+  const t = useT();
   return (
     <Card className="space-y-2.5">
       <div>
@@ -61,7 +63,7 @@ function GroupCard({ group }: { group: ProfileGroup }) {
         {group.exactDays.length > 0 ? (
           <span className="flex items-center gap-1.5">
             <Clock size={14} weight="bold" />
-            {formatWeekdays(group.exactDays)}
+            {formatWeekdays(group.exactDays, t)}
             {group.lessonStartTime ? ` · ${group.lessonStartTime}` : ""}
           </span>
         ) : null}
@@ -69,7 +71,7 @@ function GroupCard({ group }: { group: ProfileGroup }) {
           <span className="flex items-center gap-1.5">
             <GraduationCap size={14} weight="bold" />
             {group.teachers
-              .map((t) => `${t.firstName} ${t.lastName}`)
+              .map((teacher) => `${teacher.firstName} ${teacher.lastName}`)
               .join(", ")}
           </span>
         ) : null}
@@ -85,6 +87,7 @@ function GroupCard({ group }: { group: ProfileGroup }) {
 }
 
 export function StudentHomePage() {
+  const t = useT();
   const profileQuery = useStudentProfile();
   const { data: profile } = profileQuery;
   const { data: stats } = useQuery<AttendanceStats>({
@@ -116,7 +119,7 @@ export function StudentHomePage() {
 
   return (
     <Screen>
-      <ScreenHeader subtitle="Assalomu alaykum" title={name} />
+      <ScreenHeader subtitle={t("Assalomu alaykum")} title={name} />
 
       {/* From lg a 2×2 dashboard: Balans | Davomat, Bugungi darslar |
           Guruhlarim. Each block has a fixed cell, so an attendance answer
@@ -128,20 +131,20 @@ export function StudentHomePage() {
         <FadeIn index={0} className="lg:col-start-1 lg:row-start-1">
           <div className="clay-coral overflow-hidden rounded-card bg-coral-500 p-5 text-white lg:h-full">
             <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/80">
-              Balans
+              {t("Balans")}
             </p>
             <p className="mt-1 font-display text-[34px] font-extrabold leading-none">
-              {formatBalance(profile.balance)}
+              {formatBalance(profile.balance, t("so'm"))}
             </p>
             <div className="mt-3 flex items-center justify-between gap-3">
               <span className="inline-flex items-center rounded-pill bg-white/20 px-3 py-1 text-xs font-bold">
-                {inDebt ? "Qarzdorlik mavjud" : "Joriy balans"}
+                {inDebt ? t("Qarzdorlik mavjud") : t("Joriy balans")}
               </span>
               <Link
                 href="/portal/payments"
                 className="inline-flex h-9 items-center rounded-pill bg-white px-4 font-display text-sm font-bold text-coral-600"
               >
-                To&apos;ldirish
+                {t("To'ldirish")}
               </Link>
             </div>
           </div>
@@ -154,7 +157,7 @@ export function StudentHomePage() {
               <Card className="space-y-3 lg:flex lg:h-full lg:flex-col lg:justify-center">
                 <div className="flex items-center justify-between">
                   <p className="font-display text-lg font-bold text-ink-900">
-                    Davomat
+                    {t("Davomat")}
                   </p>
                   <span className="flex items-center gap-1">
                     <span
@@ -189,19 +192,19 @@ export function StudentHomePage() {
           <div className="space-y-2.5">
             <div className="flex items-center justify-between px-1">
               <h2 className="font-display text-lg font-bold text-ink-900">
-                Bugungi darslar
+                {t("Bugungi darslar")}
               </h2>
               <Link
                 href="/portal/schedule"
                 className="flex items-center gap-0.5 text-sm font-bold text-coral-600"
               >
-                Butun jadval
+                {t("Butun jadval")}
                 <CaretRight size={16} weight="bold" />
               </Link>
             </div>
             {todayLessons.length === 0 ? (
               <p className="px-1 text-sm font-semibold text-ink-500">
-                Bugun dars yo&apos;q
+                {t("Bugun dars yo'q")}
               </p>
             ) : (
               <div className="grid gap-2.5">
@@ -239,7 +242,7 @@ export function StudentHomePage() {
           <div className="space-y-2.5">
             <div className="flex items-center gap-2 px-1">
               <h2 className="font-display text-lg font-bold text-ink-900">
-                Guruhlarim
+                {t("Guruhlarim")}
               </h2>
               {profile.groups.length > 0 ? (
                 <Badge tone="grape" size="sm">
@@ -251,10 +254,10 @@ export function StudentHomePage() {
               <Card className="flex flex-col items-center gap-2 py-8 text-center">
                 <Users size={32} weight="bold" className="text-ink-400" />
                 <p className="font-display font-bold text-ink-900">
-                  Faol guruh yo&apos;q
+                  {t("Faol guruh yo'q")}
                 </p>
                 <p className="text-sm font-semibold text-ink-500">
-                  Hozircha hech qanday guruhga yozilmagansiz
+                  {t("Hozircha hech qanday guruhga yozilmagansiz")}
                 </p>
               </Card>
             ) : (

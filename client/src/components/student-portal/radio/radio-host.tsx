@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { useT } from "@/i18n/use-t";
 import { useRadio } from "../lib/radio-store";
 import { categoryOf } from "@/lib/radio-stations";
 
@@ -21,6 +22,12 @@ export function RadioHost() {
   const stationId = useRadio((s) => s.stationId);
   const hydrate = useRadio((s) => s.hydrate);
   const stop = useRadio((s) => s.stop);
+  // A ref copy: a language switch must not re-run the Media Session effect.
+  const t = useT();
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
   useEffect(() => {
     hydrate();
@@ -46,7 +53,7 @@ export function RadioHost() {
 
     session.metadata = new MediaMetadata({
       title: station.name,
-      artist: categoryOf(station.category).label,
+      artist: tRef.current(categoryOf(station.category).label),
       album: "DAF Zentrum radio",
       artwork: [{ src: "/daf-logo.png", sizes: "512x512", type: "image/png" }],
     });

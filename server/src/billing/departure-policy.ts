@@ -28,6 +28,21 @@ export type DeparturePolicy = (typeof DEPARTURE_POLICIES)[number];
 
 export const DEFAULT_DEPARTURE_POLICY: DeparturePolicy = 'STUDENT_CANCELLED';
 
+/**
+ * A student who leaves while the CENTRE has the group paused did not stop the
+ * lessons, so contract 6.2's "more than 40% held keeps the month" does not
+ * apply: the unheld lessons come back (ADR-0119). The other policies are
+ * already at least as generous and stay as chosen.
+ */
+export function policyForPausedGroup(
+  policy: DeparturePolicy,
+  groupPaused: boolean,
+): DeparturePolicy {
+  return groupPaused && policy === 'STUDENT_CANCELLED'
+    ? 'CENTER_INITIATIVE'
+    : policy;
+}
+
 /** The contract carrying rule 6.2 is in force for departures from this Tashkent day. */
 export const CONTRACT_62_START_DAY = '2026-10-01';
 

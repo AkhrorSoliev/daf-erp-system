@@ -19,6 +19,8 @@ import {
   EmptyState,
   LoadingCards,
 } from "../lumio";
+import { msg } from "@/i18n/msg";
+import { useT } from "@/i18n/use-t";
 import { useLernenLevels } from "./queries";
 import { loadState } from "../lib/load-state";
 import { LoadFailed } from "../load-failed";
@@ -40,34 +42,35 @@ const SKILLS = [
   {
     key: "hoeren",
     label: "Hören",
-    sub: "Tinglash",
+    sub: msg("Tinglash"),
     icon: Headphones,
     tone: "sky" as const,
   },
   {
     key: "lesen",
     label: "Lesen",
-    sub: "O'qish",
+    sub: msg("O'qish"),
     icon: Article,
     tone: "teal" as const,
   },
   {
     key: "schreiben",
     label: "Schreiben",
-    sub: "Yozish",
+    sub: msg("Yozish"),
     icon: PencilSimple,
     tone: "amber" as const,
   },
   {
     key: "sprechen",
     label: "Sprechen",
-    sub: "Gapirish",
+    sub: msg("Gapirish"),
     icon: Microphone,
     tone: "coral" as const,
   },
 ];
 
 export function LernenLevelsPage() {
+  const t = useT();
   const query = useLernenLevels();
   const { data } = query;
   const yolBosh = data != null && data.length === 0;
@@ -77,7 +80,7 @@ export function LernenLevelsPage() {
       {/* Sarlavha tab nomi bilan bir xil. «Darslar» Asosiy sahifada markazdagi
           guruh darslarini anglatadi — bu yerda ishlatilsa, ikki joy bitta nom
           bilan chalkashadi. */}
-      <ScreenHeader subtitle="Nemis tili" title="Ta'lim" />
+      <ScreenHeader subtitle={t("Nemis tili")} title={t("Ta'lim")} />
 
       {/*
         Yo'l holatidan MUSTAQIL: `YolTepasi` o'z so'rovini o'zi boshqaradi
@@ -95,8 +98,8 @@ export function LernenLevelsPage() {
       ) : yolBosh ? (
         <EmptyState
           icon={<BookOpen size={28} weight="bold" />}
-          title="O'quv yo'li hali tayyor emas"
-          description="Material tez orada qo'shiladi."
+          title={t("O'quv yo'li hali tayyor emas")}
+          description={t("Material tez orada qo'shiladi.")}
         />
       ) : (
         <FadeIn className="space-y-4">
@@ -104,7 +107,7 @@ export function LernenLevelsPage() {
 
           <section className="space-y-3">
             <h2 className="font-display text-sm font-bold uppercase tracking-wide text-ink-500">
-              Imtihon yo&apos;nalishlari
+              {t("Imtihon yo'nalishlari")}
             </h2>
             <div className="lumio-stagger grid grid-cols-2 gap-3">
               {SKILLS.map((s, i) => (
@@ -122,12 +125,15 @@ export function LernenLevelsPage() {
                     <p className="font-display font-bold text-ink-900">
                       {s.label}
                     </p>
-                    <p className="text-xs font-semibold text-ink-500">
-                      {s.sub}
-                    </p>
+                    {/* In German the subtitle is the label itself («Hören»). */}
+                    {t(s.sub) !== s.label && (
+                      <p className="text-xs font-semibold text-ink-500">
+                        {t(s.sub)}
+                      </p>
+                    )}
                   </div>
                   <Badge tone="neutral" size="sm">
-                    Tez orada
+                    {t("Tez orada")}
                   </Badge>
                 </Card>
               ))}

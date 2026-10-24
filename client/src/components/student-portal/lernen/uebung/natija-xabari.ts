@@ -1,3 +1,5 @@
+import { interpolate } from "@/i18n/translate";
+import type { Translate } from "../liga";
 import { nishonNomi } from "../nishon";
 import type { FrageFormat, PruefErgebnis, SeansNatijasi } from "../types";
 
@@ -10,18 +12,20 @@ import type { FrageFormat, PruefErgebnis, SeansNatijasi } from "../types";
  */
 export function javobPaneliMatni(
   natija: Pick<PruefErgebnis, "isCorrect" | "richtig" | "loesungWort" | "tippfehler">,
+  t: Translate = interpolate,
 ): { sarlavha: string; izoh: string | null; soz: string | null } {
+  // The word is the server's answer: data, never through `t`.
   if (!natija.isCorrect) {
-    return { sarlavha: "Xato", izoh: null, soz: natija.loesungWort ?? natija.richtig };
+    return { sarlavha: t("Noto'g'ri"), izoh: null, soz: natija.loesungWort ?? natija.richtig };
   }
   if (natija.tippfehler) {
     return {
-      sarlavha: "To'g'ri!",
-      izoh: "Imlosiga e'tibor bering:",
+      sarlavha: t("To'g'ri!"),
+      izoh: t("Imlosiga e'tibor bering:"),
       soz: natija.loesungWort ?? natija.richtig,
     };
   }
-  return { sarlavha: "To'g'ri!", izoh: null, soz: natija.loesungWort ?? null };
+  return { sarlavha: t("To'g'ri!"), izoh: null, soz: natija.loesungWort ?? null };
 }
 
 /**
@@ -35,13 +39,25 @@ export function orinXabari(
   oldin: number | null,
   keyin: number | null,
   joy: "Guruhda" | "Markazda" = "Guruhda",
+  t: Translate = interpolate,
 ): string | null {
   if (keyin == null) return null;
-  if (oldin == null) return `${joy} ${keyin}-o'rin`;
+  const guruh = joy === "Guruhda";
+  if (oldin == null) {
+    return guruh
+      ? t("Guruhda {n}-o'rin", { n: keyin })
+      : t("Markazda {n}-o'rin", { n: keyin });
+  }
   if (oldin === keyin) return null;
-  const farq = Math.abs(oldin - keyin);
-  const yonalish = keyin < oldin ? "ko'tarildingiz" : "tushdingiz";
-  return `${joy} ${keyin}-o'rin — ${farq} pog'ona ${yonalish}`;
+  const p = { n: keyin, farq: Math.abs(oldin - keyin) };
+  if (keyin < oldin) {
+    return guruh
+      ? t("Guruhda {n}-o'rin — {farq} pog'ona ko'tarildingiz", p)
+      : t("Markazda {n}-o'rin — {farq} pog'ona ko'tarildingiz", p);
+  }
+  return guruh
+    ? t("Guruhda {n}-o'rin — {farq} pog'ona tushdingiz", p)
+    : t("Markazda {n}-o'rin — {farq} pog'ona tushdingiz", p);
 }
 
 /**
@@ -51,7 +67,10 @@ export function orinXabari(
  * reached it (an unmet goal is noise — the ring is on the path), one line per
  * new badge. The group speaks first; a student with no group gets the centre.
  */
-export function natijaQatorlari(n: SeansNatijasi | null | undefined): {
+export function natijaQatorlari(
+  n: SeansNatijasi | null | undefined,
+  t: Translate = interpolate,
+): {
   ball: number | null;
   serie: number | null;
   orin: string | null;
@@ -60,16 +79,21 @@ export function natijaQatorlari(n: SeansNatijasi | null | undefined): {
 } {
   if (!n) return { ball: null, serie: null, orin: null, maqsad: null, nishonlar: [] };
   const orin = n.orin.gruppe
-    ? orinXabari(n.orin.gruppe.oldin, n.orin.gruppe.hozir)
-    : orinXabari(n.orin.zentrum.oldin, n.orin.zentrum.hozir, "Markazda");
+    ? orinXabari(n.orin.gruppe.oldin, n.orin.gruppe.hozir, "Guruhda", t)
+    : orinXabari(n.orin.zentrum.oldin, n.orin.zentrum.hozir, "Markazda", t);
   return {
     ball: n.punkte > 0 ? n.punkte : null,
     serie: n.serieYangi ? n.serie : null,
     orin,
     maqsad: n.maqsad?.yangiBajarildi
-      ? `Kunlik maqsad bajarildi — ${n.maqsad.hozir} / ${n.maqsad.ball}`
+      ? t("Kunlik maqsad bajarildi — {n} / {total}", {
+          n: n.maqsad.hozir,
+          total: n.maqsad.ball,
+        })
       : null,
-    nishonlar: (n.yangiNishonlar ?? []).map((k) => `Yangi nishon: ${nishonNomi(k)}`),
+    nishonlar: (n.yangiNishonlar ?? []).map((k) =>
+      t("Yangi nishon: {name}", { name: nishonNomi(k, t) }),
+    ),
   };
 }
 
@@ -92,7 +116,11 @@ export function natijaQatorlari(n: SeansNatijasi | null | undefined): {
  * bu yerda, MIJOZDA, qat'iy (server bilmaydigan) matn bilan qilinadi —
  * hech qanday yangi ma'lumot serverdan so'ralmaydi.
  */
-export function xatoYorligi(format: FrageFormat, prompt: string): string {
+export function xatoYorligi(
+  format: FrageFormat,
+  prompt: string,
+  t: Translate = interpolate,
+): string {
   // `AUDIO_BILD` and `BILD_TIPPEN` also have an empty `prompt` on purpose:
   // showing the word would turn them into reading exercises.
   // `SATZ_HOEREN` too: the sentence it plays is the answer.
@@ -103,10 +131,10 @@ export function xatoYorligi(format: FrageFormat, prompt: string): string {
     format === "SATZ_HOEREN" ||
     format === "UHR_HOEREN"
   ) {
-    return "Eshitish savoli";
+    return t("Eshitish savoli");
   }
-  if (format === "BILD_TIPPEN") return "Rasm savoli";
+  if (format === "BILD_TIPPEN") return t("Rasm savoli");
   // The clock is the question; its `prompt` is empty.
-  if (format === "UHR_LESEN" || format === "UHR_TIPPEN") return "Soat savoli";
-  return prompt;
+  if (format === "UHR_LESEN" || format === "UHR_TIPPEN") return t("Soat savoli");
+  return prompt; // data: the server's question, never through `t`
 }

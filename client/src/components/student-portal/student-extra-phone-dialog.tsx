@@ -20,6 +20,16 @@ import {
 import { Button, Field, Input } from "./lumio";
 import { EXTRA_PHONE_QUERY_KEY } from "./lib/queries";
 import type { ExtraPhoneStatus, StudentProfile } from "./lib/types";
+import { useT } from "@/i18n/context";
+import {
+  CODE_LENGTH,
+  CODE_WRONG,
+  PASSWORD_REQUIRED,
+  PHONE_INCOMPLETE,
+  REMOVE_FAILED,
+  SMS_NOT_SENT,
+  portalFormError,
+} from "./lib/form-error";
 
 export interface StudentExtraPhoneDialogProps {
   open: boolean;
@@ -40,6 +50,7 @@ export function StudentExtraPhoneDialog({
   onOpenChange,
   mode,
 }: StudentExtraPhoneDialogProps) {
+  const t = useT();
   const queryClient = useQueryClient();
   const [stage, setStage] = useState<Stage>("form");
   const [phone, setPhone] = useState("");
@@ -61,8 +72,8 @@ export function StudentExtraPhoneDialog({
 
   useEffect(() => {
     if (cooldown <= 0) return;
-    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
   }, [cooldown]);
 
   // A request in flight cannot be walked away from: a late answer would land
@@ -97,11 +108,11 @@ export function StudentExtraPhoneDialog({
 
   async function sendCode() {
     if (phone.length !== 9) {
-      setError("Telefon raqamni to'liq kiriting");
+      setError(PHONE_INCOMPLETE);
       return;
     }
     if (!password) {
-      setError("Joriy parolingizni kiriting");
+      setError(PASSWORD_REQUIRED);
       return;
     }
     setError("");
@@ -115,9 +126,7 @@ export function StudentExtraPhoneDialog({
       setCode("");
       setCooldown(res.data.resendInSec);
     } catch (err) {
-      setError(
-        getErrorMessage(err, "SMS yuborilmadi. Birozdan keyin qayta urinib ko'ring"),
-      );
+      setError(getErrorMessage(err, SMS_NOT_SENT));
     } finally {
       setBusy(false);
     }
@@ -125,7 +134,7 @@ export function StudentExtraPhoneDialog({
 
   async function verify() {
     if (code.length !== 4) {
-      setError("Kod 4 xonali bo'lishi kerak");
+      setError(CODE_LENGTH);
       return;
     }
     setError("");
@@ -136,10 +145,10 @@ export function StudentExtraPhoneDialog({
         { code },
       );
       applyStatus(res.data);
-      toast.success("Zaxira raqam saqlandi");
+      toast.success(t("Zaxira raqam saqlandi"));
       finish();
     } catch (err) {
-      setError(getErrorMessage(err, "Kod noto'g'ri yoki muddati tugagan"));
+      setError(getErrorMessage(err, CODE_WRONG));
       setCode("");
     } finally {
       setBusy(false);
@@ -148,7 +157,7 @@ export function StudentExtraPhoneDialog({
 
   async function remove() {
     if (!password) {
-      setError("Joriy parolingizni kiriting");
+      setError(PASSWORD_REQUIRED);
       return;
     }
     setError("");
@@ -159,10 +168,10 @@ export function StudentExtraPhoneDialog({
         { currentPassword: password },
       );
       applyStatus(res.data);
-      toast.success("Zaxira raqam o'chirildi");
+      toast.success(t("Zaxira raqam o'chirildi"));
       finish();
     } catch (err) {
-      setError(getErrorMessage(err, "O'chirishda xatolik"));
+      setError(getErrorMessage(err, REMOVE_FAILED));
     } finally {
       setBusy(false);
     }
@@ -170,10 +179,14 @@ export function StudentExtraPhoneDialog({
 
   const title =
     mode === "remove"
-      ? "Zaxira raqamni o'chirish"
+      ? t("Zaxira raqamni o'chirish")
       : stage === "code"
-        ? "SMS kod"
-        : "Zaxira raqam";
+        ? t("SMS kod")
+        : t("Zaxira raqam");
+  // The number is drawn bold inside the sentence: split around its placeholder.
+  const [sentBefore, sentAfter = ""] = t("Kod {phone} raqamiga yuborildi.").split(
+    "{phone}",
+  );
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -183,7 +196,7 @@ export function StudentExtraPhoneDialog({
             {title}
           </DialogTitle>
         </DialogHeader>
-        {/* noValidate: the Uzbek messages below speak, not the browser's tooltip. */}
+        {/* noValidate: our own messages below speak, not the browser's tooltip. */}
         <form
           noValidate
           onSubmit={(e) => {
@@ -196,12 +209,13 @@ export function StudentExtraPhoneDialog({
         >
           {mode === "set" && stage === "form" ? (
             <>
-              <Field label="Yangi zaxira raqam">
+              <Field label={t("Yangi zaxira raqam")}>
                 <FpPhoneInput lumio value={phone} onChange={setPhone} />
               </Field>
               <p className="px-1 text-xs font-semibold text-ink-500">
-                Kod shu raqamga boradi. Tasdiqlangach bu raqam bilan ham tizimga
-                kira olasiz.
+                {t(
+                  "Kod shu raqamga boradi. Tasdiqlangach bu raqam bilan ham tizimga kira olasiz.",
+                )}
               </p>
             </>
           ) : null}
@@ -209,13 +223,13 @@ export function StudentExtraPhoneDialog({
           {mode === "set" && stage === "code" ? (
             <>
               <p className="text-sm font-semibold text-ink-500">
-                Kod{" "}
+                {sentBefore}
                 <span className="whitespace-nowrap font-bold text-ink-700">
                   {formatPhone(phone)}
-                </span>{" "}
-                raqamiga yuborildi.
+                </span>
+                {sentAfter}
               </p>
-              <Field label="SMS kod">
+              <Field label={t("SMS kod")}>
                 <FpCodeInput lumio value={code} onChange={setCode} />
               </Field>
               <Button
@@ -225,19 +239,19 @@ export function StudentExtraPhoneDialog({
                 onClick={backToForm}
                 disabled={busy}
               >
-                Raqamni o&apos;zgartirish
+                {t("Raqamni o'zgartirish")}
               </Button>
             </>
           ) : null}
 
           {mode === "remove" ? (
             <p className="px-1 text-xs font-semibold text-ink-500">
-              O&apos;chirilgach bu raqam bilan tizimga kira olmaysiz.
+              {t("O'chirilgach bu raqam bilan tizimga kira olmaysiz.")}
             </p>
           ) : null}
 
           {stage === "form" ? (
-            <Field label="Joriy parolingiz">
+            <Field label={t("Joriy parolingiz")}>
               <Input
                 type="password"
                 value={password}
@@ -249,7 +263,7 @@ export function StudentExtraPhoneDialog({
 
           {error ? (
             <p role="alert" className="px-1 text-sm font-bold text-danger">
-              {error}
+              {portalFormError(t, error)}
             </p>
           ) : null}
 
@@ -262,8 +276,8 @@ export function StudentExtraPhoneDialog({
                 disabled={cooldown > 0 || busy}
               >
                 {cooldown > 0
-                  ? `Qayta yuborish (${cooldown}s)`
-                  : "Kodni qayta yuborish"}
+                  ? t("Qayta yuborish ({n}s)", { n: cooldown })
+                  : t("Kodni qayta yuborish")}
               </Button>
             ) : (
               <Button
@@ -272,7 +286,7 @@ export function StudentExtraPhoneDialog({
                 onClick={() => handleOpenChange(false)}
                 disabled={busy}
               >
-                Bekor qilish
+                {t("Bekor qilish")}
               </Button>
             )}
             <Button
@@ -281,10 +295,10 @@ export function StudentExtraPhoneDialog({
               loading={busy}
             >
               {mode === "remove"
-                ? "O'chirish"
+                ? t("O'chirish")
                 : stage === "code"
-                  ? "Tasdiqlash"
-                  : "Kod yuborish"}
+                  ? t("Tasdiqlash")
+                  : t("Kod yuborish")}
             </Button>
           </DialogFooter>
         </form>

@@ -13,27 +13,29 @@ import {
   LoadingCards,
   ProgressBar,
 } from "../lumio";
+import { useT } from "@/i18n/use-t";
 import { useLernenUnit } from "./queries";
 import { loadState } from "../lib/load-state";
 import { LoadFailed } from "../load-failed";
 import { seansHolatlari, type SeansHolatBelgisi } from "./fortschritt";
 import { sozHisoblagichi, type SozHisoblagichi } from "./soz-hisoblagichi";
 import type { LernenSeans } from "./types";
+import type { Translate } from "./liga";
 
 /**
  * Seans nomi `kind`dan kelib chiqadi — MAVZU emas, A1 xaritasidagi
  * BOSQICH. `null` — eski DiB darsi, uning o'z nomi bor.
  */
-function seansNomi(seans: LernenSeans): string {
+function seansNomi(seans: LernenSeans, t: Translate): string {
   switch (seans.kind) {
     case "SECTION_A":
-      return "Tanishuv";
+      return t("Tanishuv");
     case "SECTION_B":
-      return "Ishlatish";
+      return t("Ishlatish");
     case "BRIDGE":
-      return "O'tish sinovi";
+      return t("O'tish sinovi");
     case "UNIT_TEST":
-      return "Yakuniy sinov";
+      return t("Yakuniy sinov");
     default:
       return seans.titleUz ?? seans.titleDe;
   }
@@ -74,6 +76,7 @@ function SeansRow({
   /** Under a finished section lesson while the section has unmet words. */
   yanaMashq?: string | null;
 }) {
+  const t = useT();
   const qulf = holat === "QULF";
   const izoh =
     holat === "BAJARILGAN" &&
@@ -100,7 +103,7 @@ function SeansRow({
             qulf ? "text-ink-400" : "text-ink-900",
           )}
         >
-          {seansNomi(seans)}
+          {seansNomi(seans, t)}
         </span>
         {izoh ? (
           <span className="block truncate text-xs font-semibold text-coral-600">
@@ -142,6 +145,7 @@ function SozlarQatori({ hisob }: { hisob: SozHisoblagichi }) {
  * seans «navbatdagi» bo'lib ko'rinardi (har bo'limda bittadan).
  */
 export function LernenUnitPage({ unitId }: { unitId: number }) {
+  const t = useT();
   const router = useRouter();
   const query = useLernenUnit(unitId);
   const { data } = query;
@@ -177,7 +181,7 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
 
   return (
     <Screen narrow>
-      <StackHeader title={data?.titleUz ?? "Bo'lim"} backHref="/portal/lernen" />
+      <StackHeader title={data?.titleUz ?? t("Bo'lim")} backHref="/portal/lernen" />
 
       {loadState(query) === "loading" ? (
         <LoadingCards count={3} />
@@ -186,14 +190,14 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
       ) : boshMi ? (
         <EmptyState
           icon={<BookOpen size={28} weight="bold" />}
-          title="Bu unitning mashqlari hali tayyor emas"
-          description="Material tez orada qo'shiladi."
+          title={t("Bu unitning mashqlari hali tayyor emas")}
+          description={t("Material tez orada qo'shiladi.")}
           action={
             <Button
               variant="secondary"
               onClick={() => router.push("/portal/lernen")}
             >
-              Orqaga
+              {t("Orqaga")}
             </Button>
           }
         />
@@ -204,7 +208,7 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
           </p>
 
           {data.sections.map((section) => {
-            const hisob = sozHisoblagichi(section.woerter);
+            const hisob = sozHisoblagichi(section.woerter, t);
             return (
               <section key={section.id} className="space-y-2">
                 <div className="px-1">
@@ -234,7 +238,7 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
           {data.finalTest ? (
             <section className="space-y-2 border-t border-line pt-4">
               <h2 className="px-1 font-display text-base font-extrabold text-ink-900">
-                Yakuniy sinov
+                {t("Yakuniy sinov")}
               </h2>
               <SeansRow
                 seans={data.finalTest}

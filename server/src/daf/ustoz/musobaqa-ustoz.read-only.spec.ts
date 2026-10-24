@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 /**
- * S5 ustoz ko'rinishi hech narsa YOZMAYDI (spec S5 §1, ADR-0118). Bu papkaga
+ * S5 ustoz ko'rinishi hech narsa YOZMAYDI (spec S5 §1, ADR-0124). Bu papkaga
  * yozuvchi chaqiruv kirib qolsa test yiqiladi.
  */
 const YOZUVCHI =

@@ -2,6 +2,7 @@
 
 import { CloudSlash, WifiSlash } from "@phosphor-icons/react";
 import { Button, EmptyState } from "./lumio";
+import { useT } from "@/i18n/context";
 
 /**
  * What a portal screen shows when its query has no data and cannot get any
@@ -21,13 +22,14 @@ export function LoadFailed({
   };
   className?: string;
 }) {
+  const t = useT();
   if (query.isPaused) {
     return (
       <EmptyState
         className={className}
         icon={<WifiSlash weight="bold" />}
-        title="Internet aloqasi yo'q"
-        description="Internetga ulanganingizda ma'lumot o'zi yuklanadi."
+        title={t("Internet aloqasi yo'q")}
+        description={t("Internetga ulanganingizda ma'lumot o'zi yuklanadi.")}
       />
     );
   }
@@ -38,11 +40,11 @@ export function LoadFailed({
     <EmptyState
       className={className}
       icon={<CloudSlash weight="bold" />}
-      title="Ma'lumotni yuklab bo'lmadi"
-      description="Internet aloqasini tekshirib, qayta urinib ko'ring."
+      title={t("Ma'lumotni yuklab bo'lmadi")}
+      description={t("Internet aloqasini tekshirib, qayta urinib ko'ring.")}
       action={
         <Button variant="secondary" size="sm" onClick={() => void query.refetch()}>
-          Qayta urinish
+          {t("Qayta urinish")}
         </Button>
       }
     />

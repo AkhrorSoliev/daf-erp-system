@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle, XCircle } from "@phosphor-icons/react";
+import { useT } from "@/i18n/use-t";
 import { cn } from "@/lib/utils";
 import type { PruefErgebnis } from "../types";
 
@@ -26,6 +27,7 @@ export function RasmTanlash({
   natija,
   kutilmoqda = false,
 }: RasmTanlashProps) {
+  const t = useT();
   return (
     <div className="mx-auto grid w-full max-w-md grid-cols-2 gap-3">
       {options.map((url, i) => {
@@ -51,7 +53,7 @@ export function RasmTanlash({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={url}
-              alt={`${i + 1}-variant`}
+              alt={t("{n}-variant", { n: i + 1 })}
               className="size-full object-cover"
               draggable={false}
             />
@@ -80,11 +82,12 @@ export function RasmTanlash({
 
 /** The single picture a `BILD_TIPPEN` question asks about. */
 export function SavolRasmi({ url }: { url: string }) {
+  const t = useT();
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={url}
-      alt="Savoldagi rasm"
+      alt={t("Savoldagi rasm")}
       className="mx-auto aspect-square w-full max-w-64 rounded-2xl bg-white object-cover"
       draggable={false}
     />

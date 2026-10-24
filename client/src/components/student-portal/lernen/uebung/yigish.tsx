@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useT } from "@/i18n/use-t";
 import { cn } from "@/lib/utils";
 import type { PruefErgebnis } from "../types";
 import { tugmaBosildi, type JonliJuft, type Tanlov, type Tomon } from "./juft-holati";
@@ -142,6 +143,7 @@ interface IchkiProps {
 }
 
 function GapTuzish({ options, tanlangan, onOzgar, natija, kutilmoqda }: IchkiProps) {
+  const t = useT();
   // Bir xil so'z gapda ikki marta uchrashi mumkin ("ich bin ... ich"), shuning
   // uchun pastdagi bo'laklar qaysi INDEKSI ishlatilganini hisoblaymiz — so'zning
   // o'ziga qarab hisoblasak, ikkinchi nusxa tanlanganda birinchisi yashiringan
@@ -175,7 +177,7 @@ function GapTuzish({ options, tanlangan, onOzgar, natija, kutilmoqda }: IchkiPro
         )}
       >
         {tanlangan.length === 0 ? (
-          <span className="text-sm text-ink-400">So'zlarni pastdan tanlang</span>
+          <span className="text-sm text-ink-400">{t("So'zlarni pastdan tanlang")}</span>
         ) : (
           tanlangan.map((soz, j) => (
             <button

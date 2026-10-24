@@ -1,6 +1,7 @@
 "use client";
 
-import { formatNumber } from "@/lib/format-utils";
+import { formatBalance } from "@/lib/format-utils";
+import { useT } from "@/i18n/use-t";
 import { Button } from "./lumio";
 import { ArrowUpRight } from "./lumio/icon";
 
@@ -22,15 +23,21 @@ export function GatewayHandoff({
   onOpen: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   return (
     <div className="inset-well space-y-3 rounded-card bg-sunk p-4 text-center">
       <div className="space-y-1">
         <p className="font-display text-base font-bold text-ink-900">
-          {name} orqali {formatNumber(amount)} so'm
+          {t("{name} orqali {amount}", {
+            name,
+            amount: formatBalance(amount, t("so'm")),
+          })}
         </p>
         <p className="text-sm font-semibold text-ink-500">
-          To'lov {name} ilovasida yoki brauzerda ochiladi. Ochilmagan bo'lsa,
-          tugmani bosing.
+          {t(
+            "To'lov {name} ilovasida yoki brauzerda ochiladi. Ochilmagan bo'lsa, tugmani bosing.",
+            { name },
+          )}
         </p>
       </div>
       <Button
@@ -38,10 +45,10 @@ export function GatewayHandoff({
         iconAfter={<ArrowUpRight size={20} weight="bold" />}
         onClick={onOpen}
       >
-        {name}'ga o'tish
+        {t("{name}'ga o'tish", { name })}
       </Button>
       <Button block variant="ghost" size="sm" onClick={onClose}>
-        Yopish
+        {t("Yopish")}
       </Button>
     </div>
   );

@@ -1,3 +1,4 @@
+import { msg } from "@/i18n/msg";
 import {
   Newspaper,
   MusicNotes,
@@ -64,36 +65,36 @@ export interface RadioStation {
 export const RADIO_CATEGORIES: RadioCategory[] = [
   {
     id: "news",
-    label: "Yangiliklar",
-    blurb: "Gap ko'p, musiqa kam — tilni o'rganish uchun eng foydalisi",
+    label: msg("Yangiliklar"),
+    blurb: msg("Gap ko'p, musiqa kam — tilni o'rganish uchun eng foydalisi"),
     icon: Newspaper,
     tone: "sky",
   },
   {
     id: "pop",
-    label: "Pop va hitlar",
-    blurb: "Kundalik jonli nutq, qo'shiqlar orasida qisqa suhbatlar",
+    label: msg("Pop va hitlar"),
+    blurb: msg("Kundalik jonli nutq, qo'shiqlar orasida qisqa suhbatlar"),
     icon: MusicNotes,
     tone: "coral",
   },
   {
     id: "youth",
-    label: "Yoshlar",
-    blurb: "Zamonaviy so'zlashuv tili va alternativ musiqa",
+    label: msg("Yoshlar"),
+    blurb: msg("Zamonaviy so'zlashuv tili va alternativ musiqa"),
     icon: Waveform,
     tone: "grape",
   },
   {
     id: "culture",
-    label: "Madaniyat",
-    blurb: "Klassika, jazz, adabiyot va uzun ko'rsatuvlar",
+    label: msg("Madaniyat"),
+    blurb: msg("Klassika, jazz, adabiyot va uzun ko'rsatuvlar"),
     icon: PianoKeys,
     tone: "teal",
   },
   {
     id: "oldies",
-    label: "Retro",
-    blurb: "Eski hitlar va schlager — sekin, tushunarli qo'shiqlar",
+    label: msg("Retro"),
+    blurb: msg("Eski hitlar va schlager — sekin, tushunarli qo'shiqlar"),
     icon: VinylRecord,
     tone: "amber",
   },
@@ -110,7 +111,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 128,
     country: "DE",
-    note: "Sof adabiy nemis tili, sekin va tiniq talaffuz. Boshlash uchun eng yaxshisi.",
+    note: msg("Sof adabiy nemis tili, sekin va tiniq talaffuz. Boshlash uchun eng yaxshisi."),
     talk: true,
   },
   {
@@ -122,7 +123,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "AAC",
     bitrate: 96,
     country: "DE",
-    note: "Suhbatlar, adabiyot va uzun reportajlar.",
+    note: msg("Suhbatlar, adabiyot va uzun reportajlar."),
     talk: true,
   },
   {
@@ -134,7 +135,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 128,
     country: "DE",
-    note: "Shimoliy Germaniya yangiliklari, har soatda sharh.",
+    note: msg("Shimoliy Germaniya yangiliklari, har soatda sharh."),
     talk: true,
   },
   {
@@ -146,7 +147,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 128,
     country: "DE",
-    note: "Kun bo'yi yangilik va tahlil, Gessen shtatidan.",
+    note: msg("Kun bo'yi yangilik va tahlil, Gessen shtatidan."),
     talk: true,
   },
   {
@@ -158,7 +159,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "AAC",
     bitrate: 128,
     country: "DE",
-    note: "Qisqa va aniq xabarlar — tinglab tushunishni mashq qilishga qulay.",
+    note: msg("Qisqa va aniq xabarlar — tinglab tushunishni mashq qilishga qulay."),
     talk: true,
   },
   {
@@ -170,7 +171,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 128,
     country: "DE",
-    note: "Suhbat va hujjatli ko'rsatuvlar kanali.",
+    note: msg("Suhbat va hujjatli ko'rsatuvlar kanali."),
     talk: true,
   },
 
@@ -184,7 +185,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 128,
     country: "DE",
-    note: "Germaniyaning eng ko'p tinglanadigan pop kanallaridan biri.",
+    note: msg("Germaniyaning eng ko'p tinglanadigan pop kanallaridan biri."),
   },
   {
     id: "bayern3",
@@ -195,7 +196,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 128,
     country: "DE",
-    note: "Bavariya hitlari va ertalabki jonli suhbatlar.",
+    note: msg("Bavariya hitlari va ertalabki jonli suhbatlar."),
   },
   {
     id: "ndr2",
@@ -206,7 +207,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 128,
     country: "DE",
-    note: "Pop musiqa va muntazam yangilik bloklari.",
+    note: msg("Pop musiqa va muntazam yangilik bloklari."),
   },
   {
     id: "1live",
@@ -217,7 +218,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 128,
     country: "DE",
-    note: "Yoshlar orasida eng mashhuri, tez va zamonaviy nutq.",
+    note: msg("Yoshlar orasida eng mashhuri, tez va zamonaviy nutq."),
   },
   {
     id: "wdr2",
@@ -228,7 +229,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 128,
     country: "DE",
-    note: "Hit musiqa va kun davomida yangiliklar.",
+    note: msg("Hit musiqa va kun davomida yangiliklar."),
   },
   {
     id: "antenne-bayern",
@@ -239,7 +240,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 128,
     country: "DE",
-    note: "Xususiy kanal — reklama va jonli efir ko'p.",
+    note: msg("Xususiy kanal — reklama va jonli efir ko'p."),
   },
   {
     id: "ffh",
@@ -250,7 +251,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 128,
     country: "DE",
-    note: "Frankfurt hitlari, yengil kundalik so'zlashuv.",
+    note: msg("Frankfurt hitlari, yengil kundalik so'zlashuv."),
   },
   {
     id: "oe3",
@@ -261,7 +262,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 192,
     country: "AT",
-    note: "Avstriya kanali — avstriya talaffuzini eshitish uchun.",
+    note: msg("Avstriya kanali — avstriya talaffuzini eshitish uchun."),
   },
 
   // --- Yoshlar / alternativ ------------------------------------------------
@@ -274,7 +275,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "AAC",
     bitrate: 128,
     country: "DE",
-    note: "Talabalar uchun: fan, jamiyat va qisqa tushuntirishlar.",
+    note: msg("Talabalar uchun: fan, jamiyat va qisqa tushuntirishlar."),
     talk: true,
   },
   {
@@ -286,7 +287,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 128,
     country: "AT",
-    note: "Alternativ musiqa, nemis va ingliz tillari aralash.",
+    note: msg("Alternativ musiqa, nemis va ingliz tillari aralash."),
   },
   {
     id: "bytefm",
@@ -297,7 +298,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 192,
     country: "DE",
-    note: "Mustaqil indie kanali, reklamasiz.",
+    note: msg("Mustaqil indie kanali, reklamasiz."),
   },
 
   // --- Klassika / madaniyat ------------------------------------------------
@@ -310,7 +311,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 128,
     country: "DE",
-    note: "Klassik musiqa — dars tayyorlash va o'qish paytiga.",
+    note: msg("Klassik musiqa — dars tayyorlash va o'qish paytiga."),
   },
   {
     id: "swr2",
@@ -321,7 +322,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "AAC",
     bitrate: 128,
     country: "DE",
-    note: "Madaniyat, klassika va uzun hujjatli eshittirishlar.",
+    note: msg("Madaniyat, klassika va uzun hujjatli eshittirishlar."),
     talk: true,
   },
   {
@@ -333,7 +334,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 256,
     country: "DE",
-    note: "Eng yuqori sifat (256 kbps) — klassika va jazz.",
+    note: msg("Eng yuqori sifat (256 kbps) — klassika va jazz."),
   },
   {
     id: "hr2",
@@ -344,7 +345,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 128,
     country: "DE",
-    note: "Adabiyot, teatr va klassik musiqa.",
+    note: msg("Adabiyot, teatr va klassik musiqa."),
     talk: true,
   },
   {
@@ -356,7 +357,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 192,
     country: "DE",
-    note: "Uzluksiz jazz, deyarli gapsiz — diqqatni buzmaydi.",
+    note: msg("Uzluksiz jazz, deyarli gapsiz — diqqatni buzmaydi."),
   },
 
   // --- Retro / schlager ----------------------------------------------------
@@ -369,7 +370,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 128,
     country: "DE",
-    note: "Nemis schlageri va eski hitlar — so'zlari sekin va aniq.",
+    note: msg("Nemis schlageri va eski hitlar — so'zlari sekin va aniq."),
   },
   {
     id: "bayern1",
@@ -380,7 +381,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 128,
     country: "DE",
-    note: "Bavariyaning eng katta kanali, oldies va mintaqaviy xabarlar.",
+    note: msg("Bavariyaning eng katta kanali, oldies va mintaqaviy xabarlar."),
   },
   {
     id: "oldie-antenne",
@@ -391,7 +392,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 128,
     country: "DE",
-    note: "60-90 yillar xalqaro hitlari.",
+    note: msg("60-90 yillar xalqaro hitlari."),
   },
   {
     id: "schlagerparadies",
@@ -402,7 +403,7 @@ export const RADIO_STATIONS: RadioStation[] = [
     codec: "MP3",
     bitrate: 192,
     country: "DE",
-    note: "Faqat nemis schlageri — qo'shiq matnini ilg'ash oson.",
+    note: msg("Faqat nemis schlageri — qo'shiq matnini ilg'ash oson."),
   },
 ];
 

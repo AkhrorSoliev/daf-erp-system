@@ -41,6 +41,7 @@ import { StudentExitReasonsModule } from './student-exit-reasons/student-exit-re
 import { GroupTeacherChangeReasonsModule } from './group-teacher-change-reasons/group-teacher-change-reasons.module';
 import { EnrollmentTransferReasonsModule } from './enrollment-transfer-reasons/enrollment-transfer-reasons.module';
 import { LeadsModule } from './leads/leads.module';
+import { MetaLeadAdsModule } from './meta-lead-ads/meta-lead-ads.module';
 import { CustomFormsModule } from './custom-forms/custom-forms.module';
 import { MockExamsModule } from './mock-exams/mock-exams.module';
 import { TransactionsModule } from './transactions/transactions.module';
@@ -68,6 +69,7 @@ import { SettingsModule } from './settings/settings.module';
 import { CallLogsModule } from './call-logs/call-logs.module';
 import { StatementsModule } from './statements/statements.module';
 import { ContractDocumentsModule } from './contract-documents/contract-documents.module';
+import { LevelTestModule } from './level-test/level-test.module';
 import { JwtAuthGuard, BranchScopeGuard } from './common/guards';
 import { PermissionGuard } from './common/permissions/permission.guard';
 import { PermissionsModule } from './common/permissions/permissions.module';
@@ -130,6 +132,7 @@ import { validateEnv } from './config/env.validation';
     GroupTeacherChangeReasonsModule,
     EnrollmentTransferReasonsModule,
     LeadsModule,
+    MetaLeadAdsModule,
     CustomFormsModule,
     MockExamsModule,
     TransactionsModule,
@@ -157,6 +160,7 @@ import { validateEnv } from './config/env.validation';
     CallLogsModule,
     StatementsModule,
     ContractDocumentsModule,
+    LevelTestModule,
   ],
   providers: [
     {

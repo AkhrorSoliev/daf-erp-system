@@ -1109,7 +1109,7 @@ export class MusobaqaUstozController {
 
 `server/src/daf/daf.module.ts`: importlarga `MusobaqaUstozController` va `MusobaqaUstozService` qo'shing; `controllers: [DafPortalController, DafMediaController, MusobaqaUstozController]`; `providers`ga `MusobaqaUstozService`.
 
-`server/src/common/auth/branch-route-policy.ts`: ilova faolligi bandining `routes` ro'yxatiga `'GET /groups/:id/musobaqa',` qo'shing va shu bandning `reason` matniga gap qo'shing: `" «Musobaqa» tabi (S5, ADR-0118) shu qorovulni qayta ishlatadi."`
+`server/src/common/auth/branch-route-policy.ts`: ilova faolligi bandining `routes` ro'yxatiga `'GET /groups/:id/musobaqa',` qo'shing va shu bandning `reason` matniga gap qo'shing: `" «Musobaqa» tabi (S5, ADR-0124) shu qorovulni qayta ishlatadi."`
 
 `server/src/common/permissions/route-access.snapshot.json`: `"GET /groups/:id/musobaqa": ["Administrator", "Branch Director", "CEO", "Teacher"]` — fayldagi mavjud yozuvlarning formatida (har rol alohida qatorda) va alifbo tartibida joyga qo'ying. Skriptni QAYTA ISHGA TUSHIRMANG (`--force` taqiqlangan; fayl qo'lda to'ldiriladi — S4 `8b9e31ce` shunday qilgan).
 
@@ -1122,7 +1122,7 @@ import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 /**
- * S5 ustoz ko'rinishi hech narsa YOZMAYDI (spec S5 §1, ADR-0118). Bu papkaga
+ * S5 ustoz ko'rinishi hech narsa YOZMAYDI (spec S5 §1, ADR-0124). Bu papkaga
  * yozuvchi chaqiruv kirib qolsa test yiqiladi.
  */
 const YOZUVCHI =
@@ -1890,13 +1890,13 @@ Expected: tsc/eslint toza; vitest (shu jumladan `i18n-coverage.test.ts`) PASS; `
 ### Task 9: Hujjat
 
 **Files:**
-- Create: `docs/adr/0118-daf-ustoz-musobaqa-korinishi-faqat-oqiydi.md`
+- Create: `docs/adr/0124-daf-ustoz-musobaqa-korinishi-faqat-oqiydi.md`
 - Modify: `docs/adr/README.md` (indeks qatori)
 - Modify: `server/CLAUDE.md` (DaF bo'limiga bullet, ingliz tilida)
 - Modify: `client/src/qollanma/yangiliklar.ts` (yangi yozuv tepaga)
 - Modify: `docs/superpowers/specs/2026-10-20-musobaqa-s5-ustoz-korinishi-design.md` (§2: tarix «chiziq» o'rniga chiplar; §5 javobga `bugun`)
 
-- [ ] **Step 1: ADR-0118** — `docs/adr/0117-…md` shaklida (sarlavha, Holat, Kontekst, Qaror, Oqibatlar, Cheklovlar), o'zbekcha. Qaror: (1) ustoz ko'rinishi yangi jadval yozmaydi, hamma narsa S1–S3 hisoblaridan o'qiladi; (2) guruh o'rni joriy haftada S3 `guruhlarYigindisi` bilan bir manbadan, o'tgan haftada `DafGroupWeek`dan; (3) «mashq qilmadi» jami ball bo'yicha; (4) seriya/maqsad faqat joriy haftada va o'quvchi ekranidagi «bosh» qoidasisiz; (5) huquq ilova faolligi bilan bir xil (`groups.view` + `assertCallerMayTouchGroup`); (6) o'qish-faqat qorovuli. Raqamlar — Task 5 natijalari (spec §11). Cheklovlar: 400 kunlik seriya oynasi; markaz so'rovi (≈31 ms) har ochilishda; ustozga Telegram xabar yo'q; hozirgi a'zolar bo'yicha (eski haftada tarkib boshqacha bo'lgan); `guruhlar` sekinlashsa kuzatish (S3 limiti).
+- [ ] **Step 1: ADR-0124** — `docs/adr/0117-…md` shaklida (sarlavha, Holat, Kontekst, Qaror, Oqibatlar, Cheklovlar), o'zbekcha. Qaror: (1) ustoz ko'rinishi yangi jadval yozmaydi, hamma narsa S1–S3 hisoblaridan o'qiladi; (2) guruh o'rni joriy haftada S3 `guruhlarYigindisi` bilan bir manbadan, o'tgan haftada `DafGroupWeek`dan; (3) «mashq qilmadi» jami ball bo'yicha; (4) seriya/maqsad faqat joriy haftada va o'quvchi ekranidagi «bosh» qoidasisiz; (5) huquq ilova faolligi bilan bir xil (`groups.view` + `assertCallerMayTouchGroup`); (6) o'qish-faqat qorovuli. Raqamlar — Task 5 natijalari (spec §11). Cheklovlar: 400 kunlik seriya oynasi; markaz so'rovi (≈31 ms) har ochilishda; ustozga Telegram xabar yo'q; hozirgi a'zolar bo'yicha (eski haftada tarkib boshqacha bo'lgan); `guruhlar` sekinlashsa kuzatish (S3 limiti).
 
 `docs/adr/README.md` ga 0118 qatorini 0117 qatori shaklida qo'shing (mavjud qatorlar formatini ko'ring).
 
@@ -1922,7 +1922,7 @@ Expected: tsc/eslint toza; vitest (shu jumladan `i18n-coverage.test.ts`) PASS; `
 ```bash
 cd client && npx tsc --noEmit -p . && npx vitest run src/qollanma; cd ..
 git add docs server/CLAUDE.md client/src/qollanma/yangiliklar.ts
-git commit -m "docs: ADR-0118 teacher competition view, news entry, server guide
+git commit -m "docs: ADR-0124 teacher competition view, news entry, server guide
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```

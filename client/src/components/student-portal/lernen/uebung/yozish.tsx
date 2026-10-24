@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useT } from "@/i18n/use-t";
 import { cn } from "@/lib/utils";
 import type { PruefErgebnis } from "../types";
 
@@ -38,6 +39,7 @@ const UMLAUT = ["ä", "ö", "ü", "ß"];
  * qoida shu yerda ham amal qiladi.
  */
 export function Yozish({ qiymat, onYoz, natija, onEnter, kutilmoqda = false }: YozishProps) {
+  const t = useT();
   const ref = React.useRef<HTMLInputElement>(null);
 
   // Savol almashganda maydon o'zi fokuslanadi: aks holda o'quvchi har
@@ -63,7 +65,7 @@ export function Yozish({ qiymat, onYoz, natija, onEnter, kutilmoqda = false }: Y
         autoCapitalize="off"
         autoCorrect="off"
         spellCheck={false}
-        placeholder="Javobingiz"
+        placeholder={t("Javobingiz")}
         className={cn(
           "w-full rounded-2xl border-2 bg-tint px-4 py-3.5 text-lg font-semibold text-ink-900 outline-none",
           "border-transparent focus:border-coral-500",
