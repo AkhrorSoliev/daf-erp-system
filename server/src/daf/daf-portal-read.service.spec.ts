@@ -981,3 +981,38 @@ describe('getUnit — bo`limlar va ilgarilash', () => {
     expect(b.completedAt).toBeNull();
   });
 });
+
+describe("DAF_TESTER_IDS — sinovchi butun yo'lni ochiq ko'radi", () => {
+  const darslar = [
+    {
+      id: 1,
+      order: 1,
+      kind: 'SECTION_A',
+      sectionId: 10,
+      tier: null,
+      titleDe: 'A',
+      titleUz: 'A',
+      _count: { lexemes: 0, exercises: 0 },
+    },
+  ];
+  const mit = (ids: string | null) =>
+    new DafPortalReadService(
+      (() => {
+        const p = fakePrisma();
+        p.dafLesson.findMany = jest.fn(async () => darslar);
+        p.dafLessonProgress.findMany = jest.fn(async () => []);
+        return p;
+      })(),
+      { get: () => ids } as any,
+    );
+
+  it("ro'yxatdagi o'quvchiga har dars bajarilgan bo'lib qaytadi", async () => {
+    const unit = await mit('10001, 10003').getUnit(1, 10003);
+    expect(unit.lessons[0].completedAt).not.toBeNull();
+  });
+
+  it("boshqa o'quvchiga tegmaydi", async () => {
+    const unit = await mit('10001, 10003').getUnit(1, 55);
+    expect(unit.lessons[0].completedAt).toBeNull();
+  });
+});
