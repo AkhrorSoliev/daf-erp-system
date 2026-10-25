@@ -23,6 +23,24 @@ describe('parseDatedRates', () => {
     ).toEqual([{ fromMonth: '2026-10', value: 2.5 }]);
   });
 
+  it.each([1.15, 0.07, 0.29, 4.35, 1.1, 8.2, 0.58])(
+    'accepts the 2-decimal percent %s (float error must not reject it)',
+    (value) => {
+      expect(
+        parseDatedRates('fees.qr', [{ fromMonth: '2026-10', value }]),
+      ).toEqual([{ fromMonth: '2026-10', value }]);
+    },
+  );
+
+  it.each([2.555, 0.001])(
+    'still refuses %s (more than 2 decimals)',
+    (value) => {
+      expect(() =>
+        parseDatedRates('fees.qr', [{ fromMonth: '2026-10', value }]),
+      ).toThrow(BadRequestException);
+    },
+  );
+
   it.each([
     [[{ fromMonth: '2026-13', value: 4 }]],
     [[{ fromMonth: '2026-10', value: 101 }]],
@@ -62,6 +80,12 @@ describe('parseDatedTiers', () => {
     { fromAmount: 0, toAmount: 100_000_000, percent: 0.2 },
     { fromAmount: 100_000_000, toAmount: null, percent: 0.1 },
   ];
+  it('accepts a 2-decimal tier percent such as 0.07', () => {
+    const tiers = [{ fromAmount: 0, toAmount: null, percent: 0.07 }];
+    expect(
+      parseDatedTiers('bank.turnoverTiers', [{ fromMonth: '2026-10', tiers }]),
+    ).toEqual([{ fromMonth: '2026-10', tiers }]);
+  });
   it('accepts contiguous tiers ending open', () => {
     expect(
       parseDatedTiers('bank.turnoverTiers', [
@@ -101,6 +125,9 @@ describe('tierPercentFor', () => {
     expect(tierPercentFor(tiers, 0)).toBe(0.2);
     expect(tierPercentFor(tiers, 99)).toBe(0.2);
     expect(tierPercentFor(tiers, 100)).toBe(0.1);
+  });
+  it('throws a clear error for an empty tier list', () => {
+    expect(() => tierPercentFor([], 10)).toThrow("tiers bo'sh");
   });
   it('tiersForMonth follows the dated list', () => {
     expect(

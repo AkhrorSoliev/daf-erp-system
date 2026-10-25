@@ -46,7 +46,7 @@ function isPercent(v: unknown): v is number {
     Number.isFinite(v) &&
     v >= 0 &&
     v <= 100 &&
-    Math.round(v * 100) === v * 100
+    Number(v.toFixed(2)) === v
   );
 }
 
@@ -146,6 +146,7 @@ export function tiersForMonth(
 }
 
 export function tierPercentFor(tiers: BankTier[], amount: number): number {
+  if (tiers.length === 0) throw new Error("tierPercentFor: tiers bo'sh");
   const hit = tiers.find(
     (t) =>
       amount >= t.fromAmount && (t.toAmount === null || amount < t.toAmount),

@@ -502,7 +502,9 @@ export const SETTING_DEFINITIONS: {
     defaultValue: 30,
     parse: (raw) => parseIntInRange('chat.weekMinutesRadio', raw, 0, 1000),
     companyLevelOnly: true,
-  }, // Soliq va komissiyalar (spec 2026-10-25): oydan kuchga kiradigan stavkalar,
+  },
+
+  // Soliq va komissiyalar (spec 2026-10-25): oydan kuchga kiradigan stavkalar,
   // `TaxCostsService` kompaniya darajasida o'qiydi. Bo'sh = kiritilmagan.
   'fees.app.payme': {
     key: 'fees.app.payme',
