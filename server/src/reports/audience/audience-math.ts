@@ -5,6 +5,8 @@ import type {
   AudienceOverview,
   AudienceStat,
   AudienceStudent,
+  DepartureAges,
+  DepartureBandRow,
 } from './audience.types';
 
 /** A share or an average is printed only when at least this many students back it. */
@@ -83,6 +85,7 @@ function cutOf(
   students: AudienceStudent[],
   today: string,
   pick: (s: AudienceStudent) => { key: string; name: string },
+  order: 'biggest' | 'name' = 'biggest',
 ): AudienceCutRow[] {
   const groups = new Map<string, { name: string; rows: AudienceStudent[] }>();
   for (const s of students) {
@@ -95,16 +98,44 @@ function cutOf(
     .map(([key, g]) => ({ key, name: g.name, ...statOf(g.rows, today) }))
     .sort(
       (a, b) =>
-        b.total - a.total ||
+        // In name order the row for «not given» goes last, whatever its name sorts as.
+        (order === 'name'
+          ? Number(a.key === 'none') - Number(b.key === 'none')
+          : b.total - a.total) ||
         a.name.localeCompare(b.name, 'uz', { numeric: true }),
     );
+}
+
+/**
+ * The leavers table: per age band the people studying now, the leavers of the
+ * last 12 months, and the leaving share. A leaver is placed by the age he had on
+ * the day he left; the people who studied are placed by their age today.
+ */
+export function departureBandsOf(
+  students: AudienceStudent[],
+  departed: DepartureAges,
+  today: string,
+): DepartureBandRow[] {
+  const active = AGE_BANDS.map(() => 0);
+  for (const a of agesOf(students, today)) active[bandIndex(a)] += 1;
+  const left = AGE_BANDS.map(() => 0);
+  for (const a of departed.ages) left[bandIndex(a)] += 1;
+  return AGE_BANDS.map((b, i) => ({
+    key: b.key,
+    label: b.label,
+    active: active[i],
+    departed: left[i],
+    share: pctOf(left[i], active[i] + left[i]),
+  }));
 }
 
 export function buildOverview(
   students: AudienceStudent[],
   today: string,
+  extra: { systemTotal: number; departed: DepartureAges },
 ): AudienceOverview {
   return {
+    systemTotal: extra.systemTotal,
     summary: statOf(students, today),
     bands: bandsOf(students, today),
     branches: cutOf(students, today, (s) => ({
@@ -115,5 +146,16 @@ export function buildOverview(
       key: s.courseId ?? 'none',
       name: s.courseName ?? 'Kurs belgilanmagan',
     })),
+    levels: cutOf(
+      students,
+      today,
+      (s) => ({
+        key: s.level ?? 'none',
+        name: s.level ?? 'Daraja belgilanmagan',
+      }),
+      'name',
+    ),
+    departures: departureBandsOf(students, extra.departed, today),
+    departuresAgeUnknown: extra.departed.ageUnknown,
   };
 }
