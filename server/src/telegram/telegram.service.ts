@@ -45,6 +45,9 @@ import {
   createLevelTestScene,
 } from './scenes/level-test.scene';
 import { levelTestTimeoutUpdate } from './scenes/level-test-timer';
+import { createProfileFillScene } from './scenes/profile-fill.scene';
+import { handleProfileTap } from './profile-request/profile-request.handlers';
+import { parseProfileCallback } from './profile-request/profile-request-text';
 import {
   ACCOUNT_LINK_ACTION,
   ACCOUNT_LINK_BUTTON,
@@ -331,6 +334,11 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
     const statementScene = createStatementScene(this.prisma, this.statements);
 
+    const profileFillScene = createProfileFillScene({
+      prisma: this.prisma,
+      entityHistory: this.entityHistoryService,
+    });
+
     const staffLinkScene = createStaffLinkScene(
       this.prisma,
       this.entityHistoryService,
@@ -385,6 +393,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       staffLinkScene,
       accountLinkScene,
       levelTestScene,
+      profileFillScene,
     ]);
     // `useBeforeScenes`: composed per update, so a registration made after
     // boot (another module's onApplicationBootstrap) takes effect.
@@ -620,6 +629,21 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     // /xodim — `?start=xodim` havolasining buyruq ko'rinishi (ADR-0045)
     this.bot.command(STAFF_LINK_PAYLOAD, async (ctx) => {
       await ctx.scene.enter(SCENES.STAFF_LINK);
+    });
+
+    // Jins / tug'ilgan sana so'rovi tugmalari (kampaniya skripti yuboradi)
+    this.bot.action(/^pf:/, async (ctx) => {
+      const data = (ctx.callbackQuery as { data?: string }).data ?? '';
+      const action = parseProfileCallback(data);
+      if (!action) {
+        await ctx.answerCbQuery();
+        return;
+      }
+      await handleProfileTap(
+        { prisma: this.prisma, entityHistory: this.entityHistoryService },
+        ctx,
+        action,
+      );
     });
 
     // Parolni tiklash — sahnaga kirish

@@ -7,6 +7,7 @@ export const SCENES = {
   STAFF_LINK: 'staff-link',
   ACCOUNT_LINK: 'account-link',
   LEVEL_TEST: 'level-test',
+  PROFILE_FILL: 'profile-fill',
 } as const;
 
 export const TEACHER_DEEP_LINK_PREFIX = 'teacher_';

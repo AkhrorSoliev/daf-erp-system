@@ -93,7 +93,7 @@ export function buildRequestKeyboard(
           female: profileCb.gender(target, 'FEMALE'),
           date: profileCb.date(target),
         };
-  const rows = [];
+  const rows: ReturnType<typeof Markup.button.callback>[][] = [];
   if (missing.includes('gender')) {
     rows.push([
       Markup.button.callback("👦 O'g'il", cb.male),
