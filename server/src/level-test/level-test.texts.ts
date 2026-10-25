@@ -73,6 +73,3 @@ export const LEVEL_TEST_STOP_BUTTON = '🏁 Natijani bilish';
 export const LEVEL_TEST_STOP_CONFIRM = "Testni shu yerda to'xtatamizmi?";
 export const LEVEL_TEST_STOP_YES = "Ha, natijani ko'rsat";
 export const LEVEL_TEST_STOP_NO = 'Yo‘q, davom etaman';
-
-export const LEVEL_TEST_STUDENT_DONE =
-  "✅ Natijangiz saqlandi. U o'qituvchingizga va administratorga ko'rinadi — darajangizni ular bilan muhokama qilishingiz mumkin.";

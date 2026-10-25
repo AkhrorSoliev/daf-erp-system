@@ -53,7 +53,6 @@ import {
   LEVEL_TEST_STOP_CONFIRM,
   LEVEL_TEST_STOP_NO,
   LEVEL_TEST_STOP_YES,
-  LEVEL_TEST_STUDENT_DONE,
   LEVEL_TEST_TIMEOUT_NOTE,
   levelTestResultText,
 } from '../../level-test/level-test.texts';
@@ -392,7 +391,6 @@ export function createLevelTestScene(
           logger.error('Tarixga daraja natijasi yozilmadi', error as Error);
         }
       }
-      await ctx.reply(LEVEL_TEST_STUDENT_DONE);
       await ctx.scene.leave();
       return;
     }
