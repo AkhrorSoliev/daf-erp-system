@@ -43,6 +43,18 @@ describe('TaxSettingsService', () => {
     );
   });
 
+  it('invalidates the profit cache after the write, not before', async () => {
+    await service.update(
+      1,
+      { values: { 'fees.qr': [{ fromMonth: '2026-10', value: 1 }] } },
+      7,
+    );
+    expect(redis.scanStream).toHaveBeenCalledTimes(1);
+    expect(settings.setMany.mock.invocationCallOrder[0]).toBeLessThan(
+      redis.scanStream.mock.invocationCallOrder[0],
+    );
+  });
+
   it('refuses a foreign key and an empty patch', async () => {
     await expect(
       service.update(1, { values: { 'payment.defaultModel': 'MONTHLY' } }, 7),
