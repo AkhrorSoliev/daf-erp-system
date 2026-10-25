@@ -411,7 +411,6 @@ export const STRICT_FILES: string[] = [
   "components/teachers/teacher-timeline-tab.tsx",
   "components/shared/salary-monthly-panel.tsx",
   "components/shared/salary-due-card.tsx",
-  "components/payments/possible-deductions-info.tsx",
   "components/payments/overview/block-state.tsx",
   "components/payments/overview/overview-page.tsx",
   "components/payments/overview/month-charges-card.tsx",

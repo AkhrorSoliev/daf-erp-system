@@ -13,7 +13,6 @@ import {
   type SalaryGroupsSummary,
 } from "@/components/shared/teacher-groups-rate-list";
 import { SalaryMonthlyPanel } from "@/components/shared/salary-monthly-panel";
-import { PossibleDeductionsInfo } from "@/components/payments/possible-deductions-info";
 import type { EmployeeUser } from "@/hooks/use-edit-employee";
 import type { GroupData } from "@/hooks/use-edit-group";
 import { useCan } from "@/hooks/use-permissions";
@@ -244,8 +243,6 @@ export function EmployeeProfileTabs({
               ) : salarySummary ? (
                 <TeacherGroupsRateList summary={salarySummary} />
               ) : null}
-
-              <PossibleDeductionsInfo variant="teacher" />
             </div>
           )}
         </TabsContent>

@@ -19,7 +19,6 @@ import {
   type SalaryGroupsSummary,
 } from "@/components/shared/teacher-groups-rate-list";
 import { SalaryMonthlyPanel } from "@/components/shared/salary-monthly-panel";
-import { PossibleDeductionsInfo } from "@/components/payments/possible-deductions-info";
 import { useAuth, isCeoUser } from "@/hooks/use-auth";
 import { MonthStepper } from "@/components/shared/month-stepper";
 import { currentMonthKey } from "@/components/payments/salary-utils";
@@ -228,8 +227,6 @@ export function TeacherProfileTabs({
               ) : salarySummary ? (
                 <TeacherGroupsRateList summary={salarySummary} />
               ) : null}
-
-              <PossibleDeductionsInfo variant="teacher" />
             </div>
           )}
         </TabsContent>
