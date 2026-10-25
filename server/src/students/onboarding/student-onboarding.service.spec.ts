@@ -95,7 +95,11 @@ function build(
   const taken = { cards: new Set<string>(), accounts: new Set<string>() };
   const redis = makeRedis();
   const studentUpdateMany = jest.fn(async ({ where, data }: any) => {
-    if (where.phone !== row.phone) return { count: 0 };
+    // Profile fill (by id, field must still be empty) vs phone claim (by phone).
+    if (where.id !== undefined) {
+      const field = Object.keys(data)[0];
+      if ((row as any)[field] != null) return { count: 0 };
+    } else if (where.phone !== row.phone) return { count: 0 };
     Object.assign(row, data);
     return { count: 1 };
   });

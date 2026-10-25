@@ -134,3 +134,15 @@ kiradi; eski raqam kartaning tarixida qoladi. Parolini bilmaydigan o'quvchi
 almashtiradi.
 
 **Endi taqiqlangan:** yuqoridagi taqiqlar.
+
+## Qo'shimcha (2026-10-25): Telegram orqali so'rash
+
+Jinsi yoki tug'ilgan sanasi bo'sh faol o'quvchilarga bot bir martalik xabar
+yuboradi (`scripts/send-profile-request.ts`): bitta xabar va bitta tugma, so'ng
+tugmali savol-javob (jins, yil/oy/kun, tekshirish, saqlash). Yozish ilova bilan bir xil funksiyadan o'tadi
+(`students/shared/fill-student-profile.ts`): bo'sh bo'lmagan maydon
+qayta yozilmaydi, tarix yoziladi. Ilova eshigi o'zgarmadi — Telegram qo'shimcha
+yo'l. Tugma ichidagi o'quvchi raqamiga ishonilmaydi: karta shu chatga
+bog'langan bo'lsagina yoziladi.
+
+Jins markaz auditoriya hisobotlarida, tug'ilgan sana esa shartnoma va ishtirok guvohnomasida ishlatiladi.
