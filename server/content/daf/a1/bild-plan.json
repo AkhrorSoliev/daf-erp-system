@@ -596,7 +596,7 @@
     "tippen": false
   },
   "u06-s1-fotografieren": {
-    "szene": "a person holding up a camera taking a photo of a mountain landscape",
+    "szene": "a smiling person seen from the front holding a camera up to their face to take a photo, upper body visible",
     "tippen": false
   },
   "u06-s1-malen": {
@@ -620,7 +620,7 @@
     "tippen": false
   },
   "u06-s1-wuerfeln": {
-    "szene": "two white dice with black dots rolling on a wooden table",
+    "szene": "two large white six-sided dice with clearly visible black dots lying on a wooden table, close-up, centered",
     "tippen": false
   },
   "u06-s2-fussball": {
@@ -640,11 +640,11 @@
     "tippen": true
   },
   "u06-s2-karate": {
-    "szene": "a person in a white karate uniform with a black belt doing a high kick",
+    "szene": "a person in a plain white karate uniform with a black belt doing a high kick, whole body visible, nothing else in the picture",
     "tippen": true
   },
   "u06-s2-marathon": {
-    "szene": "a large crowd of runners in colorful shirts running together along a street",
+    "szene": "a large crowd of runners in colorful shirts running together along a street, plain shirts, no street signs, no numbers",
     "tippen": true
   },
   "u06-s2-ski": {
@@ -652,15 +652,15 @@
     "tippen": true
   },
   "u06-s2-schwimmen": {
-    "szene": "a swimmer in blue water doing the front crawl with splashing arms",
+    "szene": "a swimmer with a swim cap and goggles swimming the front crawl in a blue pool, side view, whole body visible, nothing else in the picture",
     "tippen": false
   },
   "u06-s2-laufen": {
-    "szene": "a person in running shoes running fast on a red running track",
+    "szene": "a full-body runner in a blue t-shirt and shorts running to the right on a red running track, whole body visible",
     "tippen": false
   },
   "u06-s2-klettern": {
-    "szene": "a climber in a helmet climbing a steep rock wall on a rope",
+    "szene": "a climber in an orange jacket and helmet shown large in the frame, climbing a rock wall on a rope, whole body visible",
     "tippen": false
   },
   "u06-s2-rad-fahren": {
@@ -708,11 +708,11 @@
     "tippen": true
   },
   "u06-s3-schwimmbad": {
-    "szene": "an indoor swimming pool with blue water, lane ropes and a metal ladder",
+    "szene": "an indoor swimming pool seen from the side with blue water, lane ropes and a metal ladder, no clouds, no steam",
     "tippen": true
   },
   "u06-s3-ticket": {
-    "szene": "a single orange paper entrance ticket with a zigzag torn edge",
+    "szene": "a single orange paper admission ticket with a zigzag perforated edge and one big yellow star in the middle, a completely blank ticket without any writing",
     "tippen": true
   },
   "u06-s3-plakat": {
@@ -772,7 +772,7 @@
     "tippen": true
   },
   "u06-s5-einladung": {
-    "szene": "an invitation card with a ribbon and balloons drawn on the front, standing open on a table",
+    "szene": "a cream envelope with a red heart-shaped wax seal and a decorated greeting card with two balloons drawn on it sticking halfway out of the envelope",
     "tippen": true
   },
   "u06-s5-party": {
