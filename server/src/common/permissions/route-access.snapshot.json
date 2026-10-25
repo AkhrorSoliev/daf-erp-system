@@ -2076,6 +2076,7 @@
     "CEO"
   ],
   "POST /public/forms/:slug/submit": "PUBLIC",
+  "POST /public/website-leads": "PUBLIC",
   "POST /refunds/:id/cancel": [
     "Branch Director",
     "CEO"
