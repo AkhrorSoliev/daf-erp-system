@@ -15,6 +15,7 @@ import { NotificationsGateway } from '../../notifications/notifications.gateway'
 import { ChatAccessService } from '../access/chat-access.service';
 import {
   I_BLOCKED_MESSAGE,
+  OPEN_PER_MINUTE,
   RATE_MESSAGE,
   RATE_PER_MINUTE,
   RESTRICTED_MESSAGE,
@@ -48,6 +49,8 @@ export interface RateLimiter {
 }
 export const CHAT_RATE_LIMITER = Symbol('CHAT_RATE_LIMITER');
 
+// Deliberately fail-closed: if Redis is down `hit` throws and sends fail with a 500,
+// rather than letting messages through unmetered.
 export function redisRateLimiter(redis: RedisService): RateLimiter {
   return { hit: (key, ttl) => hit(redis, key, ttl) };
 }
@@ -136,7 +139,33 @@ export class ChatConversationsService {
 
     // A new conversation needs the same rights as a message.
     await this.access.assertCanWrite(me, companyId);
-    await this.assertMayReach(me, peerId);
+    await this.countAgainstLimit(`chat:open:${me}`, OPEN_PER_MINUTE);
+
+    // A raw id must not reveal a student who hid from search, nor one who
+    // restricts writing: both answer exactly like a missing student. Only an
+    // exact @username (the student's own handle) or a shared group opens the door.
+    const byId = dto.studentId != null;
+    if (byId) {
+      const { whoCanFind } = await this.people.privacyOf(peerId);
+      if (
+        whoCanFind !== 'EVERYONE' &&
+        !(await this.people.sharesGroup(me, peerId))
+      ) {
+        throw new NotFoundException("O'quvchi topilmadi");
+      }
+    }
+    try {
+      await this.assertMayReach(me, peerId);
+    } catch (err) {
+      if (
+        byId &&
+        err instanceof ForbiddenException &&
+        err.message === RESTRICTED_MESSAGE
+      ) {
+        throw new NotFoundException("O'quvchi topilmadi");
+      }
+      throw err;
+    }
     const created = await this.prisma.chatConversation.upsert({
       where: {
         studentLowId_studentHighId: { studentLowId: low, studentHighId: high },
@@ -145,6 +174,15 @@ export class ChatConversationsService {
       update: {},
     });
     return { id: created.id };
+  }
+
+  /** One counter per student and minute; past `limit` the answer is 429. */
+  private async countAgainstLimit(prefix: string, limit: number) {
+    const minute = Math.floor(Date.now() / 60_000);
+    const n = await this.limiter.hit(`${prefix}:${minute}`, 120);
+    if (n > limit) {
+      throw new HttpException(RATE_MESSAGE, HttpStatus.TOO_MANY_REQUESTS);
+    }
   }
 
   /** Block first (never revealed as a block), then the peer's "who can write" setting. */
@@ -168,53 +206,69 @@ export class ChatConversationsService {
    */
   async list(me: number): Promise<ConversationView[]> {
     const rows = await this.prisma.chatConversation.findMany({
-      where: { OR: [{ studentLowId: me }, { studentHighId: me }] },
+      // A conversation with no message yet stays invisible to its other side.
+      where: {
+        OR: [{ studentLowId: me }, { studentHighId: me }],
+        lastMessageAt: { not: null },
+      },
       orderBy: [
         { lastMessageAt: { sort: 'desc', nulls: 'last' } },
         { id: 'asc' },
       ],
       take: 50,
     });
-    return Promise.all(
-      rows.map(async (c) => {
-        const peerId = c.studentLowId === me ? c.studentHighId : c.studentLowId;
-        const [peer, last, read] = await Promise.all([
-          this.people.peerSummary(me, peerId),
-          this.prisma.chatMessage.findFirst({
-            where: { conversationId: c.id, deletedAt: null },
-            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-          }),
-          this.prisma.chatReadState.findUnique({
-            where: {
-              conversationId_studentId: {
-                conversationId: c.id,
-                studentId: me,
+    const items = await Promise.all(
+      rows.map(async (c): Promise<ConversationView | null> => {
+        try {
+          const peerId =
+            c.studentLowId === me ? c.studentHighId : c.studentLowId;
+          const [peer, last, read] = await Promise.all([
+            this.people.peerSummary(me, peerId),
+            this.prisma.chatMessage.findFirst({
+              where: { conversationId: c.id, deletedAt: null },
+              orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+            }),
+            this.prisma.chatReadState.findUnique({
+              where: {
+                conversationId_studentId: {
+                  conversationId: c.id,
+                  studentId: me,
+                },
               },
+            }),
+          ]);
+          const unread = await this.prisma.chatMessage.count({
+            where: {
+              conversationId: c.id,
+              senderId: { not: me },
+              deletedAt: null,
+              ...(read && { createdAt: { gt: read.lastReadAt } }),
             },
-          }),
-        ]);
-        const unread = await this.prisma.chatMessage.count({
-          where: {
-            conversationId: c.id,
-            senderId: { not: me },
-            deletedAt: null,
-            ...(read && { createdAt: { gt: read.lastReadAt } }),
-          },
-        });
-        return {
-          id: c.id,
-          peer,
-          lastMessage: last
-            ? {
-                preview: last.text ?? PREVIEW[last.kind] ?? '',
-                at: last.createdAt.toISOString(),
-                mine: last.senderId === me,
-              }
-            : null,
-          unread,
-        };
+          });
+          return {
+            id: c.id,
+            peer,
+            lastMessage: last
+              ? {
+                  preview: last.text ?? PREVIEW[last.kind] ?? '',
+                  at: last.createdAt.toISOString(),
+                  mine: last.senderId === me,
+                }
+              : null,
+            unread,
+          };
+        } catch (err) {
+          // One unreadable conversation (e.g. a hard-deleted peer) must not blank the inbox.
+          this.logger.warn(
+            `Chat list skipped conversation ${c.id}: ${
+              err instanceof Error ? err.message : 'unknown error'
+            }`,
+          );
+          return null;
+        }
       }),
     );
+    return items.filter((i): i is ConversationView => i !== null);
   }
 
   async messages(
@@ -247,11 +301,7 @@ export class ChatConversationsService {
     const { peerId } = await this.mine(me, conversationId);
     await this.assertMayReach(me, peerId);
 
-    const minute = Math.floor(Date.now() / 60_000);
-    const n = await this.limiter.hit(`chat:rate:${me}:${minute}`, 120);
-    if (n > RATE_PER_MINUTE) {
-      throw new HttpException(RATE_MESSAGE, HttpStatus.TOO_MANY_REQUESTS);
-    }
+    await this.countAgainstLimit(`chat:rate:${me}`, RATE_PER_MINUTE);
 
     const row = await this.prisma.$transaction(async (tx) => {
       const m = await tx.chatMessage.create({

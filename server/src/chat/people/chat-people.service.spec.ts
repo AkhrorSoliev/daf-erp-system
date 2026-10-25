@@ -102,15 +102,27 @@ describe('ChatPeopleService.search', () => {
     expect(await service.search(1, 1, '@me_01')).toEqual([]);
   });
 
-  it('the @username path drops a student who blocked the viewer', async () => {
+  it('the @username path still returns a student who blocked the viewer', async () => {
     const { service, prisma } = make();
     prisma.student.findFirst.mockResolvedValue(row(9, { username: 'x_01' }));
     prisma.chatBlock.findMany.mockResolvedValue([
       { blockerId: 9, blockedId: 1 },
     ]);
-    expect(await service.search(1, 1, '@x_01')).toEqual([]);
+    const out = await service.search(1, 1, '@x_01');
+    expect(out.map((p) => p.id)).toEqual([9]);
+    expect(prisma.chatBlock.findMany).not.toHaveBeenCalled();
+  });
+
+  it('the name path hides a student who blocked the viewer', async () => {
+    const { service, prisma } = make();
+    prisma.student.findMany.mockResolvedValue([row(9), row(8)]);
+    prisma.chatBlock.findMany.mockResolvedValue([
+      { blockerId: 9, blockedId: 1 },
+    ]);
+    const out = await service.search(1, 1, 'ab');
+    expect(out.map((p) => p.id)).toEqual([8]);
     expect(prisma.chatBlock.findMany.mock.calls[0][0].where).toEqual({
-      blockerId: { in: [9] },
+      blockerId: { in: [9, 8] },
       blockedId: 1,
     });
   });
@@ -159,9 +171,9 @@ describe('ChatPeopleService.peerSummary', () => {
   it('throws when the peer row is missing', async () => {
     const { service, prisma } = make();
     prisma.student.findFirst.mockResolvedValue(null);
-    await expect(service.peerSummary(1, 2)).rejects.toThrow(
-      BadRequestException,
-    );
+    const err = await service.peerSummary(1, 2).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(BadRequestException);
+    expect((err as BadRequestException).message).toBe("O'quvchi topilmadi");
   });
 });
 

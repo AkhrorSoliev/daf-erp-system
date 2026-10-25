@@ -3,6 +3,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { RedisService } from '../redis/redis.service';
 import { SettingsModule } from '../settings/settings.module';
 import { ChatAccessService } from './access/chat-access.service';
+import { ChatEnabledGuard } from './chat-enabled.guard';
 import { ChatController } from './chat.controller';
 import {
   CHAT_RATE_LIMITER,
@@ -16,6 +17,7 @@ import { ChatUsernameService } from './username/chat-username.service';
   imports: [SettingsModule, NotificationsModule],
   controllers: [ChatController],
   providers: [
+    ChatEnabledGuard,
     ChatAccessService,
     ChatPeopleService,
     ChatUsernameService,

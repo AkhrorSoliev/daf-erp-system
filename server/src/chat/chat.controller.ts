@@ -15,6 +15,7 @@ import { CurrentUser } from '../common/decorators';
 import { StudentCardGuard } from '../common/guards';
 import { StudentOnly } from '../common/permissions/access.decorators';
 import { ChatAccessService } from './access/chat-access.service';
+import { ChatEnabledGuard, ChatGateOpen } from './chat-enabled.guard';
 import {
   BlockDto,
   MessagesQueryDto,
@@ -33,7 +34,7 @@ import { ChatUsernameService } from './username/chat-username.service';
  * card: the student id comes from the token, never from the request.
  */
 @Controller('chat')
-@UseGuards(StudentCardGuard)
+@UseGuards(StudentCardGuard, ChatEnabledGuard)
 @StudentOnly()
 export class ChatController {
   constructor(
@@ -133,6 +134,7 @@ export class ChatController {
   }
 
   @Get('access')
+  @ChatGateOpen()
   getAccess(
     @CurrentUser('studentId') studentId: number,
     @CurrentUser('companyId') companyId: number,

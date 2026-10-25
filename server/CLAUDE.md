@@ -1490,11 +1490,12 @@ A task is not a comment (ADR-0074; spec `docs/superpowers/specs/2026-10-07-topsh
 
 ### Student chat (`src/chat/`, spec 2026-10-25)
 
-Student-to-student private chat, behind the company switch `chat.enabled` (default off). Plan A (this layer) ships text only.
+Student-to-student private chat, behind the company switch `chat.enabled` (default off): while it is off every chat route except `GET /chat/access` (which reports `enabled`) is refused with 403 CHAT_OFF_MESSAGE by `ChatEnabledGuard`. Plan A (this layer) ships text only.
 
 - **One access rule.** `ChatAccessService.forStudent` is the only place that decides whether a student may write: `balance >= 0`, gender and birth date set, the card's phone proved (`isPhoneVerified` — NOT `missingOnboardingSteps`, which only asks for the phone while `STUDENT_PHONE_VERIFICATION_ENABLED` is on), not banned, and the last 7 Tashkent days (today + 6) hold at least `chat.weekMinutesActive` active and `chat.weekMinutesRadio` radio minutes in `StudentAppSession`. The pure rules and the Uzbek texts are `chat/access/chat-access.rules.ts`; clients print the texts the API returns and compute nothing.
 - **Reading is never closed.** A locked student reads everything and receives messages; only writing (and opening a new conversation) is refused.
-- **Send checks run in this order:** access → membership (404 for a conversation that is not yours) → block → the peer's `whoCanWrite` → 30/minute rate limit. A block and a privacy refusal share one message so a block is never revealed.
+- **Send checks run in this order:** access → membership (404 for a conversation that is not yours) → block → the peer's `whoCanWrite` → 30/minute rate limit. The peer's block and the peer's privacy refusal share one message (RESTRICTED_MESSAGE) so being blocked is never revealed; a block the caller placed gets its own message.
+- Opening a conversation by raw student id requires the peer's `whoCanFind` to allow it or a shared group; an exact `@username` always works. New conversations are limited to 10 per minute.
 - **Another student sees a name, `@username` and (if allowed) a photo — never a phone, a debt or a balance.** `PeerSummary` is the only shape that leaves.
 - **Live delivery** goes through `NotificationsGateway.sendToUser(student.userId, …)` as `chat.message` / `chat.read`; the existing stream carries them.
 - Media, reports, the CEO's ban, Telegram and the bell arrive with Plan B; clients with Plan C.

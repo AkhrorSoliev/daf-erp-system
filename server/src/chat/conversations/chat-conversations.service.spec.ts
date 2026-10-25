@@ -56,9 +56,11 @@ function make(
     isBlockedEitherWay: jest
       .fn()
       .mockResolvedValue(o.blocked ?? { iBlocked: false, blockedMe: false }),
-    privacyOf: jest
-      .fn()
-      .mockResolvedValue(o.privacy ?? { whoCanWrite: 'EVERYONE' }),
+    privacyOf: jest.fn().mockResolvedValue({
+      whoCanWrite: 'EVERYONE',
+      whoCanFind: 'EVERYONE',
+      ...o.privacy,
+    }),
     sharesGroup: jest.fn().mockResolvedValue(o.shares ?? false),
     peerSummary: jest.fn(),
     findByUsername: jest.fn(),
@@ -313,6 +315,109 @@ describe('ChatConversationsService.open', () => {
     });
   });
 
+  describe('a new conversation by raw student id', () => {
+    const fresh = (o: Parameters<typeof make>[0] = {}) => {
+      const m = make(o);
+      m.prisma.chatConversation.findFirst.mockResolvedValue(null);
+      return m;
+    };
+
+    it('404s like a missing student when the peer hid from search and shares no group', async () => {
+      const { service, prisma } = fresh({
+        privacy: { whoCanFind: 'NOBODY' },
+        shares: false,
+      });
+      const err = await service
+        .open(1, 1, { studentId: 2 })
+        .catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(NotFoundException);
+      expect((err as NotFoundException).message).toBe("O'quvchi topilmadi");
+      expect(prisma.chatConversation.upsert).not.toHaveBeenCalled();
+    });
+
+    it('still opens through the exact @username', async () => {
+      const { service, prisma, people } = fresh({
+        privacy: { whoCanFind: 'NOBODY' },
+        shares: false,
+      });
+      people.findByUsername.mockResolvedValue({ id: 2 });
+      await expect(service.open(1, 1, { username: 'ali_01' })).resolves.toEqual(
+        { id: 'c1' },
+      );
+      expect(prisma.chatConversation.upsert).toHaveBeenCalled();
+    });
+
+    it('opens when the peer hid from search but shares a group', async () => {
+      const { service } = fresh({
+        privacy: { whoCanFind: 'NOBODY' },
+        shares: true,
+      });
+      await expect(service.open(1, 1, { studentId: 2 })).resolves.toEqual({
+        id: 'c1',
+      });
+    });
+
+    it('answers 404, not 403, when the peer restricts who can write', async () => {
+      const { service, prisma } = fresh({
+        privacy: { whoCanWrite: 'NOBODY' },
+      });
+      const err = await service
+        .open(1, 1, { studentId: 2 })
+        .catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(NotFoundException);
+      expect((err as NotFoundException).message).toBe("O'quvchi topilmadi");
+      expect(prisma.chatConversation.upsert).not.toHaveBeenCalled();
+    });
+
+    it('answers 404 when the peer blocked the caller', async () => {
+      const { service } = fresh({
+        blocked: { iBlocked: false, blockedMe: true },
+      });
+      await expect(service.open(1, 1, { studentId: 2 })).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('keeps the explicit message when the caller blocked the peer', async () => {
+      const { service } = fresh({
+        blocked: { iBlocked: true, blockedMe: false },
+      });
+      await expect(service.open(1, 1, { studentId: 2 })).rejects.toThrow(
+        'Avval blokdan chiqaring',
+      );
+    });
+
+    it('counts under chat:open and answers 429 on the 11th in a minute', async () => {
+      const { service, limiter, prisma } = fresh({ rate: 11 });
+      const err = await service
+        .open(1, 1, { studentId: 2 })
+        .catch((e: unknown) => e);
+      expect((err as HttpException).getStatus()).toBe(429);
+      expect((err as HttpException).message).toBe(
+        'Juda tez yozyapsiz. Biroz kuting',
+      );
+      const [key, ttl] = limiter.hit.mock.calls[0] as [string, number];
+      expect(key).toMatch(/^chat:open:1:\d+$/);
+      expect(ttl).toBe(120);
+      expect(prisma.chatConversation.upsert).not.toHaveBeenCalled();
+    });
+
+    it('allows the 10th', async () => {
+      const { service } = fresh({ rate: 10 });
+      await expect(service.open(1, 1, { studentId: 2 })).resolves.toEqual({
+        id: 'c1',
+      });
+    });
+  });
+
+  it('does not rate-limit opening an existing conversation', async () => {
+    const { service, limiter } = make({ rate: 99 });
+    await expect(service.open(1, 1, { studentId: 2 })).resolves.toEqual({
+      id: 'c1',
+    });
+    expect(limiter.hit).not.toHaveBeenCalled();
+  });
+
   it('puts the smaller id first so a pair has one row', async () => {
     const { service, prisma } = make();
     prisma.chatConversation.findFirst.mockResolvedValue(null);
@@ -327,6 +432,31 @@ describe('ChatConversationsService.list', () => {
   it('lists nothing for a student without conversations', async () => {
     const { service } = make();
     expect(await service.list(1)).toEqual([]);
+  });
+
+  it('only asks for conversations that already have a message', async () => {
+    const { service, prisma } = make();
+    await service.list(1);
+    expect(prisma.chatConversation.findMany.mock.calls[0][0].where).toEqual({
+      OR: [{ studentLowId: 1 }, { studentHighId: 1 }],
+      lastMessageAt: { not: null },
+    });
+  });
+
+  it('skips a conversation whose peer cannot be read and returns the others', async () => {
+    const { service, prisma, people } = make();
+    const other = { id: 'c2', companyId: 1, studentLowId: 1, studentHighId: 3 };
+    prisma.chatConversation.findMany.mockResolvedValue([conv, other]);
+    prisma.chatMessage.findFirst.mockResolvedValue(null);
+    prisma.chatReadState.findUnique.mockResolvedValue(null);
+    prisma.chatMessage.count.mockResolvedValue(0);
+    people.peerSummary.mockImplementation(async (_me: number, peer: number) => {
+      if (peer === 2) throw new Error("O'quvchi topilmadi");
+      return { id: peer };
+    });
+    const out = await service.list(1);
+    expect(out.map((c) => c.id)).toEqual(['c2']);
+    expect(out[0].peer).toEqual({ id: 3 });
   });
 
   it('builds peer, last-message preview and unread count from lastReadAt', async () => {

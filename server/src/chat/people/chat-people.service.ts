@@ -216,9 +216,12 @@ export class ChatPeopleService {
     const ids = candidates.map((c) => c.id);
     const [privacyRows, blocks] = await Promise.all([
       this.prisma.chatPrivacy.findMany({ where: { studentId: { in: ids } } }),
-      this.prisma.chatBlock.findMany({
-        where: { blockerId: { in: ids }, blockedId: viewerId },
-      }),
+      // An exact @username is never filtered by a block: an empty result would reveal it.
+      byUsername
+        ? Promise.resolve([] as { blockerId: number }[])
+        : this.prisma.chatBlock.findMany({
+            where: { blockerId: { in: ids }, blockedId: viewerId },
+          }),
     ]);
     const privacyById = new Map(privacyRows.map((r) => [r.studentId, r]));
     const blockedViewer = new Set(blocks.map((b) => b.blockerId));
