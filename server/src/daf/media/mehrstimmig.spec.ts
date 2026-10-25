@@ -1,4 +1,5 @@
 import {
+  EINZEL_STIL,
   teileMehrstimmig,
   zeichenMehrstimmig,
   zusammenFfmpegArgs,
@@ -82,5 +83,44 @@ describe('teileMehrstimmig', () => {
         t.einzeln[0].prompt.length +
         2 * 'Im Restaurant.'.length,
     );
+  });
+});
+
+describe('alleEinzeln (har satr alohida)', () => {
+  it('asosiy suhbat bo`lmaydi, har satr o`z ovozida va qisqa uslub bilan', () => {
+    const t = teileMehrstimmig(anfrage, true);
+    expect(t.haupt.prompt).toBe('');
+    expect(t.einzeln.map((e) => e.voice)).toEqual([
+      'Erinome',
+      'Callirrhoe',
+      'Erinome',
+      'Iapetus',
+      'Erinome',
+      'Callirrhoe',
+    ]);
+    expect(t.einzeln.every((e) => e.styleInstructions === EINZEL_STIL)).toBe(
+      true,
+    );
+    expect(t.reihenfolge.every((p) => 'einzeln' in p)).toBe(true);
+  });
+
+  it('asosiy fayl bo`lmasa ffmpeg unga ulanmaydi, kirishlar 0 dan boshlanadi', () => {
+    const args = zusammenFfmpegArgs({
+      reihenfolge: [{ einzeln: 0 }, { einzeln: 1 }],
+      schnitte: [],
+      dauer: 0,
+      haupt: '',
+      einzeln: new Map([
+        [0, 'a.mp3'],
+        [1, 'b.mp3'],
+      ]),
+      ausgabe: 'out.mp3',
+    });
+    expect(args.filter((a) => a === '-i')).toHaveLength(2);
+    expect(args).not.toContain('');
+    const graph = args[args.indexOf('-filter_complex') + 1];
+    expect(graph).toContain('[0:a]');
+    expect(graph).toContain('[1:a]');
+    expect(graph).not.toContain('[2:a]');
   });
 });

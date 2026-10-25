@@ -1,0 +1,1518 @@
+{
+ "unit": "u06",
+ "woerter": [
+  {
+   "sourceId": "u06-s1-freizeit",
+   "section": "u06-s1",
+   "de": "Freizeit",
+   "artikel": "die",
+   "uz": "bo'sh vaqt",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u06-s1-hobby",
+   "section": "u06-s1",
+   "de": "Hobby",
+   "artikel": "das",
+   "plural": "Hobbys",
+   "uz": "sevimli mashg'ulot (hobbi)",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u06-s1-freizeitaktivitaet",
+   "section": "u06-s1",
+   "de": "Freizeitaktivität",
+   "artikel": "die",
+   "plural": "Freizeitaktivitäten",
+   "uz": "bo'sh vaqtdagi mashg'ulot",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u06-s1-spass",
+   "section": "u06-s1",
+   "de": "Spaß",
+   "artikel": "der",
+   "uz": "zavq, qiziqarli narsa",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u06-s1-interessant",
+   "section": "u06-s1",
+   "de": "interessant",
+   "uz": "qiziqarli",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u06-s1-interessieren",
+   "section": "u06-s1",
+   "de": "interessieren",
+   "uz": "qiziqtirmoq",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u06-s1-beliebt",
+   "section": "u06-s1",
+   "de": "beliebt",
+   "uz": "mashhur, sevimli",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u06-s1-cool",
+   "section": "u06-s1",
+   "de": "cool",
+   "uz": "zo'r",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u06-s1-besonders",
+   "section": "u06-s1",
+   "de": "besonders",
+   "uz": "ayniqsa",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u06-s1-lesen",
+   "section": "u06-s1",
+   "de": "lesen",
+   "uz": "o'qimoq",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u06-s1-buch",
+   "section": "u06-s1",
+   "de": "Buch",
+   "artikel": "das",
+   "plural": "Bücher",
+   "uz": "kitob",
+   "core": true,
+   "order": 11
+  },
+  {
+   "sourceId": "u06-s1-comic",
+   "section": "u06-s1",
+   "de": "Comic",
+   "artikel": "der",
+   "plural": "Comics",
+   "uz": "komiks",
+   "core": true,
+   "order": 12
+  },
+  {
+   "sourceId": "u06-s1-fotografieren",
+   "section": "u06-s1",
+   "de": "fotografieren",
+   "uz": "suratga olmoq",
+   "core": true,
+   "order": 13
+  },
+  {
+   "sourceId": "u06-s1-kamera",
+   "section": "u06-s1",
+   "de": "Kamera",
+   "artikel": "die",
+   "plural": "Kameras",
+   "uz": "fotoapparat",
+   "core": true,
+   "order": 14
+  },
+  {
+   "sourceId": "u06-s1-malen",
+   "section": "u06-s1",
+   "de": "malen",
+   "uz": "(bo'yoq bilan) rasm chizmoq",
+   "core": true,
+   "order": 15
+  },
+  {
+   "sourceId": "u06-s1-zeichnen",
+   "section": "u06-s1",
+   "de": "zeichnen",
+   "uz": "(qalam bilan) chizmoq",
+   "core": true,
+   "order": 16
+  },
+  {
+   "sourceId": "u06-s1-zeichnung",
+   "section": "u06-s1",
+   "de": "Zeichnung",
+   "artikel": "die",
+   "plural": "Zeichnungen",
+   "uz": "chizma, qalamda chizilgan rasm",
+   "core": true,
+   "order": 17
+  },
+  {
+   "sourceId": "u06-s1-fantasie",
+   "section": "u06-s1",
+   "de": "Fantasie",
+   "artikel": "die",
+   "plural": "Fantasien",
+   "uz": "tasavvur",
+   "core": true,
+   "order": 18
+  },
+  {
+   "sourceId": "u06-s1-sammeln",
+   "section": "u06-s1",
+   "de": "sammeln",
+   "uz": "yig'moq, to'plamoq",
+   "core": true,
+   "order": 19
+  },
+  {
+   "sourceId": "u06-s1-tanzen",
+   "section": "u06-s1",
+   "de": "tanzen",
+   "uz": "raqsga tushmoq",
+   "core": true,
+   "order": 20
+  },
+  {
+   "sourceId": "u06-s1-wandern",
+   "section": "u06-s1",
+   "de": "wandern",
+   "uz": "piyoda sayr qilmoq (tog'da)",
+   "core": true,
+   "order": 21
+  },
+  {
+   "sourceId": "u06-s1-fahrradtour",
+   "section": "u06-s1",
+   "de": "Fahrradtour",
+   "artikel": "die",
+   "plural": "Fahrradtouren",
+   "uz": "velosipedda sayohat",
+   "core": true,
+   "order": 22
+  },
+  {
+   "sourceId": "u06-s1-ausflug",
+   "section": "u06-s1",
+   "de": "Ausflug",
+   "artikel": "der",
+   "plural": "Ausflüge",
+   "uz": "sayohat (bir kunlik)",
+   "core": true,
+   "order": 23
+  },
+  {
+   "sourceId": "u06-s1-besuchen",
+   "section": "u06-s1",
+   "de": "besuchen",
+   "uz": "mehmonga bormoq, ziyorat qilmoq",
+   "core": true,
+   "order": 24
+  },
+  {
+   "sourceId": "u06-s1-spiel",
+   "section": "u06-s1",
+   "de": "Spiel",
+   "artikel": "das",
+   "plural": "Spiele",
+   "uz": "o'yin",
+   "core": true,
+   "order": 25
+  },
+  {
+   "sourceId": "u06-s1-wuerfeln",
+   "section": "u06-s1",
+   "de": "würfeln",
+   "uz": "zar tashlamoq",
+   "core": true,
+   "order": 26
+  },
+  {
+   "sourceId": "u06-s1-ziehen",
+   "section": "u06-s1",
+   "de": "ziehen",
+   "uz": "tortmoq; (o'yinda) yurmoq",
+   "core": true,
+   "order": 27
+  },
+  {
+   "sourceId": "u06-s1-raten",
+   "section": "u06-s1",
+   "de": "raten",
+   "uz": "topmoq (taxmin qilmoq)",
+   "core": true,
+   "order": 28
+  },
+  {
+   "sourceId": "u06-s1-pantomime",
+   "section": "u06-s1",
+   "de": "Pantomime",
+   "artikel": "die",
+   "plural": "Pantomimen",
+   "uz": "pantomima",
+   "core": true,
+   "order": 29
+  },
+  {
+   "sourceId": "u06-s1-verein",
+   "section": "u06-s1",
+   "de": "Verein",
+   "artikel": "der",
+   "plural": "Vereine",
+   "uz": "to'garak, klub (jamiyat)",
+   "core": true,
+   "order": 30
+  },
+  {
+   "sourceId": "u06-s1-mitglied",
+   "section": "u06-s1",
+   "de": "Mitglied",
+   "artikel": "das",
+   "plural": "Mitglieder",
+   "uz": "a'zo",
+   "core": true,
+   "order": 31
+  },
+  {
+   "sourceId": "u06-s1-nie",
+   "section": "u06-s1",
+   "de": "nie",
+   "uz": "hech qachon",
+   "core": true,
+   "order": 32
+  },
+  {
+   "sourceId": "u06-s1-selten",
+   "section": "u06-s1",
+   "de": "selten",
+   "uz": "kamdan-kam",
+   "core": true,
+   "order": 33
+  },
+  {
+   "sourceId": "u06-s1-meistens",
+   "section": "u06-s1",
+   "de": "meistens",
+   "uz": "ko'pincha",
+   "core": true,
+   "order": 34
+  },
+  {
+   "sourceId": "u06-s1-fernsehen",
+   "section": "u06-s1",
+   "de": "Fernsehen",
+   "artikel": "das",
+   "uz": "televideniye",
+   "core": true,
+   "order": 35
+  },
+  {
+   "sourceId": "u06-s2-sport",
+   "section": "u06-s2",
+   "de": "Sport",
+   "artikel": "der",
+   "uz": "sport",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u06-s2-koennen",
+   "section": "u06-s2",
+   "de": "können",
+   "uz": "qila olmoq",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u06-s2-spielen",
+   "section": "u06-s2",
+   "de": "spielen",
+   "uz": "o'ynamoq",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u06-s2-ball",
+   "section": "u06-s2",
+   "de": "Ball",
+   "artikel": "der",
+   "plural": "Bälle",
+   "uz": "to'p",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u06-s2-fussball",
+   "section": "u06-s2",
+   "de": "Fußball",
+   "artikel": "der",
+   "uz": "futbol",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u06-s2-fussballspiel",
+   "section": "u06-s2",
+   "de": "Fußballspiel",
+   "artikel": "das",
+   "plural": "Fußballspiele",
+   "uz": "futbol o'yini",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u06-s2-basketball",
+   "section": "u06-s2",
+   "de": "Basketball",
+   "artikel": "der",
+   "uz": "basketbol",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u06-s2-tennis",
+   "section": "u06-s2",
+   "de": "Tennis",
+   "artikel": "das",
+   "uz": "tennis",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u06-s2-yoga",
+   "section": "u06-s2",
+   "de": "Yoga",
+   "artikel": "das",
+   "uz": "yoga",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u06-s2-karate",
+   "section": "u06-s2",
+   "de": "Karate",
+   "artikel": "das",
+   "uz": "karate",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u06-s2-schwimmen",
+   "section": "u06-s2",
+   "de": "schwimmen",
+   "uz": "suzmoq",
+   "core": true,
+   "order": 11
+  },
+  {
+   "sourceId": "u06-s2-laufen",
+   "section": "u06-s2",
+   "de": "laufen",
+   "uz": "yugurmoq",
+   "core": true,
+   "order": 12
+  },
+  {
+   "sourceId": "u06-s2-joggen",
+   "section": "u06-s2",
+   "de": "Joggen",
+   "artikel": "das",
+   "uz": "yugurish (jogging)",
+   "core": true,
+   "order": 13
+  },
+  {
+   "sourceId": "u06-s2-marathon",
+   "section": "u06-s2",
+   "de": "Marathon",
+   "artikel": "der",
+   "plural": "Marathons",
+   "uz": "marafon",
+   "core": true,
+   "order": 14
+  },
+  {
+   "sourceId": "u06-s2-halbmarathon",
+   "section": "u06-s2",
+   "de": "Halbmarathon",
+   "artikel": "der",
+   "plural": "Halbmarathons",
+   "uz": "yarim marafon",
+   "core": true,
+   "order": 15
+  },
+  {
+   "sourceId": "u06-s2-start",
+   "section": "u06-s2",
+   "de": "Start",
+   "artikel": "der",
+   "plural": "Starts",
+   "uz": "start (boshlanish joyi)",
+   "core": true,
+   "order": 16
+  },
+  {
+   "sourceId": "u06-s2-klettern",
+   "section": "u06-s2",
+   "de": "klettern",
+   "uz": "tirmashib chiqmoq",
+   "core": true,
+   "order": 17
+  },
+  {
+   "sourceId": "u06-s2-rad-fahren",
+   "section": "u06-s2",
+   "de": "Rad fahren",
+   "uz": "velosiped haydamoq",
+   "core": true,
+   "order": 18
+  },
+  {
+   "sourceId": "u06-s2-ski",
+   "section": "u06-s2",
+   "de": "Ski",
+   "artikel": "der",
+   "plural": "Skier",
+   "uz": "chang'i",
+   "core": true,
+   "order": 19
+  },
+  {
+   "sourceId": "u06-s2-gewinnen",
+   "section": "u06-s2",
+   "de": "gewinnen",
+   "uz": "yutmoq, g'alaba qozonmoq",
+   "core": true,
+   "order": 20
+  },
+  {
+   "sourceId": "u06-s2-mitmachen",
+   "section": "u06-s2",
+   "de": "mitmachen",
+   "uz": "qatnashmoq",
+   "core": true,
+   "order": 21
+  },
+  {
+   "sourceId": "u06-s2-club",
+   "section": "u06-s2",
+   "de": "Club",
+   "artikel": "der",
+   "plural": "Clubs",
+   "uz": "klub",
+   "core": true,
+   "order": 22
+  },
+  {
+   "sourceId": "u06-s2-sportclub",
+   "section": "u06-s2",
+   "de": "Sportclub",
+   "artikel": "der",
+   "plural": "Sportclubs",
+   "uz": "sport klubi",
+   "core": true,
+   "order": 23
+  },
+  {
+   "sourceId": "u06-s2-musik",
+   "section": "u06-s2",
+   "de": "Musik",
+   "artikel": "die",
+   "uz": "musiqa",
+   "core": true,
+   "order": 24
+  },
+  {
+   "sourceId": "u06-s2-hoeren",
+   "section": "u06-s2",
+   "de": "hören",
+   "uz": "eshitmoq, tinglamoq",
+   "core": true,
+   "order": 25
+  },
+  {
+   "sourceId": "u06-s2-singen",
+   "section": "u06-s2",
+   "de": "singen",
+   "uz": "qo'shiq aytmoq",
+   "core": true,
+   "order": 26
+  },
+  {
+   "sourceId": "u06-s2-lied",
+   "section": "u06-s2",
+   "de": "Lied",
+   "artikel": "das",
+   "plural": "Lieder",
+   "uz": "qo'shiq",
+   "core": true,
+   "order": 27
+  },
+  {
+   "sourceId": "u06-s2-chor",
+   "section": "u06-s2",
+   "de": "Chor",
+   "artikel": "der",
+   "plural": "Chöre",
+   "uz": "xor",
+   "core": true,
+   "order": 28
+  },
+  {
+   "sourceId": "u06-s2-musikgruppe",
+   "section": "u06-s2",
+   "de": "Musikgruppe",
+   "artikel": "die",
+   "plural": "Musikgruppen",
+   "uz": "musiqa guruhi",
+   "core": true,
+   "order": 29
+  },
+  {
+   "sourceId": "u06-s2-buehne",
+   "section": "u06-s2",
+   "de": "Bühne",
+   "artikel": "die",
+   "plural": "Bühnen",
+   "uz": "sahna",
+   "core": true,
+   "order": 30
+  },
+  {
+   "sourceId": "u06-s2-cd",
+   "section": "u06-s2",
+   "de": "CD",
+   "artikel": "die",
+   "plural": "CDs",
+   "uz": "kompakt-disk (CD)",
+   "core": true,
+   "order": 31
+  },
+  {
+   "sourceId": "u06-s2-geige",
+   "section": "u06-s2",
+   "de": "Geige",
+   "artikel": "die",
+   "plural": "Geigen",
+   "uz": "skripka",
+   "core": true,
+   "order": 32
+  },
+  {
+   "sourceId": "u06-s2-trompete",
+   "section": "u06-s2",
+   "de": "Trompete",
+   "artikel": "die",
+   "plural": "Trompeten",
+   "uz": "truba",
+   "core": true,
+   "order": 33
+  },
+  {
+   "sourceId": "u06-s2-saxofon",
+   "section": "u06-s2",
+   "de": "Saxofon",
+   "artikel": "das",
+   "plural": "Saxofone",
+   "uz": "saksofon",
+   "core": true,
+   "order": 34
+  },
+  {
+   "sourceId": "u06-s3-wollen",
+   "section": "u06-s3",
+   "de": "wollen",
+   "uz": "istamoq (xohlamoq)",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u06-s3-wohin",
+   "section": "u06-s3",
+   "de": "wohin",
+   "uz": "qayerga",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u06-s3-mitkommen",
+   "section": "u06-s3",
+   "de": "mitkommen",
+   "uz": "birga bormoq",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u06-s3-theater",
+   "section": "u06-s3",
+   "de": "Theater",
+   "artikel": "das",
+   "plural": "Theater",
+   "uz": "teatr",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u06-s3-oper",
+   "section": "u06-s3",
+   "de": "Oper",
+   "artikel": "die",
+   "plural": "Opern",
+   "uz": "opera",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u06-s3-konzert",
+   "section": "u06-s3",
+   "de": "Konzert",
+   "artikel": "das",
+   "plural": "Konzerte",
+   "uz": "konsert",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u06-s3-film",
+   "section": "u06-s3",
+   "de": "Film",
+   "artikel": "der",
+   "plural": "Filme",
+   "uz": "film",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u06-s3-disco",
+   "section": "u06-s3",
+   "de": "Disco",
+   "artikel": "die",
+   "plural": "Discos",
+   "uz": "diskoteka",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u06-s3-schwimmbad",
+   "section": "u06-s3",
+   "de": "Schwimmbad",
+   "artikel": "das",
+   "plural": "Schwimmbäder",
+   "uz": "basseyn",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u06-s3-ticket",
+   "section": "u06-s3",
+   "de": "Ticket",
+   "artikel": "das",
+   "plural": "Tickets",
+   "uz": "chipta",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u06-s3-konzertkarte",
+   "section": "u06-s3",
+   "de": "Konzertkarte",
+   "artikel": "die",
+   "plural": "Konzertkarten",
+   "uz": "konsert chiptasi",
+   "core": true,
+   "order": 11
+  },
+  {
+   "sourceId": "u06-s3-eintritt",
+   "section": "u06-s3",
+   "de": "Eintritt",
+   "artikel": "der",
+   "uz": "kirish narxi",
+   "core": true,
+   "order": 12
+  },
+  {
+   "sourceId": "u06-s3-programm",
+   "section": "u06-s3",
+   "de": "Programm",
+   "artikel": "das",
+   "plural": "Programme",
+   "uz": "dastur",
+   "core": true,
+   "order": 13
+  },
+  {
+   "sourceId": "u06-s3-plakat",
+   "section": "u06-s3",
+   "de": "Plakat",
+   "artikel": "das",
+   "plural": "Plakate",
+   "uz": "afisha",
+   "core": true,
+   "order": 14
+  },
+  {
+   "sourceId": "u06-s3-veranstaltung",
+   "section": "u06-s3",
+   "de": "Veranstaltung",
+   "artikel": "die",
+   "plural": "Veranstaltungen",
+   "uz": "tadbir",
+   "core": true,
+   "order": 15
+  },
+  {
+   "sourceId": "u06-s3-event",
+   "section": "u06-s3",
+   "de": "Event",
+   "artikel": "das",
+   "plural": "Events",
+   "uz": "ivent (tadbir)",
+   "core": true,
+   "order": 16
+  },
+  {
+   "sourceId": "u06-s3-aktivitaet",
+   "section": "u06-s3",
+   "de": "Aktivität",
+   "artikel": "die",
+   "plural": "Aktivitäten",
+   "uz": "faoliyat, mashg'ulot",
+   "core": true,
+   "order": 17
+  },
+  {
+   "sourceId": "u06-s3-festival",
+   "section": "u06-s3",
+   "de": "Festival",
+   "artikel": "das",
+   "plural": "Festivals",
+   "uz": "festival",
+   "core": true,
+   "order": 18
+  },
+  {
+   "sourceId": "u06-s3-theater-festival",
+   "section": "u06-s3",
+   "de": "Theater-Festival",
+   "artikel": "das",
+   "plural": "Theater-Festivals",
+   "uz": "teatr festivali",
+   "core": true,
+   "order": 19
+  },
+  {
+   "sourceId": "u06-s3-orchester",
+   "section": "u06-s3",
+   "de": "Orchester",
+   "artikel": "das",
+   "plural": "Orchester",
+   "uz": "orkestr",
+   "core": true,
+   "order": 20
+  },
+  {
+   "sourceId": "u06-s3-publikum",
+   "section": "u06-s3",
+   "de": "Publikum",
+   "artikel": "das",
+   "uz": "tomoshabinlar (zal)",
+   "core": true,
+   "order": 21
+  },
+  {
+   "sourceId": "u06-s3-zuschauer",
+   "section": "u06-s3",
+   "de": "Zuschauer",
+   "artikel": "der",
+   "plural": "Zuschauer",
+   "uz": "tomoshabin (erkak)",
+   "core": true,
+   "order": 22
+  },
+  {
+   "sourceId": "u06-s3-zuschauerin",
+   "section": "u06-s3",
+   "de": "Zuschauerin",
+   "artikel": "die",
+   "plural": "Zuschauerinnen",
+   "uz": "tomoshabin (ayol)",
+   "core": true,
+   "order": 23
+  },
+  {
+   "sourceId": "u06-s3-filmfan",
+   "section": "u06-s3",
+   "de": "Filmfan",
+   "artikel": "der",
+   "plural": "Filmfans",
+   "uz": "kino ishqibozi",
+   "core": true,
+   "order": 24
+  },
+  {
+   "sourceId": "u06-s3-atmosphaere",
+   "section": "u06-s3",
+   "de": "Atmosphäre",
+   "artikel": "die",
+   "uz": "muhit, kayfiyat",
+   "core": true,
+   "order": 25
+  },
+  {
+   "sourceId": "u06-s3-besondere",
+   "section": "u06-s3",
+   "de": "besondere",
+   "uz": "alohida, maxsus",
+   "core": true,
+   "order": 26
+  },
+  {
+   "sourceId": "u06-s3-langweilig",
+   "section": "u06-s3",
+   "de": "langweilig",
+   "uz": "zerikarli",
+   "core": true,
+   "order": 27
+  },
+  {
+   "sourceId": "u06-s3-voll",
+   "section": "u06-s3",
+   "de": "voll",
+   "uz": "to'la",
+   "core": true,
+   "order": 28
+  },
+  {
+   "sourceId": "u06-s3-los-sein",
+   "section": "u06-s3",
+   "de": "los sein",
+   "uz": "bo'lmoq (sodir bo'lmoq)",
+   "core": true,
+   "order": 29
+  },
+  {
+   "sourceId": "u06-s4-wetter",
+   "section": "u06-s4",
+   "de": "Wetter",
+   "artikel": "das",
+   "uz": "ob-havo",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u06-s4-wetterbericht",
+   "section": "u06-s4",
+   "de": "Wetterbericht",
+   "artikel": "der",
+   "plural": "Wetterberichte",
+   "uz": "ob-havo ma'lumoti",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u06-s4-sonne",
+   "section": "u06-s4",
+   "de": "Sonne",
+   "artikel": "die",
+   "uz": "quyosh",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u06-s4-sonnig",
+   "section": "u06-s4",
+   "de": "sonnig",
+   "uz": "quyoshli",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u06-s4-scheinen",
+   "section": "u06-s4",
+   "de": "scheinen",
+   "uz": "(quyosh) charaqlamoq",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u06-s4-regen",
+   "section": "u06-s4",
+   "de": "Regen",
+   "artikel": "der",
+   "uz": "yomg'ir",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u06-s4-regnen",
+   "section": "u06-s4",
+   "de": "regnen",
+   "uz": "yomg'ir yog'moq",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u06-s4-schuetten",
+   "section": "u06-s4",
+   "de": "schütten",
+   "uz": "chelaklab quymoq (jala)",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u06-s4-schnee",
+   "section": "u06-s4",
+   "de": "Schnee",
+   "artikel": "der",
+   "uz": "qor",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u06-s4-schneien",
+   "section": "u06-s4",
+   "de": "schneien",
+   "uz": "qor yog'moq",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u06-s4-wind",
+   "section": "u06-s4",
+   "de": "Wind",
+   "artikel": "der",
+   "plural": "Winde",
+   "uz": "shamol",
+   "core": true,
+   "order": 11
+  },
+  {
+   "sourceId": "u06-s4-windig",
+   "section": "u06-s4",
+   "de": "windig",
+   "uz": "shamolli",
+   "core": true,
+   "order": 12
+  },
+  {
+   "sourceId": "u06-s4-wolke",
+   "section": "u06-s4",
+   "de": "Wolke",
+   "artikel": "die",
+   "plural": "Wolken",
+   "uz": "bulut",
+   "core": true,
+   "order": 13
+  },
+  {
+   "sourceId": "u06-s4-bewoelkt",
+   "section": "u06-s4",
+   "de": "bewölkt",
+   "uz": "bulutli",
+   "core": true,
+   "order": 14
+  },
+  {
+   "sourceId": "u06-s4-warm",
+   "section": "u06-s4",
+   "de": "warm",
+   "uz": "iliq",
+   "core": true,
+   "order": 15
+  },
+  {
+   "sourceId": "u06-s4-heiss",
+   "section": "u06-s4",
+   "de": "heiß",
+   "uz": "issiq (juda)",
+   "core": true,
+   "order": 16
+  },
+  {
+   "sourceId": "u06-s4-hitze",
+   "section": "u06-s4",
+   "de": "Hitze",
+   "artikel": "die",
+   "uz": "jazirama",
+   "core": true,
+   "order": 17
+  },
+  {
+   "sourceId": "u06-s4-kalt",
+   "section": "u06-s4",
+   "de": "kalt",
+   "uz": "sovuq",
+   "core": true,
+   "order": 18
+  },
+  {
+   "sourceId": "u06-s4-grad",
+   "section": "u06-s4",
+   "de": "Grad",
+   "artikel": "der",
+   "plural": "Grad",
+   "uz": "daraja (harorat)",
+   "core": true,
+   "order": 19
+  },
+  {
+   "sourceId": "u06-s4-mistwetter",
+   "section": "u06-s4",
+   "de": "Mistwetter",
+   "artikel": "das",
+   "uz": "yomon havo",
+   "core": true,
+   "order": 20
+  },
+  {
+   "sourceId": "u06-s4-schrecklich",
+   "section": "u06-s4",
+   "de": "schrecklich",
+   "uz": "dahshatli",
+   "core": true,
+   "order": 21
+  },
+  {
+   "sourceId": "u06-s4-jahreszeit",
+   "section": "u06-s4",
+   "de": "Jahreszeit",
+   "artikel": "die",
+   "plural": "Jahreszeiten",
+   "uz": "fasl",
+   "core": true,
+   "order": 22
+  },
+  {
+   "sourceId": "u06-s4-fruehling",
+   "section": "u06-s4",
+   "de": "Frühling",
+   "artikel": "der",
+   "uz": "bahor",
+   "core": true,
+   "order": 23
+  },
+  {
+   "sourceId": "u06-s4-sommer",
+   "section": "u06-s4",
+   "de": "Sommer",
+   "artikel": "der",
+   "uz": "yoz",
+   "core": true,
+   "order": 24
+  },
+  {
+   "sourceId": "u06-s4-herbst",
+   "section": "u06-s4",
+   "de": "Herbst",
+   "artikel": "der",
+   "uz": "kuz",
+   "core": true,
+   "order": 25
+  },
+  {
+   "sourceId": "u06-s4-winter",
+   "section": "u06-s4",
+   "de": "Winter",
+   "artikel": "der",
+   "uz": "qish",
+   "core": true,
+   "order": 26
+  },
+  {
+   "sourceId": "u06-s4-himmelsrichtung",
+   "section": "u06-s4",
+   "de": "Himmelsrichtung",
+   "artikel": "die",
+   "plural": "Himmelsrichtungen",
+   "uz": "dunyo tomoni",
+   "core": true,
+   "order": 27
+  },
+  {
+   "sourceId": "u06-s4-norden",
+   "section": "u06-s4",
+   "de": "Norden",
+   "artikel": "der",
+   "uz": "shimol",
+   "core": true,
+   "order": 28
+  },
+  {
+   "sourceId": "u06-s4-sueden",
+   "section": "u06-s4",
+   "de": "Süden",
+   "artikel": "der",
+   "uz": "janub",
+   "core": true,
+   "order": 29
+  },
+  {
+   "sourceId": "u06-s4-osten",
+   "section": "u06-s4",
+   "de": "Osten",
+   "artikel": "der",
+   "uz": "sharq",
+   "core": true,
+   "order": 30
+  },
+  {
+   "sourceId": "u06-s4-westen",
+   "section": "u06-s4",
+   "de": "Westen",
+   "artikel": "der",
+   "uz": "g'arb",
+   "core": true,
+   "order": 31
+  },
+  {
+   "sourceId": "u06-s4-draussen",
+   "section": "u06-s4",
+   "de": "draußen",
+   "uz": "tashqarida",
+   "core": true,
+   "order": 32
+  },
+  {
+   "sourceId": "u06-s4-natur",
+   "section": "u06-s4",
+   "de": "Natur",
+   "artikel": "die",
+   "uz": "tabiat",
+   "core": true,
+   "order": 33
+  },
+  {
+   "sourceId": "u06-s4-geniessen",
+   "section": "u06-s4",
+   "de": "genießen",
+   "uz": "rohatlanmoq",
+   "core": true,
+   "order": 34
+  },
+  {
+   "sourceId": "u06-s4-glauben",
+   "section": "u06-s4",
+   "de": "glauben",
+   "uz": "ishonmoq, o'ylamoq",
+   "core": true,
+   "order": 35
+  },
+  {
+   "sourceId": "u06-s4-fruehjahr",
+   "section": "u06-s4",
+   "de": "Frühjahr",
+   "artikel": "das",
+   "uz": "bahor fasli",
+   "core": true,
+   "order": 36
+  },
+  {
+   "sourceId": "u06-s5-verabredung",
+   "section": "u06-s5",
+   "de": "Verabredung",
+   "artikel": "die",
+   "plural": "Verabredungen",
+   "uz": "uchrashuv (kelishilgan)",
+   "core": true,
+   "order": 1
+  },
+  {
+   "sourceId": "u06-s5-verabreden",
+   "section": "u06-s5",
+   "de": "verabreden",
+   "uz": "uchrashuvga kelishmoq",
+   "core": true,
+   "order": 2
+  },
+  {
+   "sourceId": "u06-s5-treffen",
+   "section": "u06-s5",
+   "de": "treffen",
+   "uz": "uchrashmoq",
+   "core": true,
+   "order": 3
+  },
+  {
+   "sourceId": "u06-s5-treffpunkt",
+   "section": "u06-s5",
+   "de": "Treffpunkt",
+   "artikel": "der",
+   "plural": "Treffpunkte",
+   "uz": "uchrashuv joyi",
+   "core": true,
+   "order": 4
+  },
+  {
+   "sourceId": "u06-s5-stadtpark",
+   "section": "u06-s5",
+   "de": "Stadtpark",
+   "artikel": "der",
+   "plural": "Stadtparks",
+   "uz": "shahar bog'i",
+   "core": true,
+   "order": 5
+  },
+  {
+   "sourceId": "u06-s5-vorschlag",
+   "section": "u06-s5",
+   "de": "Vorschlag",
+   "artikel": "der",
+   "plural": "Vorschläge",
+   "uz": "taklif (fikr)",
+   "core": true,
+   "order": 6
+  },
+  {
+   "sourceId": "u06-s5-idee",
+   "section": "u06-s5",
+   "de": "Idee",
+   "artikel": "die",
+   "plural": "Ideen",
+   "uz": "g'oya",
+   "core": true,
+   "order": 7
+  },
+  {
+   "sourceId": "u06-s5-klingen",
+   "section": "u06-s5",
+   "de": "klingen",
+   "uz": "eshitilmoq (yaxshi tuyulmoq)",
+   "core": true,
+   "order": 8
+  },
+  {
+   "sourceId": "u06-s5-lust",
+   "section": "u06-s5",
+   "de": "Lust",
+   "artikel": "die",
+   "uz": "xohish, ishtiyoq",
+   "core": true,
+   "order": 9
+  },
+  {
+   "sourceId": "u06-s5-vielleicht",
+   "section": "u06-s5",
+   "de": "vielleicht",
+   "uz": "balki",
+   "core": true,
+   "order": 10
+  },
+  {
+   "sourceId": "u06-s5-hoffentlich",
+   "section": "u06-s5",
+   "de": "hoffentlich",
+   "uz": "umid qilamanki",
+   "core": true,
+   "order": 11
+  },
+  {
+   "sourceId": "u06-s5-schade",
+   "section": "u06-s5",
+   "de": "schade",
+   "uz": "afsus",
+   "core": true,
+   "order": 12
+  },
+  {
+   "sourceId": "u06-s5-warum",
+   "section": "u06-s5",
+   "de": "warum",
+   "uz": "nega",
+   "core": true,
+   "order": 13
+  },
+  {
+   "sourceId": "u06-s5-einladen",
+   "section": "u06-s5",
+   "de": "einladen",
+   "uz": "taklif qilmoq",
+   "core": true,
+   "order": 14
+  },
+  {
+   "sourceId": "u06-s5-einladung",
+   "section": "u06-s5",
+   "de": "Einladung",
+   "artikel": "die",
+   "plural": "Einladungen",
+   "uz": "taklifnoma",
+   "core": true,
+   "order": 15
+  },
+  {
+   "sourceId": "u06-s5-reagieren",
+   "section": "u06-s5",
+   "de": "reagieren",
+   "uz": "javob qaytarmoq (munosabat bildirmoq)",
+   "core": true,
+   "order": 16
+  },
+  {
+   "sourceId": "u06-s5-party",
+   "section": "u06-s5",
+   "de": "Party",
+   "artikel": "die",
+   "plural": "Partys",
+   "uz": "ziyofat",
+   "core": true,
+   "order": 17
+  },
+  {
+   "sourceId": "u06-s5-feiern",
+   "section": "u06-s5",
+   "de": "feiern",
+   "uz": "nishonlamoq",
+   "core": true,
+   "order": 18
+  },
+  {
+   "sourceId": "u06-s5-geburtstag",
+   "section": "u06-s5",
+   "de": "Geburtstag",
+   "artikel": "der",
+   "plural": "Geburtstage",
+   "uz": "tug'ilgan kun",
+   "core": true,
+   "order": 19
+  },
+  {
+   "sourceId": "u06-s5-geschenk",
+   "section": "u06-s5",
+   "de": "Geschenk",
+   "artikel": "das",
+   "plural": "Geschenke",
+   "uz": "sovg'a",
+   "core": true,
+   "order": 20
+  },
+  {
+   "sourceId": "u06-s5-schenken",
+   "section": "u06-s5",
+   "de": "schenken",
+   "uz": "sovg'a qilmoq",
+   "core": true,
+   "order": 21
+  },
+  {
+   "sourceId": "u06-s5-mitbringen",
+   "section": "u06-s5",
+   "de": "mitbringen",
+   "uz": "o'zi bilan olib kelmoq",
+   "core": true,
+   "order": 22
+  },
+  {
+   "sourceId": "u06-s5-gast",
+   "section": "u06-s5",
+   "de": "Gast",
+   "artikel": "der",
+   "plural": "Gäste",
+   "uz": "mehmon",
+   "core": true,
+   "order": 23
+  },
+  {
+   "sourceId": "u06-s5-ueberraschung",
+   "section": "u06-s5",
+   "de": "Überraschung",
+   "artikel": "die",
+   "plural": "Überraschungen",
+   "uz": "kutilmagan sovg'a (syurpriz)",
+   "core": true,
+   "order": 24
+  },
+  {
+   "sourceId": "u06-s5-picknick",
+   "section": "u06-s5",
+   "de": "Picknick",
+   "artikel": "das",
+   "plural": "Picknicks",
+   "uz": "piknik",
+   "core": true,
+   "order": 25
+  },
+  {
+   "sourceId": "u06-s5-museumsnacht",
+   "section": "u06-s5",
+   "de": "Museumsnacht",
+   "artikel": "die",
+   "plural": "Museumsnächte",
+   "uz": "muzeylar kechasi",
+   "core": true,
+   "order": 26
+  },
+  {
+   "sourceId": "u06-s5-kultur-nacht",
+   "section": "u06-s5",
+   "de": "Kultur-Nacht",
+   "artikel": "die",
+   "plural": "Kultur-Nächte",
+   "uz": "madaniyat kechasi",
+   "core": true,
+   "order": 27
+  },
+  {
+   "sourceId": "u06-s5-open-air-kino",
+   "section": "u06-s5",
+   "de": "Open-Air-Kino",
+   "artikel": "das",
+   "plural": "Open-Air-Kinos",
+   "uz": "ochiq osmon ostidagi kino",
+   "core": true,
+   "order": 28
+  },
+  {
+   "sourceId": "u06-s5-zufall",
+   "section": "u06-s5",
+   "de": "Zufall",
+   "artikel": "der",
+   "plural": "Zufälle",
+   "uz": "tasodif",
+   "core": true,
+   "order": 29
+  },
+  {
+   "sourceId": "u06-s1-kurs",
+   "section": "u06-s1",
+   "de": "Kurs",
+   "artikel": "der",
+   "plural": "Kurse",
+   "uz": "kurs",
+   "core": true,
+   "order": 36
+  },
+  {
+   "sourceId": "u06-s3-karte",
+   "section": "u06-s3",
+   "de": "Karte",
+   "artikel": "die",
+   "plural": "Karten",
+   "uz": "chipta; karta",
+   "core": true,
+   "order": 30
+  },
+  {
+   "sourceId": "u06-s3-liebe",
+   "section": "u06-s3",
+   "de": "liebe",
+   "uz": "aziz, qadrli (murojaatda: «Liebe Anna»)",
+   "core": true,
+   "order": 31
+  },
+  {
+   "sourceId": "u06-s5-gruss",
+   "section": "u06-s5",
+   "de": "Gruß",
+   "artikel": "der",
+   "plural": "Grüße",
+   "uz": "salom, hurmat (xat oxirida: «Viele Grüße»)",
+   "core": true,
+   "order": 30
+  }
+ ]
+}

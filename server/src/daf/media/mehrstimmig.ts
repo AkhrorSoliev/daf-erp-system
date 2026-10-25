@@ -26,7 +26,19 @@ export interface MehrstimmigerAuftrag {
   reihenfolge: Platz[];
 }
 
-export function teileMehrstimmig(anfrage: GeminiDialog): MehrstimmigerAuftrag {
+/**
+ * `alleEinzeln`: every line is voiced alone, no main take. Used while
+ * Gemini's two-voice dialogue mode is down (24.10.2026: 422 for every
+ * request). Each request is billed with its style note, so the note is the
+ * short pace line, not the whole scene.
+ */
+export const EINZEL_STIL =
+  'Hochdeutsch aus Deutschland, langsam und sehr deutlich, wie in einer Hörübung für Anfänger (A1).';
+
+export function teileMehrstimmig(
+  anfrage: GeminiDialog,
+  alleEinzeln = false,
+): MehrstimmigerAuftrag {
   const zeilen = anfrage.prompt.split('\n').map((z) => {
     const i = z.indexOf(': ');
     return { sprecher: z.slice(0, i), rest: z.slice(i + 2), roh: z };
@@ -35,13 +47,15 @@ export function teileMehrstimmig(anfrage: GeminiDialog): MehrstimmigerAuftrag {
   for (const z of zeilen)
     anzahl.set(z.sprecher, (anzahl.get(z.sprecher) ?? 0) + 1);
   const reihe = anfrage.speakers.map((s) => s.speakerId);
-  const zwei = [...reihe]
-    .sort(
-      (a, b) =>
-        (anzahl.get(b) ?? 0) - (anzahl.get(a) ?? 0) ||
-        reihe.indexOf(a) - reihe.indexOf(b),
-    )
-    .slice(0, 2);
+  const zwei = alleEinzeln
+    ? []
+    : [...reihe]
+        .sort(
+          (a, b) =>
+            (anzahl.get(b) ?? 0) - (anzahl.get(a) ?? 0) ||
+            reihe.indexOf(a) - reihe.indexOf(b),
+        )
+        .slice(0, 2);
   const stimme = new Map(anfrage.speakers.map((s) => [s.speakerId, s.voice]));
   const hauptZeilen: string[] = [];
   const einzeln: EinzelZeile[] = [];
@@ -56,7 +70,9 @@ export function teileMehrstimmig(anfrage: GeminiDialog): MehrstimmigerAuftrag {
         index,
         prompt: z.rest,
         voice: stimme.get(z.sprecher)!,
-        styleInstructions: anfrage.styleInstructions,
+        styleInstructions: alleEinzeln
+          ? EINZEL_STIL
+          : anfrage.styleInstructions,
       });
     }
   });
@@ -89,13 +105,14 @@ export function zusammenFfmpegArgs(input: {
   einzeln: Map<number, string>;
   ausgabe: string;
 }): string[] {
-  const args = ['-y', '-i', input.haupt];
+  const hatHaupt = input.reihenfolge.some((p) => 'haupt' in p);
+  const args = hatHaupt ? ['-y', '-i', input.haupt] : ['-y'];
   const index = new Map<number, number>();
   for (const p of input.reihenfolge) {
     if ('einzeln' in p) {
       const datei = input.einzeln.get(p.einzeln);
       if (!datei) throw new Error(`${p.einzeln + 1}-satr ovozi yo'q`);
-      index.set(p.einzeln, index.size + 1);
+      index.set(p.einzeln, index.size + (hatHaupt ? 1 : 0));
       args.push('-i', datei);
     }
   }

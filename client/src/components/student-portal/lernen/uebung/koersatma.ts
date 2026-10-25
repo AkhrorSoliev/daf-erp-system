@@ -28,6 +28,7 @@ const MATN: Record<FrageFormat, string> = {
   UHR_LESEN: msg("Soat nechani ko'rsatyapti?"),
   UHR_HOEREN: msg("Eshitgan vaqtingizga mos soatni tanlang"),
   UHR_TIPPEN: msg("Soatga qarab vaqtni nemischa yozing"),
+  LESEN_WAHL: msg("Matnni o'qing va savolga javob bering"),
 };
 
 export function koersatma(format: FrageFormat): string {

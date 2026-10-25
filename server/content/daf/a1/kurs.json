@@ -294,7 +294,7 @@
           "titleUz": "Sevimli mashg'ulot",
           "grammar": "Verb + gern, oft/nie",
           "grammarUz": "gern va takrorlanish",
-          "wordBudget": 35
+          "wordBudget": 36
         },
         {
           "order": 2,
@@ -312,7 +312,7 @@
           "titleUz": "Kinoga boramizmi?",
           "grammar": "wollen, ins/in die",
           "grammarUz": "wollen va yo'nalish",
-          "wordBudget": 35
+          "wordBudget": 31
         },
         {
           "order": 4,
@@ -537,7 +537,7 @@
           "titleUz": "Kursda",
           "grammar": "Imperativ du-Form",
           "grammarUz": "du buyruq shakli",
-          "wordBudget": 35
+          "wordBudget": 34
         },
         {
           "order": 3,
@@ -600,7 +600,7 @@
           "titleUz": "Do'konda",
           "grammar": "Fragen im Geschäft",
           "grammarUz": "do'kondagi savollar",
-          "wordBudget": 33
+          "wordBudget": 32
         },
         {
           "order": 4,
@@ -672,7 +672,7 @@
           "titleUz": "Xat yozish",
           "grammar": "Wortstellung in der Vergangenheit",
           "grammarUz": "o'tgan zamonda so'z tartibi",
-          "wordBudget": 35
+          "wordBudget": 33
         },
         {
           "order": 6,

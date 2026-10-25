@@ -53,6 +53,7 @@ import { UhrTanlash } from "./uhr-tanlash";
 import { rasmlarniOldindanYukla } from "./rasm-oldindan";
 import { JavobPaneli } from "./javob-paneli";
 import { DeWort } from "./de-wort";
+import { LeseBlok } from "./lese-blok";
 import { Yozish } from "./yozish";
 import { Yigish, juftSoni, juftUstunlar } from "./yigish";
 import { DialogBlok } from "./dialog-blok";
@@ -850,6 +851,11 @@ export function SeansEkrani(props: SeansEkraniProps) {
         ) : frage.audioUrl ? (
           <OvozTugmasi url={frage.audioUrl} autoPlay />
         ) : null}
+        {frage.kontext ? (
+          <p className="rounded-xl bg-tint px-3 py-2 text-sm italic text-ink-500">{frage.kontext}</p>
+        ) : null}
+        {/* `LESEN_WAHL`: matn savol bilan birga ko'rinadi; tarjimasi javobdan keyin `TranskriptBlok`da. */}
+        {frage.lesetext ? <LeseBlok text={frage.lesetext} /> : null}
         {/* `BILD_TIPPEN`: the picture is the question (`prompt` is empty).
             `DIALOG_LUECKE` draws its story picture above the dialog below. */}
         {frage.bildUrl && frage.format !== "DIALOG_LUECKE" ? <SavolRasmi url={frage.bildUrl} /> : null}

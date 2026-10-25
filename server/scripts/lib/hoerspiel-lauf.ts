@@ -208,19 +208,23 @@ export function erstelleMehrstimmig(
   fal: Pick<FalClient, 'dialogGemini' | 'sprecheGemini'>,
   fetchFn: typeof fetch,
   versuche: number,
+  alleEinzeln = false,
 ) {
   return async (d: Dialog, anfrage: GeminiDialog): Promise<Buffer> => {
-    const t = teileMehrstimmig(anfrage);
+    const t = teileMehrstimmig(anfrage, alleEinzeln);
     const holen = async (url: string, wofuer: string) => {
       console.log(`    ${d.id}: ${wofuer} — ${url}`);
       const res = await fetchFn(url);
       if (!res.ok) throw new Error(`yuklab olinmadi — HTTP ${res.status}`);
       return zuMp3(Buffer.from(await res.arrayBuffer()));
     };
-    const haupt = await holen(
-      await mitAblehnung(() => fal.dialogGemini(t.haupt), d.id, versuche),
-      'asosiy suhbat',
-    );
+    const haupt =
+      t.haupt.prompt === ''
+        ? undefined
+        : await holen(
+            await mitAblehnung(() => fal.dialogGemini(t.haupt), d.id, versuche),
+            'asosiy suhbat',
+          );
     const einzeln = new Map<number, Buffer>();
     for (const e of t.einzeln) {
       const url = await mitAblehnung(

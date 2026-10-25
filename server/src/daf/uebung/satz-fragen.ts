@@ -18,6 +18,11 @@ function mischen<T>(items: T[], rnd: () => number): T[] {
   return out;
 }
 
+/** Gap sahnasi — bo'sh bo'lsa maydon umuman qo'shilmaydi. */
+function kontextVon(satz: MaterialSatz): { kontext?: string } {
+  return satz.kontextUz ? { kontext: satz.kontextUz } : {};
+}
+
 /** Tinish belgisisiz so'zlar — gapni bo'laklashda ishlatiladi. */
 function woerterVon(de: string): string[] {
   return de
@@ -101,6 +106,7 @@ export function luecke(
       materialSchluessel('SATZ', satz.id),
     ],
     audioUrl: null,
+    ...kontextVon(satz),
   };
 }
 
@@ -138,6 +144,7 @@ export function satzBauen(satz: MaterialSatz, rnd: () => number): Frage | null {
     akzeptiert: satz.akzeptiert,
     belegteItems: [materialSchluessel('SATZ', satz.id)],
     audioUrl: null,
+    ...kontextVon(satz),
   };
 }
 
@@ -210,6 +217,7 @@ export function satzUebersetzen(
     akzeptiert: [],
     belegteItems: [materialSchluessel('SATZ', ziel.id)],
     audioUrl: null,
+    ...kontextVon(ziel),
   };
 }
 

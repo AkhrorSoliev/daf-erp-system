@@ -10,6 +10,16 @@ import type { MediaUrlResolver } from './wort-fragen';
 /** Savol qurish uchun dialogda kamida shuncha satr bo'lishi shart. */
 const MIN_ZEILEN = 4;
 
+/**
+ * `DIALOG_LUECKE` faqat haqiqiy suhbatdan quriladi (`art` yozilmasa —
+ * `DIALOG`): e'lonning (`ANSAGE`) bitta ovozi va o'qish matnining
+ * (`CHAT`, `TEXT`, `TABELLE`) satrlari na bo'sh joyga, na chalg'ituvchiga
+ * yaraydi — jadval qatori «javob» bo'lib qolardi.
+ */
+export function istSuhbat(d: Pick<MaterialDialog, 'art'>): boolean {
+  return d.art === undefined || d.art === 'DIALOG';
+}
+
 export function mischen<T>(items: T[], rnd: () => number): T[] {
   const out = [...items];
   for (let i = out.length - 1; i > 0; i -= 1) {

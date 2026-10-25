@@ -25,7 +25,8 @@ import type {
   PublicFrage,
 } from './frage.types';
 import { materialSchluessel, toPublic } from './frage.types';
-import { dialogLuecke } from './dialog-fragen';
+import { dialogLuecke, istSuhbat } from './dialog-fragen';
+import { lesenWahl } from './lese-fragen';
 import { eigeneSchluessel } from './eigener-abschnitt';
 import { hoerenWahl } from './hoer-fragen';
 import { bevorzugteFormate } from './kind-formate';
@@ -230,7 +231,8 @@ export interface PruefenErgebnis {
   isCorrect: boolean;
   richtig: string;
   /**
-   * FAQAT `HOEREN_WAHL` — suhbat matni javobdan KEYIN ochiladi
+   * FAQAT `HOEREN_WAHL` va `LESEN_WAHL` — matn (o'zbekcha tarjimasi
+   * bilan) javobdan KEYIN ochiladi; suhbat matni javobdan KEYIN ochiladi
    * (o'quvchi nimani eshitmaganini ko'radi). Boshqa formatda `undefined`,
    * savol bilan birga hech qachon yuborilmaydi (D6/D7).
    */
@@ -937,6 +939,7 @@ export class UebungService {
       sectionId: number | null;
       akzeptiert: string[];
       audioKey?: string | null;
+      kontextUz?: string | null;
     }
     interface PhraseRow {
       id: number;
@@ -948,6 +951,7 @@ export class UebungService {
     interface DialogRow {
       id: number;
       titelDe: string;
+      art?: string;
       sahnaUz?: string | null;
       sectionId: number;
       zeilen: Array<{
@@ -978,6 +982,7 @@ export class UebungService {
       sectionCode: kodVon(s.sectionId),
       akzeptiert: s.akzeptiert,
       audioKey: s.audioKey ?? null,
+      kontextUz: s.kontextUz ?? null,
     });
     const toPhrase = (p: PhraseRow): MaterialPhrase => ({
       id: p.id,
@@ -989,6 +994,7 @@ export class UebungService {
     const toDialog = (d: DialogRow): MaterialDialog => ({
       id: d.id,
       titelDe: d.titelDe,
+      art: d.art ?? 'DIALOG',
       sectionCode: kodVon(d.sectionId),
       sahnaUz: d.sahnaUz ?? null,
       zeilen: d.zeilen.map((z) => ({
@@ -1149,8 +1155,10 @@ export class UebungService {
     // (qarang `dialog-fragen.ts`dagi izoh: shu dialogning satri savol
     // kontekstiga haqiqatda mos kelib qolishi mumkin, ya'ni "xato" javob
     // aslida to'g'ri bo'lib chiqardi).
-    for (const d of dialoge) {
-      const andereZeilen = dialoge
+    // Faqat haqiqiy suhbatlar (`istSuhbat`): e'lon va o'qish matni emas.
+    const suhbatlar = dialoge.filter(istSuhbat);
+    for (const d of suhbatlar) {
+      const andereZeilen = suhbatlar
         .filter((o) => o.id !== d.id)
         .flatMap((o) => o.zeilen);
       const dl = dialogLuecke(d, andereZeilen, rnd, (key) =>
@@ -1165,6 +1173,10 @@ export class UebungService {
     for (const d of dialoge) {
       const hw = hoerenWahl(d, rnd, (key) => this.mediaUrl(key));
       if (hw) rohKandidaten.push(hw);
+      // O'qish matni (chat, e-mail, jadval): audiosi yo'q, matn savol bilan
+      // birga ko'rinadi. `lesenWahl` audio matn uchun `null` qaytaradi.
+      const lw = lesenWahl(d, rnd);
+      if (lw) rohKandidaten.push(lw);
     }
 
     // Clock: `UHR_HOEREN` turns itself on once the time has audio.
@@ -1426,11 +1438,14 @@ export class UebungService {
       throw new NotFoundException(`Material topilmadi: ${itemType}:${itemId}`);
     }
 
-    if (format === 'HOEREN_WAHL' && itemType !== 'HOERFRAGE') {
+    if (
+      (format === 'HOEREN_WAHL' || format === 'LESEN_WAHL') &&
+      itemType !== 'HOERFRAGE'
+    ) {
       // `PAAR`/`ZUORDNEN` qorovuli bilan bir xil sabab: DTO `itemType` va
       // `format`ni mustaqil tekshiradi.
       throw new BadRequestException(
-        'HOEREN_WAHL savoli faqat eshitish savoliga tegishli',
+        `${format} savoli faqat tushunish savoliga tegishli`,
       );
     }
     // Same reason: a clock format checks a clock time, and a clock time is
@@ -1584,7 +1599,10 @@ export class UebungService {
       );
     }
 
-    if (format === 'HOEREN_WAHL' && material.dialogId != null) {
+    if (
+      (format === 'HOEREN_WAHL' || format === 'LESEN_WAHL') &&
+      material.dialogId != null
+    ) {
       const d = (await this.prisma.dafDialog.findUnique({
         where: { id: material.dialogId },
         select: {

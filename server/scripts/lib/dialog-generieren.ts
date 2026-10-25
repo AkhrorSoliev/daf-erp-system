@@ -99,9 +99,11 @@ export function erstelleGeneriere(
   // Gemini voices two speakers per request; a dialog with more is made in
   // pieces and rebuilt (`mehrstimmig.ts`).
   mehrstimmig?: (d: Dialog, anfrage: GeminiDialog) => Promise<Buffer>,
+  // `--einzeln`: every dialog goes through the piecewise path (every line alone).
+  einzeln = false,
 ): DialogGenerierFn {
   return async (d, anfrage) => {
-    if (anfrage.speakers.length > 2) {
+    if (anfrage.speakers.length > 2 || einzeln) {
       if (!mehrstimmig) {
         throw new Error(
           `${d.id}: ${anfrage.speakers.length} ta gapiruvchi — Gemini bitta so'rovda faqat 2 tasini oladi`,

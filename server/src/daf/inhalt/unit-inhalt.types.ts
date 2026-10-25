@@ -119,9 +119,17 @@ export interface HoerFrage {
   falsch: string[];
 }
 
+/**
+ * Audio matn turi: `DIALOG` (ikki va undan ko'p ovoz) yoki `ANSAGE` — bitta
+ * ovoz (e'lon, radio xabari); uning har satri bitta gap. Yozilmasa — `DIALOG`.
+ */
+export type DialogArt = 'DIALOG' | 'ANSAGE';
+
 export interface Dialog {
   /** Barqaror kalit: `u01-d1`. */
   id: string;
+  /** Yozilmasa — `DIALOG`. */
+  art?: DialogArt;
   section: string;
   titelDe: string;
   titelUz: string;
@@ -143,6 +151,41 @@ export interface DialogeFile {
 }
 
 /**
+ * O'qish matni turi (audio YO'Q, `LESEN_WAHL`): `CHAT` — satr = gapiruvchi +
+ * gap; `TEXT` — satr = abzats (`sprecher` bo'sh); `TABELLE` — birinchi satr
+ * sarlavha, qolganlari qator, kataklar ` | ` bilan ajratiladi.
+ */
+export type LeseArt = 'CHAT' | 'TEXT' | 'TABELLE';
+
+/** O'qish matnining satri — `sprecher` faqat `CHAT`da to'ldiriladi. */
+export interface LesetextZeile extends Sprechbar {
+  sprecher: string;
+}
+
+/**
+ * Plakat, chat, e-mail, jadval — o'qiladigan vaziyat matni. Bazada
+ * `DafDialog` qatori (`art` bilan, audiosiz): eshitish savoli bilan bir xil
+ * 2 savol (`HoerFrage`), bir xil qoidalar.
+ */
+export interface Lesetext {
+  /** Barqaror kalit: `u06-t1`. */
+  id: string;
+  section: string;
+  art: LeseArt;
+  titelDe: string;
+  titelUz: string;
+  /** Sahna izohi (o'zbekcha, ikki nuqtasiz). */
+  sahnaUz?: string;
+  zeilen: LesetextZeile[];
+  fragen: HoerFrage[];
+}
+
+export interface LesetexteFile {
+  unit: string;
+  texte: Lesetext[];
+}
+
+/**
  * Yasalgan gap.
  *
  * Manbadan olinmaydi: A1 dagi tayyor gaplarning atigi 27 % i tanish
@@ -158,6 +201,12 @@ export interface Satz extends Sprechbar {
    */
   sourceId: string;
   section: string;
+  /**
+   * Gap qaysi vaziyatdan olingani (o'zbekcha, ikki nuqtasiz): «Kassada.
+   * Claudia aytadi». Gap formatlarida gapdan OLDIN ko'rsatiladi — yakka gap
+   * ham ma'noli bo'ladi.
+   */
+  kontextUz?: string;
   wordCount: number;
   origin: 'GENERATED';
   /**

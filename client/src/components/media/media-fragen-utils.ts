@@ -40,6 +40,7 @@ const VORSCHAU_SHAKLI: Record<FrageFormat, VorschauShakli> = {
   SATZ_HOEREN: "OVOZ",
   // Audio + savol matni birga: suhbat karnagi, ostida savolning o'zi.
   HOEREN_WAHL: "HOEREN",
+  LESEN_WAHL: "MATN",
   // Picture formats: the options (or the question) are pictures, so they are
   // drawn as thumbnails instead of URLs.
   BILD_WORT: "RASM",

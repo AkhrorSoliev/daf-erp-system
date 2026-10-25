@@ -460,3 +460,36 @@ describe('zuordnen', () => {
     expect(new Set(f.belegteItems).size).toBe(6);
   });
 });
+
+describe('gap sahnasi (kontextUz)', () => {
+  const mitKontext = {
+    ...s(1, 'Ich bin Mia.', 'Men Miyaman.'),
+    kontextUz: 'Sportklubda tanishuv',
+  };
+  const andere = [
+    s(2, 'Wir sind hier.', 'Biz shu yerdamiz.'),
+    s(3, 'Das ist gut.', 'Bu yaxshi.'),
+    s(4, 'Er kommt heute.', 'U bugun keladi.'),
+  ];
+
+  it('SATZ_BAUEN, SATZ_HOEREN va SATZ_UEBERSETZEN kontextni beradi', () => {
+    const sat = { ...mitKontext, audioKey: 'k' };
+    expect(satzBauen(sat, () => 0.5)?.kontext).toBe('Sportklubda tanishuv');
+    expect(
+      satzHoeren(
+        sat,
+        () => 0.5,
+        (k) => `u/${k}`,
+      )?.kontext,
+    ).toBe('Sportklubda tanishuv');
+    expect(satzUebersetzen(mitKontext, andere, () => 0.5)?.kontext).toBe(
+      'Sportklubda tanishuv',
+    );
+  });
+
+  it('kontext yo`q bo`lsa maydon umuman qo`shilmaydi', () => {
+    const f = satzBauen(s(1, 'Ich bin Mia.', 'Men Miyaman.'), () => 0.5);
+    expect(f).not.toBeNull();
+    expect(f).not.toHaveProperty('kontext');
+  });
+});

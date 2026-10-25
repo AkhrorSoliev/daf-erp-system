@@ -17,6 +17,7 @@ export type FrageFormat =
   | "AUDIO_WORT"
   | "WORT_TIPPEN"
   | "HOEREN_WAHL"
+  | "LESEN_WAHL"
   | "BILD_WORT"
   | "AUDIO_BILD"
   | "BILD_TIPPEN"
@@ -64,6 +65,15 @@ export interface PublicFrage {
    * has none: its four clocks are the `options`.
    */
   uhrzeit?: string | null;
+  /** Faqat LESEN_WAHL: o'qiladigan matn (chat, xat, e'lon, jadval); tarjimasi javobdan keyin `transkript` bilan keladi. */
+  lesetext?: {
+    art: "CHAT" | "TEXT" | "TABELLE";
+    titel: string;
+    sahnaUz: string | null;
+    zeilen: Array<{ sprecher: string; de: string }>;
+  } | null;
+  /** Gap sahnasi (o'zbekcha): SATZ_* va LUECKE savollarida gap oldida ko'rsatiladi. */
+  kontext?: string | null;
 }
 
 /** Javob tekshirilgandan KEYIN keladi — faqat shunda to'g'ri javob ma'lum. */

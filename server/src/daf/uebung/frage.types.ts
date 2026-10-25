@@ -13,6 +13,7 @@ export type FrageFormat =
   | 'AUDIO_WORT'
   | 'WORT_TIPPEN'
   | 'HOEREN_WAHL'
+  | 'LESEN_WAHL'
   | 'BILD_WORT'
   | 'AUDIO_BILD'
   | 'BILD_TIPPEN'
@@ -51,6 +52,8 @@ export interface MaterialSatz {
   /** Boshqa to'g'ri so'z tartiblari — `SATZ_BAUEN` ularni ham qabul qiladi. */
   akzeptiert: string[];
   /** R2 kaliti; `null` — ovoz yo'q, `SATZ_HOEREN` qurilmaydi. */
+  /** Gap qaysi sahnaga tegishli (o'zbekcha, bitta satr); savol oldidan ko'rsatiladi. */
+  kontextUz?: string | null;
   audioKey: string | null;
 }
 
@@ -112,6 +115,12 @@ export interface MaterialHoerFrage {
 export interface MaterialDialog {
   id: number;
   titelDe: string;
+  /**
+   * Matn turi: `DIALOG`, `ANSAGE` — audio (`HOEREN_WAHL`); `CHAT`, `TEXT`,
+   * `TABELLE` — o'qish matni (`LESEN_WAHL`). Yozilmasa — `DIALOG`.
+   */
+  art?: string;
+
   zeilen: MaterialDialogZeile[];
   /** Suhbat qayerda, kim bilan boshlanishi — o'zbekcha, ixtiyoriy. */
   sahnaUz?: string | null;
@@ -125,6 +134,18 @@ export interface MaterialDialog {
    */
   imageKey?: string | null;
   fragen: MaterialHoerFrage[];
+}
+
+/**
+ * `LESEN_WAHL` savoli bilan birga yuboriladigan o'qish matni. O'zbekcha
+ * tarjimasi YO'Q: u javobdan KEYIN (`pruefen` → `transkript`) ochiladi, aks
+ * holda o'quvchi nemischani o'qimay, tarjimani o'qirdi.
+ */
+export interface Lesetext {
+  art: 'CHAT' | 'TEXT' | 'TABELLE';
+  titel: string;
+  sahnaUz: string | null;
+  zeilen: Array<{ sprecher: string; de: string }>;
 }
 
 /**
@@ -189,6 +210,10 @@ export interface Frage {
    * `UHR_HOEREN`: its clocks are the `options`, and this would be the answer.
    */
   uhrzeit?: string | null;
+  /** `LESEN_WAHL`: savol bilan birga ko'rsatiladigan matn (chat, e-mail, jadval). */
+  lesetext?: Lesetext | null;
+  /** Gap sahnasi (`MaterialSatz.kontextUz`): SATZ_* va LUECKE savollarida gap oldida ko'rsatiladi. */
+  kontext?: string | null;
 }
 
 /** `belegteItems`/seans ichidagi band material kalitini quradi. */
@@ -213,6 +238,10 @@ export interface PublicFrage {
   bildUrl?: string | null;
   /** `Frage.uhrzeit` — the clock shown with the question. */
   uhrzeit?: string | null;
+  /** `Frage.lesetext` — the text a `LESEN_WAHL` question is about. */
+  lesetext?: Lesetext | null;
+  /** `Frage.kontext` — the scene line shown before the sentence. */
+  kontext?: string | null;
 }
 
 export function toPublic(f: Frage, index: number): PublicFrage {
@@ -228,5 +257,7 @@ export function toPublic(f: Frage, index: number): PublicFrage {
     audioUrl: f.audioUrl,
     bildUrl: f.bildUrl ?? null,
     ...(f.uhrzeit ? { uhrzeit: f.uhrzeit } : {}),
+    ...(f.lesetext ? { lesetext: f.lesetext } : {}),
+    ...(f.kontext ? { kontext: f.kontext } : {}),
   };
 }

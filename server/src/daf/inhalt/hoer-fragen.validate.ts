@@ -2,6 +2,9 @@ import { normalisieren } from '../uebung/antwort';
 import { tokensOf } from './progression';
 import type { Dialog } from './unit-inhalt.types';
 
+/** Dialog yoki o'qish matni — qoida faqat id, satrlar va savollarga tayanadi. */
+type SavolManbai = Pick<Dialog, 'id' | 'zeilen' | 'fragen'>;
+
 /** Har dialogda aniq shuncha savol — dizayn 4.2. */
 export const FRAGEN_PRO_DIALOG = 2;
 
@@ -53,7 +56,7 @@ const NICHT_LATEIN = /[Ѐ-ԯ؀-ۿ]/;
  * tartibi va yordamchi so'zlar u yerda ma'lum) — validator sof qoladi.
  */
 export function validateHoerFragen(
-  dialog: Dialog,
+  dialog: SavolManbai,
   unbekannt: (text: string) => string[],
 ): string[] {
   const problems: string[] = [];

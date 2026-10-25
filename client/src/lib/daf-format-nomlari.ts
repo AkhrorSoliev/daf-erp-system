@@ -29,6 +29,7 @@ export const FORMAT_NOMLARI: Record<FrageFormat, string> = {
   UHR_LESEN: msg("Soatdan vaqtni topish"),
   UHR_HOEREN: msg("Eshitilgan vaqtning soatini topish"),
   UHR_TIPPEN: msg("Soatga qarab vaqtni yozish"),
+  LESEN_WAHL: msg("Matnni o'qib savolga javob berish"),
 };
 
 /** The optional last argument is the page's translator; a code that is not in the list shows as it is. */
