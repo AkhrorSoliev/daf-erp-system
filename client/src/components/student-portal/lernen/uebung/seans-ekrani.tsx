@@ -186,6 +186,17 @@ export function SeansEkrani(props: SeansEkraniProps) {
     xatoFlashTaymerlari.current.clear();
   }, []);
   React.useEffect(() => tozalaFlashTaymerlari, [tozalaFlashTaymerlari]);
+  // False once the screen is gone. A pair's verdict arrives through a promise
+  // (see `onJuft`), which — unlike a per-call `mutate` callback — still runs
+  // after the student left the session; it must then stay silent. The effect
+  // sets it true again so React StrictMode's second run does not leave it false.
+  const tirik = React.useRef(true);
+  React.useEffect(() => {
+    tirik.current = true;
+    return () => {
+      tirik.current = false;
+    };
+  }, []);
   const [natija, setNatija] = React.useState<PruefErgebnis | null>(null);
   const [savolBoshi, setSavolBoshi] = React.useState(() => Date.now());
   const [seansBoshi, setSeansBoshi] = React.useState(() => Date.now());
@@ -286,8 +297,15 @@ export function SeansEkrani(props: SeansEkraniProps) {
 
     const { chapUstun, ongUstun } = juftUstunlar(frage.options, format);
     ovozniUygot();
-    juftTekshir.mutate(
-      {
+    // `mutateAsync(...).then(ok, err)`, NOT `mutate(body, { onSuccess, onError })`:
+    // all pairs share this one mutation, and TanStack Query v5 keeps only the LAST
+    // `mutate` call's callbacks, so with two pairs in flight the first pair's
+    // verdict was dropped and it stayed waiting for good. Every promise settles
+    // for its own call. `.then(ok, err)` (not `.catch`) keeps a throw inside the
+    // success handler from being read as a network error; the trailing empty
+    // `.catch` only keeps such a throw from becoming an unhandled rejection.
+    juftTekshir
+      .mutateAsync({
         // `frage.itemType` kengroq turga ega (`MaterialTyp`), lekin
         // server PAAR uchun HAR DOIM `WORT`, ZUORDNEN uchun HAR DOIM
         // `PHRASE` beradi (`wort-fragen.ts`/`satz-fragen.ts`) — shuning
@@ -313,9 +331,10 @@ export function SeansEkrani(props: SeansEkraniProps) {
         questionIndex: frage.index,
         attemptNo: holat ? urinishRaqami(holat, frage) : 1,
         lessonId: darsMi ? darsLessonId : undefined,
-      },
-      {
-        onSuccess: (javob) => {
+      })
+      .then(
+        (javob) => {
+          if (!tirik.current) return;
           // `juftJavobKeldi` endi `{ juftlar, xato }` qaytaradi (ko'rik
           // topilmasi tuzatildi): "shu javob birinchi urinishdagi
           // xatomi" degan qaror endi sof `juft-holati.ts` modulida.
@@ -357,7 +376,8 @@ export function SeansEkrani(props: SeansEkraniProps) {
           }, 500);
           xatoFlashTaymerlari.current.add(taymerId);
         },
-        onError: (err) => {
+        (err) => {
+          if (!tirik.current) return;
           // Aloqa uzilsa juft OSILIB QOLMASLIGI kerak — eng yomon holat
           // shu bo'lardi, chunki savol hech qachon tugamas edi.
           // `juftJavobKeldi(..., false)` bilan ikkala tugma yana bo'sh
@@ -370,8 +390,8 @@ export function SeansEkrani(props: SeansEkraniProps) {
           );
           toast.error(getErrorMessage(err, t("Yuborib bo'lmadi. Qayta bosing")));
         },
-      },
-    );
+      )
+      .catch(() => {});
   };
 
   // Juftlash savoli tugaganda (hamma juft yashil): `javobBerildi`ga
