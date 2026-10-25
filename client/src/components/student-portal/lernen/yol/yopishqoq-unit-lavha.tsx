@@ -2,11 +2,15 @@
 
 import { cn } from "@/lib/utils";
 
-/** Same level colours as the path (A1 coral, A2 teal, B1 grape); the unit page's banner uses them too. */
+/**
+ * The level hues of the path (A1 coral, A2 teal, B1 grape), in the palette's deep stops: the banner carries
+ * white text, which the bright 500 stops cannot hold at 4.5:1 (2.82 / 2.48 / 4.23); these give 5.07 / 5.20 / 5.70.
+ * The unit page's banner uses the same map. The path's nodes keep the bright stops.
+ */
 export const DARAJA_FONI: Record<string, string> = {
-  A1: "bg-coral-500",
-  A2: "bg-teal-500",
-  B1: "bg-grape-500",
+  A1: "bg-coral-700",
+  A2: "bg-teal-700",
+  B1: "bg-grape-600",
 };
 
 /**

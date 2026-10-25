@@ -23,7 +23,7 @@ describe("<TozaUnitLavha />", () => {
 
   it("is the path's level-coloured banner with the unit's line", () => {
     expect(html).toContain("A2 · Wohnen");
-    expect(html).toContain("bg-teal-500");
+    expect(html).toContain("bg-teal-700");
   });
 
   it("is read by screen readers (unlike the sticky path banner) and Dafi waves hello", () => {
