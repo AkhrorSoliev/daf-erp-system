@@ -74,10 +74,18 @@ export const profileCb = {
   cancel: (id: number) => `pf:x:${id}`,
 };
 
+/** Karta raqami Postgres int4 (Branch/Student.id) — undan kattasi tugma emas. */
+const MAX_INT4 = 2147483647;
+
 export function parseProfileCallback(data: string): ProfileAction | null {
-  let m = /^pf:s:(\d+)$/.exec(data);
+  const action = parseRaw(data);
+  return action && action.studentId <= MAX_INT4 ? action : null;
+}
+
+function parseRaw(data: string): ProfileAction | null {
+  let m = /^pf:s:(\d{1,10})$/.exec(data);
   if (m) return { kind: 'start', studentId: Number(m[1]) };
-  m = /^pf:g:(\d+):([MF])$/.exec(data);
+  m = /^pf:g:(\d{1,10}):([MF])$/.exec(data);
   if (m) {
     return {
       kind: 'gender',
@@ -85,9 +93,9 @@ export function parseProfileCallback(data: string): ProfileAction | null {
       gender: m[2] as 'M' | 'F',
     };
   }
-  m = /^pf:x:(\d+)$/.exec(data);
+  m = /^pf:x:(\d{1,10})$/.exec(data);
   if (m) return { kind: 'cancel', studentId: Number(m[1]) };
-  m = /^pf:dl:(\d+):([MFN])$/.exec(data);
+  m = /^pf:dl:(\d{1,10}):([MFN])$/.exec(data);
   if (m) {
     return {
       kind: 'decades',
@@ -95,7 +103,7 @@ export function parseProfileCallback(data: string): ProfileAction | null {
       g: m[2] as GenderChoice,
     };
   }
-  m = /^pf:dd:(\d+):([MFN]):(\d{4})$/.exec(data);
+  m = /^pf:dd:(\d{1,10}):([MFN]):(\d{4})$/.exec(data);
   if (m) {
     return {
       kind: 'decade',
@@ -104,7 +112,7 @@ export function parseProfileCallback(data: string): ProfileAction | null {
       decade: Number(m[3]),
     };
   }
-  m = /^pf:dy:(\d+):([MFN]):(\d{4})$/.exec(data);
+  m = /^pf:dy:(\d{1,10}):([MFN]):(\d{4})$/.exec(data);
   if (m) {
     return {
       kind: 'year',
@@ -113,7 +121,7 @@ export function parseProfileCallback(data: string): ProfileAction | null {
       year: Number(m[3]),
     };
   }
-  m = /^pf:dm:(\d+):([MFN]):(\d{4})-(\d{2})$/.exec(data);
+  m = /^pf:dm:(\d{1,10}):([MFN]):(\d{4})-(\d{2})$/.exec(data);
   if (m) {
     return {
       kind: 'month',
@@ -123,7 +131,7 @@ export function parseProfileCallback(data: string): ProfileAction | null {
       month: Number(m[4]),
     };
   }
-  m = /^pf:dc:(\d+):([MFN]):(\d{4}-\d{2}-\d{2})$/.exec(data);
+  m = /^pf:dc:(\d{1,10}):([MFN]):(\d{4}-\d{2}-\d{2})$/.exec(data);
   if (m) {
     return {
       kind: 'review',
@@ -132,7 +140,7 @@ export function parseProfileCallback(data: string): ProfileAction | null {
       iso: m[3],
     };
   }
-  m = /^pf:ds:(\d+):([MFN]):(\d{4}-\d{2}-\d{2}|-)$/.exec(data);
+  m = /^pf:ds:(\d{1,10}):([MFN]):(\d{4}-\d{2}-\d{2}|-)$/.exec(data);
   if (m) {
     return {
       kind: 'save',

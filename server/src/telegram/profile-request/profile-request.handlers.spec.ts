@@ -255,6 +255,74 @@ describe('wizard paths', () => {
   });
 });
 
+describe('review shows only what will be written', () => {
+  it('gender filled meanwhile: no Jins line', async () => {
+    const s = setup(row({ gender: Gender.MALE }));
+    await tap(s, { kind: 'review', studentId: 7, g: 'F', iso: '2005-03-15' });
+    expect(edited(s)[0]).toBe(
+      "Tekshirib ko'ring:\n\nTug'ilgan sana: 15-mart, 2005\n\nHammasi to'g'rimi?",
+    );
+  });
+  it('date filled meanwhile: no date line', async () => {
+    const s = setup(row({ dateOfBirth: FILLED_DOB }));
+    await tap(s, { kind: 'review', studentId: 7, g: 'F', iso: '2005-03-15' });
+    expect(edited(s)[0]).toBe(
+      "Tekshirib ko'ring:\n\nJins: Ayol\n\nHammasi to'g'rimi?",
+    );
+    expect(cbOf(edited(s))[0]).toBe('pf:ds:7:F:-');
+  });
+  it('both filled meanwhile: already filled, no keyboard', async () => {
+    const s = setup(row({ gender: Gender.MALE, dateOfBirth: FILLED_DOB }));
+    await tap(s, { kind: 'review', studentId: 7, g: 'F', iso: '2005-03-15' });
+    expect(edited(s)[0]).toBe(ALREADY_FILLED);
+    noKeyboard(edited(s));
+  });
+  it('gender tap when the gender got filled meanwhile goes on with the date', async () => {
+    const s = setup(row({ gender: Gender.MALE }));
+    await tap(s, { kind: 'gender', studentId: 7, gender: 'F' });
+    expect(edited(s)[0]).toBe(YEAR_PROMPT);
+    expect(cbOf(edited(s))[0]).toBe('pf:dd:7:N:2020');
+  });
+  it('date screens after the date got filled meanwhile restart at the gender question', async () => {
+    for (const a of [
+      { kind: 'decades', studentId: 7, g: 'M' },
+      { kind: 'decade', studentId: 7, g: 'M', decade: 2000 },
+      { kind: 'year', studentId: 7, g: 'M', year: 2005 },
+      { kind: 'month', studentId: 7, g: 'M', year: 2005, month: 3 },
+    ] as ProfileAction[]) {
+      const s = setup(row({ dateOfBirth: FILLED_DOB }));
+      await tap(s, a);
+      expect(edited(s)[0]).toBe('Jinsingizni tanlang:');
+    }
+  });
+  it('an empty review (g = N, date filled, gender missing) restarts', async () => {
+    const s = setup(row({ dateOfBirth: FILLED_DOB }));
+    await tap(s, { kind: 'review', studentId: 7, g: 'N', iso: '2005-03-15' });
+    expect(edited(s)[0]).toBe('Jinsingizni tanlang:');
+  });
+});
+
+describe('save never claims more than it did', () => {
+  it('writes nothing but a field is empty (N, no date): back to the start screen', async () => {
+    const s = setup(row());
+    await tap(s, { kind: 'save', studentId: 7, g: 'N', iso: null });
+    expect(s.raw.prisma.student.updateMany).not.toHaveBeenCalled();
+    expect(edited(s)[0]).toBe('Jinsingizni tanlang:');
+  });
+  it('same for a date-missing card that got no date', async () => {
+    const s = setup(row({ gender: Gender.MALE }));
+    await tap(s, { kind: 'save', studentId: 7, g: 'N', iso: null });
+    expect(s.raw.prisma.student.updateMany).not.toHaveBeenCalled();
+    expect(edited(s)[0]).toBe(YEAR_PROMPT);
+  });
+  it('date written but gender still empty (g = N): no THANKS, gender question', async () => {
+    const s = setup(row());
+    await tap(s, { kind: 'save', studentId: 7, g: 'N', iso: '2005-03-15' });
+    expect(s.raw.prisma.student.updateMany).toHaveBeenCalledTimes(1);
+    expect(edited(s)[0]).toBe('Jinsingizni tanlang:');
+  });
+});
+
 describe('cancel', () => {
   it('restores the original request with its single button', async () => {
     const s = setup(row({ firstName: 'Vali<' }));

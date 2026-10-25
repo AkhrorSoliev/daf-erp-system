@@ -122,6 +122,15 @@ function paramsValid(a: ProfileAction, today: string): boolean {
 const GENDER_ENUM = { M: Gender.MALE, F: Gender.FEMALE } as const;
 
 /** Saqlash: faqat kartada hali bo'sh VA tugmada bor maydonlar, bitta chaqiruv bilan. */
+/** Birinchi savol: jins yo'q bo'lsa jins, aks holda yil. */
+function firstScreen(
+  id: number,
+  hasGender: boolean,
+  today: string,
+): PickerScreen {
+  return hasGender ? decadesScreen(id, 'N', today) : genderScreen(id);
+}
+
 async function save(
   deps: ProfileDeps,
   ctx: ProfileCtx,
@@ -134,7 +143,8 @@ async function save(
   if (g !== 'N' && !student.gender) input.gender = GENDER_ENUM[g];
   if (iso && !student.dateOfBirth) input.dateOfBirth = iso;
   if (!input.gender && !input.dateOfBirth) {
-    return edit(ctx, ALREADY_FILLED);
+    // Tugma kartada yetishmayotgan narsani olib kelmagan: hech narsa yozilmadi.
+    return show(ctx, firstScreen(student.id, !!student.gender, today));
   }
   if (input.dateOfBirth) {
     const problem = birthDateProblem(input.dateOfBirth, today);
@@ -145,7 +155,11 @@ async function save(
     }
   }
   await fillStudentProfile(deps, student, input, student.userId ?? undefined);
-  return edit(ctx, THANKS);
+  // Rahmat faqat hech narsa yetishmay qolganda; aks holda keyingi savol.
+  const hasGender = !!(student.gender ?? input.gender);
+  const hasDate = !!(student.dateOfBirth ?? input.dateOfBirth);
+  if (hasGender && hasDate) return edit(ctx, THANKS);
+  return show(ctx, firstScreen(student.id, hasGender, today));
 }
 
 export async function handleProfileTap(
@@ -188,13 +202,12 @@ export async function handleProfileTap(
           .reply_markup,
       });
     case 'start':
-      return show(
-        ctx,
-        missing.includes('gender')
-          ? genderScreen(id)
-          : decadesScreen(id, 'N', today),
-      );
+      return show(ctx, firstScreen(id, !missing.includes('gender'), today));
     case 'gender':
+      // Jins oraliqda to'ldirilgan bo'lsa, yozilmaydi: so'rov faqat sanani davom ettiradi.
+      if (!missing.includes('gender')) {
+        return show(ctx, decadesScreen(id, 'N', today));
+      }
       return show(
         ctx,
         needsDate
@@ -202,15 +215,30 @@ export async function handleProfileTap(
           : reviewScreen(id, action.gender, null),
       );
     case 'decades':
-      return show(ctx, decadesScreen(id, action.g, today));
     case 'decade':
-      return show(ctx, yearsScreen(id, action.g, action.decade, today));
     case 'year':
-      return show(ctx, monthsScreen(id, action.g, action.year));
     case 'month':
+      // Sana oraliqda to'ldirilgan bo'lsa, sana ekranlari kerak emas.
+      if (!needsDate) {
+        return show(ctx, firstScreen(id, !missing.includes('gender'), today));
+      }
+      if (action.kind === 'decades') {
+        return show(ctx, decadesScreen(id, action.g, today));
+      }
+      if (action.kind === 'decade') {
+        return show(ctx, yearsScreen(id, action.g, action.decade, today));
+      }
+      if (action.kind === 'year') {
+        return show(ctx, monthsScreen(id, action.g, action.year));
+      }
       return show(ctx, daysScreen(id, action.g, action.year, action.month));
-    case 'review':
-      return show(ctx, reviewScreen(id, action.g, action.iso));
+    case 'review': {
+      // Faqat haqiqatan yoziladigan narsa ko'rsatiladi.
+      const g = missing.includes('gender') ? action.g : 'N';
+      const iso = needsDate ? action.iso : null;
+      if (g === 'N' && !iso) return show(ctx, firstScreen(id, false, today));
+      return show(ctx, reviewScreen(id, g, iso));
+    }
     case 'save':
       // Ko'rinish rejimida hech narsa yozilmaydi.
       if (!student) return edit(ctx, PREVIEW_NOTE);

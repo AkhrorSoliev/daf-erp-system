@@ -118,6 +118,28 @@ describe('callbacks', () => {
   ])('rejects %s', (bad) => expect(parseProfileCallback(bad)).toBeNull());
 });
 
+describe('student id bound (int4)', () => {
+  it('accepts 2147483647 and rejects anything above or too long', () => {
+    expect(parseProfileCallback('pf:s:2147483647')).toEqual({
+      kind: 'start',
+      studentId: 2147483647,
+    });
+    for (const bad of [
+      'pf:s:2147483648',
+      'pf:s:99999999999',
+      'pf:g:2147483648:M',
+      'pf:x:2147483648',
+      'pf:dl:2147483648:N',
+      'pf:dd:2147483648:N:2000',
+      'pf:dy:2147483648:N:2005',
+      'pf:dm:2147483648:N:2005-03',
+      'pf:dc:2147483648:N:2005-03-15',
+      'pf:ds:2147483648:N:-',
+    ])
+      expect(parseProfileCallback(bad)).toBeNull();
+  });
+});
+
 describe('buildRequestKeyboard', () => {
   const buttons = (k: ReturnType<typeof buildRequestKeyboard>) =>
     k.reply_markup.inline_keyboard.flat() as any[];
