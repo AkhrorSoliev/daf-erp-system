@@ -9,6 +9,8 @@ export interface AudienceStudent {
   branchName: string | null;
   courseId: string | null;
   courseName: string | null;
+  /** The studying group's level as staff wrote it («A1»); null = not given. */
+  level: string | null;
 }
 
 export interface AgeBandRow {
@@ -36,9 +38,32 @@ export interface AudienceCutRow extends AudienceStat {
   name: string;
 }
 
+/** One age band of the leavers table: who studies now, who left, and the leaving share. */
+export interface DepartureBandRow {
+  key: string;
+  label: string;
+  active: number;
+  departed: number;
+  /** departed ÷ (active + departed), whole percent; null while fewer than `MIN_KNOWN` people stand behind it. */
+  share: number | null;
+}
+
+/** Confirmed departures of the last 12 months (ADR-0035) with a known age. */
+export interface DepartureAges {
+  ages: number[];
+  /** Leavers whose birth date is not given. */
+  ageUnknown: number;
+}
+
 export interface AudienceOverview {
+  /** Everyone the system holds in scope (not deleted, archived or prospect), studying or not. */
+  systemTotal: number;
   summary: AudienceStat;
   bands: AgeBandRow[];
   branches: AudienceCutRow[];
   courses: AudienceCutRow[];
+  levels: AudienceCutRow[];
+  departures: DepartureBandRow[];
+  /** Leavers of the last 12 months whose age is not known. */
+  departuresAgeUnknown: number;
 }

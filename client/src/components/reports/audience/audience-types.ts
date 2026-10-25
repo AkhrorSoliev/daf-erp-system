@@ -15,16 +15,25 @@ export interface AudienceCutRow extends AudienceStat {
   name: string;
 }
 
-export interface AgeBandRow {
+/** One age band of the leavers table. */
+export interface DepartureBandRow {
   key: string;
   label: string;
-  count: number;
-  pct: number | null;
+  /** Studying now. */
+  active: number;
+  /** Left in the last 12 months. */
+  departed: number;
+  /** departed ÷ (active + departed), whole percent; null while too few people stand behind it. */
+  share: number | null;
 }
 
 export interface AudienceOverview {
+  /** Everyone the system holds in scope, studying or not. */
+  systemTotal: number;
   summary: AudienceStat;
-  bands: AgeBandRow[];
-  branches: AudienceCutRow[];
   courses: AudienceCutRow[];
+  levels: AudienceCutRow[];
+  departures: DepartureBandRow[];
+  /** Leavers of the last 12 months whose age is not known. */
+  departuresAgeUnknown: number;
 }

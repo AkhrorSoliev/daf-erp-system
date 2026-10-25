@@ -4,11 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useT } from "@/i18n/context";
 import { msg } from "@/i18n/msg";
-import { formatNumber } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
-import { AudienceBands } from "./audience-bands";
-import { AudienceCardsSkeleton, AudienceCoverage, AudienceHeadline } from "./audience-cards";
 import { AudienceCutTable } from "./audience-cuts";
+import { AudienceDepartures } from "./audience-departures";
+import { AudienceNumbers, AudienceNumbersSkeleton } from "./audience-numbers";
 import { useAudienceOverview } from "./audience-queries";
 
 /** «Auditoriya»: who studies here. Every figure is the server's; the page only arranges and formats. No branch picker: it follows the header. */
@@ -20,11 +19,7 @@ export function AudiencePage() {
     <div className="flex flex-col gap-4">
       <div>
         <h2 className="font-heading text-lg font-semibold tracking-tight">{t("Auditoriya")}</h2>
-        <p className="text-sm text-muted-foreground">
-          {data
-            ? t("Hozir o'qiyotgan o'quvchilar · {n} kishi", { n: formatNumber(data.summary.total) })
-            : t("Hozir o'qiyotgan o'quvchilar")}
-        </p>
+        <p className="text-sm text-muted-foreground">{t("Tanlangan filial · hozirgi holat")}</p>
       </div>
 
       {isError && !data ? (
@@ -35,8 +30,8 @@ export function AudiencePage() {
           </Button>
         </div>
       ) : !data ? (
-        <AudienceCardsSkeleton />
-      ) : data.summary.total === 0 ? (
+        <AudienceNumbersSkeleton />
+      ) : data.systemTotal === 0 && data.summary.total === 0 ? (
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
             {t("Bu filialda hozir o'qiyotgan o'quvchi yo'q — boshqa filialni tanlab ko'ring.")}
@@ -45,11 +40,10 @@ export function AudiencePage() {
       ) : (
         // The previous answer stays dimmed and inert until the next one lands (a branch switch).
         <div aria-busy={isPlaceholderData} className={cn("flex flex-col gap-4", isPlaceholderData && "pointer-events-none opacity-60")}>
-          <AudienceCoverage s={data.summary} />
-          <AudienceHeadline s={data.summary} />
-          <AudienceBands bands={data.bands} />
+          <AudienceNumbers systemTotal={data.systemTotal} s={data.summary} />
+          <AudienceCutTable title={msg("Yo'nalish bo'yicha")} nameHead={msg("Yo'nalish")} rows={data.levels} />
           <AudienceCutTable title={msg("Kurs bo'yicha")} nameHead={msg("Kurs")} rows={data.courses} />
-          <AudienceCutTable title={msg("Filial bo'yicha")} nameHead={msg("Filial")} rows={data.branches} />
+          <AudienceDepartures rows={data.departures} ageUnknown={data.departuresAgeUnknown} />
         </div>
       )}
     </div>
