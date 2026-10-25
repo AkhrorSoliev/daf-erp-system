@@ -7,6 +7,7 @@ import { LoadFailed } from "../load-failed";
 import { loadState } from "../lib/load-state";
 import { useT } from "@/i18n/context";
 import { useConversations } from "./chat-queries";
+import { ChatAccessBanner } from "./chat-access-banner";
 import { ConversationRow } from "./conversation-row";
 
 export function ChatListPage() {
@@ -36,7 +37,7 @@ export function ChatListPage() {
           </div>
         }
       />
-      {/* Task 4: <ChatAccessBanner /> goes here. */}
+      <ChatAccessBanner />
       {state === "loading" && (
         <div className="flex flex-col gap-2.5">
           {[0, 1, 2].map((i) => (

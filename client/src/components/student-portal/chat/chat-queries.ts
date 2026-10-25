@@ -41,6 +41,11 @@ export function useChatEnabled(): boolean {
   return useChatAccess().data?.enabled === true;
 }
 
+/** True only once the server has answered and says the student may write. */
+export function useCanWrite(): boolean {
+  return useChatAccess().data?.canWrite === true;
+}
+
 export function useConversations(enabled = true) {
   return useQuery<ConversationView[]>({
     queryKey: CHAT_KEYS.list,
