@@ -4,4 +4,5 @@ export const PAYMENT_METHOD_LABEL: Record<string, string> = {
   CLICK: 'Click',
   UZUM: 'Uzum',
   TRANSFER: "Bank o'tkazmasi",
+  QR: 'QR-kod',
 };

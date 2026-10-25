@@ -39,8 +39,9 @@ const METHOD_LABELS: Record<string, string> = {
   CLICK: 'Click',
   UZUM: 'Uzum',
   TRANSFER: "O'tkazma",
+  QR: 'QR-kod',
 };
-const METHOD_ORDER = ['CASH', 'PAYME', 'CLICK', 'UZUM', 'TRANSFER'];
+const METHOD_ORDER = ['CASH', 'PAYME', 'CLICK', 'UZUM', 'TRANSFER', 'QR'];
 
 export function buildMethodLine(
   byMethod: Array<{ method: string; _sum: { amount: number | null } }>,

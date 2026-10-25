@@ -241,6 +241,7 @@ enum PaymentMethod {
   CLICK
   UZUM
   TRANSFER
+  QR
 }
 
 enum PaymentStatus {

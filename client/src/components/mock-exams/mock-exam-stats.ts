@@ -13,6 +13,7 @@ import type { MockExamStats, MockStatsMethod } from "./exam-detail-types";
 const METHOD_WORDS: Partial<Record<MockStatsMethod, string>> = {
   CASH: msg("Naqd"),
   TRANSFER: msg("O'tkazma"),
+  QR: msg("QR-kod"),
   BALANCE: msg("Balansdan (eski)"),
   UNKNOWN: msg("To'lov turi yozilmagan"),
 };

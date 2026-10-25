@@ -83,6 +83,7 @@ export const METHOD_LABELS: Record<string, string> = {
   CLICK: 'Click',
   UZUM: 'Uzum',
   TRANSFER: "O'tkazma",
+  QR: 'QR-kod',
 };
 
 export const EXPENSE_METHOD_LABELS: Record<string, string> = {

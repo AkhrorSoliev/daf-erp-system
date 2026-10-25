@@ -15,6 +15,7 @@ const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   CLICK: 'Click',
   UZUM: 'Uzum',
   TRANSFER: "Bank o'tkazmasi",
+  QR: 'QR-kod',
 };
 
 // Neon-style monochrome palette — dark text on white, single hairline divider.

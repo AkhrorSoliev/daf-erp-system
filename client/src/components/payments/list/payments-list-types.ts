@@ -1,6 +1,6 @@
 /** Copies of the server's `GET /payments/list/*` shapes (`server/src/payments/list/`, spec B4 §5). */
 
-export type PaymentMethod = "CASH" | "PAYME" | "CLICK" | "UZUM" | "TRANSFER";
+export type PaymentMethod = "CASH" | "PAYME" | "CLICK" | "UZUM" | "TRANSFER" | "QR";
 export type PaymentSource = "ADMIN_MANUAL" | "STUDENT_PORTAL" | "GATEWAY_WEBHOOK" | "MANUAL_ATTACH";
 export type RowStatus = "COMPLETED" | "REVERSED" | "PENDING" | "FAILED" | "REFUNDED" | "CANCELLED";
 export type PartKind = "CURRENT" | "ADVANCE" | "LATE";

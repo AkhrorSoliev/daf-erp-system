@@ -47,6 +47,7 @@ export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CLICK: msg("Click"),
   UZUM: msg("Uzum"),
   TRANSFER: msg("O'tkazma"),
+  QR: msg("QR-kod"),
 };
 
 /** The method's name in the page language; an unknown code prints as it is. */
