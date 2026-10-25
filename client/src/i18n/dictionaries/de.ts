@@ -911,6 +911,7 @@ const de: Dictionary = {
   "Click": "Click",
   "Uzum": "Uzum",
   "O'tkazma": "Überweisung",
+  "QR-kod": "QR-Code",
   "Boshlang'ich balans muvaffaqiyatli kiritildi": "Das Anfangsguthaben wurde erfasst",
   "{name} uchun joriy qoldiq balansni kiriting. Bu ma'lumot bir martagina kiritiladi va keyinchalik o'zgartirilmaydi — har dars uchun yechilgan summa shu balansdan hisoblanadi.": "Erfassen Sie das aktuelle Restguthaben für {name}. Diese Angabe wird nur einmal erfasst und später nicht geändert — der für jede Unterrichtsstunde abgezogene Betrag wird von diesem Guthaben berechnet.",
   "Summa": "Betrag",

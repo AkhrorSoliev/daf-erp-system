@@ -87,7 +87,7 @@ const SOURCES: Record<string, string> = { admin: "ADMIN", onlayn: "ONLINE" };
 const STATUSES: Record<string, string> = { otgan: "COMPLETED", bekor: "REVERSED", hammasi: "ALL" };
 /** Only the table's own keys: `?holat=constructor` must not pick a prototype member. */
 const own = (table: Record<string, string>, key: string): string | undefined => (Object.hasOwn(table, key) ? table[key] : undefined);
-const METHODS = ["CASH", "CLICK", "PAYME", "TRANSFER", "UZUM", "QR"];
+const METHODS = ["CASH", "CLICK", "PAYME", "TRANSFER", "QR", "UZUM"];
 
 const tokens = (s: string) => s.split(",").map((t) => t.trim()).filter(Boolean);
 const digits = (s: string) => tokens(s).filter((t) => /^\d+$/.test(t));

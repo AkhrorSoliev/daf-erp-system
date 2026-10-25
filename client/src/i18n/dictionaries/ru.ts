@@ -911,6 +911,7 @@ const ru: Dictionary = {
   "Click": "Click",
   "Uzum": "Uzum",
   "O'tkazma": "Перевод",
+  "QR-kod": "QR-код",
   "Boshlang'ich balans muvaffaqiyatli kiritildi": "Начальный баланс успешно внесён",
   "{name} uchun joriy qoldiq balansni kiriting. Bu ma'lumot bir martagina kiritiladi va keyinchalik o'zgartirilmaydi — har dars uchun yechilgan summa shu balansdan hisoblanadi.": "Введите текущий остаток баланса для {name}. Эти данные вносятся только один раз и потом не меняются — сумма, списываемая за каждое занятие, считается от этого баланса.",
   "Summa": "Сумма",

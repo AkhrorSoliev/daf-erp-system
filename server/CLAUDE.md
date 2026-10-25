@@ -698,7 +698,7 @@ The financial system is built on an **append-only ledger** principle — financi
 
 #### Financial Enums
 
-- **PaymentMethod**: `CASH`, `PAYME`, `CLICK`, `UZUM`, `TRANSFER`
+- **PaymentMethod**: `CASH`, `PAYME`, `CLICK`, `UZUM`, `TRANSFER`, `QR`
 - **PaymentStatus**: `PENDING`, `COMPLETED`, `FAILED`, `REFUNDED`, `CANCELLED`, `REVERSED`
 - **PaymentSource**: `ADMIN_MANUAL`, `STUDENT_PORTAL`, `GATEWAY_WEBHOOK`, `MANUAL_ATTACH`
 - **TransactionType**: `PAYMENT`, `LESSON_DEDUCTION`, `LESSON_CONSUMPTION`, `INITIAL_BALANCE`, `REFUND`, `SALARY_ACCRUAL`, `SALARY_PAYMENT`, `EXPENSE`, `ADJUSTMENT`, `TAX`, `BALANCE_WITHDRAWAL`, `DISCOUNT_ADJUSTMENT`, `MOCK_EXAM_FEE`, `DEBT_WRITE_OFF`

@@ -911,6 +911,7 @@ const en: Dictionary = {
   "Click": "Click",
   "Uzum": "Uzum",
   "O'tkazma": "Transfer",
+  "QR-kod": "QR code",
   "Boshlang'ich balans muvaffaqiyatli kiritildi": "The opening balance was saved",
   "{name} uchun joriy qoldiq balansni kiriting. Bu ma'lumot bir martagina kiritiladi va keyinchalik o'zgartirilmaydi — har dars uchun yechilgan summa shu balansdan hisoblanadi.": "Enter the current remaining balance for {name}. This is entered only once and cannot be changed later — the amount charged for each lesson is calculated from this balance.",
   "Summa": "Amount",
