@@ -22,6 +22,7 @@ describe('StudentEnrollmentService', () => {
   let settingsMock: any;
   let debtWriteOffMock: any;
   let historyMock: any;
+  let emitterMock: { emit: jest.Mock };
 
   const mockStudent = {
     id: 1,
@@ -153,7 +154,10 @@ describe('StudentEnrollmentService', () => {
             assertTrialLessonAnswered: jest.fn().mockResolvedValue(undefined),
           }),
         },
-        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide: EventEmitter2,
+          useValue: (emitterMock = { emit: jest.fn() }),
+        },
       ],
     }).compile();
 
@@ -594,6 +598,103 @@ describe('StudentEnrollmentService', () => {
         monthlyChargeMock.reverseChargeForDeparture,
       ).not.toHaveBeenCalled();
       expect(prisma.enrollment.update).not.toHaveBeenCalled();
+    });
+
+    describe('a reason that says the student moved (ADR-0125)', () => {
+      const reasonNamed = (name: string) =>
+        prisma.studentExitReason.findFirst.mockResolvedValueOnce({
+          id: 'reason-1',
+          name,
+          companyId: 1001,
+          appliesTo: ['GROUP_REMOVAL'],
+        });
+
+      it('is settled as a transfer: no policy, no trial-lesson wait', async () => {
+        reasonNamed("Boshqa guruhga ko'chdi");
+        await service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
+          departureReasonId: 'reason-1',
+        });
+        expect(
+          monthlyChargeMock.reverseChargeForDeparture.mock.calls[0][1].policy,
+        ).toBeUndefined();
+        expect(
+          monthlyChargeMock.assertTrialLessonAnswered,
+        ).not.toHaveBeenCalled();
+      });
+
+      it('any other reason keeps the student-cancelled rule', async () => {
+        reasonNamed('Moliyaviy sabablar');
+        await service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
+          departureReasonId: 'reason-1',
+        });
+        expect(
+          monthlyChargeMock.reverseChargeForDeparture.mock.calls[0][1].policy,
+        ).toBe('STUDENT_CANCELLED');
+        expect(monthlyChargeMock.assertTrialLessonAnswered).toHaveBeenCalled();
+      });
+    });
+
+    describe('departure.withheld', () => {
+      beforeEach(() => {
+        prisma.studentExitReason.findFirstOrThrow = undefined;
+        prisma.studentExitReason.findFirst.mockResolvedValueOnce({
+          id: 'reason-1',
+          name: 'Boshqa guruhga ko\u2018chdi',
+          companyId: 1001,
+          appliesTo: ['GROUP_REMOVAL'],
+        });
+        prisma.group.findUnique.mockResolvedValue({
+          name: '#005',
+          branchId: 2,
+        });
+      });
+
+      it('tells the task writer when contract 6.2 kept the month', async () => {
+        monthlyChargeMock.reverseChargeForDeparture.mockResolvedValueOnce({
+          refunded: 0,
+          lessons: 0,
+          policy: 'STUDENT_CANCELLED',
+          share: { held: 6, covered: 13, percent: 46 },
+          withheld: true,
+          withheldAmount: 242_305,
+          trial: false,
+        });
+        await service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
+          departureReasonId: 'reason-1',
+        });
+        expect(emitterMock.emit).toHaveBeenCalledWith(
+          'departure.withheld',
+          expect.objectContaining({
+            companyId: 1001,
+            branchId: 2,
+            studentId: 1,
+            enrollmentId: 'enroll-1',
+            amount: 242_305,
+            held: 6,
+            covered: 13,
+            percent: 46,
+          }),
+        );
+      });
+
+      it('says nothing when the money came back', async () => {
+        monthlyChargeMock.reverseChargeForDeparture.mockResolvedValueOnce({
+          refunded: 100_000,
+          lessons: 3,
+          policy: 'STUDENT_CANCELLED',
+          share: { held: 4, covered: 13, percent: 31 },
+          withheld: false,
+          withheldAmount: 0,
+          trial: false,
+        });
+        await service.removeFromGroup(1, 'enroll-1', 10001, 1001, {
+          departureReasonId: 'reason-1',
+        });
+        expect(emitterMock.emit).not.toHaveBeenCalledWith(
+          'departure.withheld',
+          expect.anything(),
+        );
+      });
     });
 
     it('answers a transaction conflict with 409', async () => {

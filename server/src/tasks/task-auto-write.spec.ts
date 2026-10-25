@@ -189,7 +189,11 @@ describe('autoCloseTasks', () => {
       where: {
         AND: [
           { companyId: 1, entityType: 'Student', entityId: '10001' },
-          { kind: { in: ['BROKEN_PROMISE', 'CALLBACK', 'UNCALLED_LEAD'] } },
+          {
+            kind: {
+              in: ['BROKEN_PROMISE', 'CALLBACK', 'UNCALLED_LEAD', 'HELD_MONTH'],
+            },
+          },
           { status: { in: OPEN } },
         ],
       },

@@ -346,16 +346,17 @@ export function departurePolicyPayload(
 }
 
 export interface WithheldWarning {
-  tone: "warning" | "danger";
+  tone: "warning" | "success";
   title: string;
   body: string;
 }
 
 /**
  * Removal only: contract 6.2 keeps the month's money when the student leaves
- * after more than 40% of the lessons. An admin who moves a student to another
- * group through «Chiqarish» loses it by mistake — the transfer returns it.
- * Says so before the click; blocks nothing.
+ * after more than 40% of the lessons. A reason that says the student moved to
+ * another group («ko'chdi») is settled as a transfer on the server (ADR-0125):
+ * the unheld lessons come back, and the box says so. Otherwise it warns that a
+ * move done through «Chiqarish» would lose the money. Blocks nothing.
  */
 export function withheldWarning(
   preview: DeparturePreview | undefined,
@@ -381,11 +382,19 @@ export function withheldWarning(
     "Oyning {percent}% i o'tgan (shartnoma 6.2: {threshold}% dan ko'p). O'quvchi boshqa guruhga o'tayotgan bo'lsa, bu oynani yopib, profildagi «Guruhni o'zgartirish» dan foydalaning: u o'tmagan darslarning pulini balansga qaytaradi. «Chiqarish» faqat o'quvchi haqiqatan ketganda.",
     { percent: heldPercent, threshold },
   );
-  return looksLikeMove
-    ? {
-        tone: "danger",
-        title,
-        body: `${t("Siz «ko'chdi» sababini tanladingiz — bu chiqarish emas, almashtirish.")} ${body}`,
-      }
-    : { tone: "warning", title, body };
+  if (looksLikeMove) {
+    return {
+      tone: "success",
+      title:
+        amount > 0
+          ? t("Ko'chish sifatida hisoblanadi — {amount} balansga qaytadi", {
+              amount: som(amount, t),
+            })
+          : t("Ko'chish sifatida hisoblanadi"),
+      body: t(
+        "«Ko'chdi» sababi tanlandi: o'tmagan darslarning puli o'quvchi balansiga qaytariladi (shartnoma 6.2 qo'llanmaydi). O'quvchi haqiqatan ketayotgan bo'lsa, boshqa sabab tanlang.",
+      ),
+    };
+  }
+  return { tone: "warning", title, body };
 }

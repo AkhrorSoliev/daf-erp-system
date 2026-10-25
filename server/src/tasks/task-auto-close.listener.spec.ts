@@ -147,3 +147,23 @@ describe('TaskAutoCloseListener', () => {
     error.mockRestore();
   });
 });
+
+describe('TaskAutoCloseListener — «Pul ushlab qolindi»', () => {
+  it('a student enrolled again closes the held-month task, and only that kind', async () => {
+    const { listener, prisma } = setup();
+    await listener.onEnrolled({ companyId: 1, studentId: 10149 });
+    expect(autoCloseTasks).toHaveBeenCalledWith(
+      prisma,
+      { ...STUDENT, entityId: '10149', kind: { in: ['HELD_MONTH'] } },
+      'STUDENT_ENROLLED',
+      undefined,
+      null,
+    );
+  });
+
+  it('an event without a company closes nothing', async () => {
+    const { listener } = setup();
+    await listener.onEnrolled({ companyId: null, studentId: 10149 });
+    expect(autoCloseTasks).not.toHaveBeenCalled();
+  });
+});
