@@ -65,13 +65,13 @@ export function RasmTanlash({
               <CheckCircle
                 size={28}
                 weight="fill"
-                className="absolute right-2 top-2 rounded-full bg-white text-success"
+                className="absolute right-2 top-2 rounded-full bg-surface text-artikel-das"
               />
             ) : xatoTanlov ? (
               <XCircle
                 size={28}
                 weight="fill"
-                className={cn("absolute right-2 top-2 rounded-full bg-white", XATO_BELGISI)}
+                className={cn("absolute right-2 top-2 rounded-full bg-surface", XATO_BELGISI)}
               />
             ) : null}
           </button>

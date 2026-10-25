@@ -94,6 +94,47 @@ describe("<NatijaSahna />", () => {
     }
   });
 
+  // The card clips its children to its rounded corner. With a 36 px radius (rounded-2xl under
+  // .lumio, --radius 20 px x 1.8) the clip radius inside the 2 px border is 34 px; the bar's
+  // first and last letters lie at x ~ 4-10 px, y ~ 6.5 px (cap tops), where the arc hides every
+  // x below 34 - sqrt(34^2 - (34-6.5)^2) = 14 px: «G» and «T» of «GENAUIGKEIT», «ТОЧНОСТЬ» were cut.
+  // rounded-md is 16 px (clip radius 14) and py-1.5 puts the cap tops at y ~ 8.5: the arc then
+  // hides only x < 14 - sqrt(14^2 - (14-8.5)^2) = 1.1 px, clear of the widest caption (x >= 2).
+  it("rounds the card so its corners do not eat the caption's first and last letters", () => {
+    const html = render({ ball: 20, serie: 4 });
+    const kartalar = [...html.matchAll(/<div class="([^"]*border-coral-700[^"]*)"/g)].map((m) => m[1].split(" "));
+    expect(kartalar).toHaveLength(3);
+    for (const k of kartalar) {
+      expect(k).toContain("rounded-md");
+      expect(k).toContain("sm:rounded-2xl");
+      expect(k).not.toContain("rounded-2xl");
+      expect(k).toContain("overflow-hidden");
+    }
+    for (const m of html.matchAll(/<p class="(bg-coral-700[^"]*)"/g)) {
+      const k = m[1].split(" ");
+      expect(k).toContain("py-1.5");
+      expect(k).not.toContain("py-1");
+    }
+  });
+
+  // A German caption that wraps at 320 px makes its bar two lines tall; the three bars share
+  // the card grid's rows (subgrid), so all three stay equally tall and the value rows line up.
+  it("keeps the three caption bars and the three value rows aligned", () => {
+    const html = render({ ball: 20, serie: 4 });
+    expect(html).toMatch(/<div class="[^"]*\bgrid-cols-3\b[^"]*\bgap-x-2\.5\b[^"]*"/);
+    expect(html).not.toMatch(/\bgap-2\.5\b/);
+    const kartalar = [...html.matchAll(/<div class="([^"]*border-coral-700[^"]*)"/g)].map((m) => m[1].split(" "));
+    for (const k of kartalar) {
+      for (const sinf of ["row-span-2", "grid", "grid-rows-subgrid"]) expect(k, sinf).toContain(sinf);
+    }
+    // The text stays centred in a bar that is taller than its own line, and may shrink to wrap.
+    for (const m of html.matchAll(/<p class="(bg-coral-700[^"]*)"><span class="([^"]*)"/g)) {
+      const bar = m[1].split(" ");
+      for (const sinf of ["flex", "items-center", "justify-center"]) expect(bar, sinf).toContain(sinf);
+      expect(m[2].split(" ")).toContain("min-w-0");
+    }
+  });
+
   // The server's 0 points is «0», not «+0»; any gain keeps the plus.
   it("shows 0 points as 0, without a plus", () => {
     const t = matn(render({ ball: 0, serie: 4 }));

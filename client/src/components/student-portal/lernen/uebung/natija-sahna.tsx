@@ -25,16 +25,24 @@ export function ballMatni(ball: number | null, sanaladigan: number | null): stri
   return `+${sanaladigan ?? 0}`;
 }
 
-/** One of the three result cards (duo.html `.card`): a filled caption over the value. */
+/**
+ * One of the three result cards (duo.html `.card`): a filled caption over the value.
+ * The card spans two rows of the cards' grid and takes them over (subgrid), so the three
+ * caption bars are equally tall and the three values line up even when one caption wraps.
+ */
 function Karta({ nom, qiymat, belgi }: { nom: string; qiymat: string; belgi: React.ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-2xl border-2 border-coral-700 bg-surface">
+    // The card clips to its corner. `rounded-md` (16 px under .lumio) below `sm`: at 36 px the arc
+    // hid the bar's first and last letters (x < 14 px at the cap tops); 16 px hides x < 1.1 px.
+    <div className="row-span-2 grid grid-rows-subgrid overflow-hidden rounded-md border-2 border-coral-700 bg-surface sm:rounded-2xl">
       {/* coral-700, not coral-500: white small text needs 4.5:1 (5.07:1 here, 2.82:1 on coral-500).
           Below `sm` the card is only 77 px wide at 360 (64 at 320), so the caption is 10 px with
           normal tracking and 2 px padding: German «GENAUIGKEIT» is 68 px then. At 320 it still
-          does not fit one line, so it wraps (hyphenated, else broken) instead of clipping. */}
-      <p className="bg-coral-700 px-0.5 py-1 text-[10px] font-extrabold uppercase leading-tight tracking-normal text-white break-words hyphens-auto sm:text-[11px] sm:tracking-wide">
-        {nom}
+          does not fit one line, so it wraps (hyphenated, else broken) instead of clipping. The
+          bar can be taller than one line (the row follows the tallest caption), so the text is
+          centred in it; `py-1.5` also lowers the cap tops clear of the rounded corner. */}
+      <p className="bg-coral-700 flex items-center justify-center px-0.5 py-1.5 text-[10px] font-extrabold uppercase leading-tight tracking-normal text-white break-words hyphens-auto sm:text-[11px] sm:tracking-wide">
+        <span className="min-w-0">{nom}</span>
       </p>
       <p className="flex items-center justify-center gap-1 px-1.5 py-2.5 font-display text-xl font-extrabold tabular-nums text-ink-900">
         {belgi}
@@ -96,7 +104,7 @@ export function NatijaSahna({
           {togri} / {jami} · {vaqtBelgisi(durationMs)}
         </p>
       </div>
-      <div className="grid w-full max-w-sm grid-cols-3 gap-2.5">
+      <div className="grid w-full max-w-sm grid-cols-3 gap-x-2.5">
         <Karta
           nom={t("Ball")}
           qiymat={ballMatni(ball, sanaladigan)}

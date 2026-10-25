@@ -73,12 +73,27 @@ describe("the missed-choice mark", () => {
 });
 
 // A right answer's text sits on a wash of its own green: the bright success green
-// is 2.3–2.6:1 there, the deep green of the article colours 4.7:1.
+// is 2.3–2.6:1 there, the deep green of the article colours 4.7:1. The check icon on the
+// picture and clock choices is a graphic on a white disc (2.6:1, needs 3:1) and takes it too.
 describe("the right answer's text", () => {
-  it.each(["tanlash.tsx", "yozish.tsx", "yigish.tsx"])("%s draws it in the deep green", (fayl) => {
+  it.each(["tanlash.tsx", "yozish.tsx", "yigish.tsx", "rasm-tanlash.tsx", "uhr-tanlash.tsx"])(
+    "%s draws it in the deep green",
+    (fayl) => {
+      const manba = readFileSync(path.join(__dirname, fayl), "utf8");
+      expect(manba).toContain("text-artikel-das");
+      expect(manba).not.toMatch(/\btext-success\b/);
+    },
+  );
+});
+
+// In dark mode `--artikel-das` is a LIGHT green (#5fd394): on a hard white disc it would be 1.6:1,
+// worse than before. The disc is the card surface (white in light mode, the dark card at night),
+// so both marks keep their contrast in both themes.
+describe("the check and cross marks on the picture and clock choices", () => {
+  it.each(["rasm-tanlash.tsx", "uhr-tanlash.tsx"])("%s puts both marks on the themed surface, not on white", (fayl) => {
     const manba = readFileSync(path.join(__dirname, fayl), "utf8");
-    expect(manba).toContain("text-artikel-das");
-    expect(manba).not.toMatch(/\btext-success\b/);
+    expect(manba.match(/absolute right-2 top-2 rounded-full bg-surface/g)).toHaveLength(2);
+    expect(manba).not.toMatch(/absolute right-2 top-2 rounded-full bg-white/);
   });
 });
 
