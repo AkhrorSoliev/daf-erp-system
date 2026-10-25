@@ -1366,6 +1366,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /student-portal/attendance/history',
       'GET /student-portal/payments',
       'PATCH /student-portal/name',
+      'PATCH /student-portal/lernen-tema',
       'PATCH /student-portal/password',
       'POST /student-portal/photo',
       'DELETE /student-portal/photo',

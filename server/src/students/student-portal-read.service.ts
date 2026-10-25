@@ -21,6 +21,7 @@ export class StudentPortalReadService {
         gender: true,
         dateOfBirth: true,
         photo: true,
+        lernenTema: true,
         comment: true,
         balance: true,
         placeOfStudy: true,

@@ -1700,6 +1700,9 @@
     "Branch Director",
     "CEO"
   ],
+  "PATCH /student-portal/lernen-tema": [
+    "Student"
+  ],
   "PATCH /student-portal/lernen/eslatmalar": [
     "Student"
   ],

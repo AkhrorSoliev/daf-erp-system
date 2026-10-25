@@ -23,6 +23,7 @@ import { QrAttendanceService } from '../attendance/qr-attendance.service';
 import { GatewayConfigService } from '../payment-gateways/gateway-config.service';
 import { ChangePortalPasswordDto } from './dto/change-portal-password.dto';
 import { UpdatePortalNameDto } from './dto/update-portal-name.dto';
+import { UpdateLernenTemaDto } from './dto/update-lernen-tema.dto';
 import { InitPaymentDto } from './dto/init-payment.dto';
 import { ScanQrDto } from '../attendance/dto/qr-session.dto';
 import { CurrentUser } from '../common/decorators';
@@ -78,6 +79,16 @@ export class StudentPortalController {
   ) {
     if (!studentId) throw new NotFoundException('Talaba topilmadi');
     return this.studentPortalService.updateName(studentId, dto, userId);
+  }
+
+  @Patch('lernen-tema')
+  @StudentOnly()
+  updateLernenTema(
+    @CurrentUser('studentId') studentId: number,
+    @Body() dto: UpdateLernenTemaDto,
+  ) {
+    if (!studentId) throw new NotFoundException('Talaba topilmadi');
+    return this.studentPortalService.updateLernenTema(studentId, dto.tema);
   }
 
   @Patch('password')

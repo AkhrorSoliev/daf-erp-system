@@ -18,6 +18,7 @@ describe('StudentPortalController — route access', () => {
     getAttendanceStats: jest.fn().mockResolvedValue({}),
     getAttendanceHistory: jest.fn().mockResolvedValue([]),
     updateName: jest.fn().mockResolvedValue({}),
+    updateLernenTema: jest.fn().mockResolvedValue({ lernenTema: 'toza' }),
     changePassword: jest.fn().mockResolvedValue({}),
     updatePhoto: jest.fn().mockResolvedValue({}),
     removePhoto: jest.fn().mockResolvedValue({}),
@@ -63,6 +64,7 @@ describe('StudentPortalController — route access', () => {
     'getAttendanceStats',
     'getAttendanceHistory',
     'updateName',
+    'updateLernenTema',
     'changePassword',
     'updatePhoto',
     'removePhoto',
@@ -80,6 +82,24 @@ describe('StudentPortalController — route access', () => {
       expect(defaultRolesOf(StudentPortalController, method)).toEqual([
         'Student',
       ]);
+    });
+  });
+
+  describe('updateLernenTema()', () => {
+    it('passes the validated id to the service for the caller student', async () => {
+      await controller.updateLernenTema(10042, { tema: 'dengiz' });
+      expect(mockService.updateLernenTema).toHaveBeenCalledWith(
+        10042,
+        'dengiz',
+      );
+    });
+
+    it('refuses a token without a student card', () => {
+      expect(() =>
+        controller.updateLernenTema(undefined as unknown as number, {
+          tema: 'toza',
+        }),
+      ).toThrow('Talaba topilmadi');
     });
   });
 
