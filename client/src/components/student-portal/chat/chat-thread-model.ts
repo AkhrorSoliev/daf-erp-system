@@ -27,6 +27,16 @@ export function threadMessages(
   return out.reverse();
 }
 
+/** True when the viewport bottom is within `threshold` px of the page end. */
+export function isNearBottom(
+  scrollY: number,
+  innerHeight: number,
+  docHeight: number,
+  threshold = 120,
+): boolean {
+  return docHeight - (scrollY + innerHeight) <= threshold;
+}
+
 /** Id of the newest message the peer wrote, for the «read» call. */
 export function lastPeerMessageId(messages: MessageView[]): string | null {
   for (let i = messages.length - 1; i >= 0; i--) {

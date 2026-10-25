@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addPending,
+  isNearBottom,
   lastPeerMessageId,
   mergePending,
   removePending,
@@ -86,5 +87,16 @@ describe("pending messages", () => {
     let pending = addPending([], "k1", "a", now);
     pending = addPending(pending, "k2", "b", now);
     expect(removePending(pending, "k1").map((p) => p.key)).toEqual(["k2"]);
+  });
+});
+
+describe("isNearBottom", () => {
+  it("is true within the threshold of the page end", () => {
+    expect(isNearBottom(900, 800, 1750)).toBe(true);
+    expect(isNearBottom(950, 800, 1750)).toBe(true);
+  });
+  it("is false when scrolled up far", () => {
+    expect(isNearBottom(0, 800, 5000)).toBe(false);
+    expect(isNearBottom(900, 800, 1850)).toBe(false);
   });
 });

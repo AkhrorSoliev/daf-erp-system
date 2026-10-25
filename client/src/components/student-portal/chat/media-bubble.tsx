@@ -87,7 +87,7 @@ function ImageContent({ message }: { message: MessageView }) {
               void file.refresh();
             }
           }}
-          className="h-auto max-h-60 w-auto max-w-full rounded-xl object-cover"
+          className="h-auto max-h-60 min-h-32 w-auto min-w-32 max-w-full rounded-xl bg-tint object-cover"
         />
       </button>
       {open ? <Viewer url={file.url} onClose={() => setOpen(false)} /> : null}
