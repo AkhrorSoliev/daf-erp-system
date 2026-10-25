@@ -5,6 +5,7 @@ import {
   HttpStatus,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -62,6 +63,8 @@ const PREVIEW: Record<string, string> = {
 
 @Injectable()
 export class ChatConversationsService {
+  private readonly logger = new Logger(ChatConversationsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: ChatAccessService,
@@ -305,10 +308,19 @@ export class ChatConversationsService {
 
   /** Live delivery over the existing SSE stream; a student with no account gets nothing. */
   private async pushToPeer(peerId: number, payload: object): Promise<void> {
-    const peer = await this.prisma.student.findFirst({
-      where: { id: peerId },
-      select: { userId: true },
-    });
-    if (peer?.userId) this.gateway.sendToUser(peer.userId, payload);
+    // Runs after commit: a failed push must never fail (and invite a retry of) a saved write.
+    try {
+      const peer = await this.prisma.student.findFirst({
+        where: { id: peerId },
+        select: { userId: true },
+      });
+      if (peer?.userId) this.gateway.sendToUser(peer.userId, payload);
+    } catch (err) {
+      this.logger.warn(
+        `Chat live push to student ${peerId} failed: ${
+          err instanceof Error ? err.message : 'unknown error'
+        }`,
+      );
+    }
   }
 }
