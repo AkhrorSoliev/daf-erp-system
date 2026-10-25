@@ -4,6 +4,7 @@ import {
   dayMonth,
   isMonthlyBillingMonth,
   monthRange,
+  paymentMethodLabel,
   profitLines,
   som,
 } from "./overview-math";
@@ -123,5 +124,12 @@ describe("profitLines", () => {
     expect(printed).toContain("Xodimlar oyligi 0 so'm");
     expect(printed).toContain("Boshqa xarajatlar 0 so'm");
     expect(printed.join(" | ")).not.toContain("-0 so'm");
+  });
+});
+
+describe("paymentMethodLabel", () => {
+  it("names a QR payment, and prints an unknown code as it is", () => {
+    expect(paymentMethodLabel("QR")).toBe("QR-kod");
+    expect(paymentMethodLabel("QRX")).toBe("QRX");
   });
 });
