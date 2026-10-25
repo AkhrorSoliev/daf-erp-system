@@ -1011,6 +1011,7 @@ describe('ReportsService', () => {
       });
       jest.spyOn(svc, 'getMonthlyNetProfit').mockResolvedValue({
         teacherSalary: 95_834_547,
+        taxes: emptyTaxCosts(),
         adminSalary: 0,
         operatingExpenses: 41_773_000,
         refunds: 200_000,
@@ -1042,6 +1043,7 @@ describe('ReportsService', () => {
         });
       jest.spyOn(svc, 'getMonthlyNetProfit').mockResolvedValue({
         teacherSalary: 0,
+        taxes: emptyTaxCosts(),
         adminSalary: 0,
         operatingExpenses: 0,
         refunds: 0,

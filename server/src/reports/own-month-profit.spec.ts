@@ -66,4 +66,23 @@ describe('computeOwnMonthProfit', () => {
     );
     expect(result).toBe(400_000);
   });
+
+  it("subtracts the month's tax and fee costs, like the net profit does", () => {
+    const result = computeOwnMonthProfit(
+      1_000_000,
+      np({
+        teacherSalary: 400_000,
+        taxes: { ...emptyTaxCosts(), providerFees: 20_000, total: 50_000 },
+      }),
+    );
+    expect(result).toBe(550_000);
+  });
+
+  it('with no tax costs the figure is unchanged', () => {
+    const result = computeOwnMonthProfit(
+      1_000_000,
+      np({ teacherSalary: 400_000, taxes: emptyTaxCosts() }),
+    );
+    expect(result).toBe(600_000);
+  });
 });
