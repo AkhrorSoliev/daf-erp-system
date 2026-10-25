@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, CheckCircle } from "@phosphor-icons/react";
+import { BookOpen, Check, CheckCircle, LockSimple, Star } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import {
   Screen,
@@ -18,7 +18,12 @@ import { useLernenUnit } from "./queries";
 import { loadState } from "../lib/load-state";
 import { LoadFailed } from "../load-failed";
 import { seansHolatlari, type SeansHolatBelgisi } from "./fortschritt";
+import { useKamHarakat } from "./harakat/use-kam-harakat";
+import { ovozChal, ovozniUygot } from "./ovoz/ovoz";
 import { sozHisoblagichi, type SozHisoblagichi } from "./soz-hisoblagichi";
+import { useLernenTema } from "./tema/use-lernen-tema";
+import type { TugunHolat, TugunTone } from "./tema/tema-turlari";
+import { DARAJA_TONI, belgiTuri, tugunRangi } from "./tema/toza/toza-tugun-model";
 import type { LernenSeans } from "./types";
 import type { Translate } from "./liga";
 
@@ -41,76 +46,95 @@ function seansNomi(seans: LernenSeans, t: Translate): string {
   }
 }
 
-/** Holat doirachasi: bajarilgan — belgi, navbatdagi — to'ldirilgan, qulf — bo'sh. */
-function SeansBelgi({ holat }: { holat: SeansHolatBelgisi }) {
-  if (holat === "BAJARILGAN") {
-    return (
-      <CheckCircle size={26} weight="fill" className="shrink-0 text-success" />
-    );
-  }
-  if (holat === "NAVBATDAGI") {
-    return (
-      <span
-        aria-hidden
-        className="size-[22px] shrink-0 rounded-full bg-coral-500"
-      />
-    );
-  }
-  return (
-    <span
-      aria-hidden
-      className="size-[22px] shrink-0 rounded-full border-2 border-line"
-    />
-  );
-}
+/** The lock chain's answer in the path's words. */
+const TUGUN_HOLATI: Record<SeansHolatBelgisi, TugunHolat> = {
+  BAJARILGAN: "done",
+  NAVBATDAGI: "active",
+  QULF: "locked",
+};
 
-function SeansRow({
+/**
+ * One lesson as a «place» of the unit (spec §8): the path's own node badge
+ * (check, star, lock), the name, and «Boshlash» on the current one. A locked
+ * place stays a button — it answers with the short "locked" sound — but tells
+ * screen readers it is closed, as the path node does.
+ */
+function SeansJoyi({
   seans,
   holat,
+  tone,
   onOpen,
+  onQulf,
   yanaMashq,
 }: {
   seans: LernenSeans;
   holat: SeansHolatBelgisi;
+  tone: TugunTone;
   onOpen: (id: number) => void;
+  onQulf: () => void;
   /** Under a finished section lesson while the section has unmet words. */
   yanaMashq?: string | null;
 }) {
   const t = useT();
-  const qulf = holat === "QULF";
+  const tugun = TUGUN_HOLATI[holat];
+  const qulf = tugun === "locked";
+  const joriy = tugun === "active";
+  const { yuz, lab } = tugunRangi(tugun, tone);
+  const belgi = belgiTuri(tugun);
+  const Icon = belgi === "tekshirildi" ? Check : belgi === "yulduz" ? Star : LockSimple;
+  const nom = seansNomi(seans, t);
   const izoh =
-    holat === "BAJARILGAN" &&
-    (seans.kind === "SECTION_A" || seans.kind === "SECTION_B")
+    tugun === "done" && (seans.kind === "SECTION_A" || seans.kind === "SECTION_B")
       ? yanaMashq
       : null;
   return (
     <button
       type="button"
-      disabled={qulf}
-      onClick={() => onOpen(seans.id)}
+      onClick={qulf ? onQulf : () => onOpen(seans.id)}
+      aria-disabled={qulf || undefined}
+      aria-label={qulf ? t("{label} — hali ochilmagan", { label: nom }) : undefined}
       className={cn(
-        "flex w-full items-center gap-3.5 rounded-card border border-line bg-surface px-4 py-3.5 text-left shadow-lumio-sm transition-transform",
-        qulf
-          ? "opacity-60"
-          : "active:translate-y-[2px] hover:-translate-y-0.5",
+        "flex w-full items-center gap-3.5 rounded-card border-2 border-b-[5px] border-line bg-surface px-4 py-3 text-left transition-transform",
+        qulf ? "cursor-default" : "active:translate-y-[3px] hover:-translate-y-0.5",
       )}
+      style={joriy ? { borderColor: yuz } : undefined}
     >
-      <SeansBelgi holat={holat} />
+      <span
+        aria-hidden
+        className="grid size-11 shrink-0 place-items-center rounded-full"
+        style={{
+          background: yuz,
+          color: qulf ? "var(--ink-400)" : "#fff",
+          boxShadow: `0 4px 0 ${lab}`,
+        }}
+      >
+        <Icon size={22} weight="fill" />
+      </span>
       <span className="min-w-0 flex-1">
+        {/* Text on white: ink-600 (6.58:1) for a closed lesson — a pale ink-400 (2.52:1) is unreadable, the lock badge already says "closed". */}
         <span
           className={cn(
             "block truncate font-semibold",
-            qulf ? "text-ink-400" : "text-ink-900",
+            qulf ? "text-ink-600" : "text-ink-900",
           )}
         >
-          {seansNomi(seans, t)}
+          {nom}
         </span>
         {izoh ? (
-          <span className="block truncate text-xs font-semibold text-coral-600">
+          <span className="block truncate text-xs font-semibold text-[var(--amber-ink)]">
             {izoh}
           </span>
         ) : null}
       </span>
+      {joriy ? (
+        // White text needs 4.5:1: the level colour itself is 2.48-4.23:1, its darker lip 4.56-7.10:1.
+        <span
+          className="shrink-0 rounded-full px-3 py-1 font-display text-xs font-extrabold uppercase tracking-wide text-white"
+          style={{ background: lab }}
+        >
+          {t("Boshlash")}
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -122,7 +146,7 @@ function SozlarQatori({ hisob }: { hisob: SozHisoblagichi }) {
       <p
         className={cn(
           "flex items-center gap-1 text-xs font-bold tabular-nums",
-          hisob.tugadi ? "text-success" : "text-ink-500",
+          hisob.tugadi ? "text-artikel-das" : "text-ink-600",
         )}
       >
         {hisob.tugadi ? <CheckCircle size={14} weight="fill" aria-hidden /> : null}
@@ -138,17 +162,29 @@ function SozlarQatori({ hisob }: { hisob: SozHisoblagichi }) {
 }
 
 /**
- * Unit — bo'limlar ostida guruhlangan seanslar ro'yxati.
+ * Unit — bo'limlar ostida guruhlangan seanslar.
  *
  * Qulf butun UNIT bo'yicha hisoblanadi, bo'lim ichida emas: agar har
  * bo'lim o'z navbatini alohida hisoblasa, bir vaqtning o'zida uchta
  * seans «navbatdagi» bo'lib ko'rinardi (har bo'limda bittadan).
+ *
+ * The header is the theme's (`LernenTema.UnitLavha`); the places reuse the
+ * «Toza» node model (ADR-0128).
  */
 export function LernenUnitPage({ unitId }: { unitId: number }) {
   const t = useT();
   const router = useRouter();
+  const { tema } = useLernenTema();
+  // Marks the less-motion state for CSS: the entrance stagger resolves at once (globals.css).
+  const kam = useKamHarakat();
   const query = useLernenUnit(unitId);
   const { data } = query;
+
+  // The sound engine is its own chunk and this page opens by URL too: load it
+  // now, so on iOS/Telegram the unlock finds it ready inside the first tap.
+  React.useEffect(() => {
+    void import("./ovoz/ovoz-motor").catch(() => {});
+  }, []);
 
   const holatMap = React.useMemo(() => {
     if (!data) return new Map<number, SeansHolatBelgisi>();
@@ -170,7 +206,18 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
     return new Map(data.lessons.map((l, i) => [l.id, holatlar[i]]));
   }, [data]);
 
-  const openLesson = (id: number) => router.push(`/portal/lernen/lessons/${id}`);
+  // Unlock first, inside the tap, then play: the audio context starts only in a gesture.
+  const openLesson = (id: number) => {
+    ovozniUygot();
+    ovozChal("bos");
+    router.push(`/portal/lernen/lessons/${id}`);
+  };
+  // A locked place answers with the short "locked" sound and opens nothing.
+  const qulfBosildi = () => {
+    ovozniUygot();
+    ovozChal("qulf");
+  };
+  const tone: TugunTone = (data && DARAJA_TONI[data.level]) || "coral";
 
   // A unit whose content is not written yet still has its seeded lessons;
   // the server says so with `bereit: false` (absent from an older server).
@@ -180,7 +227,8 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
       (data.sections.length === 0 && data.lessons.length === 0));
 
   return (
-    <Screen narrow>
+    // The marker sits on this outer root; the stagger below is strictly inside it (descendant selector).
+    <Screen narrow data-kam-harakat={kam ? "" : undefined}>
       <StackHeader title={data?.titleUz ?? t("Bo'lim")} backHref="/portal/lernen" />
 
       {loadState(query) === "loading" ? (
@@ -203,9 +251,7 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
         />
       ) : data.sections.length > 0 ? (
         <Stagger className="space-y-5">
-          <p className="px-1 text-sm font-semibold text-ink-500">
-            {data.label} · {data.titleDe}
-          </p>
+          <tema.UnitLavha daraja={data.level} matn={`${data.label} · ${data.titleDe}`} />
 
           {data.sections.map((section) => {
             const hisob = sozHisoblagichi(section.woerter, t);
@@ -215,18 +261,20 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
                   <h2 className="font-display text-base font-extrabold text-ink-900">
                     {section.order}. {section.titleUz}
                   </h2>
-                  <p className="text-xs font-semibold text-ink-400">
+                  <p className="text-xs font-semibold text-ink-600">
                     {section.titleDe}
                   </p>
                 </div>
                 {hisob ? <SozlarQatori hisob={hisob} /> : null}
                 <div className="space-y-2">
                   {section.lessons.map((l) => (
-                    <SeansRow
+                    <SeansJoyi
                       key={l.id}
                       seans={l}
                       holat={holatMap.get(l.id) ?? "QULF"}
+                      tone={tone}
                       onOpen={openLesson}
+                      onQulf={qulfBosildi}
                       yanaMashq={hisob?.yanaMashq}
                     />
                   ))}
@@ -240,10 +288,12 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
               <h2 className="px-1 font-display text-base font-extrabold text-ink-900">
                 {t("Yakuniy sinov")}
               </h2>
-              <SeansRow
+              <SeansJoyi
                 seans={data.finalTest}
                 holat={holatMap.get(data.finalTest.id) ?? "QULF"}
+                tone={tone}
                 onOpen={openLesson}
+                onQulf={qulfBosildi}
               />
             </section>
           ) : null}
@@ -251,15 +301,15 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
       ) : (
         // Eski DiB uniti: bo'lim yo'q, darslar guruhsiz ro'yxat.
         <Stagger className="space-y-2">
-          <p className="px-1 text-sm font-semibold text-ink-500">
-            {data.label} · {data.titleDe}
-          </p>
+          <tema.UnitLavha daraja={data.level} matn={`${data.label} · ${data.titleDe}`} />
           {data.lessons.map((l) => (
-            <SeansRow
+            <SeansJoyi
               key={l.id}
               seans={l}
               holat={yassiHolatMap.get(l.id) ?? "QULF"}
+              tone={tone}
               onOpen={openLesson}
+              onQulf={qulfBosildi}
             />
           ))}
         </Stagger>

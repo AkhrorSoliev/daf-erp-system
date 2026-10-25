@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TUGUN_TONLARI } from "../tema-turlari";
-import { belgiTuri, tugunRangi } from "./toza-tugun-model";
+import { DARAJA_TONI, belgiTuri, tugunRangi } from "./toza-tugun-model";
 
 describe("toza tugun modeli", () => {
   it("shows a check for done, a star for the current one and a lock for the rest", () => {
@@ -29,5 +29,11 @@ describe("toza tugun modeli", () => {
         expect(r.lab).not.toBe(r.yuz);
       }
     }
+  });
+});
+
+describe("DARAJA_TONI", () => {
+  it("is the path's CEO-approved level colours: A1 coral, A2 teal, B1 grape", () => {
+    expect(DARAJA_TONI).toEqual({ A1: "coral", A2: "teal", B1: "grape" });
   });
 });
