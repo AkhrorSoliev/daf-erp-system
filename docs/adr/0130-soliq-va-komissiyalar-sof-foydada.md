@@ -50,7 +50,7 @@ Tizim soliq hisoblamasdi (`server/CLAUDE.md` da «No tax calculation» qoidasi t
 - Ushlanma alohida budjet to'lovi sifatida yozilmaydi, faqat ko'rsatiladi.
 - Joriy oyda aylanma solig'i faqat shu paytgacha kelgan to'lovlardan hisoblanadi: kelajakdagi tushum uchun prognoz yo'q, oy yopilguncha soliq o'sib boradi.
 - Qo'lda «Soliqlar» (TAXES) xarajati yozilgan oyda soliq ikki marta sanaladi: tizim buni to'xtatmaydi, faqat sahifada ogohlantiradi.
-- `User.officialSalary` o'zgarganda foyda keshi Toshkent yarim tungacha tozalanmaydi (faqat stavka saqlanganda tozalanadi); o'tgan oy raqami shu vaqtgacha eski bo'lishi mumkin.
+- Rasmiy oylik sanasiz saqlanadi: `User.officialSalary` ni o'zgartirish stavka kuchda bo'lgan o'tgan oylarning ijtimoiy solig'ini ham qayta hisoblaydi (eski oylar o'zgarmaslik qoidasi faqat stavkalarga tegishli). Shuning uchun qiymat haqiqatan o'zgarganda `UsersService.updateUser` kompaniyaning foyda keshini tozalaydi. Kerak bo'lsa keyin rasmiy oylik ham sanali ro'yxatga o'tkaziladi.
 - Bosh paneldagi «Pul qayerga ketdi» kartasi soliq va komissiyalarni bitta jamlangan «Soliq va komissiyalar» qatori qilib ko'rsatadi va «Hisob to'liq emas» belgisisiz chiqadi; to'rt qator va belgi faqat Foyda tarkibi oynasida, Excelda va Telegramda.
 - Stavka kiritilmagan bo'lsa hisob 0 bilan davom etadi va «Hisob to'liq emas» belgisi bilan chiqadi — belgi yo'qolguncha raqamga to'liq ishonib bo'lmaydi.
 - Server avval, sayt keyin chiqadi: yangi sayt eski serverda `taxes` maydonini olmaydi (mijoz buni kechiradi, `taxes` bo'lmasa qatorlar chiqmaydi).

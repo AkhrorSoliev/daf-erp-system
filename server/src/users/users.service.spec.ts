@@ -10,6 +10,12 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { RedisService } from '../redis/redis.service';
 import { PermissionsService } from '../common/permissions/permissions.service';
 import { fakePermissions } from '../common/permissions/testing';
+import { invalidateNetProfitCache } from '../reports/net-profit-cache';
+
+jest.mock('../reports/net-profit-cache', () => ({
+  ...jest.requireActual('../reports/net-profit-cache'),
+  invalidateNetProfitCache: jest.fn().mockResolvedValue(undefined),
+}));
 
 describe('UsersService — updateUser status/isActive sync', () => {
   let service: UsersService;
@@ -1963,5 +1969,38 @@ describe('UsersService — officialSalary (spec 2026-10-25)', () => {
     expect(prisma.user.findMany.mock.calls[1][0].select).not.toHaveProperty(
       'officialSalary',
     );
+  });
+
+  describe('net profit cache (officialSalary is undated)', () => {
+    const invalidate = invalidateNetProfitCache as jest.Mock;
+    beforeEach(() => invalidate.mockClear());
+
+    it('clears the company cache once, after the write, when the value changes', async () => {
+      const service = await build(CEO);
+      await service.updateUser(5, { officialSalary: 2_000_000 } as any, 2);
+      expect(invalidate).toHaveBeenCalledTimes(1);
+      expect(invalidate).toHaveBeenCalledWith(expect.anything(), 1001);
+      expect(invalidate.mock.invocationCallOrder[0]).toBeGreaterThan(
+        prisma.user.update.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('does not clear it when the value is the same or the field is omitted', async () => {
+      const service = await build(CEO);
+      target.officialSalary = 2_000_000 as any;
+      try {
+        await service.updateUser(5, { officialSalary: 2_000_000 } as any, 2);
+        await service.updateUser(5, { firstName: 'Renamed' } as any, 2);
+      } finally {
+        target.officialSalary = null;
+      }
+      expect(invalidate).not.toHaveBeenCalled();
+    });
+
+    it('treats null before and 0 after as no change', async () => {
+      const service = await build(CEO);
+      await service.updateUser(5, { officialSalary: 0 } as any, 2);
+      expect(invalidate).not.toHaveBeenCalled();
+    });
   });
 });

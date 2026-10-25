@@ -24,6 +24,7 @@ import { EntityHistoryService } from '../common/entity-history';
 import { userArchiveData } from '../common/status/user-archive';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { RedisService } from '../redis/redis.service';
+import { invalidateNetProfitCache } from '../reports/net-profit-cache';
 import {
   passwordWrite,
   recordSessionsEnded,
@@ -994,6 +995,16 @@ export class UsersService {
         });
       },
     );
+
+    // The official salary is undated (ADR-0130): a new value rewrites the social
+    // tax of every past month that already has a rate, so the cached net profit
+    // of those months is stale. Never fails the update (swallows its own errors).
+    if (
+      dto.officialSalary !== undefined &&
+      dto.officialSalary !== (user.officialSalary ?? 0)
+    ) {
+      await invalidateNetProfitCache(this.redis, user.companyId);
+    }
 
     // The password is committed now: mirror the bump before anything else can
     // fail, or the old access tokens keep working for the rest of their hour.
