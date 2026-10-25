@@ -156,6 +156,33 @@ describe('computePaymentCosts', () => {
     expect(out.missing).toEqual([]);
   });
 
+  it('sums a stored providerFee as stored, even on a CASH or TRANSFER group', () => {
+    // Documents current behaviour: the stored fee wins over the channel map.
+    const out = computePaymentCosts({
+      groups: [
+        {
+          branchId: 1,
+          method: M.CASH,
+          source: S.ADMIN_MANUAL,
+          amount: 1_000_000,
+          storedFee: 7_000,
+        },
+        {
+          branchId: 1,
+          method: M.TRANSFER,
+          source: S.ADMIN_MANUAL,
+          amount: 2_000_000,
+          storedFee: 11_000,
+        },
+      ],
+      companyTurnover: 2_000_000,
+      month: '2026-10',
+      book: book(),
+    });
+    expect(out.providerFees).toBe(18_000);
+    expect(out.missing).not.toContain('fees.integration');
+  });
+
   it('lists only used channels without a rate', () => {
     const out = computePaymentCosts({
       groups: groups.slice(2, 3),
