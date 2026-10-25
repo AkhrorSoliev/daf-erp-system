@@ -3,10 +3,12 @@ import {
   MAX_STUDENT_AGE,
   MIN_STUDENT_AGE,
 } from '../../students/shared/student-onboarding';
+import { GenderChoice, profileCb } from './profile-request-text';
 
 /**
- * Tug'ilgan sana tugmalari: holat faqat callback_data'da (sessiya ham, scene ham yo'q).
- * Bu fayl toza: matn va klaviatura quradi, bazaga tegmaydi.
+ * Ma'lumot kiritish tugmalari (jins, yil, oy, kun, tekshirish): holat faqat
+ * callback_data'da (sessiya ham, scene ham yo'q). Bu fayl toza: matn va
+ * klaviatura quradi, bazaga tegmaydi.
  */
 
 export const YEAR_PROMPT = "Tug'ilgan yilingizni tanlang:";
@@ -82,59 +84,80 @@ function chunk<T>(items: T[], size: number): T[][] {
   return rows;
 }
 
-const cancelBtn = (studentId: number): Btn =>
-  Markup.button.callback(CANCEL, `pf:x:${studentId}`);
-const backRow = (studentId: number, cb: string): Btn[] => [
+const cancelBtn = (id: number): Btn =>
+  Markup.button.callback(CANCEL, profileCb.cancel(id));
+const backRow = (id: number, cb: string): Btn[] => [
   Markup.button.callback(BACK, cb),
-  cancelBtn(studentId),
+  cancelBtn(id),
 ];
 
-export function decadesScreen(studentId: number, today: string): PickerScreen {
-  const btns = decadeStarts(today).map((d) =>
-    Markup.button.callback(`${d}–${d + 9}`, `pf:dd:${studentId}:${d}`),
-  );
+export function genderScreen(id: number): PickerScreen {
   return {
-    text: YEAR_PROMPT,
+    text: 'Jinsingizni tanlang:',
     keyboard: Markup.inlineKeyboard([
-      ...chunk(btns, 2),
-      [cancelBtn(studentId)],
+      [
+        Markup.button.callback('👨 Erkak', profileCb.gender(id, 'M')),
+        Markup.button.callback('👩 Ayol', profileCb.gender(id, 'F')),
+      ],
+      [cancelBtn(id)],
     ]),
   };
 }
 
+export function decadesScreen(
+  id: number,
+  g: GenderChoice,
+  today: string,
+): PickerScreen {
+  const btns = decadeStarts(today).map((d) =>
+    Markup.button.callback(`${d}–${d + 9}`, profileCb.decade(id, g, d)),
+  );
+  // Jins so'ralayotgan bo'lsa, bir qadam orqaga — jins savoli.
+  const last = g === 'N' ? [cancelBtn(id)] : backRow(id, profileCb.start(id));
+  return {
+    text: YEAR_PROMPT,
+    keyboard: Markup.inlineKeyboard([...chunk(btns, 2), last]),
+  };
+}
+
 export function yearsScreen(
-  studentId: number,
+  id: number,
+  g: GenderChoice,
   decade: number,
   today: string,
 ): PickerScreen {
   const btns = yearsOfDecade(today, decade).map((y) =>
-    Markup.button.callback(String(y), `pf:dy:${studentId}:${y}`),
+    Markup.button.callback(String(y), profileCb.year(id, g, y)),
   );
   return {
     text: 'Yilni tanlang:',
     keyboard: Markup.inlineKeyboard([
       ...chunk(btns, 5),
-      backRow(studentId, `pf:d:${studentId}`),
+      backRow(id, profileCb.decades(id, g)),
     ]),
   };
 }
 
-export function monthsScreen(studentId: number, year: number): PickerScreen {
+export function monthsScreen(
+  id: number,
+  g: GenderChoice,
+  year: number,
+): PickerScreen {
   const btns = MONTHS_UZ.map((name, i) =>
-    Markup.button.callback(name, `pf:dm:${studentId}:${year}-${two(i + 1)}`),
+    Markup.button.callback(name, profileCb.month(id, g, year, i + 1)),
   );
-  const decade = Math.floor(year / 10) * 10;
   return {
     text: 'Oyni tanlang:',
     keyboard: Markup.inlineKeyboard([
       ...chunk(btns, 3),
-      backRow(studentId, `pf:dd:${studentId}:${decade}`),
+      backRow(id, profileCb.decade(id, g, Math.floor(year / 10) * 10)),
     ]),
   };
 }
 
 export function daysScreen(
-  studentId: number,
+  id: number,
+  g: GenderChoice,
   year: number,
   month: number,
 ): PickerScreen {
@@ -143,35 +166,47 @@ export function daysScreen(
     btns.push(
       Markup.button.callback(
         String(d),
-        `pf:dc:${studentId}:${year}-${two(month)}-${two(d)}`,
+        profileCb.review(id, g, `${year}-${two(month)}-${two(d)}`),
       ),
     );
   return {
     text: 'Kunni tanlang:',
     keyboard: Markup.inlineKeyboard([
       ...chunk(btns, 7),
-      backRow(studentId, `pf:dy:${studentId}:${year}`),
+      backRow(id, profileCb.year(id, g, year)),
     ]),
   };
 }
 
-export function confirmScreen(studentId: number, iso: string): PickerScreen {
-  const [y, m, d] = iso.split('-').map(Number);
+/** Saqlashdan oldingi tekshiruv: faqat shu yerda nima yozilishi ko'rsatiladi. */
+export function reviewScreen(
+  id: number,
+  g: GenderChoice,
+  iso: string | null,
+): PickerScreen {
+  const lines: string[] = [];
+  if (g !== 'N') lines.push(`Jins: ${g === 'M' ? 'Erkak' : 'Ayol'}`);
+  let back = profileCb.start(id);
+  if (iso) {
+    const [y, m, d] = iso.split('-').map(Number);
+    lines.push(`Tug'ilgan sana: ${d}-${MONTHS_UZ[m - 1].toLowerCase()}, ${y}`);
+    back = profileCb.month(id, g, y, m);
+  }
   return {
-    text: `Tug'ilgan sana: ${d}-${MONTHS_UZ[m - 1].toLowerCase()}, ${y}. To'g'rimi?`,
+    text: `Tekshirib ko'ring:\n\n${lines.join('\n')}\n\nHammasi to'g'rimi?`,
     keyboard: Markup.inlineKeyboard([
       [
-        Markup.button.callback('✅ Ha, saqlash', `pf:ds:${studentId}:${iso}`),
-        Markup.button.callback('↩️ Qaytadan', `pf:d:${studentId}`),
+        Markup.button.callback('✅ Ha, saqlash', profileCb.save(id, g, iso)),
+        Markup.button.callback('↩️ Qaytadan', profileCb.start(id)),
       ],
-      backRow(studentId, `pf:dm:${studentId}:${y}-${two(m)}`),
+      backRow(id, back),
     ]),
   };
 }
 
-/** Qayta tanlash tugmasi (sana qoidaga to'g'ri kelmaganda). */
-export function retryKeyboard(studentId: number) {
+/** Qayta boshlash tugmasi (sana qoidaga to'g'ri kelmaganda). */
+export function retryKeyboard(id: number) {
   return Markup.inlineKeyboard([
-    [Markup.button.callback('↩️ Qaytadan', `pf:d:${studentId}`)],
+    [Markup.button.callback('↩️ Qaytadan', profileCb.start(id))],
   ]);
 }

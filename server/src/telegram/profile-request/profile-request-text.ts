@@ -2,16 +2,13 @@ import { Markup } from 'telegraf';
 
 export type ProfileField = 'gender' | 'dateOfBirth';
 
-/** Har variantning yopuvchi jumlasida bor: takror yuborishni to'xtatish kaliti. */
-export const PROFILE_REQUEST_MARKER = 'bosib kiriting. Rahmat!';
+/** Yagona so'rov xabarining o'zgarmas jumlasi: takror yuborishni to'xtatish kaliti. */
+export const PROFILE_REQUEST_MARKER = 'Pastdagi tugmani bosing';
 
-export const GENDER_SAVED = '✅ Jinsingiz saqlandi.';
-export const DATE_SAVED = "✅ Tug'ilgan sanangiz saqlandi.";
 export const THANKS = "✅ Rahmat! Ma'lumotingiz saqlandi.";
 export const ALREADY_FILLED = "Bu ma'lumot allaqachon kiritilgan. Rahmat!";
 export const NOT_YOURS = 'Bu tugma sizning hisobingizga tegishli emas.';
 export const PREVIEW_NOTE = "👁 Ko'rinish: hech narsa saqlanmadi.";
-export const CANCELLED = 'Bekor qilindi.';
 
 /** Ko'rinish (preview) tugmalari shu raqam bilan keladi; haqiqiy karta raqami 10000 dan boshlanadi. */
 export const PREVIEW_STUDENT_ID = 0;
@@ -29,110 +26,128 @@ export function missingProfileFields(s: {
   return out;
 }
 
-export function buildRequestText(
-  firstName: string,
-  missing: ProfileField[],
-): string {
-  const both = missing.length === 2;
-  const body = both
-    ? "Jinsingiz va tug'ilgan sanangiz bizda yo'q. Tug'ilgan sana hujjatlaringiz (shartnoma, ishtirok guvohnomasi) xatosiz tayyorlanishi uchun, jins esa markaz hisobotlari uchun kerak."
-    : missing[0] === 'gender'
-      ? "Jinsingiz bizda yo'q. U markaz hisobotlari to'g'ri chiqishi uchun kerak."
-      : "Tug'ilgan sanangiz bizda yo'q. Hujjatlaringiz (shartnoma, ishtirok guvohnomasi) xatosiz tayyorlanishi uchun kerak.";
-  const closing = both
-    ? 'Tugmalarni bosib kiriting. Rahmat!'
-    : 'Tugmani bosib kiriting. Rahmat!';
-  return `Assalomu alaykum, ${esc(firstName)}!\n\n${body}\n\n${closing}`;
+/** Hamma uchun bitta matn: qaysi maydon yetishmasligi aytilmaydi. */
+export function buildRequestText(firstName: string): string {
+  return (
+    `Assalomu alaykum, ${esc(firstName)}! 😊\n\n` +
+    "Markazimizda siz haqingizda ba'zi ma'lumotlar yetishmayapti. Ular bizning statistikamiz uchun kerak edi, o'quvchilarimizni yaxshiroq tushunishga yordam beradi.\n\n" +
+    `${PROFILE_REQUEST_MARKER}, bir necha soniya vaqtingizni oladi. Rahmat! 🙏`
+  );
 }
 
+/** Tanlangan jins: M, F yoki N (jins so'ralmaydi — kartada bor). */
+export type GenderChoice = 'M' | 'F' | 'N';
+
 export type ProfileAction =
-  | { kind: 'gender'; studentId: number; gender: 'MALE' | 'FEMALE' }
-  | { kind: 'date'; studentId: number }
-  | { kind: 'decade'; studentId: number; decade: number }
-  | { kind: 'year'; studentId: number; year: number }
-  | { kind: 'month'; studentId: number; year: number; month: number }
-  | { kind: 'confirm'; studentId: number; iso: string }
-  | { kind: 'save'; studentId: number; iso: string }
-  | { kind: 'cancel'; studentId: number }
-  | { kind: 'preview' };
+  | { kind: 'start'; studentId: number }
+  | { kind: 'gender'; studentId: number; gender: 'M' | 'F' }
+  | { kind: 'decades'; studentId: number; g: GenderChoice }
+  | { kind: 'decade'; studentId: number; g: GenderChoice; decade: number }
+  | { kind: 'year'; studentId: number; g: GenderChoice; year: number }
+  | {
+      kind: 'month';
+      studentId: number;
+      g: GenderChoice;
+      year: number;
+      month: number;
+    }
+  | { kind: 'review'; studentId: number; g: GenderChoice; iso: string }
+  | { kind: 'save'; studentId: number; g: GenderChoice; iso: string | null }
+  | { kind: 'cancel'; studentId: number };
 
 const two = (n: number) => String(n).padStart(2, '0');
 
 export const profileCb = {
-  gender: (id: number, g: 'MALE' | 'FEMALE') =>
-    `pf:g:${id}:${g === 'MALE' ? 'M' : 'F'}`,
-  date: (id: number) => `pf:d:${id}`,
-  decade: (id: number, decade: number) => `pf:dd:${id}:${decade}`,
-  year: (id: number, year: number) => `pf:dy:${id}:${year}`,
-  month: (id: number, year: number, month: number) =>
-    `pf:dm:${id}:${year}-${two(month)}`,
-  confirm: (id: number, iso: string) => `pf:dc:${id}:${iso}`,
-  save: (id: number, iso: string) => `pf:ds:${id}:${iso}`,
+  start: (id: number) => `pf:s:${id}`,
+  gender: (id: number, g: 'M' | 'F') => `pf:g:${id}:${g}`,
+  decades: (id: number, g: GenderChoice) => `pf:dl:${id}:${g}`,
+  decade: (id: number, g: GenderChoice, decade: number) =>
+    `pf:dd:${id}:${g}:${decade}`,
+  year: (id: number, g: GenderChoice, year: number) =>
+    `pf:dy:${id}:${g}:${year}`,
+  month: (id: number, g: GenderChoice, year: number, month: number) =>
+    `pf:dm:${id}:${g}:${year}-${two(month)}`,
+  review: (id: number, g: GenderChoice, iso: string) =>
+    `pf:dc:${id}:${g}:${iso}`,
+  save: (id: number, g: GenderChoice, iso: string | null) =>
+    `pf:ds:${id}:${g}:${iso ?? '-'}`,
   cancel: (id: number) => `pf:x:${id}`,
-  preview: () => 'pf:p:g',
 };
 
 export function parseProfileCallback(data: string): ProfileAction | null {
-  let m = /^pf:g:(\d+):([MF])$/.exec(data);
+  let m = /^pf:s:(\d+)$/.exec(data);
+  if (m) return { kind: 'start', studentId: Number(m[1]) };
+  m = /^pf:g:(\d+):([MF])$/.exec(data);
   if (m) {
     return {
       kind: 'gender',
       studentId: Number(m[1]),
-      gender: m[2] === 'M' ? 'MALE' : 'FEMALE',
+      gender: m[2] as 'M' | 'F',
     };
   }
-  m = /^pf:d:(\d+)$/.exec(data);
-  if (m) return { kind: 'date', studentId: Number(m[1]) };
-  m = /^pf:dd:(\d+):(\d{4})$/.exec(data);
-  if (m)
-    return { kind: 'decade', studentId: Number(m[1]), decade: Number(m[2]) };
-  m = /^pf:dy:(\d+):(\d{4})$/.exec(data);
-  if (m) return { kind: 'year', studentId: Number(m[1]), year: Number(m[2]) };
-  m = /^pf:dm:(\d+):(\d{4})-(\d{2})$/.exec(data);
+  m = /^pf:x:(\d+)$/.exec(data);
+  if (m) return { kind: 'cancel', studentId: Number(m[1]) };
+  m = /^pf:dl:(\d+):([MFN])$/.exec(data);
+  if (m) {
+    return {
+      kind: 'decades',
+      studentId: Number(m[1]),
+      g: m[2] as GenderChoice,
+    };
+  }
+  m = /^pf:dd:(\d+):([MFN]):(\d{4})$/.exec(data);
+  if (m) {
+    return {
+      kind: 'decade',
+      studentId: Number(m[1]),
+      g: m[2] as GenderChoice,
+      decade: Number(m[3]),
+    };
+  }
+  m = /^pf:dy:(\d+):([MFN]):(\d{4})$/.exec(data);
+  if (m) {
+    return {
+      kind: 'year',
+      studentId: Number(m[1]),
+      g: m[2] as GenderChoice,
+      year: Number(m[3]),
+    };
+  }
+  m = /^pf:dm:(\d+):([MFN]):(\d{4})-(\d{2})$/.exec(data);
   if (m) {
     return {
       kind: 'month',
       studentId: Number(m[1]),
-      year: Number(m[2]),
-      month: Number(m[3]),
+      g: m[2] as GenderChoice,
+      year: Number(m[3]),
+      month: Number(m[4]),
     };
   }
-  m = /^pf:dc:(\d+):(\d{4}-\d{2}-\d{2})$/.exec(data);
-  if (m) return { kind: 'confirm', studentId: Number(m[1]), iso: m[2] };
-  m = /^pf:ds:(\d+):(\d{4}-\d{2}-\d{2})$/.exec(data);
-  if (m) return { kind: 'save', studentId: Number(m[1]), iso: m[2] };
-  m = /^pf:x:(\d+)$/.exec(data);
-  if (m) return { kind: 'cancel', studentId: Number(m[1]) };
-  if (data === 'pf:p:g') return { kind: 'preview' };
+  m = /^pf:dc:(\d+):([MFN]):(\d{4}-\d{2}-\d{2})$/.exec(data);
+  if (m) {
+    return {
+      kind: 'review',
+      studentId: Number(m[1]),
+      g: m[2] as GenderChoice,
+      iso: m[3],
+    };
+  }
+  m = /^pf:ds:(\d+):([MFN]):(\d{4}-\d{2}-\d{2}|-)$/.exec(data);
+  if (m) {
+    return {
+      kind: 'save',
+      studentId: Number(m[1]),
+      g: m[2] as GenderChoice,
+      iso: m[3] === '-' ? null : m[3],
+    };
+  }
   return null;
 }
 
-/** `target = 'preview'`: gender tugmalari hech narsa yozmaydi, sana tugmasi 0-raqamli kartada ishlaydi. */
-export function buildRequestKeyboard(
-  target: number | 'preview',
-  missing: ProfileField[],
-) {
-  const cb =
-    target === 'preview'
-      ? {
-          male: profileCb.preview(),
-          female: profileCb.preview(),
-          date: profileCb.date(PREVIEW_STUDENT_ID),
-        }
-      : {
-          male: profileCb.gender(target, 'MALE'),
-          female: profileCb.gender(target, 'FEMALE'),
-          date: profileCb.date(target),
-        };
-  const rows: ReturnType<typeof Markup.button.callback>[][] = [];
-  if (missing.includes('gender')) {
-    rows.push([
-      Markup.button.callback("👦 O'g'il", cb.male),
-      Markup.button.callback('👧 Qiz', cb.female),
-    ]);
-  }
-  if (missing.includes('dateOfBirth')) {
-    rows.push([Markup.button.callback('📅 Sanani kiritish', cb.date)]);
-  }
-  return Markup.inlineKeyboard(rows);
+/** Yagona tugma. `'preview'`: tugma 0-raqamli kartada ishlaydi, bazaga tegmaydi. */
+export function buildRequestKeyboard(target: number | 'preview') {
+  const id = target === 'preview' ? PREVIEW_STUDENT_ID : target;
+  return Markup.inlineKeyboard([
+    [Markup.button.callback("📝 Ma'lumotlarni kiritish", profileCb.start(id))],
+  ]);
 }

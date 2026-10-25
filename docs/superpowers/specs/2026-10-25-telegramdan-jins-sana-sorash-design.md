@@ -19,11 +19,9 @@ guruhda ACTIVE yozuv, `telegramChatId` bor, `telegramDisconnectedAt` yo'q va
 Bosqichlar (har biri alohida buyruq, CEO ruxsatisiz keyingisiga o'tilmaydi):
 
 1. **Sinov** (flagsiz): hech narsa yuborilmaydi; chatlar soni va namuna matn chiqadi.
-2. **`--preview=<chatId>`**: matnlar faqat shu chatga (CEO'ning o'ziga) yuboriladi —
-   har variant bittadan: (a) ikkalasi yo'q, (b) faqat jins yo'q, (c) faqat sana yo'q,
-   (d) bir chatda ikki o'quvchi. Tugmalar `pf:p:*` — bosilsa **hech narsa yozilmaydi**,
-   faqat keyingi qadam matni ko'rinadi. Bot javob matnlari (rahmat, xato, «allaqachon
-   kiritilgan») ham shu yerda ketma-ket yuboriladi.
+2. **`--preview=<chatId>`**: so'rov xabari va botning javob matni faqat shu chatga (CEO'ning o'ziga)
+   yuboriladi. Tugma (`pf:s:0`) haqiqiy savol-javobni ochadi, lekin **hech narsa yozilmaydi**
+   va bazaga tegilmaydi.
 3. **`--apply --expect=<N>`**: CEO matnni tasdiqlagandan keyingina. Son farq qilsa
    yozishdan oldin to'xtaydi.
 
@@ -31,39 +29,36 @@ Qayta ishga tushirish xavfsiz: `SmsMessage`da shu matnli SENT yozuvi bor o'quvch
 o'tkazib yuboriladi. Bitta chatda bir necha o'quvchi bo'lsa — har biriga alohida
 xabar (ismi bilan). Tezlik: ~20 xabar/s (`GAP_MS = 50`).
 
-## Xabar matni (qoralama)
+## Xabar matni va savol-javob (25.10 (2): bitta xabar va bitta tugma)
 
-Tartib: salom → sabab → harakat → rahmat.
+Hamma o'quvchiga BITTA matn, qaysi maydon yetishmasligi aytilmaydi (hujjat so'zlari yo'q):
 
-> Assalomu alaykum, {ism}!
+> Assalomu alaykum, {ism}! 😊
 >
-> Kartangizda {jinsingiz va tug'ilgan sanangiz | jinsingiz | tug'ilgan sanangiz} yo'q.
-> Shartnoma va ishtirok guvohnomasi kabi hujjatlar to'g'ri tuzilishi uchun kerak.
+> Markazimizda siz haqingizda ba'zi ma'lumotlar yetishmayapti. Ular bizning statistikamiz uchun kerak edi, o'quvchilarimizni yaxshiroq tushunishga yordam beradi.
 >
-> Pastdagi tugmalar orqali kiriting — bir daqiqa. Rahmat!
+> Pastdagi tugmani bosing, bir necha soniya vaqtingizni oladi. Rahmat! 🙏
 
-Tugmalar (faqat yetishmaydigani uchun): `👦 O'g'il` `👧 Qiz` · `📅 Tug'ilgan sanani yozish`.
+Bitta tugma: `📝 Ma'lumotlarni kiritish` (`pf:s:<id>`). Takror yuborish kaliti: `Pastdagi tugmani bosing`.
 
-## Bot tomoni
-
-- `callback_data`: `pf:g:<studentId>:M|F`, `pf:d:<studentId>`.
-- **Egalik tekshiruvi**: `student.telegramChatId === String(ctx.chat.id)`; aks holda
-  rad. Begona chat boshqa kartani o'zgartira olmaydi.
-- Jins tugmasi → darrov yoziladi. Sana ham yo'q bo'lsa — sana so'raladi.
-- Sana: kichik scene (`PROFILE_FILL`). Format `KK.OO.YYYY`; `YYYY-MM-DD` ga
-  aylantirilib `birthDateProblem` tekshiradi (yosh 5–100, kelajak emas, 30-fevral
-  emas). Xato bo'lsa sababi aytilib qayta so'raladi; `/bekor` yoki bekor tugmasi chiqaradi.
-- Yozish: mavjud `StudentOnboardingService.updateProfile` — tekshiruv, tarix yozuvi
-  va `User.gender` sinxroni shu yerda. Bo'sh bo'lmagan maydon qayta yozilmaydi;
-  eski tugma bosilsa «Allaqachon kiritilgan».
-- Telegram `ctx.from` ma'lumotidan jins/sana **taxmin qilinmaydi**.
+Tugma bosilgach xuddi shu xabar joyida tahrirlanadi (scene ham, sessiya ham yo'q; holat `callback_data`da, ≤ 64 bayt):
+1. **Jins** (faqat kartada jinsi yo'q bo'lsa): `Jinsingizni tanlang:` — `👨 Erkak` / `👩 Ayol` (`pf:g:<id>:M|F`).
+2. **Yil** (o'n yilliklar) → **oy** → **kun** (faqat sanasi yo'q bo'lsa): `pf:dd|dy|dm:<id>:<g>:…`, `g` ∈ M/F/N
+   (N = jins so'ralmaydi). Yillar: joriy Toshkent yili − 100 … − 5. Har ekranda «⬅️ Orqaga» va «Bekor qilish».
+3. **Tekshirish**: «Tekshirib ko'ring: Jins: … / Tug'ilgan sana: … / Hammasi to'g'rimi?» — `✅ Ha, saqlash` (`pf:ds:<id>:<g>:<sana|->`) / `↩️ Qaytadan`.
+4. **Saqlash**: hammasi shu yerda, `fillStudentProfile`ning bitta chaqiruvi bilan; faqat kartada hali bo'sh maydonlar yoziladi,
+   oraliqda to'ldirilgani o'tkazib yuboriladi. So'ng «✅ Rahmat! Ma'lumotingiz saqlandi.» (tugmasiz).
+- «Bekor qilish» (`pf:x:<id>`) xabarni asl so'rov matni va yagona tugmasiga qaytaradi.
+- Egalik (karta shu chatga bog'langanmi) HAR bir tugmada tekshiriladi; begona chat — «Bu tugma sizning hisobingizga tegishli emas».
+- Ko'rinish (preview): `<id>` = 0, bazaga hech qachon tegilmaydi, oxirgi saqlash faqat «hech narsa saqlanmadi» deydi.
+- Qolgan qoidalar o'zgarmadi: sana `birthDateProblem`dan, yozuv `fillStudentProfile`dan; Telegram `ctx.from` ma'lumotidan jins/sana taxmin qilinmaydi.
 
 ## Test
 
-- Sana tahlili: `15.03.2005`, `5.3.2005`, `31.02.2005`, `2030`, bo'sh, matn.
+- Tugma yo'llari: jins+sana, faqat jins, faqat sana; oraliqda to'ldirilgan maydon; qoida xatosi; bekor qilish.
 - Egalik: begona chat → yozilmaydi.
 - Qamrov so'rovi: kim kiradi/kirmaydi (blok, o'chirilgan, guruhsiz).
-- Skript matn quruvchisi: 3 variant + ko'p o'quvchi.
+- Skript matn quruvchisi: bitta matn + ko'p o'quvchi.
 
 ## Hujjat
 
@@ -73,31 +68,3 @@ ADR-0039 ga bitta qator qo'shiladi (Telegram — qo'shimcha yo'l). Yangi ADR yo'
 
 Avtomatik takror eslatma, yangi o'quvchini avtomatik so'rash, Mini App ichida forma.
 Kampaniya natijasi yetmasa — keyin alohida qaror.
-
-## 25.10 o'zgarishi: sana tugmalar bilan tanlanadi
-
-**Nega.** Matn bilan yozilgan sana (`KK.OO.YYYY`) ko'pincha xato chiqadi: o'quvchilar
-formatni to'g'ri yozmaydi. Scene va matn tahlili olib tashlandi, o'rniga tugmalar.
-
-**5 ekran** (hammasi bitta xabarni joyida tahrirlaydi; har birida «Bekor qilish», 2–5-da «⬅️ Orqaga»):
-1. `Tug'ilgan yilingizni tanlang:` — o'n yilliklar (`1980–1989`), yangisi birinchi, qatorda 2 ta.
-   Yillar oralig'i: joriy Toshkent yili − 100 … − 5 (`MAX/MIN_STUDENT_AGE`).
-2. `Yilni tanlang:` — shu o'n yillikdagi yillar, qatorda 5 ta.
-3. `Oyni tanlang:` — 12 oy, qatorda 3 ta.
-4. `Kunni tanlang:` — 1…N (kabisa yilini hisobga oladi), qatorda 7 ta.
-5. `Tug'ilgan sana: 15-mart, 2005. To'g'rimi?` — «✅ Ha, saqlash» / «↩️ Qaytadan».
-
-**Holatsiz.** Hamma holat `callback_data`da (≤ 64 bayt): `pf:d:<id>`, `pf:dd:<id>:<o'n yillik>`,
-`pf:dy:<id>:<yil>`, `pf:dm:<id>:<yil>-<oy>`, `pf:dc:<id>:<sana>`, `pf:ds:<id>:<sana>`, `pf:x:<id>`.
-«Bekor qilish» so'rovni o'chirmaydi: xabar yetishmayotgan maydonlar tugmalariga qaytadi.
-Sana saqlangach jins hali yo'q bo'lsa, jins tugmalari chiqadi. Sessiya ham, scene ham yo'q. `studentId` foydalanuvchi qo'lida, shuning uchun egalik
-tekshiruvi (id VA `telegramChatId`) HAR bir tugmada takrorlanadi, faqat saqlashda emas.
-Sana qoidasi o'zgarmadi: `birthDateProblem`; yozuv — `fillStudentProfile`.
-
-**Ko'rinish (preview).** O'quvchi raqami 0 — ko'rinish belgisi (haqiqiy raqamlar 10000 dan).
-`pf:d:0` haqiqiy tanlagichni bazasiz ochadi, saqlash bosqichi hech narsa yozmaydi
-(«Ko'rinish: hech narsa saqlanmadi»). 0 hech qachon `fillStudentProfile`ga yetmaydi.
-
-**Matnlar.** Salom, so'ng sabab, so'ng yopuvchi jumla («Tugmani bosib kiriting. Rahmat!»,
-ikkalasi yo'q bo'lsa «Tugmalarni …»). Takror yuborish kaliti: `bosib kiriting. Rahmat!`.
-Tugma yorlig'i: «📅 Sanani kiritish».

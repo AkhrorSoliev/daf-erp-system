@@ -1,4 +1,4 @@
-> 25.10 o'zgarishi: sana matn bilan emas, tugmalar bilan tanlanadi (scene va `KK.OO.YYYY` o'chirildi) — spec oxiridagi bo'limga qarang.
+> 25.10 (2): bitta xabar, bitta tugma, so'ng tugmali savol-javob (jins → yil/oy/kun → tekshirish → saqlash); scene, matnli sana va 3 matn varianti yo'q — spec oxirgi holatni beradi.
 
 # Telegramdan jins va tug'ilgan sanani so'rash — Implementation Plan
 

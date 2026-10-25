@@ -1,13 +1,13 @@
 /**
  * Jinsi yoki tug'ilgan sanasi kartada yo'q faol o'quvchilarga Telegram'da so'rov
- * yuboradi (tugmalar + sana scene'i: server/src/telegram/profile-request).
+ * yuboradi (bitta xabar, bitta tugma, so'ng tugmali savol-javob: server/src/telegram/profile-request).
  *
  *   railway run --service caring-courage --environment production \
  *     npx ts-node --transpile-only scripts/send-profile-request.ts [rejim]
  *
  * Rejimlar (tartib bilan):
  *   (bo'sh)             sinov: hech narsa yuborilmaydi, son va namuna chiqadi
- *   --preview=<chatId>  hamma xabar variantlari FAQAT shu chatga; tugmalar hech
+ *   --preview=<chatId>  so'rov xabari FAQAT shu chatga; tugmalar hech
  *                       narsa yozmaydi, bazaga tegilmaydi
  *   --apply --expect=N  haqiqiy yuborish; son farq qilsa yozishdan oldin to'xtaydi
  *
@@ -21,7 +21,6 @@ import {
   PROFILE_REQUEST_MARKER,
   buildRequestKeyboard,
   buildRequestText,
-  missingProfileFields,
 } from '../src/telegram/profile-request/profile-request-text';
 import { printHeader, run } from './lib/check-cli';
 import { UsageError } from './lib/apply-expect-args';
@@ -121,9 +120,7 @@ void run(async (prisma) => {
   );
   console.log(`Oldin yuborilgani (o'tkazib yuboriladi): ${done.size}`);
   if (todo[0]) {
-    console.log(
-      `\n── Namuna ──\n${buildRequestText(todo[0].firstName, missingProfileFields(todo[0]))}\n`,
-    );
+    console.log(`\n── Namuna ──\n${buildRequestText(todo[0].firstName)}\n`);
   }
 
   if (mode.mode === 'dry') {
@@ -142,11 +139,10 @@ void run(async (prisma) => {
   let sent = 0;
   let failed = 0;
   for (const s of todo) {
-    const missing = missingProfileFields(s);
-    const text = buildRequestText(s.firstName, missing);
+    const text = buildRequestText(s.firstName);
     const out = await sendTelegramText(bot, s.telegramChatId as string, text, {
       parse_mode: 'HTML',
-      reply_markup: buildRequestKeyboard(s.id, missing).reply_markup,
+      reply_markup: buildRequestKeyboard(s.id).reply_markup,
     });
     await prisma.smsMessage.create({
       data: {

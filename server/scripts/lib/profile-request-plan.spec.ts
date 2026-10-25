@@ -37,22 +37,21 @@ describe('parseProfileRequestArgs', () => {
 
 describe('buildPreviewMessages', () => {
   const msgs = buildPreviewMessages();
-  it('covers the three request variants and the bot replies', () => {
-    expect(msgs.length).toBeGreaterThanOrEqual(4);
-    expect(msgs.filter((m) => m.keyboard).length).toBe(3);
-    const joined = msgs.map((m) => m.text).join('\n');
-    expect(joined).toContain("Jinsingiz va tug'ilgan sanangiz bizda yo'q");
+  it('is the one request message plus the bot explainer', () => {
+    expect(msgs).toHaveLength(2);
+    expect(msgs.filter((m) => m.keyboard)).toHaveLength(1);
     expect(
-      msgs.filter((m) => m.text.includes(PROFILE_REQUEST_MARKER)).length,
-    ).toBe(3);
+      msgs.filter((m) => m.text.includes(PROFILE_REQUEST_MARKER)),
+    ).toHaveLength(1);
+    expect(msgs[0].text).toContain('Assalomu alaykum, Aziz!');
+    const joined = msgs.map((m) => m.text).join('\n');
     expect(joined).toContain("Rahmat! Ma'lumotingiz saqlandi");
+    expect(joined).not.toContain('KK.OO');
   });
-  it('preview buttons carry no real student id (0 is the preview marker)', () => {
-    for (const m of msgs) {
-      const data = (m.keyboard?.reply_markup.inline_keyboard ?? [])
-        .flat()
-        .map((b: any) => b.callback_data);
-      for (const d of data) expect(d).toMatch(/^pf:(p:g|d:0)$/);
-    }
+  it('the only preview button opens the wizard on student id 0', () => {
+    const data = (msgs[0].keyboard?.reply_markup.inline_keyboard ?? [])
+      .flat()
+      .map((b: any) => b.callback_data);
+    expect(data).toEqual(['pf:s:0']);
   });
 });
