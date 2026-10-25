@@ -70,8 +70,8 @@ export function ChatAccessBanner() {
           {line}
         </p>
       ))}
-      {/* A banned student gets no way back through minutes: no progress. */}
-      {!danger && <Progress p={view.progress} />}
+      {/* Bars only for a QUOTA lock; the server sentence covers the rest. */}
+      {view.progress && <Progress p={view.progress} />}
     </Card>
   );
 }

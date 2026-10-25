@@ -79,12 +79,19 @@ describe("accessView", () => {
     expect(accessView(access({ canWrite: false })).mode).toBe("locked");
   });
 
-  it("passes the quota numbers through as progress", () => {
-    expect(accessView(access()).progress).toEqual({
+  it("draws progress bars only for a QUOTA lock", () => {
+    const lock = (reasons: ChatLockReason[]) =>
+      accessView(access({ canWrite: false, reasons, messages: ["x"] })).progress;
+    expect(lock(["QUOTA"])).toEqual({
       activeHave: 40,
       activeNeed: 60,
       radioHave: 10,
       radioNeed: 30,
     });
+    expect(lock(["DEBT"])).toBeNull();
+    expect(lock(["PHONE", "GENDER"])).toBeNull();
+    expect(lock(["BANNED", "QUOTA"])).toBeNull();
+    expect(accessView(access({ warning: "w" })).progress).toBeNull();
+    expect(accessView(access()).progress).toBeNull();
   });
 });

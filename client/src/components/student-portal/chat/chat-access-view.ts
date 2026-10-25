@@ -11,7 +11,8 @@ export interface AccessView {
   mode: "open" | "warning" | "locked" | "banned";
   /** The server's own sentences, verbatim: data, never passed through t(). */
   lines: string[];
-  progress: AccessProgress;
+  /** Only a QUOTA lock draws bars; null otherwise. */
+  progress: AccessProgress | null;
 }
 
 /** Reads the server's verdict; decides nothing itself. */
@@ -23,9 +24,12 @@ export function accessView(a: ChatAccess): AccessView {
     radioNeed: a.quota.quota.radioMin,
   };
   if (a.reasons.includes("BANNED")) {
-    return { mode: "banned", lines: a.messages, progress };
+    return { mode: "banned", lines: a.messages, progress: null };
   }
-  if (!a.canWrite) return { mode: "locked", lines: a.messages, progress };
-  if (a.warning) return { mode: "warning", lines: [a.warning], progress };
-  return { mode: "open", lines: [], progress };
+  if (!a.canWrite) {
+    const bars = a.reasons.includes("QUOTA") ? progress : null;
+    return { mode: "locked", lines: a.messages, progress: bars };
+  }
+  if (a.warning) return { mode: "warning", lines: [a.warning], progress: null };
+  return { mode: "open", lines: [], progress: null };
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "@phosphor-icons/react";
 import { useT } from "@/i18n/context";
 import { Skeleton } from "../lumio";
@@ -11,11 +12,18 @@ import { VoicePlayer } from "./voice-player";
 function Viewer({ url, onClose }: { url: string; onClose: () => void }) {
   const t = useT();
   useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -23,6 +31,7 @@ function Viewer({ url, onClose }: { url: string; onClose: () => void }) {
       onClick={onClose}
     >
       <button
+        autoFocus
         type="button"
         aria-label={t("Yopish")}
         onClick={onClose}
@@ -37,7 +46,8 @@ function Viewer({ url, onClose }: { url: string; onClose: () => void }) {
         className="max-h-full max-w-full object-contain"
         onClick={(e) => e.stopPropagation()}
       />
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -67,6 +77,9 @@ function ImageContent({ message }: { message: MessageView }) {
           src={file.url}
           alt={t("Rasm")}
           loading="lazy"
+          onLoad={() => {
+            retried.current = false;
+          }}
           onError={() => {
             // An expired link: one new link, then give up.
             if (!retried.current) {

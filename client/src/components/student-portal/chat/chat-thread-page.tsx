@@ -77,6 +77,18 @@ export function ChatThreadPage({ id }: { id: string }) {
     endRef.current?.scrollIntoView({ block: "end" });
   }, [state]);
 
+  // A new peer message while the student is near the end: follow it.
+  const prevPeer = useRef(lastPeer);
+  useEffect(() => {
+    if (prevPeer.current === lastPeer) return;
+    prevPeer.current = lastPeer;
+    if (state !== "ready" || !scrolledOnce.current) return;
+    const end = endRef.current;
+    if (end && end.getBoundingClientRect().top < window.innerHeight + 400) {
+      end.scrollIntoView({ block: "end", behavior: "smooth" });
+    }
+  }, [lastPeer, state]);
+
   // Read once on open, then whenever a newer peer message is on screen. The
   // ref holds what was last reported, so a poll that changes nothing is silent.
   useEffect(() => {
@@ -121,7 +133,7 @@ export function ChatThreadPage({ id }: { id: string }) {
 
       </header>
 
-      <div className="flex flex-col gap-2 pb-32 pt-4">
+      <div className="flex flex-col gap-2 pb-32 pt-4 md:pb-12">
         {state === "loading" && <BubbleSkeleton />}
         {(state === "offline" || state === "failed") && (
           <LoadFailed query={query} />

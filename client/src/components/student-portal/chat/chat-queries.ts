@@ -45,11 +45,6 @@ export function useChatEnabled(): boolean {
   return useChatAccess().data?.enabled === true;
 }
 
-/** True only once the server has answered and says the student may write. */
-export function useCanWrite(): boolean {
-  return useChatAccess().data?.canWrite === true;
-}
-
 export function useConversations(enabled = true) {
   return useQuery<ConversationView[]>({
     queryKey: CHAT_KEYS.list,
@@ -145,30 +140,17 @@ export function useOpenConversation() {
   });
 }
 
-const BLOCKED_KEY = ["student-portal", "chat", "blocked"] as const;
-
-/**
- * Ids of the students I blocked in this browser session. No endpoint tells
- * who I blocked (GET /chat/me has no such field), so this is filled by the
- * block/unblock answers and is empty again after a reload.
- */
-export function useBlockedIds(): number[] {
-  return (
-    useQuery<number[]>({
-      queryKey: BLOCKED_KEY,
-      queryFn: () => [],
-      staleTime: Infinity,
-      gcTime: Infinity,
-    }).data ?? []
-  );
-}
-
 /** GET /chat/me: my @username (null until set) and my three privacy choices. */
 export function useChatMe() {
   return useQuery<ChatMe>({
     queryKey: CHAT_KEYS.me,
     queryFn: () => api.get("/chat/me").then((r) => r.data),
   });
+}
+
+/** Students I blocked, from GET /chat/me. */
+export function useBlockedIds(): number[] {
+  return useChatMe().data?.blockedIds ?? [];
 }
 
 function useBlockMutation(
@@ -180,10 +162,16 @@ function useBlockMutation(
   return useMutation<unknown, unknown, number>({
     mutationFn: (studentId) => api.post(`/chat/${path}`, { studentId }),
     onSuccess: (_d, studentId) => {
-      qc.setQueryData<number[]>(BLOCKED_KEY, (old = []) =>
-        path === "block"
-          ? [...old.filter((i) => i !== studentId), studentId]
-          : old.filter((i) => i !== studentId),
+      qc.setQueryData<ChatMe>(
+        CHAT_KEYS.me,
+        (old) =>
+          old && {
+            ...old,
+            blockedIds:
+              path === "block"
+                ? [...old.blockedIds.filter((i) => i !== studentId), studentId]
+                : old.blockedIds.filter((i) => i !== studentId),
+          },
       );
       return Promise.all([
         qc.invalidateQueries({ queryKey: CHAT_KEYS.list }),

@@ -37,6 +37,13 @@ export function VoicePlayer({
     return el ? registerMedia(el) : undefined;
   }, []);
 
+  // A failed link must never leave a stale "play" behind for a later refetch.
+  useEffect(() => {
+    if (file.loadState === "failed" || file.loadState === "offline") {
+      playWhenReady.current = false;
+    }
+  }, [file.loadState]);
+
   // The link arrived after the first press: start then.
   useEffect(() => {
     const el = audio.current;
@@ -61,7 +68,11 @@ export function VoicePlayer({
       // the new URL has been applied; an unchanged URL plays right here.
       playWhenReady.current = true;
       const fresh = await file.refresh();
-      if (!fresh || fresh !== file.url) return;
+      if (!fresh) {
+        playWhenReady.current = false;
+        return;
+      }
+      if (fresh !== file.url) return;
       playWhenReady.current = false;
     }
     el.playbackRate = fast ? 1.5 : 1;
@@ -82,6 +93,9 @@ export function VoicePlayer({
         src={file.url ?? undefined}
         preload="none"
         onPlay={() => setPlaying(true)}
+        onPlaying={() => {
+          retried.current = false;
+        }}
         onPause={() => setPlaying(false)}
         // A new `src` empties the element without a pause event.
         onEmptied={() => setPlaying(false)}
@@ -93,7 +107,9 @@ export function VoicePlayer({
           if (file.url && !retried.current) {
             retried.current = true;
             playWhenReady.current = true;
-            void file.refresh();
+            void file.refresh().then((u) => {
+              if (!u) playWhenReady.current = false;
+            });
           }
         }}
       />

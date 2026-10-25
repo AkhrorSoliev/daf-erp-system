@@ -46,7 +46,7 @@ export function ConversationRow({
           </span>
           {unread ? (
             <span className="inline-flex h-[22px] min-w-[22px] shrink-0 items-center justify-center rounded-full bg-coral-500 px-[7px] font-display text-xs font-extrabold text-white">
-              {unread}
+              {unread > 99 ? "99+" : unread}
             </span>
           ) : null}
         </span>

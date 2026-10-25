@@ -42,6 +42,8 @@ export interface ChatPrivacy {
 /** GET /chat/me. */
 export interface ChatMe extends ChatPrivacy {
   username: string | null;
+  /** Students I blocked. */
+  blockedIds: number[];
 }
 
 /** What another student may see: never a phone, a debt or a balance. */

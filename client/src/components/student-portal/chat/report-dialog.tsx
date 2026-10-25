@@ -102,7 +102,10 @@ export function ReportDialog({
         >
           {t("Yuborish")}
         </Button>
-        <Button variant="secondary" block onClick={() => onOpenChange(false)}>
+        <Button variant="secondary" block onClick={() => {
+            setRefusal(null);
+            onOpenChange(false);
+          }}>
           {t("Bekor qilish")}
         </Button>
       </div>

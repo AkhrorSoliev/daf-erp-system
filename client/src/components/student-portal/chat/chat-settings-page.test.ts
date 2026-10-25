@@ -54,6 +54,7 @@ describe("ChatSettingsPage", () => {
       whoCanWrite: "EVERYONE",
       whoCanFind: "NOBODY",
       whoSeesPhoto: "GROUPMATES",
+      blockedIds: [],
     });
     expect(text).toContain("Chat sozlamalari");
     expect(text).toContain("Boshqalar sizni shu nom bilan topadi");

@@ -47,6 +47,7 @@ function usePrivacyChange() {
       );
       toast.error(getErrorMessage(err, t("Saqlab bo'lmadi")));
     },
+    onSettled: () => qc.invalidateQueries({ queryKey: CHAT_KEYS.me }),
   });
 }
 
