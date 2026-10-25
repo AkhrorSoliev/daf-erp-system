@@ -99,10 +99,12 @@ export function TaxSettingsClient() {
     items.map(({ key, label }) => (
       <TaxRateRow
         key={key}
+        id={key}
         label={t(label)}
         list={listOf(key)}
         thisMonth={thisMonth}
         saving={savingKey === key}
+        busy={save.isPending}
         onSave={(list) => save.mutateAsync({ key, list })}
       />
     ));
@@ -137,6 +139,7 @@ export function TaxSettingsClient() {
           list={(data.values["bank.turnoverTiers"] ?? []) as DatedTiers[]}
           thisMonth={thisMonth}
           saving={savingKey === "bank.turnoverTiers"}
+          busy={save.isPending}
           onSave={(list) => save.mutateAsync({ key: "bank.turnoverTiers", list })}
         />
       </section>

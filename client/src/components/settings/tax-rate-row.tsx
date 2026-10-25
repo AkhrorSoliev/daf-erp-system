@@ -23,17 +23,24 @@ import {
  * qo'shiladi, qolganlari turadi).
  */
 export function TaxRateRow({
+  id,
   label,
   list,
   thisMonth,
   saving,
+  busy,
   onSave,
 }: {
+  /** Barqaror kalit (tarjima qilinmaydi): maydon id lari shundan. */
+  id: string;
   label: string;
   list: DatedRate[];
   /** Toshkent bo'yicha joriy oy, YYYY-MM. */
   thisMonth: string;
+  /** Shu qatorning saqlashi ketmoqda (aylanuvchi belgi). */
   saving: boolean;
+  /** Istalgan saqlash ketmoqda: ikki marta bosib bo'lmaydi. */
+  busy: boolean;
   onSave: (fullList: DatedRate[]) => Promise<unknown>;
 }) {
   const t = useT();
@@ -41,10 +48,12 @@ export function TaxRateRow({
   const [month, setMonth] = useState(thisMonth);
   const [value, setValue] = useState("");
   const [askMonth, setAskMonth] = useState<string | null>(null);
+  // Xato foydalanuvchi yozgandan keyingina chiqadi, forma ochilishi bilan emas.
+  const [touched, setTouched] = useState(false);
 
   const now = currentRate(list, thisMonth);
   const draft = { fromMonth: month, value };
-  const error = value === "" && month === thisMonth ? null : rowError(draft);
+  const error = touched ? rowError(draft) : null;
   const canSave = rowError(draft) === null;
 
   const send = () => {
@@ -53,6 +62,7 @@ export function TaxRateRow({
       () => {
         setOpen(false);
         setValue("");
+        setTouched(false);
       },
       () => undefined, // xabarni umumiy mutatsiya ko'rsatadi
     );
@@ -98,35 +108,41 @@ export function TaxRateRow({
         <div className="space-y-2 rounded-md border bg-muted/30 p-3">
           <div className="flex flex-wrap items-end gap-3">
             <div className="space-y-1">
-              <Label htmlFor={`m-${label}`}>{t("Qaysi oydan")}</Label>
+              <Label htmlFor={`m-${id}`}>{t("Qaysi oydan")}</Label>
               <Input
-                id={`m-${label}`}
+                id={`m-${id}`}
                 type="month"
                 className="w-40"
                 value={month}
-                onChange={(e) => setMonth(e.target.value)}
+                onChange={(e) => {
+                  setMonth(e.target.value);
+                  setTouched(true);
+                }}
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor={`v-${label}`}>{t("Foiz")}</Label>
+              <Label htmlFor={`v-${id}`}>{t("Foiz")}</Label>
               <div className="flex items-center gap-2">
                 <Input
-                  id={`v-${label}`}
+                  id={`v-${id}`}
                   inputMode="decimal"
                   autoComplete="off"
                   className="w-24 text-center"
                   value={value}
                   aria-invalid={error ? true : undefined}
-                  onChange={(e) => setValue(percentInput(e.target.value))}
+                  onChange={(e) => {
+                    setValue(percentInput(e.target.value));
+                    setTouched(true);
+                  }}
                 />
                 <span className="text-sm text-muted-foreground">%</span>
               </div>
             </div>
-            <Button size="sm" disabled={!canSave || saving} onClick={submit}>
+            <Button size="sm" disabled={!canSave || busy} onClick={submit}>
               {saving && <Loader2 className="mr-1.5 size-4 animate-spin" />}
               {t("Saqlash")}
             </Button>
-            <Button variant="ghost" size="sm" disabled={saving} onClick={() => setOpen(false)}>
+            <Button variant="ghost" size="sm" disabled={busy} onClick={() => setOpen(false)}>
               {t("Bekor qilish")}
             </Button>
           </div>

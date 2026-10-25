@@ -27,6 +27,7 @@ export function rowError(row: RateRow): string | null {
 
 export function tiersError(rows: TierRow[]): string | null {
   if (rows.length === 0) return msg("Kamida bitta oraliq kiriting");
+  if (rows.some((r) => !/^\d*$/.test(r.fromAmount) || !/^\d*$/.test(r.toAmount))) return msg("Faqat butun so'm kiriting");
   if (Number(rows[0].fromAmount) !== 0) return msg("1-oraliq 0 dan boshlanadi");
   if (rows[rows.length - 1].toAmount.trim() !== "") return msg("Oxirgi oraliqning yuqori chegarasi bo'sh qoladi");
   for (let i = 0; i < rows.length; i++) {

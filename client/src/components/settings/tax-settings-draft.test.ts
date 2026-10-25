@@ -46,6 +46,11 @@ describe("tax settings draft", () => {
     ).toBeNull();
   });
 
+  it("refuses a fractional or comma amount instead of silently stripping it", () => {
+    expect(tiersError([{ fromAmount: "0", toAmount: "1,5", percent: "1" }])).toBe("Faqat butun so'm kiriting");
+    expect(tiersError([{ fromAmount: "0", toAmount: "1.5", percent: "1" }])).toBe("Faqat butun so'm kiriting");
+  });
+
   it("builds payloads and reads the current rate", () => {
     expect(toRatePayload([{ fromMonth: "2026-10", value: "4" }])).toEqual([{ fromMonth: "2026-10", value: 4 }]);
     expect(

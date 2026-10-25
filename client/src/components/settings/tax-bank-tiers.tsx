@@ -17,7 +17,8 @@ import {
   type TierRow,
 } from "./tax-settings-draft";
 
-const digits = (raw: string) => raw.replace(/\D/g, "");
+// Vergul/nuqta saqlanadi: jim kesib tashlansa «1,5» 15 bo'lib qolardi — xato ko'rsatiladi.
+const amountInput = (raw: string) => raw.replace(/[^\d.,]/g, "");
 
 /** Amalda turgan (yoki oxirgi) oraliqlar — yangi shaklning boshlang'ich qiymati. */
 function startRows(list: DatedTiers[], thisMonth: string): TierRow[] {
@@ -35,11 +36,15 @@ export function TaxBankTiers({
   list,
   thisMonth,
   saving,
+  busy,
   onSave,
 }: {
   list: DatedTiers[];
   thisMonth: string;
+  /** Shu qatorning saqlashi ketmoqda (aylanuvchi belgi). */
   saving: boolean;
+  /** Istalgan saqlash ketmoqda: ikki marta bosib bo'lmaydi. */
+  busy: boolean;
   onSave: (fullList: DatedTiers[]) => Promise<unknown>;
 }) {
   const t = useT();
@@ -151,7 +156,7 @@ export function TaxBankTiers({
                           className="w-32"
                           value={r.fromAmount}
                           disabled={i > 0}
-                          onChange={(e) => patchRow(i, { fromAmount: digits(e.target.value) })}
+                          onChange={(e) => patchRow(i, { fromAmount: amountInput(e.target.value) })}
                         />
                       </td>
                       <td className="pb-2 pr-2">
@@ -161,7 +166,7 @@ export function TaxBankTiers({
                           className="w-32"
                           value={r.toAmount}
                           placeholder={isLast ? "∞" : ""}
-                          onChange={(e) => setTo(i, digits(e.target.value))}
+                          onChange={(e) => setTo(i, amountInput(e.target.value))}
                         />
                       </td>
                       <td className="pb-2 pr-2">
@@ -206,11 +211,11 @@ export function TaxBankTiers({
           {!monthOk && <p className="text-sm text-destructive">{t("Oyni tanlang")}</p>}
 
           <div className="flex gap-2">
-            <Button size="sm" disabled={!canSave || saving} onClick={submit}>
+            <Button size="sm" disabled={!canSave || busy} onClick={submit}>
               {saving && <Loader2 className="mr-1.5 size-4 animate-spin" />}
               {t("Saqlash")}
             </Button>
-            <Button variant="ghost" size="sm" disabled={saving} onClick={() => setOpen(false)}>
+            <Button variant="ghost" size="sm" disabled={busy} onClick={() => setOpen(false)}>
               {t("Bekor qilish")}
             </Button>
           </div>
