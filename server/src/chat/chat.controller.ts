@@ -21,6 +21,7 @@ import { ChatAccessService } from './access/chat-access.service';
 import { ChatEnabledGuard, ChatGateOpen } from './chat-enabled.guard';
 import {
   BlockDto,
+  CreateReportDto,
   MessagesQueryDto,
   OpenConversationDto,
   SearchQueryDto,
@@ -32,6 +33,7 @@ import {
 import { ChatConversationsService } from './conversations/chat-conversations.service';
 import { ChatFileUploadInterceptor } from './media/chat-file-upload.interceptor';
 import { ChatMediaService } from './media/chat-media.service';
+import { ChatReportsService } from './reports/chat-reports.service';
 import { ChatPeopleService } from './people/chat-people.service';
 import { ChatUsernameService } from './username/chat-username.service';
 
@@ -49,7 +51,17 @@ export class ChatController {
     private readonly people: ChatPeopleService,
     private readonly conversations: ChatConversationsService,
     private readonly media: ChatMediaService,
+    private readonly reports: ChatReportsService,
   ) {}
+
+  @Post('report')
+  report(
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+    @Body() dto: CreateReportDto,
+  ) {
+    return this.reports.create(studentId, companyId, dto);
+  }
 
   @Post('conversations')
   open(

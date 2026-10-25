@@ -1,11 +1,14 @@
-import { ChatFindWho, ChatWho } from '@prisma/client';
+import { ChatFindWho, ChatReportStatus, ChatWho } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import {
+  IsBoolean,
   IsEnum,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
@@ -93,4 +96,47 @@ export class UploadChatFileDto {
   @Min(0)
   @Max(3600)
   durationSec?: number;
+}
+
+export class CreateReportDto {
+  @IsUUID()
+  conversationId!: string;
+
+  @Transform(trim)
+  @IsString()
+  @MinLength(3, { message: 'Shikoyat sababini yozing' })
+  @MaxLength(500)
+  reason!: string;
+}
+
+export class ListReportsQueryDto {
+  @IsOptional()
+  @IsEnum(ChatReportStatus)
+  status?: ChatReportStatus;
+
+  @IsOptional()
+  @IsString()
+  cursor?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => (value === undefined ? undefined : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  limit?: number;
+}
+
+export class ResolveReportDto {
+  @IsIn(['RESOLVED', 'DISMISSED'])
+  outcome!: 'RESOLVED' | 'DISMISSED';
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(500)
+  note?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  banReported?: boolean;
 }

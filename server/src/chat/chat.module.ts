@@ -5,6 +5,7 @@ import { SmsModule } from '../sms/sms.module';
 import { SettingsModule } from '../settings/settings.module';
 import { ChatAccessService } from './access/chat-access.service';
 import { ChatEnabledGuard } from './chat-enabled.guard';
+import { ChatAdminController } from './chat-admin.controller';
 import { ChatController } from './chat.controller';
 import {
   CHAT_RATE_LIMITER,
@@ -17,11 +18,13 @@ import { ChatMediaPurgeService } from './media/chat-media-purge.service';
 import { ChatMediaService } from './media/chat-media.service';
 import { ChatNotifyService } from './notify/chat-notify.service';
 import { ChatPeopleService } from './people/chat-people.service';
+import { ChatBanService } from './reports/chat-ban.service';
+import { ChatReportsService } from './reports/chat-reports.service';
 import { ChatUsernameService } from './username/chat-username.service';
 
 @Module({
   imports: [SettingsModule, NotificationsModule, SmsModule],
-  controllers: [ChatController],
+  controllers: [ChatController, ChatAdminController],
   providers: [
     ChatEnabledGuard,
     ChatAccessService,
@@ -33,6 +36,8 @@ import { ChatUsernameService } from './username/chat-username.service';
     ChatMediaService,
     ChatMediaPurgeService,
     ChatNotifyService,
+    ChatReportsService,
+    ChatBanService,
     {
       provide: CHAT_RATE_LIMITER,
       useFactory: redisRateLimiter,
