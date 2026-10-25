@@ -1488,6 +1488,19 @@ A task is not a comment (ADR-0074; spec `docs/superpowers/specs/2026-10-07-topsh
 - **Comments no longer carry tasks.** `POST /comments` takes `{ entityType, entityId, content }` only (`forbidNonWhitelisted` → 400 for `isTask` / `assigneeIds` / `dueDate` / `priority`); lists hide `isTask = true` rows; `my-tasks`, `created-tasks`, `assignee-status` and `TaskReminderService` are gone. `Comment.isTask`, `Comment.migratedTaskId` and `CommentAssignee` stay for the migration only. `PATCH /comments/:id` (author or CEO) and `DELETE` (CEO) are as before; comment creation is still audited through `EntityHistoryService`.
 - **Migration** (`scripts/migrate-comment-tasks.ts`, with `scripts/lib/comment-task-apply.ts`): dry run by default (read-only connection, checked), `--apply` writes one transaction per comment and stamps `Comment.migratedTaskId`, so a rerun skips finished rows. Run it ONCE right after the deploy, outside working hours: `railway run --service caring-courage --environment production npx ts-node --transpile-only scripts/migrate-comment-tasks.ts [--apply]`. Until it has run, /tasks is empty.
 
+### Student chat (`src/chat/`, spec 2026-10-25)
+
+Student-to-student private chat, behind the company switch `chat.enabled` (default off): while it is off every chat route except `GET /chat/access` (which reports `enabled`) is refused with 403 CHAT_OFF_MESSAGE by `ChatEnabledGuard`. Plan A (this layer) ships text only.
+
+- **One access rule.** `ChatAccessService.forStudent` is the only place that decides whether a student may write: `balance >= 0`, gender and birth date set, the card's phone proved (`isPhoneVerified` — NOT `missingOnboardingSteps`, which only asks for the phone while `STUDENT_PHONE_VERIFICATION_ENABLED` is on), not banned, and the last 7 Tashkent days (today + 6) hold at least `chat.weekMinutesActive` active and `chat.weekMinutesRadio` radio minutes in `StudentAppSession`. The pure rules and the Uzbek texts are `chat/access/chat-access.rules.ts`; clients print the texts the API returns and compute nothing.
+- **Reading is never closed.** A locked student reads everything and receives messages; only writing (and opening a new conversation) is refused.
+- **Send checks run in this order:** access → membership (404 for a conversation that is not yours) → block → the peer's `whoCanWrite` → 30/minute rate limit. The peer's block and the peer's privacy refusal share one message (RESTRICTED_MESSAGE) so being blocked is never revealed; a block the caller placed gets its own message.
+- Opening a conversation by raw student id requires the peer's `whoCanFind` to allow it or a shared group; an exact `@username` always works. New conversations are limited to 10 per minute.
+- Name search finds students who are studying (`activeStudentWhere()`); an exact `@username` finds anyone.
+- **Another student sees a name, `@username` and (if allowed) a photo — never a phone, a debt or a balance.** `PeerSummary` is the only shape that leaves.
+- **Live delivery** goes through `NotificationsGateway.sendToUser(student.userId, …)` as `chat.message` / `chat.read`; the existing stream carries them.
+- Media, reports, the CEO's ban, Telegram and the bell arrive with Plan B; clients with Plan C.
+
 ### Notifications (4 channels)
 
 - `NotificationsModule` (`src/notifications/`) — notification system. Decision record: ADR-0076 (`docs/adr/0076-qongiroqcha-kutilayotgan-xabar-ozi-yopiladi.md`); design: `docs/superpowers/specs/2026-10-07-topshiriqlar-design.md` §8.

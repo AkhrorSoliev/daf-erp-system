@@ -6,6 +6,9 @@
     "Branch Director",
     "CEO"
   ],
+  "DELETE /chat/messages/:id": [
+    "Student"
+  ],
   "DELETE /comments/:id": [
     "CEO"
   ],
@@ -265,6 +268,21 @@
   "GET /cash-accounts/:id/movements": [
     "Branch Director",
     "CEO"
+  ],
+  "GET /chat/access": [
+    "Student"
+  ],
+  "GET /chat/conversations": [
+    "Student"
+  ],
+  "GET /chat/conversations/:id/messages": [
+    "Student"
+  ],
+  "GET /chat/me": [
+    "Student"
+  ],
+  "GET /chat/search": [
+    "Student"
   ],
   "GET /comments": [
     "Administrator",
@@ -1089,6 +1107,27 @@
   "GET /salary/monthly/user/:userId/detail": [
     "Branch Director",
     "CEO"
+  ],
+  "PATCH /chat/conversations/:id/read": [
+    "Student"
+  ],
+  "PATCH /chat/privacy": [
+    "Student"
+  ],
+  "POST /chat/block": [
+    "Student"
+  ],
+  "POST /chat/conversations": [
+    "Student"
+  ],
+  "POST /chat/conversations/:id/messages": [
+    "Student"
+  ],
+  "POST /chat/unblock": [
+    "Student"
+  ],
+  "PUT /chat/username": [
+    "Student"
   ],
   "PUT /salary/monthly/user/:userId/adjustment": [
     "CEO"

@@ -37,6 +37,9 @@ describe('SETTING_DEFINITIONS registry', () => {
         'participation.minAppPercent.B1',
         'participation.minLessons',
         'participation.maxLatePercent',
+        'chat.enabled',
+        'chat.weekMinutesActive',
+        'chat.weekMinutesRadio',
       ].sort(),
     );
   });
