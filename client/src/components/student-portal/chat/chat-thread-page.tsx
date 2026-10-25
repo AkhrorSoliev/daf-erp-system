@@ -25,6 +25,7 @@ import {
 } from "./chat-thread-model";
 import { ChatAccessBanner } from "./chat-access-banner";
 import { ChatComposer } from "./chat-composer";
+import { MediaBubble } from "./media-bubble";
 import { MessageBubble } from "./message-bubble";
 import { useThreadSend } from "./use-thread-send";
 
@@ -149,6 +150,7 @@ export function ChatThreadPage({ id }: { id: string }) {
                   message={m}
                   onDelete={setToDelete}
                   onRetry={() => retry(m.id.replace("pending:", ""))}
+                  renderMedia={(msg) => <MediaBubble message={msg} />}
                 />
               ))}
             </section>
@@ -168,7 +170,11 @@ export function ChatThreadPage({ id }: { id: string }) {
             {!access ? (
               <Skeleton className="h-12 w-full rounded-[26px]" />
             ) : access.canWrite ? (
-              <ChatComposer onSend={onSend} busy={busy} />
+              <ChatComposer
+                conversationId={id}
+                onSend={onSend}
+                busy={busy}
+              />
             ) : (
               <ChatAccessBanner />
             )}

@@ -3,6 +3,9 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { PaperPlaneRight } from "@phosphor-icons/react";
 import { useT } from "@/i18n/context";
+import { ImagePicker, ImagePreviewChip } from "./image-picker";
+import { useUploadChatFile } from "./use-chat-upload";
+import { VoiceRecorder } from "./voice-recorder";
 
 // Mirrors MESSAGE_MAX in server/src/chat/chat.constants.ts.
 export const MESSAGE_MAX = 2000;
@@ -11,9 +14,11 @@ const MAX_HEIGHT_PX = 120; // about five lines
 
 /** Rounded field + round coral send button. Enter sends, Shift+Enter breaks the line. */
 export function ChatComposer({
+  conversationId,
   onSend,
   busy,
 }: {
+  conversationId: string;
   onSend: (text: string) => void;
   /** An earlier message is still waiting for the server. */
   busy: boolean;
@@ -21,8 +26,12 @@ export function ChatComposer({
   const t = useT();
   const [text, setText] = useState("");
   const field = useRef<HTMLTextAreaElement>(null);
+  const { upload, uploading, progress } = useUploadChatFile(conversationId);
+  const [image, setImage] = useState<File | null>(null);
+  const [recording, setRecording] = useState(false);
   const empty = text.trim().length === 0;
-  const blocked = empty || busy;
+  const inFlight = busy || uploading;
+  const blocked = empty || inFlight;
 
   useLayoutEffect(() => {
     const el = field.current;
@@ -37,8 +46,27 @@ export function ChatComposer({
     setText("");
   };
 
+  const sendImage = async () => {
+    if (!image) return;
+    if (await upload({ file: image })) setImage(null);
+  };
+
   return (
-    <div className="flex items-end gap-2.5">
+    <div>
+      {image ? (
+        <ImagePreviewChip
+          file={image}
+          sending={uploading}
+          progress={progress}
+          onSend={() => void sendImage()}
+          onCancel={() => setImage(null)}
+        />
+      ) : null}
+      <div className="flex items-end gap-2.5">
+      {recording ? null : (
+        <ImagePicker disabled={inFlight} onPick={setImage} />
+      )}
+      {recording ? null : (
       <div className="flex min-h-12 flex-1 flex-col justify-center rounded-[26px] border border-line bg-background px-4">
         <textarea
           ref={field}
@@ -63,6 +91,14 @@ export function ChatComposer({
           </span>
         ) : null}
       </div>
+      )}
+      {empty || recording ? (
+        <VoiceRecorder
+          disabled={inFlight}
+          onSubmit={upload}
+          onRecordingChange={setRecording}
+        />
+      ) : (
       <button
         type="button"
         aria-label={t("Yuborish")}
@@ -72,6 +108,8 @@ export function ChatComposer({
       >
         <PaperPlaneRight size={22} weight="fill" />
       </button>
+      )}
+      </div>
     </div>
   );
 }
