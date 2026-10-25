@@ -205,7 +205,7 @@ export function NatijaEkrani({
               <p className="text-sm font-semibold text-ink-700">{qator.orin}</p>
             ) : null}
             {qator.maqsad ? (
-              <p className="text-sm font-bold text-success">{qator.maqsad}</p>
+              <p className="text-sm font-bold text-artikel-das">{qator.maqsad}</p>
             ) : null}
             {qator.nishonlar.map((matn) => (
               <p key={matn} className="text-sm font-bold text-ink-900">
@@ -222,7 +222,7 @@ export function NatijaEkrani({
             </p>
           ) : (
             <>
-              <p className="font-display text-sm font-bold uppercase tracking-wide text-ink-500">
+              <p className="font-display text-sm font-bold uppercase tracking-wide text-ink-600">
                 {t("Qaytarib ko'ring · {n}", { n: xatolar.length })}
               </p>
               <ul className="space-y-2">

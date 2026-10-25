@@ -56,3 +56,19 @@ describe("the verdict text on the tinted bar", () => {
     expect(paneli).not.toContain("text-ink-500");
   });
 });
+
+// The result screen's small text sits on white cards: the bright success green
+// (#2bb673) is 2.61:1 there and the secondary grey (#6b8392) 3.97:1, both under 4.5:1.
+describe("the result screen's text on its white cards", () => {
+  const ekran = readFileSync(path.join(__dirname, "natija-ekrani.tsx"), "utf8");
+
+  it("draws the daily-goal line in the deep green of the article colours", () => {
+    expect(ekran).toContain("text-artikel-das");
+    expect(ekran).not.toMatch(/\btext-success\b/);
+  });
+
+  it("draws the «Qaytarib ko'ring» header darker than the secondary grey", () => {
+    expect(ekran).toContain("text-ink-600");
+    expect(ekran).not.toContain("text-ink-500");
+  });
+});

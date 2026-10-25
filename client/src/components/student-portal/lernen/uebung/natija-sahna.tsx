@@ -19,8 +19,9 @@ function vaqtBelgisi(durationMs: number): string {
 /** One of the three result cards (duo.html `.card`): a filled caption over the value. */
 function Karta({ nom, qiymat, belgi }: { nom: string; qiymat: string; belgi: React.ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-2xl border-2 border-coral-500 bg-surface">
-      <p className="bg-coral-500 px-1 py-1 text-[11px] font-extrabold uppercase leading-tight tracking-wide text-white">
+    <div className="overflow-hidden rounded-2xl border-2 border-coral-700 bg-surface">
+      {/* coral-700, not coral-500: white 11px text needs 4.5:1 (5.07:1 here, 2.82:1 on coral-500). */}
+      <p className="bg-coral-700 px-1 py-1 text-[11px] font-extrabold uppercase leading-tight tracking-wide text-white">
         {nom}
       </p>
       <p className="flex items-center justify-center gap-1 px-1.5 py-2.5 font-display text-xl font-extrabold tabular-nums text-ink-900">

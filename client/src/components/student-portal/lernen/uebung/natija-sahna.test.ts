@@ -61,6 +61,14 @@ describe("<NatijaSahna />", () => {
     expect(html).not.toContain("text-ink-500");
   });
 
+  // The caption is 11px text, so it needs 4.5:1: white on coral-500 is 2.82:1,
+  // white on coral-700 (#c83d20) is 5.07:1 (the coral tokens are the same in dark mode).
+  it("fills the three captions with the deep coral, so the white text reads", () => {
+    const html = render({ ball: 20, serie: 4 });
+    expect(html.match(/<p class="bg-coral-700[^"]*text-white/g)).toHaveLength(3);
+    expect(html).not.toContain("bg-coral-500");
+  });
+
   // The count-up changes every frame; a live region would read each number out.
   it("announces nothing while the points count up", () => {
     expect(render({ ball: 20, serie: 4 })).not.toContain("aria-live");
