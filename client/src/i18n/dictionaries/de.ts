@@ -5276,6 +5276,15 @@ const de: Dictionary = {
   "Bu sahifa faqat sizga yuborilgan maxsus havola orqali ochiladi. Iltimos, formaga kirish uchun siz qabul qilgan havolani bosing.": "Diese Seite öffnet sich nur über einen speziellen Link, der Ihnen geschickt wurde. Bitte tippen Sie auf den Link, den Sie erhalten haben, um das Formular zu öffnen.",
   "Forma topilmadi": "Formular nicht gefunden",
   "Bu havola eskirgan yoki forma o'chirilgan bo'lishi mumkin.": "Der Link ist möglicherweise veraltet, oder das Formular wurde gelöscht.",
+  // Ta'lim looks (lernen-temalar.ts)
+  "Toza": "Schlicht",
+  "Oq fon, qalin yumshoq tugmalar": "Weißer Hintergrund, dicke weiche Buttons",
+  "O'rmon": "Wald",
+  "Yumshoq qatlamli o'rmon": "Ein weicher Wald in Schichten",
+  "Dengiz": "Meer",
+  "Suv osti dunyosi": "Eine Unterwasserwelt",
+  "Nemis sayohati": "Deutschlandreise",
+  "Tongdan tungacha": "Von der Dämmerung bis zur Nacht",
 };
 
 export default de;

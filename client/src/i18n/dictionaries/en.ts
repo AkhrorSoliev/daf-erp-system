@@ -5276,6 +5276,15 @@ const en: Dictionary = {
   "Bu sahifa faqat sizga yuborilgan maxsus havola orqali ochiladi. Iltimos, formaga kirish uchun siz qabul qilgan havolani bosing.": "This page opens only through the special link sent to you. Please tap the link you received to open the form.",
   "Forma topilmadi": "Form not found",
   "Bu havola eskirgan yoki forma o'chirilgan bo'lishi mumkin.": "This link may be out of date, or the form may have been deleted.",
+  // Ta'lim looks (lernen-temalar.ts)
+  "Toza": "Clean",
+  "Oq fon, qalin yumshoq tugmalar": "White background, chunky soft buttons",
+  "O'rmon": "Forest",
+  "Yumshoq qatlamli o'rmon": "A soft layered forest",
+  "Dengiz": "Sea",
+  "Suv osti dunyosi": "An underwater world",
+  "Nemis sayohati": "German journey",
+  "Tongdan tungacha": "From dawn to night",
 };
 
 export default en;
