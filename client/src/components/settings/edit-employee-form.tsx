@@ -207,7 +207,7 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
         if (values.password) payload.password = values.password;
       }
       if (canSeePay) {
-        const officialSalary = officialSalaryOf(values.officialSalary);
+        const officialSalary = officialSalaryOf(values.officialSalary, !!employee?.officialSalary);
         if (officialSalary !== undefined) payload.officialSalary = officialSalary;
       }
       if (values.gender) payload.gender = values.gender;

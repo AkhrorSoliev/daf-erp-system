@@ -35,4 +35,11 @@ describe("officialSalaryOf", () => {
     expect(officialSalaryOf("")).toBeUndefined();
     expect(officialSalaryOf(undefined)).toBeUndefined();
   });
+
+  it("sends 0 (all cash) when an employee who had a value empties the field", () => {
+    expect(officialSalaryOf("", true)).toBe(0);
+    expect(officialSalaryOf(undefined, true)).toBe(0);
+    expect(officialSalaryOf("", false)).toBeUndefined();
+    expect(officialSalaryOf("1500000", true)).toBe(1_500_000);
+  });
 });

@@ -105,9 +105,13 @@ export const employeeSchema = z
     }
   });
 
-/** The number to send, or undefined (leave it as it is) while the field is empty. */
-export function officialSalaryOf(text: string | undefined): number | undefined {
-  return text ? Number(text) : undefined;
+/**
+ * The number to send. An empty field leaves a new employee as it is (undefined)
+ * but clears the value of one who HAD it: 0 means «hammasi naqd».
+ */
+export function officialSalaryOf(text: string | undefined, hadValue = false): number | undefined {
+  if (text) return Number(text);
+  return hadValue ? 0 : undefined;
 }
 
 export type EmployeeFormValues = z.infer<typeof employeeSchema>;
