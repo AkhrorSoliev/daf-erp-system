@@ -42,12 +42,12 @@ export const hisobotlar: QollanmaSahifa[] = [
     sahifa: "auditoriya",
     sarlavha: "Auditoriya",
     qisqacha:
-      "Hozir o'qiyotgan o'quvchilar kim: jinsi, yoshi, kurs va filial kesimida — va bu raqamlar qanchalik to'liq ma'lumotga tayanishi.",
+      "Tizimda nechta o'quvchi bor, nechtasi o'qiyapti, nechtasining jinsi ma'lum; yo'nalish va kurs bo'yicha ma'lumot to'liqligi; ketganlar yoshi.",
     rollar: [1, 2],
     adr: ["0108", "0039"],
     yollar: ["/reports/audience"],
-    kalitSozlar: ["auditoriya", "jins", "yosh", "erkak", "ayol", "o'rtacha yosh", "yosh guruhlari", "kim o'qiydi"],
-    yangilangan: "2026-10-17",
+    kalitSozlar: ["auditoriya", "jins", "yosh", "erkak", "ayol", "yo'nalish", "daraja", "ketganlar yoshi", "kim o'qiydi", "ma'lumot to'liqligi"],
+    yangilangan: "2026-10-25",
   },
   {
     bolim: "hisobotlar",

@@ -2,14 +2,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useT } from "@/i18n/context";
 import { formatNumber } from "@/lib/format-utils";
-import { ageText, pctText } from "./audience-format";
+import { shareText, unknownCount } from "./audience-format";
 import type { AudienceCutRow } from "./audience-types";
 
 /**
- * Blocks 4 and 5: the same figures per course or branch. Not paginated on
- * purpose: it is a whole-picture summary (a handful of rows), like the months
- * table of the departed report. A dash means the server had too few known.
- * `title` and `nameHead` are `msg()` texts, translated here. Row names are the server's.
+ * Blocks 2 and 3: the studying students per level or per course, with how many
+ * of them have a known gender. Counts only, so a row is true however little is
+ * known; the last column says how complete it is. Not paginated on purpose: a
+ * handful of rows, a whole-picture summary. `title` and `nameHead` are `msg()`
+ * texts, translated here. Row names are the server's.
  */
 export function AudienceCutTable({ title, nameHead, rows }: { title: string; nameHead: string; rows: AudienceCutRow[] }) {
   const t = useT();
@@ -22,11 +23,11 @@ export function AudienceCutTable({ title, nameHead, rows }: { title: string; nam
             <TableRow>
               <TableHead className="w-12 border-r">#</TableHead>
               <TableHead>{t(nameHead)}</TableHead>
-              <TableHead className="text-right">{t("O'quvchilar")}</TableHead>
-              <TableHead className="text-right">{t("Jinsi aniq")}</TableHead>
-              <TableHead className="text-right">{t("Erkaklar")}</TableHead>
-              <TableHead className="text-right">{t("Ayollar")}</TableHead>
-              <TableHead className="text-right">{t("O'rtacha yosh")}</TableHead>
+              <TableHead className="text-right">{t("Faol")}</TableHead>
+              <TableHead className="text-right">{t("Erkak")}</TableHead>
+              <TableHead className="text-right">{t("Ayol")}</TableHead>
+              <TableHead className="text-right">{t("Noma'lum")}</TableHead>
+              <TableHead className="text-right">{t("Aniq")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -35,25 +36,17 @@ export function AudienceCutTable({ title, nameHead, rows }: { title: string; nam
                 <TableCell className="border-r text-muted-foreground">{i + 1}</TableCell>
                 <TableCell className="font-medium">{r.name}</TableCell>
                 <TableCell className="text-right tabular-nums">{formatNumber(r.total)}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatNumber(r.genderKnown)}</TableCell>
-                {r.malePct === null ? (
-                  <TableCell colSpan={2} className="text-center text-xs text-muted-foreground">
-                    {t("yetarli ma'lumot yo'q")}
-                  </TableCell>
-                ) : (
-                  <>
-                    <TableCell className="text-right tabular-nums">{pctText(r.malePct)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{pctText(r.femalePct)}</TableCell>
-                  </>
-                )}
-                <TableCell className="text-right tabular-nums">{ageText(r.avgAge)}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatNumber(r.male)}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatNumber(r.female)}</TableCell>
+                <TableCell className="text-right tabular-nums text-muted-foreground">
+                  {formatNumber(unknownCount(r.total, r.genderKnown))}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{shareText(r.genderKnown, r.total)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
-        <p className="text-xs text-muted-foreground">
-          {t("Jinsi yoki yoshi aniq o'quvchi 5 tadan kam bo'lsa, foiz ko'rsatilmaydi.")}
-        </p>
+        <p className="text-xs text-muted-foreground">{t("«Aniq» — jinsi ma'lum o'quvchilar ulushi.")}</p>
       </CardContent>
     </Card>
   );

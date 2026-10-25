@@ -3,7 +3,10 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
-import { isExerciseSessionRoute } from "@/lib/student-nav-items";
+import {
+  isChatThreadRoute,
+  isExerciseSessionRoute,
+} from "@/lib/student-nav-items";
 import { MiniAppScript } from "@/components/telegram-mini-app/mini-app-script";
 import { ActivityHost } from "./activity/activity-host";
 import { StudentOnboardingGate } from "./onboarding/student-onboarding-gate";
@@ -69,7 +72,9 @@ export function StudentPortalLayout({
 
   // A lesson's own fixed action bar owns the bottom edge: no nav pill and no
   // radio dock over it (see isExerciseSessionRoute's doc comment).
-  const inSession = isExerciseSessionRoute(pathname);
+  // A chat thread does the same with its composer.
+  const inSession =
+    isExerciseSessionRoute(pathname) || isChatThreadRoute(pathname);
   const dockShown = radioActive && !inSession;
 
   // Nothing of the portal is reachable until the student has given what

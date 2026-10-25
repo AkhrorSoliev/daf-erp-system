@@ -20,6 +20,13 @@ export const yangiliklar: Yangilik[] = [
     sahifa: { bolim: "tolovlar", sahifa: "tolov-qayd-qilish" },
   },
   {
+    sana: "2026-10-25",
+    sarlavha: "«Auditoriya» sahifasi soddalashtirildi",
+    matn: "Hisobotlar → «Auditoriya» endi to'rt blokdan iborat va faqat sonlar hamda jadvallarni ko'rsatadi. Birinchi blok: tizimda jami o'quvchi, ulardan faol (dars qilayotgan), faollardan jinsi aniq, so'ng erkak, ayol va jinsi noma'lumlar soni. Keyingi ikki blok — yo'nalish (guruh darajasi: A1, A2, B1…) va kurs bo'yicha jadval: faol, erkak, ayol, noma'lum va jinsi ma'lum bo'lganlar ulushi. Oxirgi blok — oxirgi 12 oyda ketganlar yosh guruhlari bo'yicha: hozir o'qiyotganlar, ketganlar va ketish ulushi. Avvalgi sahifadagi yosh guruhlari, o'rtacha yosh va filial jadvali olib tashlandi.",
+    rollar: [1, 2],
+    sahifa: { bolim: "hisobotlar", sahifa: "auditoriya" },
+  },
+  {
     sana: "2026-10-24",
     sarlavha: "Daraja testi natijalari o'quvchi kartasida va hisobotda",
     matn: "Botdagi «Darajani aniqlash» testida endi «🏁 Natijani bilish» tugmasi bor: savollar qiyinlashganda odam testni shu joyida to'xtatib, yetgan darajasini bilib oladi. Test boshlangan zahoti yoziladi, shuning uchun yarmida qolganlar ham hisobga olinadi. Allaqachon o'qiyotgan o'quvchi (chatiga bitta karta bog'langan) testni yechsa, bot telefon va filialni so'ramaydi, lid ochilmaydi, natija o'quvchi kartasining «Guruhlar» yorlig'idagi «Daraja testi» blokida va tarixida ko'rinadi. Umumiy statistika — Hisobotlar → «Bot hisoboti» sahifasidagi «Daraja testi» bloki: oyda nechta urinish boshlangan, nechtasi oxirigacha yechilgan, nechtasi yarmida qolgan va nechanchi savolda, natijalar darajalar bo'yicha. Bir soatdan ortiq tugatilmagan urinish «yarmida qoldi» deb sanaladi.",

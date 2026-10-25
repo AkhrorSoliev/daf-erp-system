@@ -12,6 +12,7 @@ import {
   markMiniAppSignedIn,
   markMiniAppSignedOut,
   miniAppAudienceForHost,
+  studentPortalPath,
   onMiniAppActivated,
   openOutsideMiniApp,
   staffCabinetPath,
@@ -290,5 +291,41 @@ describe("staffCabinetPath", () => {
     "https://evil.com/tasks?task=3f2b8c1e-9a4d-4e7b-8c2a-1d5e6f7a8b9c",
   ])("refuses %s", (next) => {
     expect(staffCabinetPath(next)).toBe("/profile");
+  });
+});
+
+// The chat notice's button: `/tg?next=/portal/chat/<uuid>`.
+describe("studentPortalPath", () => {
+  const id = "3f2b8c1e-9a4d-4e7b-8c2a-1d5e6f7a8b9c";
+
+  it.each([
+    [`/portal/chat/${id}`, `/portal/chat/${id}`],
+    [`/portal/chat/${id.toUpperCase()}`, `/portal/chat/${id.toUpperCase()}`],
+    ["/portal/chat", "/portal/chat"],
+  ])("opens %s", (next, expected) => {
+    expect(studentPortalPath(next)).toBe(expected);
+  });
+
+  it.each([
+    null,
+    undefined,
+    "",
+    "/portal",
+    "/portal/payments",
+    "//evil.com",
+    "https://evil.com",
+    `https://evil.com/portal/chat/${id}`,
+    "/portal/chat/../payments",
+    `/portal/chat/${id}/x`,
+    `/portal/chat/${id}/`,
+    `/portal/chat/${id}?x=1`,
+    "/portal/chat/",
+    "/portal/chat/not-a-uuid",
+    `/portal/chat/${id} `,
+    `/portal/chat/${id}\n`,
+    `/portal/chat/${id.replace(/-/g, "%2d")}`,
+    `/portal//chat/${id}`,
+  ])("falls back to /portal for %j", (next) => {
+    expect(studentPortalPath(next)).toBe("/portal");
   });
 });

@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { bottomNavItems, moreRoutes } from "@/lib/student-nav-items";
 import { useT } from "@/i18n/use-t";
+import { useUnreadChatTotal } from "../chat/chat-queries";
+import { UnreadDot } from "../chat/unread-dot";
 
 // Floating glass bottom-nav pill — mobile only (hidden at md, where the side
 // rail takes over; the shell passes that class in). Active
@@ -21,6 +23,7 @@ import { useT } from "@/i18n/use-t";
 export function LumioBottomNav({ className }: { className?: string }) {
   const t = useT();
   const pathname = usePathname();
+  const unreadChat = useUnreadChatTotal();
 
   function isActive(url: string) {
     if (url === "/portal") return pathname === "/portal";
@@ -55,7 +58,15 @@ export function LumioBottomNav({ className }: { className?: string }) {
                   : "text-ink-600 hover:text-ink-900",
               )}
             >
-              <Icon size={24} weight={active ? "fill" : "regular"} />
+              <span className="relative inline-flex">
+                <Icon size={24} weight={active ? "fill" : "regular"} />
+                {item.url === "/portal/more" && (
+                  <UnreadDot
+                    count={unreadChat}
+                    className="absolute -right-1 -top-0.5 ring-2 ring-surface"
+                  />
+                )}
+              </span>
               <span
                 className={cn(
                   // A longer ru/de label («Расписание», «Stundenplan») wraps
