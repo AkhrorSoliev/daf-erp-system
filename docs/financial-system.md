@@ -33,7 +33,7 @@ Moliyaviy yozuvlar **hech qachon o'chirilmaydi yoki tahrir qilinmaydi**. Xatolik
 
 | Enum | Qiymatlari | Ishlatilishi |
 |------|-----------|--------------|
-| `PaymentMethod` | CASH, PAYME, CLICK, UZUM, TRANSFER | To'lov usuli |
+| `PaymentMethod` | CASH, PAYME, CLICK, UZUM, TRANSFER, **QR** | To'lov usuli |
 | `PaymentStatus` | PENDING, COMPLETED, FAILED, REFUNDED, CANCELLED, **REVERSED** | To'lov holati |
 | `PaymentSource` | ADMIN_MANUAL, STUDENT_PORTAL, GATEWAY_WEBHOOK, MANUAL_ATTACH | To'lov manbai |
 | `TransactionType` | PAYMENT, LESSON_DEDUCTION, LESSON_CONSUMPTION, INITIAL_BALANCE, REFUND, SALARY_ACCRUAL, SALARY_PAYMENT, EXPENSE, ADJUSTMENT, TAX, BALANCE_WITHDRAWAL, DISCOUNT_ADJUSTMENT, MOCK_EXAM_FEE, DEBT_WRITE_OFF | Tranzaksiya turi |

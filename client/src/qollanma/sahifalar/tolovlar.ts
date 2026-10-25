@@ -117,7 +117,7 @@ export const tolovlar: QollanmaSahifa[] = [
     qisqacha:
       "To'lovni Moliya sahifalaridagi «To'lov qayd qilish» tugmasi bilan yozasiz: o'quvchini tanlaysiz, summa va usulni kiritasiz; oylik kursda oyna pul qaysi darsgacha yetishini ham aytadi (01.11.2026 dan oy to'lovining kamida 50% i uchun «Kamida 50%» tugmasi bilan). To'lov darhol balansga tushadi va avval qarzni yopadi; chek o'quvchiga Telegramda to'lov yozilgan zahoti boradi.",
     rollar: [1, 2, 3, 5],
-    adr: ["0047", "0058", "0064", "0065", "0066"],
+    adr: ["0047", "0058", "0064", "0065", "0066", "0130"],
     yollar: ["/payments/list", "/payments/overview"],
     kalitSozlar: [
       "to'lov qayd qilish",
@@ -305,8 +305,10 @@ export const tolovlar: QollanmaSahifa[] = [
       "oldindan",
       "eski qarz",
       "o'quvchi to'lovi",
+      "QR-kod",
+      "QR orqali to'lov",
     ],
-    yangilangan: "2026-10-11",
+    yangilangan: "2026-10-25",
   },
   {
     bolim: "tolovlar",
@@ -315,7 +317,7 @@ export const tolovlar: QollanmaSahifa[] = [
     qisqacha:
       "«Ish haqi» sahifasi ustozlar va xodimlarning oyligini bitta jadvalda va oy holati bilan ko'rsatadi: kim qancha ishladi, qancha avans ushlanadi, qancha beriladi. Avans berilgan oyining oyligidan ushlanadi. Pul berilgach «Berildi» bosiladi: sana va naqd/karta summalari so'raladi, xodimga bot xabari boradi.",
     rollar: [1, 2],
-    adr: ["0082", "0006", "0052", "0072", "0112"],
+    adr: ["0082", "0006", "0052", "0072", "0112", "0130"],
     yollar: ["/payments/salary"],
     kalitSozlar: [
       "ish haqi",
@@ -350,8 +352,12 @@ export const tolovlar: QollanmaSahifa[] = [
       "hisoblash davri",
       "oylikni to'g'rilash",
       "qo'lda oylik",
+      "rasmiy oylik",
+      "rasmiy qism",
+      "budjetga",
+      "xodim qo'liga",
     ],
-    yangilangan: "2026-10-18",
+    yangilangan: "2026-10-25",
   },
   {
     bolim: "tolovlar",

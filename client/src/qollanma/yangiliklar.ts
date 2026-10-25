@@ -6,6 +6,20 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-25",
+    sarlavha: "Sozlamalar → Soliq va komissiyalar: sof foydadan ayriladi",
+    matn: "Sozlamalar → «Soliq va komissiyalar» sahifasida to'lov komissiyasi (Payme, Click, Uzum ilovasi orqali, integratsiya orqali, QR-kod), oylikdan ushlanma va korxona ijtimoiy solig'i, hisob raqamga tushgan puldan aylanma solig'i va bank xarajati stavkalarini kiritasiz. Har stavka qaysi oydan kuchga kirishi bilan yoziladi, shuning uchun stavka o'zgarsa o'tgan oylar o'zgarmaydi. Kiritilgan stavkalar sof foydadan o'zi ayriladi: «Foyda tarkibi»da, bosh panelda, Telegram hisobotida va Excel «Sof foyda» varag'ida alohida qatorlar chiqadi. Qaysi stavka kiritilmagan bo'lsa, hisob 0 bilan davom etadi va «Hisob to'liq emas» deb yoziladi. Avtomatik hisoblanadigan soliqlarni xarajatga qo'lda yozmang — ikki marta sanaladi. Xodim profilida yangi «Rasmiy oylik (so'm)» maydoni bor; oylik berishda oynada rasmiy qism, budjetga ketadigan qism va xodim qo'liga beriladigan summa ko'rinadi. Sahifani sukut bo'yicha faqat CEO ko'radi; CEO uni «Ruxsatlar» orqali boshqalarga bera oladi.",
+    rollar: [1],
+    sahifa: { bolim: "xarajatlar", sahifa: "xarajatlar-sahifasi" },
+  },
+  {
+    sana: "2026-10-25",
+    sarlavha: "To'lov qabul qilishda yangi usul: QR-kod",
+    matn: "«To'lov qayd qilish» oynasida yangi usul bor: «QR-kod». O'quvchi bank QR-kodi orqali to'lab, chekni ko'rsatsa, to'lovni shu usul bilan yozing. U naqd emas, bank hisobiga tushgan pul sanaladi; to'lovlar ro'yxati, o'quvchi kartasi va hisobotlarda «QR-kod» deb ko'rinadi. Komissiya stavkasi Sozlamalar → «Soliq va komissiyalar» da alohida turadi.",
+    rollar: [1, 2, 3, 5],
+    sahifa: { bolim: "tolovlar", sahifa: "tolov-qayd-qilish" },
+  },
+  {
     sana: "2026-10-24",
     sarlavha: "Daraja testi natijalari o'quvchi kartasida va hisobotda",
     matn: "Botdagi «Darajani aniqlash» testida endi «🏁 Natijani bilish» tugmasi bor: savollar qiyinlashganda odam testni shu joyida to'xtatib, yetgan darajasini bilib oladi. Test boshlangan zahoti yoziladi, shuning uchun yarmida qolganlar ham hisobga olinadi. Allaqachon o'qiyotgan o'quvchi (chatiga bitta karta bog'langan) testni yechsa, bot telefon va filialni so'ramaydi, lid ochilmaydi, natija o'quvchi kartasining «Guruhlar» yorlig'idagi «Daraja testi» blokida va tarixida ko'rinadi. Umumiy statistika — Hisobotlar → «Bot hisoboti» sahifasidagi «Daraja testi» bloki: oyda nechta urinish boshlangan, nechtasi oxirigacha yechilgan, nechtasi yarmida qolgan va nechanchi savolda, natijalar darajalar bo'yicha. Bir soatdan ortiq tugatilmagan urinish «yarmida qoldi» deb sanaladi.",

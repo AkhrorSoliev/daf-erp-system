@@ -47,3 +47,28 @@ Kanal nima uchun kerak: Hisobotlar → «Marketing» sahifasining tepasidagi «K
 Ustozlarga avans bu yerga yozilmaydi — u Ish haqi → Avanslar bo'limida. Xodimlar oyligi ham Ish haqida hisoblanadi. Ularni bu sahifaga xarajat qilib yozsangiz, foydadan ikki marta ayiriladi.
 
 </Eslatma>
+
+## Soliq va komissiyalar
+
+Sozlamalar → «Soliq va komissiyalar» sahifasida ikki turdagi pul chiqimining stavkalari kiritiladi; tizim ularni sof foydadan o'zi ayiradi, xarajatga yozish shart emas. Sahifani sukut bo'yicha faqat CEO ko'radi; CEO uni «Ruxsatlar» orqali filial direktori, administrator yoki kassirga bera oladi.
+
+Sahifa to'rt bo'limdan iborat, tepada «To'ldirilgan: X/Y» turadi:
+
+- **«To'lov komissiyasi»** — Payme, Click va Uzum ilovasi orqali, «Integratsiya (ID bilan)» va «QR-kod» to'lovlari uchun foiz. Naqd va bank o'tkazmasi to'lovlari komissiyasiz.
+- **«Oylik»** — «Xodimdan ushlanma» va «Korxona ijtimoiy solig'i» foizi. Ular faqat xodim profilida «Rasmiy oylik (so'm)» kiritilgan bo'lsa hisoblanadi (bo'sh bo'lsa — hammasi naqd, soliqsiz). Oyning rasmiy qismi — kiritilgan summa bilan shu oy hisoblangan oylikning kichigi; qolgani naqd.
+- **«Aylanma solig'i»** — hisob raqamga tushgan puldan foiz. Naqd to'lovlar bu aylanmaga kirmaydi.
+- **«Bank xarajati»** — aylanma summasiga qarab qatorlar: «dan», «gacha» va foiz. Oy aylanmasi qaysi qatorga tushsa, shu foiz butun aylanmaga qo'llanadi; filiallarga aylanma ulushi bo'yicha bo'linadi.
+
+Har stavka qaysi **oydan** kuchga kirishi bilan saqlanadi. Stavka o'zgarsa, eski oylar o'zgarmaydi: oy uchun shu oydan oldingi eng oxirgi stavka olinadi. O'tgan oyga tegadigan o'zgarish saqlashdan oldin tasdiq so'raydi.
+
+Qanday sanaladi:
+
+- Komissiya, aylanma solig'i va bank xarajati **pul tushgan oy** bo'yicha olinadi, ijtimoiy soliq esa oylik **hisoblangan oy** bo'yicha. Qaytarilgan pul bu xarajatlarni kamaytirmaydi.
+- Xodimdan ushlanma markazning qo'shimcha xarajati emas: u xodim oyligi ichida, oylik berish oynasida «Rasmiy qism · Budjetga · Xodim qo'liga» deb ko'rinadi. Naqd va karta yig'indisi avvalgidek oylik summasiga teng.
+- Joriy oyda aylanma solig'i faqat shu paytgacha tushgan puldan hisoblanadi; oy oxirigacha o'sib boradi.
+
+Natija Moliya → «Umumiy ma'lumotlar» → «Foyda» → «Foyda tarkibi»da («To'lov komissiyasi», «Ijtimoiy soliq», «Aylanma solig'i», «Bank xarajati» qatorlari), bosh panelda, Telegram hisobotida va Excel «Sof foyda» varag'ida ko'rinadi. Shu oyda kerak bo'lgan stavka kiritilmagan bo'lsa, hisob 0 bilan davom etadi va «Hisob to'liq emas: N ta stavka kiritilmagan» deb yoziladi; CEO uchun «Stavkalarni kiritish →» havolasi bor.
+
+**Ikki marta yozmang.** Avtomatik hisoblanadigan soliqlarni xarajatga qo'lda yozmang: ular ikki marta sanaladi. Aylanma solig'i stavkasi kiritilgan joriy oyda «Soliqlar» turkumi uchun «Bu oy hali yozilmagan» ogohlantirishi ham chiqmaydi.
+
+Dividend (egaga yechib olingan foyda) solig'i bu sahifada hali yo'q.
