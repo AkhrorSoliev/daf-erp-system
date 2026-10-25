@@ -34,7 +34,9 @@ function Karta({ nom, qiymat, belgi }: { nom: string; qiymat: string; belgi: Rea
   return (
     // The card clips to its corner. `rounded-md` (16 px under .lumio) below `sm`: at 36 px the arc
     // hid the bar's first and last letters (x < 14 px at the cap tops); 16 px hides x < 1.1 px.
-    <div className="row-span-2 grid grid-rows-subgrid overflow-hidden rounded-md border-2 border-coral-700 bg-surface sm:rounded-2xl">
+    // `grid-cols-1` (= minmax(0, 1fr)): an auto column would grow to the widest value row and the card
+    // would clip it (the «%» of «100%» and the icon were gone at 320 px).
+    <div className="row-span-2 grid grid-cols-1 grid-rows-subgrid overflow-hidden rounded-md border-2 border-coral-700 bg-surface sm:rounded-2xl">
       {/* coral-700, not coral-500: white small text needs 4.5:1 (5.07:1 here, 2.82:1 on coral-500).
           Below `sm` the card is only 77 px wide at 360 (64 at 320), so the caption is 10 px with
           normal tracking and 2 px padding: German «GENAUIGKEIT» is 68 px then. At 320 it still
@@ -44,7 +46,12 @@ function Karta({ nom, qiymat, belgi }: { nom: string; qiymat: string; belgi: Rea
       <p className="bg-coral-700 flex items-center justify-center px-0.5 py-1.5 text-[10px] font-extrabold uppercase leading-tight tracking-normal text-white break-words hyphens-auto sm:text-[11px] sm:tracking-wide">
         <span className="min-w-0">{nom}</span>
       </p>
-      <p className="flex items-center justify-center gap-1 px-1.5 py-2.5 font-display text-xl font-extrabold tabular-nums text-ink-900">
+      {/* The card is 64 px wide inside at 320 (77 at 360). «100%» is 51.5 px at 20 px, 85.5 px with the
+          icon, gap and padding: too wide. Below `sm` the value is 18 px (46.35), the gap 2 px and the
+          padding 2 px a side: 74.35 px, which fits at 360 and 390. At 320 it still cannot, so the icon
+          wraps above the value (`flex-wrap`, the lines kept together by `content-center`) rather than
+          being clipped; the shared row then takes the tallest value's height. */}
+      <p className="flex min-w-0 flex-wrap content-center items-center justify-center gap-0.5 px-0.5 py-2.5 font-display text-lg font-extrabold tabular-nums text-ink-900 sm:gap-1 sm:px-1.5 sm:text-xl">
         {belgi}
         {qiymat}
       </p>
@@ -108,17 +115,17 @@ export function NatijaSahna({
         <Karta
           nom={t("Ball")}
           qiymat={ballMatni(ball, sanaladigan)}
-          belgi={<Star size={18} weight="fill" className="text-amber-500" />}
+          belgi={<Star size={18} weight="fill" className="shrink-0 text-amber-500" />}
         />
         <Karta
           nom={t("Aniqlik")}
           qiymat={`${aniqlikFoizi(togri, jami)}%`}
-          belgi={<CheckCircle size={18} weight="fill" className="text-teal-500" />}
+          belgi={<CheckCircle size={18} weight="fill" className="shrink-0 text-teal-500" />}
         />
         <Karta
           nom={t("Seriya")}
           qiymat={serie == null ? "—" : String(serie)}
-          belgi={<Fire size={18} weight="fill" className="text-coral-500" />}
+          belgi={<Fire size={18} weight="fill" className="shrink-0 text-coral-500" />}
         />
       </div>
     </div>

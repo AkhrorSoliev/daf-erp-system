@@ -126,6 +126,8 @@ describe("<NatijaSahna />", () => {
     const kartalar = [...html.matchAll(/<div class="([^"]*border-coral-700[^"]*)"/g)].map((m) => m[1].split(" "));
     for (const k of kartalar) {
       for (const sinf of ["row-span-2", "grid", "grid-rows-subgrid"]) expect(k, sinf).toContain(sinf);
+      // Without it the card's column is auto-sized and grows to the widest value row.
+      expect(k, "grid-cols-1").toContain("grid-cols-1");
     }
     // The text stays centred in a bar that is taller than its own line, and may shrink to wrap.
     for (const m of html.matchAll(/<p class="(bg-coral-700[^"]*)"><span class="([^"]*)"/g)) {
@@ -133,6 +135,43 @@ describe("<NatijaSahna />", () => {
       for (const sinf of ["flex", "items-center", "justify-center"]) expect(bar, sinf).toContain(sinf);
       expect(m[2].split(" ")).toContain("min-w-0");
     }
+  });
+
+  // The card's inner width is 64 px at 320 and 77 px at 360. The «100%» value needs 51.5 px at
+  // 20 px; with the icon (18), the gap and the padding that is 85.5 px, so the row used to push the
+  // card's column wider and the card clipped it («%» and the icon gone). Below `sm` the value is
+  // 18 px (46.35), the gap 2 px and the padding 2 px a side: 74.35 -> fits 77 at 360 (and 87 at 390);
+  // at 320 it cannot fit one line, so the icon wraps above the value instead of being clipped.
+  it("lets the value row shrink or wrap instead of pushing the card wider", () => {
+    const html = render({ ball: 20, serie: 4 });
+    const qatorlar = [...html.matchAll(/<p class="([^"]*font-display[^"]*)"/g)].map((m) => m[1].split(" "));
+    expect(qatorlar).toHaveLength(3);
+    for (const k of qatorlar) {
+      for (const sinf of [
+        "flex",
+        "flex-wrap",
+        "items-center",
+        "justify-center",
+        "content-center",
+        "min-w-0",
+        "gap-0.5",
+        "px-0.5",
+        "text-lg",
+        "sm:gap-1",
+        "sm:px-1.5",
+        "sm:text-xl",
+      ]) {
+        expect(k, sinf).toContain(sinf);
+      }
+      for (const eski of ["gap-1", "px-1.5", "text-xl"]) expect(k, eski).not.toContain(eski);
+    }
+  });
+
+  it("keeps the icons at full size when the row is tight", () => {
+    const html = render({ ball: 20, serie: 4 });
+    const belgilar = [...html.matchAll(/<svg[^>]*class="([^"]*(?:text-amber-500|text-teal-500|text-coral-500)[^"]*)"/g)];
+    expect(belgilar).toHaveLength(3);
+    for (const m of belgilar) expect(m[1].split(" ")).toContain("shrink-0");
   });
 
   // The server's 0 points is «0», not «+0»; any gain keeps the plus.
