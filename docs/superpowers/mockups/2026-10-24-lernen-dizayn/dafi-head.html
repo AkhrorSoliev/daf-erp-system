@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dafi — bosh</title>
+<style>
+body{font-family:"Nunito",system-ui,sans-serif;background:linear-gradient(#fff3e6,#ffe0cc);display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:20px 12px;color:#2a1a14}
+h1{font-size:22px;margin-bottom:4px}p{font-size:13px;opacity:.7;margin-bottom:6px;text-align:center;max-width:420px}
+#stage{height:420px;display:grid;place-items:end center;padding-bottom:14px}
+.b{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:430px}
+button{border:0;border-radius:14px;padding:12px 16px;font:900 14px inherit;font-family:inherit;background:#ff6b4a;color:#fff;box-shadow:0 5px 0 #c9482b;cursor:pointer}
+button:active{transform:translateY(4px);box-shadow:0 1px 0 #c9482b}
+</style></head><body>
+<h1>Dafi — bosh</h1><p>Eng boshidagi oddiy ayiqcha, faqat bosh. Yuz, quloq va qoshlar bilan jonli.</p>
+<div id="stage"><div id="box"></div></div>
+<div class="b">
+ <button onclick="go('idle')">Tinch</button><button onclick="go('wave')">Salom</button>
+ <button onclick="go('cheer');reward()">Bayram</button><button onclick="go('think')">O'ylayapti</button>
+ <button onclick="go('miss');wrong()">Yumshoq xato</button>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="sfx.js"></script><script src="dafi-head.js"></script>
+<script>
+gsap.ticker.lagSmoothing(0);
+const d=mountDafiHead(document.getElementById('box'),'idle',320);
+function go(s){d.set(s);}
+</script></body></html>

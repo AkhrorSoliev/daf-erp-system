@@ -6,6 +6,7 @@ import { useT } from "@/i18n/use-t";
 import { cn } from "@/lib/utils";
 import { Clock, Fire, Star, Trophy } from "@phosphor-icons/react";
 import { Button, Card, FadeIn, StatChip } from "../../lumio";
+import { kamHarakatHozir } from "../harakat/kam-harakat";
 import type { SeansXato } from "../seans-navbat";
 import type { SeansNatijasi } from "../types";
 import { natijaQatorlari, xatoYorligi } from "./natija-xabari";
@@ -39,7 +40,7 @@ const SANOQ_DAVOMIYLIGI = 600;
 
 /**
  * `maqsad` gacha noldan sanab chiqadigan qiymat — `requestAnimationFrame`
- * bilan, ~600ms. `prefers-reduced-motion` yoqilgan bo'lsa animatsiya
+ * bilan, ~600ms. Harakat kamaytirilgan bo'lsa (tizim yoki qurilma kaliti) animatsiya
  * UMUMAN ishlamaydi, oxirgi qiymat darrov ko'rsatiladi: harakatni
  * kamaytirishni so'ragan o'quvchi uchun raqamning o'zi muhim, uning
  * sakrab o'sishi emas.
@@ -53,11 +54,7 @@ function useSanaladiganBall(maqsad: number | null): number | null {
       return;
     }
 
-    const kamHarakatSoraladi =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    if (kamHarakatSoraladi || maqsad === 0) {
+    if (kamHarakatHozir() || maqsad === 0) {
       setQiymat(maqsad);
       return;
     }

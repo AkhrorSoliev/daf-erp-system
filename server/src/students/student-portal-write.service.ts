@@ -73,6 +73,19 @@ export class StudentPortalWriteService {
     return updated;
   }
 
+  /**
+   * The student's own Ta'lim look (ADR-0125). A personal setting: written for
+   * the caller's live card only, not recorded in the entity history.
+   */
+  async updateLernenTema(studentId: number, tema: string) {
+    const { count } = await this.prisma.student.updateMany({
+      where: { id: studentId, deletedAt: null },
+      data: { lernenTema: tema },
+    });
+    if (count === 0) throw new NotFoundException('Talaba topilmadi');
+    return { lernenTema: tema };
+  }
+
   async changePassword(
     userId: number,
     studentId: number,

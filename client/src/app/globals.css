@@ -858,6 +858,12 @@
   animation: lumio-pulse-ring 1800ms var(--ease-out) infinite;
 }
 
+/* The device's own "Kam harakat" switch (Ta'lim path root carries the
+   attribute) stops the ring like the system setting below does. */
+.lumio [data-kam-harakat] .lumio-pulse-ring {
+  animation: none;
+}
+
 /* Reduced motion → resolve to end-state, drop the stagger delay.
    Halqalar butunlay to'xtaydi: vestibulyar buzilishi bor foydalanuvchi
    uchun doimiy harakat bosh aylanishiga sabab bo'ladi, va bu bezak

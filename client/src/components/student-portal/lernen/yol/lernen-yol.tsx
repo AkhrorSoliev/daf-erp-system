@@ -4,10 +4,17 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ArrowsClockwise, CaretRight } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import { LessonNode, type LessonNodeTone } from "../../lumio";
+import type { LessonNodeTone } from "../../lumio";
 import { useT } from "@/i18n/use-t";
+import { Dafi } from "../dafi/dafi";
+import { useKamHarakat } from "../harakat/use-kam-harakat";
+import { ovozChal, ovozniUygot } from "../ovoz/ovoz";
 import { useFortschritt } from "../queries";
+import { useLernenTema } from "../tema/use-lernen-tema";
+import type { LernenTema } from "../tema/tema-turlari";
 import type { LernenLevel } from "../types";
+import { useJoriyUnit } from "./joriy-unit";
+import { SeansVaraq } from "./seans-varaq";
 import { useYolSkroll } from "./yol-skroll";
 import {
   yolMoljali,
@@ -15,6 +22,7 @@ import {
   yolTugunlari,
   type YolTugun,
 } from "./yol-tuzilishi";
+import { YopishqoqUnitLavha } from "./yopishqoq-unit-lavha";
 
 /** Daraja rangi — CEO tasdiqlagan uchlik: A1 koral, A2 teal, B1 uzum. */
 const DARAJA_TONE: Record<string, LessonNodeTone> = {
@@ -23,7 +31,7 @@ const DARAJA_TONE: Record<string, LessonNodeTone> = {
   B1: "grape",
 };
 
-/** Unit qatorining foni/matni — `LessonNode`dagi tuslar bilan bir xil juftlik. */
+/** Unit qatorining foni/matni — daraja rangi (A1 koral, A2 teal, B1 uzum), tema tugun belgisi bilan bir uchlik. */
 const UNIT_QATOR_TONE: Record<string, string> = {
   A1: "bg-coral-100 text-coral-700",
   A2: "bg-teal-50 text-teal-700",
@@ -32,10 +40,10 @@ const UNIT_QATOR_TONE: Record<string, string> = {
 
 /**
  * Qatorning tekislanishi — markaz → o'ng → markaz → chap, to'rt bosqichda
- * takrorlanadi. Faqat `LessonNode` tugunlariga (`seans`/`tez-orada`)
- * tegishli: unit qatori va daraja yorlig'i har doim to'liq kenglikda, ular
- * zigzagning qismi emas — shuning uchun sanoq ular ustidan "sakrab" o'tadi,
- * to'xtamaydi.
+ * takrorlanadi. Faqat tema tugun belgisi (`TugunBelgisi`) bilan chiziladigan
+ * tugunlarga (`seans`/`tez-orada`) tegishli: unit qatori va daraja yorlig'i
+ * har doim to'liq kenglikda, ular zigzagning qismi emas — shuning uchun
+ * sanoq ular ustidan "sakrab" o'tadi, to'xtamaydi.
  */
 const TEKISLASH = [
   "justify-center",
@@ -83,6 +91,7 @@ function UnitQatori({
     <button
       ref={ref}
       type="button"
+      data-yol-unit=""
       onClick={onClick}
       className={cn(
         "flex w-full items-center justify-between gap-3 rounded-2xl px-4 py-3.5 text-left shadow-lumio-sm transition-transform active:translate-y-[2px] hover:-translate-y-0.5",
@@ -98,39 +107,50 @@ function UnitQatori({
 }
 
 /**
- * `seans` va `tez-orada` — ikkalasi ham bir xil `LessonNode`.
+ * `seans` va `tez-orada` — ikkalasi ham tema tugun belgisi bilan chiziladi.
  *
- * `tez-orada` uchun `id` yo'q (`yolTugunlari` uni har doim `null`
- * qiladi) va `holat` har doim `"locked"`, shuning uchun `onClick`
- * shunchaki berilmaydi — alohida shoxobcha yozishning hojati yo'q.
+ * `tez-orada` uchun `id` yo'q (`yolTugunlari` uni har doim `null` qiladi) va
+ * `holat` har doim `"locked"`. Joriy tugun yonida Dafi turadi: u zigzagning
+ * bo'sh tomonida (chap tekislashda o'ng tomonda) chiziladi.
  */
 function SeansTuguni({
   tugun,
   align,
   ostyozuvKorinsinmi,
+  Belgi,
   onClick,
+  onQulf,
   ref,
 }: {
   tugun: YolTugun;
   align: (typeof TEKISLASH)[number];
   ostyozuvKorinsinmi: boolean;
+  /** The active theme's node badge, chosen once by `LernenYol`. */
+  Belgi: LernenTema["TugunBelgisi"];
   onClick?: () => void;
+  onQulf?: () => void;
   ref?: React.Ref<HTMLDivElement>;
 }) {
+  const dafiOngda = align === "justify-start";
   return (
     <div ref={ref} className={cn("flex", align)}>
-      <div className="flex flex-col items-center gap-1.5">
+      <div className="relative flex flex-col items-center gap-1.5">
         {ostyozuvKorinsinmi && tugun.ostyozuv ? (
           <p className="max-w-[132px] truncate text-center text-[11px] font-bold uppercase tracking-wide text-ink-400">
             {tugun.ostyozuv}
           </p>
         ) : null}
-        <LessonNode
+        {tugun.holat === "active" ? (
+          <div className={cn("absolute top-3", dafiOngda ? "-right-[84px]" : "-left-[84px]")}>
+            <Dafi holat="tinch" olcham="sm" />
+          </div>
+        ) : null}
+        <Belgi
           label={tugun.matn}
-          percent={tugun.holat === "done" ? 100 : 0}
-          state={tugun.holat}
+          holat={tugun.holat}
           tone={DARAJA_TONE[tugun.daraja] ?? "coral"}
           onClick={onClick}
+          onBosilmagan={onQulf}
         />
       </div>
     </div>
@@ -148,6 +168,8 @@ function SeansTuguni({
 export function LernenYol({ levels }: LernenYolProps) {
   const router = useRouter();
   const t = useT();
+  const { tema } = useLernenTema();
+  const kam = useKamHarakat();
   const tugunlar = React.useMemo(() => yolTugunlari(levels, t), [levels, t]);
   // Zigzag bosqichi va "bo'lim o'zgardimi" bayrog'i `yol-tuzilishi.ts`da
   // hisoblanadi va sinaladi (`yol-tuzilishi.test.ts`) — bu komponent faqat
@@ -160,6 +182,18 @@ export function LernenYol({ levels }: LernenYolProps) {
   const { unitRef, seansRef } = useYolSkroll(
     moljal ? tugunlar[moljal.seansIndex].id : null,
   );
+
+  // The sound engine is a separate chunk. Preload it so it is already here when the
+  // first tap arrives: on iOS/Telegram WebViews the audio unlock must run inside the tap.
+  React.useEffect(() => {
+    import("../ovoz/ovoz-motor").catch(() => {});
+  }, []);
+
+  const konteyner = React.useRef<HTMLDivElement>(null);
+  const joriyUnit = useJoriyUnit(konteyner);
+  const unitlar = React.useMemo(() => tugunlar.filter((x) => x.tur === "unit"), [tugunlar]);
+  const korinayotganUnit = unitlar[Math.min(joriyUnit, unitlar.length - 1)];
+  const [varaq, setVaraq] = React.useState<YolTugun | null>(null);
 
   const fortschritt = useFortschritt();
   // Dizayn §4: hech qanday so'z muddati kelmagan bo'lsa tugma XIRA va
@@ -176,7 +210,12 @@ export function LernenYol({ levels }: LernenYolProps) {
     fortschritt.data.faelligeWoerter === 0;
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-5">
+    <div
+      ref={konteyner}
+      // Marks the less-motion state (device switch or system) for CSS: the pulse ring and the banner fade read it.
+      data-kam-harakat={kam ? "" : undefined}
+      className="mx-auto flex w-full max-w-md flex-col gap-5"
+    >
       <button
         type="button"
         // `disabled` ATAYLAB QO'YILMAGAN: u tugmani tab tartibidan
@@ -204,6 +243,10 @@ export function LernenYol({ levels }: LernenYolProps) {
         />
         {xiraTakrorlash ? t("Bugun takrorlanadigan so'z yo'q") : t("Takrorlash")}
       </button>
+
+      {korinayotganUnit ? (
+        <YopishqoqUnitLavha matn={korinayotganUnit.matn} daraja={korinayotganUnit.daraja} />
+      ) : null}
 
       <div className="flex flex-col gap-5">
         {tugunlar.map((tugun, i) => {
@@ -234,15 +277,36 @@ export function LernenYol({ levels }: LernenYolProps) {
               tugun={tugun}
               align={align}
               ostyozuvKorinsinmi={meta.ostyozuvKorinsinmi}
+              Belgi={tema.TugunBelgisi}
               onClick={
                 tugun.tur === "seans" && tugun.holat !== "locked"
-                  ? () => router.push(`/portal/lernen/lessons/${tugun.id}`)
+                  ? () => {
+                      ovozniUygot();
+                      ovozChal("bos");
+                      setVaraq(tugun);
+                    }
                   : undefined
               }
+              onQulf={() => {
+                ovozniUygot();
+                ovozChal("qulf");
+              }}
             />
           );
         })}
       </div>
+
+      <SeansVaraq
+        tugun={varaq}
+        onYopish={() => setVaraq(null)}
+        onBoshlash={() => {
+          if (varaq?.id != null) {
+            ovozChal("unitOchildi");
+            router.push(`/portal/lernen/lessons/${varaq.id}`);
+          }
+          setVaraq(null);
+        }}
+      />
     </div>
   );
 }

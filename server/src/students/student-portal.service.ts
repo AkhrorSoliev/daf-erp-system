@@ -33,6 +33,10 @@ export class StudentPortalService {
   updateName(studentId: number, dto: UpdatePortalNameDto, userId: number) {
     return this.write.updateName(studentId, dto, userId);
   }
+
+  updateLernenTema(studentId: number, tema: string) {
+    return this.write.updateLernenTema(studentId, tema);
+  }
   changePassword(
     userId: number,
     studentId: number,

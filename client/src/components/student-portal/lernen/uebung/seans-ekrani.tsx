@@ -12,6 +12,7 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { Button, EmptyState, LoadingCards, ProgressBar } from "../../lumio";
 import { RadioSessionToggle } from "../../radio/radio-session-toggle";
 import { useSidebar } from "../../lib/sidebar-store";
+import { kamHarakatHozir } from "../harakat/kam-harakat";
 import { LernenLessonPage } from "../lernen-lesson-page";
 import {
   sozHisobiniEskirt,
@@ -321,10 +322,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
           // `juftJavobKeldi` bilan allaqachon ro'yxatdan olib
           // tashlangan, rang shu zahoti (oraliq holatsiz) "bo'sh"ga
           // qaytadi.
-          const kamHarakatSoraladi =
-            typeof window !== "undefined" &&
-            window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-          if (kamHarakatSoraladi) return;
+          if (kamHarakatHozir()) return;
 
           setXatoIdxlar((prev) => [...prev, { chapIdx, ongIdx }]);
           const taymerId = setTimeout(() => {

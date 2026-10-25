@@ -1,0 +1,116 @@
+let C,bus,rev;
+const R=(a,b)=>a+Math.random()*(b-a);
+function init(){
+  if(C)return;
+  C=new (window.AudioContext||window.webkitAudioContext)();
+  const lim=C.createDynamicsCompressor();
+  lim.threshold.value=-10;lim.knee.value=12;lim.ratio.value=6;lim.attack.value=.002;lim.release.value=.25;
+  lim.connect(C.destination);
+  // aks-sado: stereo, yuqori chastotalar tezroq so'nadi (iliq dum), 30ms pre-delay
+  const sr=C.sampleRate,len=Math.floor(sr*1.0),pre=Math.floor(sr*.03),ir=C.createBuffer(2,len,sr);
+  for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);let lp=0;
+    for(let i=pre;i<len;i++){const x=(i-pre)/(len-pre);
+      const k=.08+.82*(1-x);              // vaqt o'tishi bilan filtr yopiladi
+      lp+=k*((Math.random()*2-1)-lp);
+      d[i]=lp*Math.pow(1-x,2.6)*(i<pre+400?x*0+ (i-pre)/400:1);}}
+  rev=C.createConvolver();rev.buffer=ir;
+  const wet=C.createGain();wet.gain.value=.11;
+  rev.connect(wet).connect(lim);
+  bus=C.createGain();bus.gain.value=.85;
+  const hs=C.createBiquadFilter();hs.type="highshelf";hs.frequency.value=3500;hs.gain.value=4;bus.connect(hs).connect(lim);
+  const send=C.createGain();send.gain.value=.9;bus.connect(send).connect(rev);
+}
+const T=()=>C.currentTime;
+function out(node,pan){const p=C.createStereoPanner();p.pan.value=pan||0;node.connect(p).connect(bus);return p;}
+function env(g,t,a,peak,d){
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(peak,t+a);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+a+d);
+}
+// Karplus-Strong: haqiqiy tor tebranishi (arfa/pluck)
+const ksCache={};
+function ksBuf(f){
+  const sr=C.sampleRate,N=Math.max(2,Math.round(sr/f)),key=N;
+  if(ksCache[key])return ksCache[key];
+  const len=sr*2,buf=C.createBuffer(1,len,sr),d=buf.getChannelData(0),ring=new Float32Array(N);
+  for(let i=0;i<N;i++)ring[i]=Math.random()*2-1;
+  for(let p=0;p<2;p++)for(let i=0;i<N;i++)ring[i]=(ring[i]+ring[(i+1)%N])/2;   // yumshoq boshlanish
+  let idx=0;
+  for(let i=0;i<len;i++){
+    const n=(idx+1)%N;d[i]=ring[idx];
+    ring[idx]=.9965*(ring[idx]+ring[n])/2;idx=n;}
+  return ksCache[key]={buf,N};
+}
+function harp(f,t,vol=.35,pan=0,d=1.1){
+  const {buf,N}=ksBuf(f),s=C.createBufferSource(),g=C.createGain();
+  s.buffer=buf;s.playbackRate.value=f*N/C.sampleRate;
+  const lp=C.createBiquadFilter();lp.type='lowpass';lp.frequency.value=Math.min(15000,f*14);
+  s.connect(lp).connect(g);env(g,t,.008,vol,d);out(g,pan);s.start(t);s.stop(t+d+.1);
+}
+// kalimba: sof asosiy + 5.4x qisqa metall ton + engil tushish
+function kalimba(f,t,vol=.3,pan=0,d=.7){
+  const g=C.createGain();env(g,t,.008,vol,d);out(g,pan);
+  [[1,1,d],[5.4,.3,d*.2],[12.1,.05,d*.08]].forEach(([r,a,dd])=>{
+    const o=C.createOscillator(),og=C.createGain();
+    o.frequency.setValueAtTime(f*r*1.012,t);o.frequency.exponentialRampToValueAtTime(f*r,t+.04);
+    og.gain.setValueAtTime(a,t);og.gain.exponentialRampToValueAtTime(.001,t+dd);
+    o.connect(og).connect(g);o.start(t);o.stop(t+dd+.1);});
+  tick(t,vol*.12,4200,pan);
+}
+function tick(t,vol,freq,pan){
+  const n=C.createBufferSource(),b=C.createBuffer(1,C.sampleRate*.02,C.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);
+  n.buffer=b;const f=C.createBiquadFilter();f.type='bandpass';f.frequency.value=freq;f.Q.value=1.5;
+  const g=C.createGain();g.gain.value=vol;n.connect(f).connect(g);out(g,pan);n.start(t);
+}
+// shisha qo'ng'iroq: inharmonik rejimlar + juft detune ("shimmer")
+function glass(f,t,vol=.15,d=2,pan=0){
+  const modes=[[1,1,1],[2.756,.62,.7],[5.404,.36,.5],[8.933,.12,.28]];
+  const g=C.createGain();env(g,t,.012,vol,d);out(g,pan);
+  modes.forEach(([r,a,k])=>[-.9,.9].forEach(det=>{
+    const o=C.createOscillator(),og=C.createGain();
+    o.frequency.value=f*r+det*(r>1?1.6:1);
+    og.gain.setValueAtTime(a*.5,t);og.gain.exponentialRampToValueAtTime(.001,t+d*k);
+    o.connect(og).connect(g);o.start(t);o.stop(t+d*k+.1);}));
+}
+// stereo havo: ikki polosali shovqin, chapdan o'ngga
+function air(t,dur,from,to,vol=.2,p0=-.8,p1=.8){
+  const n=C.createBufferSource(),b=C.createBuffer(1,C.sampleRate*dur,C.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+  n.buffer=b;
+  const f=C.createBiquadFilter();f.type='bandpass';f.Q.value=3;
+  f.frequency.setValueAtTime(from,t);f.frequency.exponentialRampToValueAtTime(to,t+dur);
+  const g=C.createGain();g.gain.setValueAtTime(.0001,t);
+  g.gain.exponentialRampToValueAtTime(vol,t+dur*.6);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  const p=C.createStereoPanner();p.pan.setValueAtTime(p0,t);p.pan.linearRampToValueAtTime(p1,t+dur);
+  n.connect(f).connect(g).connect(p).connect(bus);n.start(t);
+}
+function sub(t,vol=.3,f0=120,f1=42,d=.35){
+  const o=C.createOscillator(),g=C.createGain();
+  o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f1,t+d*.6);
+  o.connect(g).connect(bus);env(g,t,.004,vol,d);o.start(t);o.stop(t+d+.1);
+}
+const N={C5:523.25,D5:587.33,E5:659.25,G5:783.99,A5:880,C6:1046.5,D6:1174.7,E6:1318.5,G6:1568,A6:1760,C7:2093,E7:2637};
+
+function tap(){init();const t=T();
+  kalimba(N.G5,t,.26,0,.25);glass(N.G6,t,.035,.5,0);}
+function correct(){init();const t=T();
+  kalimba(N.E5,t,.3,-.15,.5);kalimba(N.G5,t+.07,.3,0,.5);kalimba(N.C6,t+.14,.34,.15,.8);
+  glass(N.C7,t+.14,.09,1.5,.2);glass(N.G6,t+.18,.06,1.4,-.2);}
+function unitOpen(){init();const t=T();
+  air(t,.6,600,7000,.09);sub(t+.42,.15);
+  [N.C5,N.E5,N.G5,N.C6,N.E6,N.G6].forEach((f,i)=>harp(f,t+.3+i*.06,.32,-.6+i*.24,1.2));
+  glass(N.C6,t+.66,.12,2.4,-.2);glass(N.G6,t+.68,.1,2.4,.25);glass(N.E7,t+.72,.06,2,0);}
+function wrong(){init();const t=T();
+  kalimba(N.E5*.5*1.0,t,.26,-.1,.45);kalimba(N.C5*.5*1.0*1.0,t+.11,.26,.1,.7);
+  glass(N.G5,t+.11,.02,.6,0);}
+function reward(){init();const t=T();
+  sub(t,.17,150,48,.35);air(t,.55,700,7500,.09);
+  [N.C5,N.E5,N.G5,N.C6,N.E6,N.G6,N.C7].forEach((f,i)=>harp(f,t+.08+i*.065,.3,-.7+i*.23,1.4));
+  const e=t+.62;
+  [N.C6,N.E6,N.G6,N.C7].forEach((f,i)=>glass(f,e,.13,3,-.45+i*.3));
+  kalimba(N.G5,e,.24,-.3,.9);kalimba(N.C6,e+.1,.26,0,.9);kalimba(N.E6,e+.2,.28,.3,1.2);
+  sub(e,.12,110,50,.3);
+  for(let i=0;i<9;i++)glass(R(1800,3600),e+.2+i*.085,R(.025,.05),.9,R(-.9,.9));}
+// qulf: yopiq darsga bosilganda juda qisqa yumshoq "tuk"
+function lock(){init();const t=T();kalimba(N.C5*.5,t,.18,0,.14);tick(t,.1,1800,0);}

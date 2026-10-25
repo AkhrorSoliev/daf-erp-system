@@ -1700,6 +1700,9 @@
     "Branch Director",
     "CEO"
   ],
+  "PATCH /student-portal/lernen-tema": [
+    "Student"
+  ],
   "PATCH /student-portal/lernen/eslatmalar": [
     "Student"
   ],
@@ -2073,6 +2076,7 @@
     "CEO"
   ],
   "POST /public/forms/:slug/submit": "PUBLIC",
+  "POST /public/website-leads": "PUBLIC",
   "POST /refunds/:id/cancel": [
     "Branch Director",
     "CEO"
