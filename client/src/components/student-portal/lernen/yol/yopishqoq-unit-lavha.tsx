@@ -19,7 +19,7 @@ export function YopishqoqUnitLavha({ matn, daraja }: { matn: string; daraja: str
       aria-live="polite"
       className={cn(
         "sticky top-2 z-10 rounded-2xl px-4 py-3 font-display text-base font-extrabold text-white",
-        "shadow-[0_5px_0_rgba(0,0,0,.22)] transition-colors duration-500",
+        "shadow-[0_5px_0_rgba(0,0,0,.22)] transition-colors duration-500 motion-reduce:transition-none",
         FON[daraja] ?? FON.A1,
       )}
     >
