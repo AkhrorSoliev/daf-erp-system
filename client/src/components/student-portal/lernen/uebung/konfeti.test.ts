@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { KONFETI_RANGLARI, KONFETI_SONI, OGIRLIK, konfetiQadam, konfetiYarat } from "./konfeti";
+import {
+  KONFETI_KADRLARI,
+  KONFETI_RANGLARI,
+  KONFETI_SONI,
+  OGIRLIK,
+  konfetiQadam,
+  konfetiYarat,
+} from "./konfeti";
 
 const sobit = (v: number) => () => v;
 
@@ -15,7 +22,8 @@ function urug() {
 describe("konfetiYarat", () => {
   it("throws a hundred pieces from one point, upwards", () => {
     const zarralar = konfetiYarat(180, 330, sobit(0.5));
-    expect(zarralar).toHaveLength(KONFETI_SONI);
+    expect(zarralar).toHaveLength(100);
+    expect(KONFETI_SONI).toBe(100);
     for (const z of zarralar) {
       expect([z.x, z.y]).toEqual([180, 330]);
       expect(z.vy).toBeLessThan(0);
@@ -44,12 +52,24 @@ describe("konfetiYarat", () => {
 
 describe("konfetiQadam", () => {
   it("moves every piece by its speed, then gravity slows it on the way up", () => {
-    const [z] = konfetiYarat(100, 200, sobit(0.5));
-    const { x, y, vx, vy, a } = z;
+    // 0.75 on the random scale gives vx = 3.5, vy = -5.75, a = 4.5: a sideways speed that is
+    // not zero, so a dropped or reversed x move cannot hide behind `x + 0`.
+    const [z] = konfetiYarat(100, 200, sobit(0.75));
+    expect([z.vx, z.vy, z.a]).toEqual([3.5, -5.75, 4.5]);
     konfetiQadam([z]);
-    expect(z.x).toBeCloseTo(x + vx);
-    expect(z.y).toBeCloseTo(y + vy);
-    expect(z.vy).toBeCloseTo(vy + OGIRLIK);
-    expect(z.a).toBeCloseTo(a + 0.2);
+    expect(z.x).toBeCloseTo(103.5);
+    expect(z.y).toBeCloseTo(194.25);
+    expect(z.vy).toBeCloseTo(-5.75 + OGIRLIK);
+    expect(z.vx).toBe(3.5);
+    expect(z.a).toBeCloseTo(4.7);
+  });
+
+  it("lets every piece fall below where it was thrown from by the last frame", () => {
+    // The slowest piece (vy = -14) is back below its start at about frame 68.
+    for (const r of [0, 0.999999]) {
+      const zarralar = konfetiYarat(50, 300, sobit(r));
+      for (let kadr = 0; kadr < KONFETI_KADRLARI; kadr++) konfetiQadam(zarralar);
+      for (const z of zarralar) expect(z.y).toBeGreaterThan(300);
+    }
   });
 });
