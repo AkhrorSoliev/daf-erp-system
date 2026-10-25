@@ -55,6 +55,13 @@ export class LeadSectionsService {
     return section;
   }
 
+  /** Tizim bo'limi (masalan «Sayt») doim joyida turadi. */
+  private assertNotSystem(systemKey: string | null, action: string) {
+    if (systemKey) {
+      throw new BadRequestException(`Tizim bo'limini ${action} bo'lmaydi`);
+    }
+  }
+
   private async ensureColumnInScope(
     columnId: string,
     companyId: number,
@@ -129,6 +136,7 @@ export class LeadSectionsService {
     scope: ReportBranchIds,
   ) {
     const existing = await this.ensureSectionInScope(id, companyId, scope);
+    this.assertNotSystem(existing.systemKey, "nomini o'zgartirib");
 
     const name = dto.name.trim();
     if (!name) {
@@ -165,6 +173,7 @@ export class LeadSectionsService {
     scope: ReportBranchIds,
   ) {
     const existing = await this.ensureSectionInScope(id, companyId, scope);
+    this.assertNotSystem(existing.systemKey, "o'chirib");
 
     const batchId = randomUUID();
     const now = new Date();
@@ -224,6 +233,7 @@ export class LeadSectionsService {
     scope: ReportBranchIds,
   ) {
     const existing = await this.ensureSectionInScope(id, companyId, scope);
+    this.assertNotSystem(existing.systemKey, "ko'chirib");
     const column = await this.ensureColumnInScope(
       dto.targetColumnId,
       companyId,
