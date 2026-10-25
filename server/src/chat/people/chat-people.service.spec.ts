@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { activeStudentWhere } from '../../students/shared/active-student-where';
 import { ChatPeopleService } from './chat-people.service';
 
 function make(over: Record<string, unknown> = {}) {
@@ -76,13 +77,15 @@ describe('ChatPeopleService.search', () => {
     expect(out[0].photo).toBeNull();
   });
 
-  it('name search is scoped to live ACTIVE students of the company, not the viewer', async () => {
+  it('name search is scoped to studying (activeStudentWhere) live students of the company, not the viewer', async () => {
     const { service, prisma } = make();
     await service.search(1, 7, 'ab');
     const where = prisma.student.findMany.mock.calls[0][0].where;
     expect(where.companyId).toBe(7);
     expect(where.deletedAt).toBeNull();
+    expect(where).toMatchObject(activeStudentWhere());
     expect(where.status).toBe('ACTIVE');
+    expect(where.enrollments.some).toBeDefined();
     expect(where.id).toEqual({ not: 1 });
   });
 

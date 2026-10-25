@@ -1496,6 +1496,7 @@ Student-to-student private chat, behind the company switch `chat.enabled` (defau
 - **Reading is never closed.** A locked student reads everything and receives messages; only writing (and opening a new conversation) is refused.
 - **Send checks run in this order:** access → membership (404 for a conversation that is not yours) → block → the peer's `whoCanWrite` → 30/minute rate limit. The peer's block and the peer's privacy refusal share one message (RESTRICTED_MESSAGE) so being blocked is never revealed; a block the caller placed gets its own message.
 - Opening a conversation by raw student id requires the peer's `whoCanFind` to allow it or a shared group; an exact `@username` always works. New conversations are limited to 10 per minute.
+- Name search finds students who are studying (`activeStudentWhere()`); an exact `@username` finds anyone.
 - **Another student sees a name, `@username` and (if allowed) a photo — never a phone, a debt or a balance.** `PeerSummary` is the only shape that leaves.
 - **Live delivery** goes through `NotificationsGateway.sendToUser(student.userId, …)` as `chat.message` / `chat.read`; the existing stream carries them.
 - Media, reports, the CEO's ban, Telegram and the bell arrive with Plan B; clients with Plan C.

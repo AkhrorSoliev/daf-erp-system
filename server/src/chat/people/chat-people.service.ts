@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { ChatFindWho, ChatWho } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { activeStudentWhere } from '../../students/shared/active-student-where';
 import { normalizeUsername } from '../username/chat-username.rules';
 import type { UpdatePrivacyDto } from '../dto/chat.dto';
 import { maySeePhoto, mayFindByName } from './chat-people.rules';
@@ -199,7 +200,7 @@ export class ChatPeopleService {
         where: {
           companyId,
           deletedAt: null,
-          status: 'ACTIVE',
+          ...activeStudentWhere(),
           id: { not: viewerId },
           OR: [
             { firstName: { contains: q, mode: 'insensitive' } },
