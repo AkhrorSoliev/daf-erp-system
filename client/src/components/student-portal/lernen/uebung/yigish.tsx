@@ -4,6 +4,7 @@ import * as React from "react";
 import { useT } from "@/i18n/use-t";
 import { cn } from "@/lib/utils";
 import type { PruefErgebnis } from "../types";
+import { XATO_FONI, XATO_SINFI } from "./javob-ohangi";
 import { tugmaBosildi, type JonliJuft, type Tanlov, type Tomon } from "./juft-holati";
 
 /**
@@ -173,7 +174,7 @@ function GapTuzish({ options, tanlangan, onOzgar, natija, kutilmoqda }: IchkiPro
           "flex min-h-[3.25rem] flex-wrap items-center gap-2 rounded-2xl border-2 p-3",
           "border-transparent bg-tint",
           natija?.isCorrect && "border-success bg-success/10 text-success",
-          natija != null && !natija.isCorrect && "border-danger bg-danger/10 text-danger",
+          natija != null && !natija.isCorrect && XATO_SINFI,
         )}
       >
         {tanlangan.length === 0 ? (
@@ -197,7 +198,7 @@ function GapTuzish({ options, tanlangan, onOzgar, natija, kutilmoqda }: IchkiPro
                 natija != null
                   ? cn(
                       "cursor-default",
-                      natija.isCorrect ? "bg-success/10 text-success" : "bg-danger/10 text-danger",
+                      natija.isCorrect ? "bg-success/10 text-success" : XATO_FONI,
                     )
                   : qulflangan
                     ? "cursor-default bg-white text-ink-800 opacity-70"
@@ -249,7 +250,7 @@ function tugmaSinfi(holat: TugmaHolati): string {
     case "togri":
       return "border-success bg-success/10 text-success";
     case "xato":
-      return "border-danger bg-danger/10 text-danger";
+      return XATO_SINFI;
     case "tanlab":
       return "border-coral-500 bg-coral-500/10";
     case "kutilmoqda":

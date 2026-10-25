@@ -8,7 +8,8 @@ import type { FrageFormat, PruefErgebnis, SeansNatijasi } from "../types";
  * `richtig` is a picture URL, so the word comes from `loesungWort` — shown
  * after a correct answer too, because the student may have found the
  * picture without knowing the word yet. A typed word one slip away counts
- * as correct (`tippfehler`) and shows the spelling to learn.
+ * as correct (`tippfehler`) and shows the spelling to learn. A wrong answer
+ * is the soft «almost» with the answer to learn (ADR-0128), never a verdict.
  */
 export function javobPaneliMatni(
   natija: Pick<PruefErgebnis, "isCorrect" | "richtig" | "loesungWort" | "tippfehler">,
@@ -16,7 +17,8 @@ export function javobPaneliMatni(
 ): { sarlavha: string; izoh: string | null; soz: string | null } {
   // The word is the server's answer: data, never through `t`.
   if (!natija.isCorrect) {
-    return { sarlavha: t("Noto'g'ri"), izoh: null, soz: natija.loesungWort ?? natija.richtig };
+    const soz = natija.loesungWort ?? natija.richtig;
+    return { sarlavha: t("Deyarli!"), izoh: soz ? t("To'g'ri javob:") : null, soz };
   }
   if (natija.tippfehler) {
     return {

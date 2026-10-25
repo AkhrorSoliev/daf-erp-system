@@ -16,11 +16,19 @@ describe("javobPaneliMatni", () => {
     });
   });
 
-  it("a wrong answer shows the right one", () => {
+  it("a wrong answer is the soft «almost» and shows the right one", () => {
     expect(javobPaneliMatni({ isCorrect: false, richtig: "Bahnhof" })).toEqual({
-      sarlavha: "Noto'g'ri",
-      izoh: null,
+      sarlavha: "Deyarli!",
+      izoh: "To'g'ri javob:",
       soz: "Bahnhof",
+    });
+  });
+
+  it("a wrong answer with no word to show says only «almost»", () => {
+    expect(javobPaneliMatni({ isCorrect: false, richtig: "" })).toEqual({
+      sarlavha: "Deyarli!",
+      izoh: null,
+      soz: "",
     });
   });
 
@@ -199,8 +207,8 @@ const tr = (s: string, p?: Record<string, string | number>) =>
 describe("the page's t", () => {
   it("translates the client's words, never the exercise data", () => {
     expect(javobPaneliMatni({ isCorrect: false, richtig: "der Bahnhof" }, tr)).toEqual({
-      sarlavha: "[Noto'g'ri]",
-      izoh: null,
+      sarlavha: "[Deyarli!]",
+      izoh: "[To'g'ri javob:]",
       soz: "der Bahnhof",
     });
     expect(

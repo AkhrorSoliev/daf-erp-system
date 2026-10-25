@@ -4,26 +4,23 @@ import { useT } from "@/i18n/use-t";
 import { cn } from "@/lib/utils";
 import type { PruefErgebnis } from "../types";
 import { DeWort } from "./de-wort";
+import { XATO_SARLAVHASI } from "./javob-ohangi";
 import { javobPaneliMatni } from "./natija-xabari";
 
 /**
- * The panel under a checked question, for every format but the pairing
- * ones. What it says comes from `javobPaneliMatni`.
+ * The verdict under a checked question, for every format but the pairing
+ * ones. What it says comes from `javobPaneliMatni`; the tint is the bottom
+ * bar's own (`PastkiPanel` `ohang`), so this draws only the words.
  */
 export function JavobPaneli({ natija }: { natija: PruefErgebnis }) {
   const t = useT();
   const { sarlavha, izoh, soz } = javobPaneliMatni(natija, t);
   return (
-    <div
-      className={cn(
-        "rounded-2xl px-4 py-3",
-        natija.isCorrect ? "bg-success/10" : "bg-danger/10",
-      )}
-    >
+    <div>
       <p
         className={cn(
-          "font-bold",
-          natija.isCorrect ? "text-success" : "text-danger",
+          "font-display text-lg font-extrabold",
+          natija.isCorrect ? "text-success" : XATO_SARLAVHASI,
         )}
       >
         {sarlavha}

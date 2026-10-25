@@ -5186,7 +5186,6 @@ const en: Dictionary = {
   "Barcha so'zlaringiz hali muddatidan oldin — ertaga qayting.": "None of your words are due yet — come back tomorrow.",
   "Yo'lga qaytish": "Back to the path",
   "Soat rasmi": "Clock",
-  "Noto'g'ri": "Wrong",
   "To'g'ri!": "Correct!",
   "Imlosiga e'tibor bering:": "Mind the spelling:",
   "Hammasi to'g'ri! Ammo bu savolda birinchi urinishda xato bo'lgani uchun u keyinroq yana qaytadi.": "All correct! But this question had a mistake on the first try, so it will come back later.",
@@ -5294,6 +5293,7 @@ const en: Dictionary = {
   "Ovozlar": "Sounds",
   "Kam harakat": "Less motion",
   "Ko'rinishni saqlab bo'lmadi, qayta urinib ko'ring": "Could not save the look, please try again",
+  "Deyarli!": "Almost!",
 };
 
 export default en;

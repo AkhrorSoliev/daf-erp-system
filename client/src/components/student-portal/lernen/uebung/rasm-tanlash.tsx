@@ -4,6 +4,7 @@ import { CheckCircle, XCircle } from "@phosphor-icons/react";
 import { useT } from "@/i18n/use-t";
 import { cn } from "@/lib/utils";
 import type { PruefErgebnis } from "../types";
+import { XATO_BELGISI, XATO_CHEGARASI } from "./javob-ohangi";
 
 export interface RasmTanlashProps {
   /** Picture URLs — the answer is not among the props. */
@@ -46,7 +47,7 @@ export function RasmTanlash({
               "border-transparent",
               bosilgan && !natija && "border-coral-500",
               togri && "border-success",
-              xatoTanlov && "border-danger",
+              xatoTanlov && XATO_CHEGARASI,
               (natija != null || kutilmoqda) && "cursor-default",
             )}
           >
@@ -70,7 +71,7 @@ export function RasmTanlash({
               <XCircle
                 size={28}
                 weight="fill"
-                className="absolute right-2 top-2 rounded-full bg-white text-danger"
+                className={cn("absolute right-2 top-2 rounded-full bg-white", XATO_BELGISI)}
               />
             ) : null}
           </button>
