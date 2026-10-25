@@ -36,6 +36,7 @@ export const NOTIFICATION_GROUP: Record<NotificationType, NotificationGroup> = {
   ENROLLMENT_AUTO_PAUSED: 'attendance',
   PAYMENT_PROMISE_OVERDUE: 'payment',
   SYSTEM: 'system',
+  CHAT_MESSAGE: 'system',
 };
 
 export const TYPES_BY_GROUP = Object.fromEntries(
@@ -85,11 +86,14 @@ export function notificationKind(
   type: NotificationType,
   now: Date,
   actionRequired?: boolean,
+  relatedEntityId?: string,
 ): { actionRequired: boolean; groupKey: string | null } {
-  return {
-    actionRequired: actionRequired ?? ACTION_TYPES.has(type),
-    groupKey: LESSON_ALERT_TYPES.includes(type)
-      ? lessonGroupKey(type, tashkentDateStr(now))
-      : null,
-  };
+  let groupKey: string | null = null;
+  if (LESSON_ALERT_TYPES.includes(type)) {
+    groupKey = lessonGroupKey(type, tashkentDateStr(now));
+  } else if (type === 'CHAT_MESSAGE' && relatedEntityId) {
+    // One line per conversation, whatever the day.
+    groupKey = `CHAT_MESSAGE:${relatedEntityId}`;
+  }
+  return { actionRequired: actionRequired ?? ACTION_TYPES.has(type), groupKey };
 }

@@ -102,3 +102,20 @@ describe('notification_action_state migration', () => {
     ).toEqual([...LESSON_ALERT_TYPES].sort());
   });
 });
+
+describe('CHAT_MESSAGE', () => {
+  it('is an information row in the system group, folded per conversation', () => {
+    expect(NOTIFICATION_GROUP.CHAT_MESSAGE).toBe('system');
+    expect(ACTION_TYPES.has('CHAT_MESSAGE')).toBe(false);
+    expect(
+      notificationKind('CHAT_MESSAGE', new Date(), undefined, 'conv-1'),
+    ).toEqual({
+      actionRequired: false,
+      groupKey: 'CHAT_MESSAGE:conv-1',
+    });
+  });
+
+  it('has no group key without a conversation', () => {
+    expect(notificationKind('CHAT_MESSAGE', new Date()).groupKey).toBeNull();
+  });
+});

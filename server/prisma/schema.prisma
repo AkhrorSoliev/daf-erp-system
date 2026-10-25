@@ -146,6 +146,7 @@ enum NotificationType {
   PAYMENT_PROMISE_OVERDUE
   ABSENCE_WARNING
   ENROLLMENT_AUTO_PAUSED
+  CHAT_MESSAGE
 }
 
 enum TaskPriority {
@@ -5049,4 +5050,16 @@ model ChatReport {
   resolutionNote String?
 
   @@index([companyId, status, createdAt])
+}
+
+/// One row per conversation and RECIPIENT: when the Telegram notice for unread
+/// messages last went out, and since when one is waiting for 08:00.
+model ChatNotifyState {
+  conversationId String
+  studentId      Int
+  notifiedAt     DateTime?
+  pendingSince   DateTime?
+
+  @@id([conversationId, studentId])
+  @@index([pendingSince])
 }

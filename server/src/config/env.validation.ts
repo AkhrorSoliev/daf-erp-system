@@ -180,6 +180,17 @@ export function validateEnv(
     disabled.push('Topshiriq fayllari (R2_TASKS_BUCKET_NAME)');
   }
 
+  // Chat images and voice: the same rule as the tasks bucket.
+  if (isSet(config, 'R2_CHAT_BUCKET_NAME')) {
+    if (!isSet(config, 'R2_ENDPOINT')) {
+      errors.push(
+        "R2_CHAT_BUCKET_NAME — R2_* kalitlarisiz ishlamaydi (Fayl yuklash guruhi o'rnatilmagan)",
+      );
+    }
+  } else {
+    disabled.push('Chat fayllari (R2_CHAT_BUCKET_NAME)');
+  }
+
   for (const { feature, keys } of GROUPS) {
     const missing = keys.filter((key) => !isSet(config, key));
     if (missing.length === 0) continue;
