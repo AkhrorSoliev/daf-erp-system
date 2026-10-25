@@ -82,10 +82,11 @@ function chunk<T>(items: T[], size: number): T[][] {
   return rows;
 }
 
-const cancelBtn = (): Btn => Markup.button.callback(CANCEL, 'pf:x');
-const backRow = (cb: string): Btn[] => [
+const cancelBtn = (studentId: number): Btn =>
+  Markup.button.callback(CANCEL, `pf:x:${studentId}`);
+const backRow = (studentId: number, cb: string): Btn[] => [
   Markup.button.callback(BACK, cb),
-  cancelBtn(),
+  cancelBtn(studentId),
 ];
 
 export function decadesScreen(studentId: number, today: string): PickerScreen {
@@ -94,7 +95,10 @@ export function decadesScreen(studentId: number, today: string): PickerScreen {
   );
   return {
     text: YEAR_PROMPT,
-    keyboard: Markup.inlineKeyboard([...chunk(btns, 2), [cancelBtn()]]),
+    keyboard: Markup.inlineKeyboard([
+      ...chunk(btns, 2),
+      [cancelBtn(studentId)],
+    ]),
   };
 }
 
@@ -110,7 +114,7 @@ export function yearsScreen(
     text: 'Yilni tanlang:',
     keyboard: Markup.inlineKeyboard([
       ...chunk(btns, 5),
-      backRow(`pf:d:${studentId}`),
+      backRow(studentId, `pf:d:${studentId}`),
     ]),
   };
 }
@@ -124,7 +128,7 @@ export function monthsScreen(studentId: number, year: number): PickerScreen {
     text: 'Oyni tanlang:',
     keyboard: Markup.inlineKeyboard([
       ...chunk(btns, 3),
-      backRow(`pf:dd:${studentId}:${decade}`),
+      backRow(studentId, `pf:dd:${studentId}:${decade}`),
     ]),
   };
 }
@@ -146,7 +150,7 @@ export function daysScreen(
     text: 'Kunni tanlang:',
     keyboard: Markup.inlineKeyboard([
       ...chunk(btns, 7),
-      backRow(`pf:dy:${studentId}:${year}`),
+      backRow(studentId, `pf:dy:${studentId}:${year}`),
     ]),
   };
 }
@@ -160,7 +164,7 @@ export function confirmScreen(studentId: number, iso: string): PickerScreen {
         Markup.button.callback('✅ Ha, saqlash', `pf:ds:${studentId}:${iso}`),
         Markup.button.callback('↩️ Qaytadan', `pf:d:${studentId}`),
       ],
-      backRow(`pf:dm:${studentId}:${y}-${two(m)}`),
+      backRow(studentId, `pf:dm:${studentId}:${y}-${two(m)}`),
     ]),
   };
 }

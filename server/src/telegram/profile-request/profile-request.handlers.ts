@@ -22,6 +22,10 @@ import {
 import {
   ALREADY_FILLED,
   CANCELLED,
+  DATE_SAVED,
+  ProfileField,
+  buildRequestKeyboard,
+  missingProfileFields,
   GENDER_SAVED,
   NOT_YOURS,
   PREVIEW_NOTE,
@@ -100,7 +104,11 @@ function paramsValid(a: ProfileAction, today: string): boolean {
       return a.year >= min && a.year <= max && a.month >= 1 && a.month <= 12;
     case 'confirm':
     case 'save':
-      return isRealIsoDate(a.iso);
+      return (
+        isRealIsoDate(a.iso) &&
+        Number(a.iso.slice(0, 4)) >= min &&
+        Number(a.iso.slice(0, 4)) <= max
+      );
     default:
       return true;
   }
@@ -108,7 +116,9 @@ function paramsValid(a: ProfileAction, today: string): boolean {
 
 type PickerAction = Extract<
   ProfileAction,
-  { kind: 'date' | 'decade' | 'year' | 'month' | 'confirm' | 'save' }
+  {
+    kind: 'date' | 'decade' | 'year' | 'month' | 'confirm' | 'save' | 'cancel';
+  }
 >;
 
 async function handlePicker(
@@ -126,7 +136,7 @@ async function handlePicker(
       return;
     }
     await ctx.answerCbQuery();
-    if (student.dateOfBirth) {
+    if (a.kind !== 'cancel' && student.dateOfBirth) {
       await edit(ctx, ALREADY_FILLED);
       return;
     }
@@ -135,6 +145,23 @@ async function handlePicker(
   }
 
   switch (a.kind) {
+    case 'cancel': {
+      const missing = student
+        ? missingProfileFields(student)
+        : (['gender', 'dateOfBirth'] as ProfileField[]);
+      return edit(
+        ctx,
+        CANCELLED,
+        missing.length
+          ? {
+              reply_markup: buildRequestKeyboard(
+                student ? student.id : 'preview',
+                missing,
+              ).reply_markup,
+            }
+          : NO_KEYBOARD,
+      );
+    }
     case 'date':
       return show(ctx, decadesScreen(id, today));
     case 'decade':
@@ -148,7 +175,10 @@ async function handlePicker(
     case 'save': {
       if (!student) {
         // Ko'rinish rejimi: hech narsa yozilmaydi.
-        return edit(ctx, PREVIEW_NOTE);
+        return edit(ctx, PREVIEW_NOTE, {
+          reply_markup: buildRequestKeyboard('preview', ['gender'])
+            .reply_markup,
+        });
       }
       const problem = birthDateProblem(a.iso, today);
       if (problem) {
@@ -162,6 +192,12 @@ async function handlePicker(
         { dateOfBirth: a.iso },
         student.userId ?? undefined,
       );
+      if (!student.gender) {
+        return edit(ctx, DATE_SAVED, {
+          reply_markup: buildRequestKeyboard(student.id, ['gender'])
+            .reply_markup,
+        });
+      }
       return edit(ctx, THANKS);
     }
   }
@@ -173,11 +209,6 @@ export async function handleProfileTap(
   action: ProfileAction,
   today: string = tashkentDateStr(new Date()),
 ): Promise<void> {
-  if (action.kind === 'cancel') {
-    await ctx.answerCbQuery();
-    await edit(ctx, CANCELLED);
-    return;
-  }
   if (action.kind === 'preview') {
     // Ko'rinish rejimi: bazaga tegmaydi, faqat keyingi qadamni ko'rsatadi.
     await ctx.answerCbQuery();

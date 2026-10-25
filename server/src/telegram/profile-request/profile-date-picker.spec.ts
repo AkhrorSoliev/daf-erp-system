@@ -68,7 +68,7 @@ describe('screens', () => {
         .slice(0, -1)
         .every((r) => r.length <= 2),
     ).toBe(true);
-    expect(cbs(s).at(-1)).toEqual(['pf:x']);
+    expect(cbs(s).at(-1)).toEqual(['pf:x:7']);
     expect(labels(s).at(-1)).toEqual(['Bekor qilish']);
   });
   it('2: years 5 per row, back to decades', () => {
@@ -82,7 +82,7 @@ describe('screens', () => {
       'pf:dy:7:1984',
     ]);
     expect(cbs(s)[1]).toHaveLength(5);
-    expect(cbs(s).at(-1)).toEqual(['pf:d:7', 'pf:x']);
+    expect(cbs(s).at(-1)).toEqual(['pf:d:7', 'pf:x:7']);
     expect(labels(s).at(-1)).toEqual(['⬅️ Orqaga', 'Bekor qilish']);
   });
   it('3: twelve months, 3 per row, back to the decade', () => {
@@ -95,7 +95,7 @@ describe('screens', () => {
       ['Oktabr', 'Noyabr', 'Dekabr'],
     ]);
     expect(cbs(s)[2][0]).toBe('pf:dm:7:2005-07');
-    expect(cbs(s).at(-1)).toEqual(['pf:dd:7:2000', 'pf:x']);
+    expect(cbs(s).at(-1)).toEqual(['pf:dd:7:2000', 'pf:x:7']);
   });
   it('4: days of the month, leap aware, 7 per row, back to months', () => {
     const feb = daysScreen(7, 2004, 2);
@@ -105,14 +105,14 @@ describe('screens', () => {
     expect(feb.text).toBe('Kunni tanlang:');
     expect(cbs(feb)[0]).toHaveLength(7);
     expect(cbs(feb)[0][0]).toBe('pf:dc:7:2004-02-01');
-    expect(cbs(feb).at(-1)).toEqual(['pf:dy:7:2004', 'pf:x']);
+    expect(cbs(feb).at(-1)).toEqual(['pf:dy:7:2004', 'pf:x:7']);
   });
   it('5: confirm text and buttons', () => {
     const s = confirmScreen(7, '2005-03-15');
     expect(s.text).toBe("Tug'ilgan sana: 15-mart, 2005. To'g'rimi?");
     expect(cbs(s)[0]).toEqual(['pf:ds:7:2005-03-15', 'pf:d:7']);
     expect(labels(s)[0]).toEqual(['✅ Ha, saqlash', '↩️ Qaytadan']);
-    expect(cbs(s).at(-1)).toEqual(['pf:dm:7:2005-03', 'pf:x']);
+    expect(cbs(s).at(-1)).toEqual(['pf:dm:7:2005-03', 'pf:x:7']);
     expect(confirmScreen(7, '2005-03-05').text).toContain('5-mart');
   });
   it('every callback stays under 64 bytes for the largest id', () => {

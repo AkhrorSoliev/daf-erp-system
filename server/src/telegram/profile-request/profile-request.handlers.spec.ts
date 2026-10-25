@@ -59,6 +59,7 @@ const pickerActions = (id: number): ProfileAction[] => [
   { kind: 'month', studentId: id, year: 2005, month: 3 },
   { kind: 'confirm', studentId: id, iso: '2005-03-15' },
   { kind: 'save', studentId: id, iso: '2005-03-15' },
+  { kind: 'cancel', studentId: id },
 ];
 
 describe('gender taps', () => {
@@ -166,7 +167,7 @@ describe('date picker', () => {
   );
 
   it('save writes a valid date and thanks without a keyboard', async () => {
-    const s = setup(row());
+    const s = setup(row({ gender: Gender.MALE }));
     await tap(s, { kind: 'save', studentId: 7, iso: '2005-03-15' });
     expect(s.raw.prisma.student.updateMany).toHaveBeenCalledWith({
       where: { id: 7, dateOfBirth: null },
@@ -186,7 +187,7 @@ describe('date picker', () => {
 
   it('save with a rule problem explains it and offers a retry', async () => {
     const s = setup(row());
-    await tap(s, { kind: 'save', studentId: 7, iso: '2024-01-01' });
+    await tap(s, { kind: 'save', studentId: 7, iso: '2021-12-01' });
     expect(s.raw.prisma.student.updateMany).not.toHaveBeenCalled();
     const [text, extra] = s.ctx.editMessageText.mock.calls[0];
     expect(text).toBe("Yosh 5 dan 100 gacha bo'lishi kerak. Qaytadan tanlang.");
@@ -210,16 +211,111 @@ describe('date picker', () => {
   });
 });
 
-describe('cancel and preview', () => {
-  it('cancel edits to CANCELLED with no keyboard, no database', async () => {
+const cbOf = (call: any[]) =>
+  (call[1].reply_markup.inline_keyboard as any[][])
+    .flat()
+    .map((b) => b.callback_data);
+
+describe('date saved first, then gender (mirror path)', () => {
+  it('offers the gender buttons when gender is still empty', async () => {
+    const s = setup(row());
+    await tap(s, { kind: 'save', studentId: 7, iso: '2005-03-15' });
+    const call = s.ctx.editMessageText.mock.calls[0];
+    expect(call[0]).toBe("✅ Tug'ilgan sanangiz saqlandi.");
+    expect(cbOf(call)).toEqual(['pf:g:7:M', 'pf:g:7:F']);
+  });
+  it('thanks without a keyboard when gender is already there', async () => {
+    const s = setup(row({ gender: Gender.MALE }));
+    await tap(s, { kind: 'save', studentId: 7, iso: '2005-03-15' });
+    const call = s.ctx.editMessageText.mock.calls[0];
+    expect(call[0]).toBe(THANKS);
+    expect(call[1].reply_markup.inline_keyboard).toEqual([]);
+  });
+  it('preview save offers the preview gender button', async () => {
     const s = setup(null);
-    await tap(s, { kind: 'cancel' });
-    const [text, extra] = s.ctx.editMessageText.mock.calls[0];
-    expect(text).toBe(CANCELLED);
-    expect(extra.reply_markup.inline_keyboard).toEqual([]);
+    await tap(s, { kind: 'save', studentId: 0, iso: '2005-03-15' });
+    const call = s.ctx.editMessageText.mock.calls[0];
+    expect(call[0]).toContain(PREVIEW_NOTE);
+    expect(cbOf(call)).toEqual(['pf:p:g', 'pf:p:g']);
     expect(s.prismaCalls()).toBe(0);
   });
+});
 
+describe('date boundary and params', () => {
+  // today 2026-10-25: 2021 is the youngest offered year
+  it('rejects a date in the youngest year that is still too young', async () => {
+    const s = setup(row());
+    await tap(s, { kind: 'save', studentId: 7, iso: '2021-12-01' });
+    expect(s.raw.prisma.student.updateMany).not.toHaveBeenCalled();
+    const call = s.ctx.editMessageText.mock.calls[0];
+    expect(call[0]).toBe(
+      "Yosh 5 dan 100 gacha bo'lishi kerak. Qaytadan tanlang.",
+    );
+    expect(cbOf(call)).toEqual(['pf:d:7']);
+  });
+  it('writes a date in that year that is old enough', async () => {
+    const s = setup(row());
+    await tap(s, { kind: 'save', studentId: 7, iso: '2021-03-01' });
+    expect(s.raw.prisma.student.updateMany).toHaveBeenCalled();
+  });
+  it.each(['0000-01-01', '9999-01-01'])(
+    'confirm/save with out-of-range year %s only answers',
+    async (iso) => {
+      for (const kind of ['confirm', 'save'] as const) {
+        const s = setup(row());
+        await tap(s, { kind, studentId: 7, iso });
+        expect(s.ctx.answerCbQuery).toHaveBeenCalled();
+        expect(s.ctx.editMessageText).not.toHaveBeenCalled();
+        expect(s.prismaCalls()).toBe(0);
+      }
+    },
+  );
+});
+
+describe('cancel', () => {
+  it('restores the keyboard for what is still missing', async () => {
+    const both = setup(row());
+    await tap(both, { kind: 'cancel', studentId: 7 });
+    expect(both.ctx.editMessageText.mock.calls[0][0]).toBe(CANCELLED);
+    expect(cbOf(both.ctx.editMessageText.mock.calls[0])).toEqual([
+      'pf:g:7:M',
+      'pf:g:7:F',
+      'pf:d:7',
+    ]);
+    const dateOnly = setup(row({ gender: Gender.MALE }));
+    await tap(dateOnly, { kind: 'cancel', studentId: 7 });
+    expect(cbOf(dateOnly.ctx.editMessageText.mock.calls[0])).toEqual([
+      'pf:d:7',
+    ]);
+  });
+  it('shows no keyboard when nothing is missing', async () => {
+    const s = setup(
+      row({ gender: Gender.MALE, dateOfBirth: new Date('2000-01-01') }),
+    );
+    await tap(s, { kind: 'cancel', studentId: 7 });
+    const call = s.ctx.editMessageText.mock.calls[0];
+    expect(call[0]).toBe(CANCELLED);
+    expect(call[1].reply_markup.inline_keyboard).toEqual([]);
+  });
+  it('a foreign chat gets NOT_YOURS and no edit', async () => {
+    const s = setup(null);
+    await tap(s, { kind: 'cancel', studentId: 7 });
+    expect(s.ctx.answerCbQuery).toHaveBeenCalledWith(NOT_YOURS);
+    expect(s.ctx.editMessageText).not.toHaveBeenCalled();
+  });
+  it('preview cancel restores both preview buttons without the database', async () => {
+    const s = setup(row());
+    await tap(s, { kind: 'cancel', studentId: 0 });
+    expect(cbOf(s.ctx.editMessageText.mock.calls[0])).toEqual([
+      'pf:p:g',
+      'pf:p:g',
+      'pf:d:0',
+    ]);
+    expect(s.prismaCalls()).toBe(0);
+  });
+});
+
+describe('preview', () => {
   it('preview gender tap replies with the note and the year picker for id 0', async () => {
     const s = setup(null);
     await tap(s, { kind: 'preview' });
@@ -241,15 +337,10 @@ describe('cancel and preview', () => {
     },
   );
 
-  it('preview save edits to the preview note, nothing saved', async () => {
-    const s = setup(row());
-    await tap(s, { kind: 'save', studentId: 0, iso: '2005-03-15' });
-    expect(s.ctx.editMessageText.mock.calls[0][0]).toBe(PREVIEW_NOTE);
-  });
-
   it('studentId 0 can never reach fillStudentProfile', async () => {
     const s = setup(row());
     await tap(s, { kind: 'gender', studentId: 0, gender: 'MALE' });
+    expect(s.ctx.answerCbQuery).toHaveBeenCalledWith(NOT_YOURS);
     await tap(s, { kind: 'save', studentId: 0, iso: '2005-03-15' });
     expect(s.prismaCalls()).toBe(0);
   });

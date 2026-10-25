@@ -76,7 +76,7 @@ describe('callbacks', () => {
         profileCb.save(big, '2005-03-15'),
         { kind: 'save', studentId: big, iso: '2005-03-15' },
       ],
-      [profileCb.cancel(), { kind: 'cancel' }],
+      [profileCb.cancel(big), { kind: 'cancel', studentId: big }],
       [profileCb.preview(), { kind: 'preview' }],
     ];
     for (const [data, action] of cases) {
@@ -88,7 +88,6 @@ describe('callbacks', () => {
   it.each([
     'pf:g:abc:M',
     'pf:g:5:X',
-    'pf:x:5',
     'other',
     'pf:d:',
     'pf:d:1.5',
@@ -100,7 +99,10 @@ describe('callbacks', () => {
     'pf:dc:5:2005-3-15',
     'pf:ds:5:2005-03-15x',
     'pf:ds::2005-03-15',
-    'xpf:x',
+    'pf:x',
+    'pf:x:',
+    'pf:x:1.5',
+    'xpf:x:5',
     'pf:x ',
   ])('rejects %s', (bad) => expect(parseProfileCallback(bad)).toBeNull());
 });

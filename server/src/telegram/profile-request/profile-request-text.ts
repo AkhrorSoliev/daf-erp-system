@@ -6,6 +6,7 @@ export type ProfileField = 'gender' | 'dateOfBirth';
 export const PROFILE_REQUEST_MARKER = 'bosib kiriting. Rahmat!';
 
 export const GENDER_SAVED = '✅ Jinsingiz saqlandi.';
+export const DATE_SAVED = "✅ Tug'ilgan sanangiz saqlandi.";
 export const THANKS = "✅ Rahmat! Ma'lumotingiz saqlandi.";
 export const ALREADY_FILLED = "Bu ma'lumot allaqachon kiritilgan. Rahmat!";
 export const NOT_YOURS = 'Bu tugma sizning hisobingizga tegishli emas.';
@@ -52,7 +53,7 @@ export type ProfileAction =
   | { kind: 'month'; studentId: number; year: number; month: number }
   | { kind: 'confirm'; studentId: number; iso: string }
   | { kind: 'save'; studentId: number; iso: string }
-  | { kind: 'cancel' }
+  | { kind: 'cancel'; studentId: number }
   | { kind: 'preview' };
 
 const two = (n: number) => String(n).padStart(2, '0');
@@ -67,7 +68,7 @@ export const profileCb = {
     `pf:dm:${id}:${year}-${two(month)}`,
   confirm: (id: number, iso: string) => `pf:dc:${id}:${iso}`,
   save: (id: number, iso: string) => `pf:ds:${id}:${iso}`,
-  cancel: () => 'pf:x',
+  cancel: (id: number) => `pf:x:${id}`,
   preview: () => 'pf:p:g',
 };
 
@@ -100,7 +101,8 @@ export function parseProfileCallback(data: string): ProfileAction | null {
   if (m) return { kind: 'confirm', studentId: Number(m[1]), iso: m[2] };
   m = /^pf:ds:(\d+):(\d{4}-\d{2}-\d{2})$/.exec(data);
   if (m) return { kind: 'save', studentId: Number(m[1]), iso: m[2] };
-  if (data === 'pf:x') return { kind: 'cancel' };
+  m = /^pf:x:(\d+)$/.exec(data);
+  if (m) return { kind: 'cancel', studentId: Number(m[1]) };
   if (data === 'pf:p:g') return { kind: 'preview' };
   return null;
 }
