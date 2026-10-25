@@ -4,12 +4,24 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AudienceFactsLoader } from './audience-facts.loader';
 import { AudienceService } from './audience.service';
 
+const mockLoadDepartures = jest.fn();
+const mockDeparturesInRange = jest.fn();
+jest.mock('../shared/departures.loader', () => ({
+  loadDepartures: (...args: unknown[]) => mockLoadDepartures(...args),
+}));
+jest.mock('../../students/shared/departure-episodes', () => ({
+  departuresInRange: (...args: unknown[]) => mockDeparturesInRange(...args),
+}));
+
 describe('AudienceFactsLoader', () => {
-  const prisma = { student: { findMany: jest.fn() } };
+  const prisma = { student: { findMany: jest.fn(), count: jest.fn() } };
   let loader: AudienceFactsLoader;
 
   beforeEach(async () => {
     prisma.student.findMany.mockReset();
+    prisma.student.count.mockReset();
+    mockLoadDepartures.mockReset();
+    mockDeparturesInRange.mockReset();
     const m = await Test.createTestingModule({
       providers: [
         AudienceFactsLoader,
@@ -49,7 +61,9 @@ describe('AudienceFactsLoader', () => {
           { branch: { id: 1, name: 'Other' } },
           { branch: { id: 3, name: 'Namangan' } },
         ],
-        enrollments: [{ group: { course: { id: 9, name: 'Standart' } } }],
+        enrollments: [
+          { group: { level: ' A2 ', course: { id: 9, name: 'Standart' } } },
+        ],
       },
       {
         gender: null,
@@ -66,6 +80,7 @@ describe('AudienceFactsLoader', () => {
       branchName: 'Namangan',
       courseId: '9',
       courseName: 'Standart',
+      level: 'A2',
     });
     expect(rows[1]).toEqual({
       gender: null,
@@ -74,16 +89,67 @@ describe('AudienceFactsLoader', () => {
       branchName: null,
       courseId: null,
       courseName: null,
+      level: null,
     });
+  });
+
+  it('counts everyone in scope except prospects and archived cards', async () => {
+    prisma.student.count.mockResolvedValue(1240);
+    await expect(loader.countAll(7, [3])).resolves.toBe(1240);
+    const { where } = prisma.student.count.mock.calls[0][0];
+    expect(where).toMatchObject({
+      companyId: 7,
+      deletedAt: null,
+      status: { notIn: ['PROSPECT', 'ARCHIVED'] },
+      branches: { some: { branchId: { in: [3] } } },
+    });
+  });
+
+  it('places a leaver by the age he had on the day he left and counts those with no birth date', async () => {
+    mockLoadDepartures.mockResolvedValue({
+      episodes: [],
+      floor: null,
+    });
+    mockDeparturesInRange.mockReturnValue([
+      { studentId: 1, startedAt: new Date('2026-03-10T08:00:00.000Z') },
+      { studentId: 2, startedAt: new Date('2026-03-10T08:00:00.000Z') },
+    ]);
+    prisma.student.findMany.mockResolvedValue([
+      { id: 1, dateOfBirth: new Date('2008-03-09T19:00:00.000Z') },
+      { id: 2, dateOfBirth: null },
+    ]);
+    const out = await loader.loadDeparted(
+      7,
+      null,
+      new Date('2026-10-25T10:00:00.000Z'),
+    );
+    // born 2008-03-10 (Tashkent), left 2026-03-10: his 18th birthday that day
+    expect(out).toEqual({ ages: [18], ageUnknown: 1 });
+  });
+
+  it('reads no students when nobody left', async () => {
+    mockLoadDepartures.mockResolvedValue({ episodes: [], floor: null });
+    mockDeparturesInRange.mockReturnValue([]);
+    const out = await loader.loadDeparted(7, null, new Date());
+    expect(out).toEqual({ ages: [], ageUnknown: 0 });
+    expect(prisma.student.findMany).not.toHaveBeenCalled();
   });
 });
 
 describe('AudienceService', () => {
-  const loader = { load: jest.fn() };
+  const loader = {
+    load: jest.fn(),
+    countAll: jest.fn(),
+    loadDeparted: jest.fn(),
+  };
   let service: AudienceService;
 
   beforeEach(async () => {
     loader.load.mockReset();
+    loader.countAll.mockReset().mockResolvedValue(0);
+    loader.loadDeparted
+      .mockReset()
+      .mockResolvedValue({ ages: [], ageUnknown: 0 });
     const m = await Test.createTestingModule({
       providers: [
         AudienceService,
@@ -109,11 +175,18 @@ describe('AudienceService', () => {
         branchName: 'A',
         courseId: 'c',
         courseName: 'C',
+        level: 'A1',
       },
     ]);
+    loader.countAll.mockResolvedValue(1240);
+    loader.loadDeparted.mockResolvedValue({ ages: [18], ageUnknown: 2 });
     const o = await service.overview(1, null);
     expect(o.summary.total).toBe(1);
+    expect(o.systemTotal).toBe(1240);
     expect(o.branches).toHaveLength(1);
+    expect(o.levels.map((l) => l.name)).toEqual(['A1']);
+    expect(o.departuresAgeUnknown).toBe(2);
     expect(loader.load).toHaveBeenCalledWith(1, null);
+    expect(loader.countAll).toHaveBeenCalledWith(1, null);
   });
 });

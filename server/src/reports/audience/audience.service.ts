@@ -29,7 +29,15 @@ export class AudienceService {
         "Bu filial ma'lumotlarini ko'rish huquqingiz yo'q",
       );
     }
-    const students = await this.loader.load(companyId, scope);
-    return buildOverview(students, tashkentDateStr(new Date()));
+    const now = new Date();
+    const [students, systemTotal, departed] = await Promise.all([
+      this.loader.load(companyId, scope),
+      this.loader.countAll(companyId, scope),
+      this.loader.loadDeparted(companyId, scope, now),
+    ]);
+    return buildOverview(students, tashkentDateStr(now), {
+      systemTotal,
+      departed,
+    });
   }
 }

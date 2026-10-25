@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { StudentStatus } from '@prisma/client';
 import { tashkentDateStr } from '../../common/date/tashkent';
 import {
   studentBranchWhere,
@@ -9,7 +10,12 @@ import {
   ACTIVE_ENROLLMENT_WHERE,
   activeStudentWhere,
 } from '../../students/shared/active-student-where';
-import type { AudienceStudent } from './audience.types';
+import { departuresInRange } from '../../students/shared/departure-episodes';
+import { ageOn } from '../../students/shared/student-onboarding';
+import { loadDepartures } from '../shared/departures.loader';
+import type { AudienceStudent, DepartureAges } from './audience.types';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Everyone «Auditoriya» counts: the studying students (ADR-0015, one
@@ -41,7 +47,10 @@ export class AudienceFactsLoader {
           take: 1,
           select: {
             group: {
-              select: { course: { select: { id: true, name: true } } },
+              select: {
+                level: true,
+                course: { select: { id: true, name: true } },
+              },
             },
           },
         },
@@ -62,7 +71,56 @@ export class AudienceFactsLoader {
         branchName: branch?.name ?? null,
         courseId: course ? String(course.id) : null,
         courseName: course?.name ?? null,
+        level: s.enrollments[0]?.group.level?.trim() || null,
       };
     });
+  }
+
+  /** Everyone the system holds in scope: not deleted, archived or prospect, studying or not. */
+  countAll(companyId: number, scope: ReportBranchIds): Promise<number> {
+    return this.prisma.student.count({
+      where: {
+        companyId,
+        deletedAt: null,
+        status: { notIn: [StudentStatus.PROSPECT, StudentStatus.ARCHIVED] },
+        ...studentBranchWhere(scope),
+      },
+    });
+  }
+
+  /**
+   * Confirmed departures of the last 12 months (ADR-0035, the one definition),
+   * each with the age he had on the day he left.
+   */
+  async loadDeparted(
+    companyId: number,
+    scope: ReportBranchIds,
+    now: Date,
+  ): Promise<DepartureAges> {
+    const { episodes, floor } = await loadDepartures(
+      this.prisma,
+      companyId,
+      scope,
+      { now },
+    );
+    const left = departuresInRange(
+      episodes,
+      { gte: new Date(now.getTime() - 365 * DAY_MS), lt: now },
+      floor,
+    );
+    if (left.length === 0) return { ages: [], ageUnknown: 0 };
+    const rows = await this.prisma.student.findMany({
+      where: { id: { in: left.map((e) => e.studentId) } },
+      select: { id: true, dateOfBirth: true },
+    });
+    const born = new Map(rows.map((r) => [r.id, r.dateOfBirth]));
+    const ages: number[] = [];
+    for (const e of left) {
+      const dob = born.get(e.studentId);
+      if (dob) {
+        ages.push(ageOn(tashkentDateStr(dob), tashkentDateStr(e.startedAt)));
+      }
+    }
+    return { ages, ageUnknown: left.length - ages.length };
   }
 }
