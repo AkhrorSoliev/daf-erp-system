@@ -720,6 +720,9 @@ model Student {
   verifiedPhone          String?
   phoneVerifiedAt        DateTime?
   photo                  String?
+  // The Ta'lim look the student picked (ADR-0125): one of LERNEN_TEMA_IDLARI,
+  // null = the default. Not User.uiSkin: that is the staff skin.
+  lernenTema             String?
   comment                String?
   balance                Int           @default(0)
   // Per-student discount (0–100) applied at lesson-billing time. Discount

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { yolSkrollSiljishi, type YolSkrollOlchami } from "./yol-skroll";
+import { yolSkrollSiljishi, yolTepaZaxirasi, type YolSkrollOlchami } from "./yol-skroll";
 
 // Telefon: 800 px oyna, tepada 24 px, pastda 128 px (navigatsiya) band —
 // ko'rinadigan qism 24..672, balandligi 648.
@@ -58,5 +58,16 @@ describe("yolSkrollSiljishi", () => {
     expect(
       yolSkrollSiljishi(olcham({ unitTepa: -600, seansTepa: -300, seansPast: -140 })),
     ).toBe(-600 - 24);
+  });
+});
+
+describe("yolTepaZaxirasi", () => {
+  it("keeps the unit row clear of the sticky banner: padding + breath + the banner's height", () => {
+    // main padding 24, breath 8, banner 48 -> the row lands at 80, below the banner's bottom (56).
+    expect(yolTepaZaxirasi(24, 48)).toBe(80);
+  });
+
+  it("is just padding + breath when there is no banner", () => {
+    expect(yolTepaZaxirasi(24, 0)).toBe(32);
   });
 });

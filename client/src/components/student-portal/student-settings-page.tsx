@@ -13,6 +13,7 @@ import {
 } from "./lumio";
 import { useT } from "@/i18n/context";
 import { StudentPasswordDialog } from "./student-password-dialog";
+import { LernenKorinishTanlash } from "./lernen-korinish-tanlash";
 import { LogoutOthersDialog } from "@/components/shared/logout-others-dialog";
 import { useStudentProfile } from "./lib/queries";
 import { settingsHelpItems } from "@/lib/student-nav-items";
@@ -43,6 +44,8 @@ export function StudentSettingsPage() {
           <LanguagePicker />
         </Card>
       </Section>
+
+      <LernenKorinishTanlash />
 
       <Section title={t("Xavfsizlik")}>
         <ListRow

@@ -5276,6 +5276,22 @@ const ru: Dictionary = {
   "Bu sahifa faqat sizga yuborilgan maxsus havola orqali ochiladi. Iltimos, formaga kirish uchun siz qabul qilgan havolani bosing.": "Эта страница открывается только по специальной ссылке, отправленной вам. Чтобы открыть форму, нажмите на полученную ссылку.",
   "Forma topilmadi": "Форма не найдена",
   "Bu havola eskirgan yoki forma o'chirilgan bo'lishi mumkin.": "Ссылка могла устареть, или форма могла быть удалена.",
+  // Ta'lim looks (lernen-temalar.ts)
+  "Toza": "Чистый",
+  "Oq fon, qalin yumshoq tugmalar": "Белый фон, объёмные мягкие кнопки",
+  "O'rmon": "Лес",
+  "Yumshoq qatlamli o'rmon": "Мягкий многослойный лес",
+  "Dengiz": "Море",
+  "Suv osti dunyosi": "Подводный мир",
+  "Nemis sayohati": "Путешествие по Германии",
+  "Tongdan tungacha": "От рассвета до ночи",
+  "Boshlash": "Начать",
+
+  // Ta'lim look picker (lernen-korinish-tanlash.tsx); «Yoqilgan» and «O'chiq» already exist
+  "Ta'lim ko'rinishi": "Вид раздела «Обучение»",
+  "Ovozlar": "Звуки",
+  "Kam harakat": "Меньше движения",
+  "Ko'rinishni saqlab bo'lmadi, qayta urinib ko'ring": "Не удалось сохранить вид, попробуйте ещё раз",
 };
 
 export default ru;

@@ -52,3 +52,26 @@ describe('StudentPortalReadService.getPaymentHistory', () => {
     });
   });
 });
+
+describe('StudentPortalReadService.getProfile — lernenTema', () => {
+  it("selects the Ta'lim look and returns it", async () => {
+    const findFirst = jest.fn().mockResolvedValue({
+      id: 10042,
+      firstName: 'Ali',
+      lastName: 'Valiyev',
+      lernenTema: 'alp',
+      enrollments: [],
+      branches: [],
+      dateOfBirth: null,
+      userId: null,
+    });
+    const service = new StudentPortalReadService({
+      student: { findFirst },
+    } as unknown as PrismaService);
+
+    const res = await service.getProfile(10042);
+
+    expect(findFirst.mock.calls[0][0].select.lernenTema).toBe(true);
+    expect(res.lernenTema).toBe('alp');
+  });
+});

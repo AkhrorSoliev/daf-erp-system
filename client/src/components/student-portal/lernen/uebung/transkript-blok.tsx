@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useT } from "@/i18n/use-t";
+import { kamHarakatHozir } from "../harakat/kam-harakat";
 import { SuhbatRasmi } from "./rasm-tanlash";
 
 /**
@@ -40,12 +41,9 @@ export function TranskriptBlok({
   React.useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const kamHarakat = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
     el.scrollIntoView({
       block: "nearest",
-      behavior: kamHarakat ? "auto" : "smooth",
+      behavior: kamHarakatHozir() ? "auto" : "smooth",
     });
   }, []);
 

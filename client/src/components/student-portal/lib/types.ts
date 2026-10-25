@@ -36,6 +36,8 @@ export interface StudentProfile {
   parentName: string | null;
   telegram: string | null;
   photo: string | null;
+  /** Ta'lim look the student picked (ADR-0125); null/absent = the default. */
+  lernenTema?: string | null;
   balance: number;
   status: string;
   login: string | null;
