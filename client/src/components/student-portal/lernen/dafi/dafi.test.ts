@@ -13,4 +13,14 @@ describe("<Dafi />", () => {
   it("defaults to the calm state", () => {
     expect(renderToStaticMarkup(createElement(Dafi))).toContain('data-holat="tinch"');
   });
+  it("server-renders the calm pose: a mouth and every state-only layer hidden", () => {
+    const html = renderToStaticMarkup(createElement(Dafi));
+    // Neutral mouth (mw=12, mc=12), the rig's first render draws the same path.
+    expect(html).toMatch(/<path class="mo"[^>]*d="M88 106 Q100 118 112 106"/);
+    for (const cls of ["hL", "hR", "bL", "bR", "fq", "fs", "fst"]) {
+      const tag = html.match(new RegExp(`<[a-z]+ [^>]*class="${cls}"[^>]*>`));
+      expect(tag, `layer .${cls} is in the markup`).not.toBeNull();
+      expect(tag![0], `layer .${cls} starts hidden`).toContain('opacity="0"');
+    }
+  });
 });

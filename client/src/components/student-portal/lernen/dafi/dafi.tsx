@@ -14,9 +14,12 @@ export interface DafiProps {
 }
 
 /**
- * Dafi, the bear head (ADR-0125). The SVG is server-rendered so the first
- * paint already shows him; `gsap` and the rig load after mount and only
- * here (the portal bundle stays free of the animation library).
+ * Dafi, the bear head (ADR-0125). The SVG is server-rendered in its calm
+ * pose (the neutral mouth and the hidden state-only layers are starting
+ * attributes of `DAFI_SVG`), so the first paint already shows him, and he
+ * stays that way if the animation chunk is slow or fails to load. `gsap` and
+ * the rig load after mount and only here (the portal bundle stays free of the
+ * animation library); the rig overwrites these attributes on its first frame.
  */
 export function Dafi({ holat = "tinch", olcham = "md", className }: DafiProps) {
   const ref = React.useRef<HTMLDivElement>(null);
