@@ -104,6 +104,7 @@ const TABLE: Row[] = [
   ['courses.create', 'D', 'DA', { K: 'COMPANY', T: 'COMPANY' }],
   ['settings.branches', 'D', 'DAK', { T: 'NO_PAGE' }],
   ['settings.payment', 'D', 'DAK', { T: 'NO_PAGE' }],
+  ['settings.tax', '', 'DAK', { T: 'NO_PAGE' }],
   [
     'settings.telegram-groups',
     'D',
@@ -130,8 +131,8 @@ describe('permission catalog', () => {
     }
   });
 
-  it('has 71 capabilities in 14 sections, none of them empty', () => {
-    expect(PERMISSION_KEYS).toHaveLength(71);
+  it('has 72 capabilities in 14 sections, none of them empty', () => {
+    expect(PERMISSION_KEYS).toHaveLength(72);
     expect(PERMISSION_SECTIONS).toHaveLength(14);
     for (const section of PERMISSION_SECTIONS) {
       expect(
@@ -197,8 +198,8 @@ describe('permission catalog', () => {
   });
 
   it('gives the CEO every capability, whatever else they hold', () => {
-    expect(defaultKeysForRoles([ROLE_ID.CEO]).size).toBe(71);
-    expect(defaultKeysForRoles([ROLE_ID.TEACHER, ROLE_ID.CEO]).size).toBe(71);
+    expect(defaultKeysForRoles([ROLE_ID.CEO]).size).toBe(72);
+    expect(defaultKeysForRoles([ROLE_ID.TEACHER, ROLE_ID.CEO]).size).toBe(72);
   });
 
   it('gives a teacher only their groups and attendance', () => {
@@ -316,12 +317,12 @@ describe('who the CEO may give a capability to (spec §6)', () => {
     ).toEqual(['attendance.mark', 'groups.view']);
   });
 
-  it('counts 108 locked cells, 69 keys with a lock and 8 CEO-only keys', () => {
+  it('counts 109 locked cells, 70 keys with a lock and 8 CEO-only keys', () => {
     const locks = PERMISSION_KEYS.map(
       (key) => Object.keys(permissionDef(key).lockReasons).length,
     );
-    expect(locks.reduce((sum, n) => sum + n, 0)).toBe(108);
-    expect(locks.filter((n) => n > 0)).toHaveLength(69);
+    expect(locks.reduce((sum, n) => sum + n, 0)).toBe(109);
+    expect(locks.filter((n) => n > 0)).toHaveLength(70);
     expect(
       PERMISSION_KEYS.filter(
         (key) => permissionDef(key).allowedRoles.length === 0,

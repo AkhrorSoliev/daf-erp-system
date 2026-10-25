@@ -196,6 +196,13 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'COMPANY_WIDE',
     reason:
+      'Soliq va komissiyalar (spec 2026-10-25): every key is a company-level ' +
+      'setting (`companyLevelOnly`) — one value for every branch.',
+    routes: ['GET /settings/tax', 'PATCH /settings/tax'],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
       'Lead ownership limits (ADR-0093): `leads.maxUntouched`, ' +
       '`leads.firstActionHours` and `leads.followUpDays` are company-level ' +
       'settings (`companyLevelOnly`) — one value for every branch. The read ' +

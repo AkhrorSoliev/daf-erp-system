@@ -123,6 +123,14 @@ export const ADMIN_PERMISSIONS = {
     lockReasons: { [T]: LOCK.NO_PAGE },
     requires: [],
   },
+  'settings.tax': {
+    section: 'settings',
+    label: 'Soliq va komissiyalar',
+    defaultRoles: [],
+    allowedRoles: [D, A, K],
+    lockReasons: { [T]: LOCK.NO_PAGE },
+    requires: [],
+  },
   // Approving a group binds it to a branch, and the branch's 21:00 money
   // report starts going there (`telegram-groups/telegram-groups.service.ts`).
   'settings.telegram-groups': {

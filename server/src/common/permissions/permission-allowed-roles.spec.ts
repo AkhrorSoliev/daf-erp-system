@@ -20,6 +20,8 @@ import {
 const REVIEWED_COMPANY_WIDE_WRITES: Partial<Record<PermissionKey, string>> = {
   'settings.branches':
     'POST /branches: BranchesService.create refuses every caller but the CEO',
+  'settings.tax':
+    'PATCH /settings/tax: every tax key is companyLevelOnly; widened only so the CEO can hand the page to an accountant account',
 };
 
 const SERVER_ROOT = join(__dirname, '..', '..', '..');

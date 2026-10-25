@@ -1080,10 +1080,10 @@ describe('ReportsService', () => {
       );
 
       expect(redis.get).toHaveBeenCalledWith(
-        'rpt:np:v5:1001:3,7:u10001:2026-08',
+        'rpt:np:v6:1001:3,7:u10001:2026-08',
       );
       expect(redis.setex).toHaveBeenCalledWith(
-        'rpt:np:v5:1001:3,7:u10001:2026-08',
+        'rpt:np:v6:1001:3,7:u10001:2026-08',
         expect.any(Number),
         '4200000',
       );
@@ -1111,7 +1111,7 @@ describe('ReportsService', () => {
       // Earlier month: served from the cache, nothing computed for it.
       expect(rows[0]).toMatchObject({ profit: 1111, profitBasis: 'kanonik' });
       expect(redis.get).toHaveBeenCalledWith(
-        'rpt:np:v5:1001:all:u10001:2026-08',
+        'rpt:np:v6:1001:all:u10001:2026-08',
       );
       // Anchor month: the live figure, the cache untouched for its key.
       expect(rows[1]).toMatchObject({
@@ -1125,7 +1125,7 @@ describe('ReportsService', () => {
         performedById: 10001,
       });
       expect(redis.get).not.toHaveBeenCalledWith(
-        'rpt:np:v5:1001:all:u10001:2026-09',
+        'rpt:np:v6:1001:all:u10001:2026-09',
       );
       expect(redis.setex).not.toHaveBeenCalled();
     });

@@ -67,6 +67,7 @@ import { PaymentPromisesModule } from './payment-promises/payment-promises.modul
 import { KpiModule } from './kpi/kpi.module';
 import { ParticipationCertificatesModule } from './participation-certificates/participation-certificates.module';
 import { SettingsModule } from './settings/settings.module';
+import { TaxModule } from './tax/tax.module';
 import { ChatModule } from './chat/chat.module';
 import { CallLogsModule } from './call-logs/call-logs.module';
 import { StatementsModule } from './statements/statements.module';
@@ -153,6 +154,7 @@ import { validateEnv } from './config/env.validation';
     LessonTeacherOverridesModule,
     LessonReschedulesModule,
     SettingsModule,
+    TaxModule,
     ChatModule,
     ReceiptsModule,
     OutreachModule,

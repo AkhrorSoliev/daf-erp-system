@@ -29,9 +29,9 @@ const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
  * the exact branch set and the caller; v2 wrote multi-branch scopes to the
  * company-wide entry. v4: balance withdrawals count as revenue of the month
  * they are made (ADR-0055). v5: a cancelled refund no longer counts as a refund
- * — both of its ledger rows are left out of the figure.
+ * — both of its ledger rows are left out of the figure. v6: tax and fee costs subtracted (spec 2026-10-25).
  */
-const NET_PROFIT_CACHE_VERSION = 'v5';
+const NET_PROFIT_CACHE_VERSION = 'v6';
 const logger = new Logger('NetProfitCache');
 
 /** Seconds remaining until the next Tashkent midnight (min 60). */
@@ -100,4 +100,29 @@ export async function cachedNetProfit(
   }
 
   return value;
+}
+
+/**
+ * Soliq stavkasi saqlanganda o'tgan oylarning keshlangan foydasi eskiradi
+ * (stavka o'tgan oydan kuchga kirishi mumkin). Kompaniyaning hamma kalitini
+ * o'chiradi; Redis ishlamasa faqat log yozadi.
+ */
+export async function invalidateNetProfitCache(
+  redis: RedisService | undefined,
+  companyId: number,
+): Promise<void> {
+  if (!redis) return;
+  try {
+    const stream = redis.scanStream({
+      match: `rpt:np:${NET_PROFIT_CACHE_VERSION}:${companyId}:*`,
+      count: 200,
+    });
+    for await (const keys of stream as AsyncIterable<string[]>) {
+      if (keys.length) await redis.del(...keys);
+    }
+  } catch (e) {
+    logger.warn(
+      `Net profit cache invalidate failed for company ${companyId}: ${e}`,
+    );
+  }
 }

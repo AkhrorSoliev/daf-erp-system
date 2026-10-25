@@ -1,5 +1,6 @@
 import {
   cachedNetProfit,
+  invalidateNetProfitCache,
   netProfitCacheKey,
   secondsUntilTashkentMidnight,
 } from './net-profit-cache';
@@ -37,7 +38,7 @@ describe('netProfitCacheKey', () => {
   });
   it('names the branch set sorted and de-duplicated', () => {
     expect(netProfitCacheKey(at([7, 3, 7]))).toBe(
-      'rpt:np:v5:1001:3,7:u10001:2026-07',
+      'rpt:np:v6:1001:3,7:u10001:2026-07',
     );
   });
   it('separates one branch from a set containing it', () => {
@@ -50,10 +51,10 @@ describe('netProfitCacheKey', () => {
   });
   it('writes company-wide as all and an empty scope as none', () => {
     expect(netProfitCacheKey(at(null))).toBe(
-      'rpt:np:v5:1001:all:u10001:2026-07',
+      'rpt:np:v6:1001:all:u10001:2026-07',
     );
     expect(netProfitCacheKey(at([]))).toBe(
-      'rpt:np:v5:1001:none:u10001:2026-07',
+      'rpt:np:v6:1001:none:u10001:2026-07',
     );
   });
 });
@@ -71,7 +72,7 @@ describe('cachedNetProfit', () => {
     expect(v).toBe(43_900_000);
     expect(compute).toHaveBeenCalledTimes(1);
     expect(redis.setex).toHaveBeenCalledWith(
-      'rpt:np:v5:1001:all:u10001:2026-07',
+      'rpt:np:v6:1001:all:u10001:2026-07',
       expect.any(Number),
       '43900000',
     );
@@ -131,5 +132,39 @@ describe('cachedNetProfit', () => {
       cachedNetProfit(redis, at(null, '2026-06'), compute),
     ).resolves.toBe(-8_000_000);
     expect(compute).not.toHaveBeenCalled();
+  });
+});
+
+describe('invalidateNetProfitCache', () => {
+  it('deletes every key of the company under the current version', async () => {
+    const del = jest.fn();
+    const scanStream = jest.fn(() => ({
+      async *[Symbol.asyncIterator]() {
+        yield ['rpt:np:v6:1001:all:u1:2026-07'];
+        yield [];
+        yield ['rpt:np:v6:1001:3:u2:2026-08'];
+      },
+    }));
+    await invalidateNetProfitCache({ scanStream, del } as never, 1001);
+    expect(scanStream).toHaveBeenCalledWith({
+      match: 'rpt:np:v6:1001:*',
+      count: 200,
+    });
+    expect(del).toHaveBeenCalledTimes(2);
+  });
+
+  it('swallows a Redis failure', async () => {
+    const scanStream = jest.fn(() => {
+      throw new Error('down');
+    });
+    await expect(
+      invalidateNetProfitCache({ scanStream } as never, 1001),
+    ).resolves.toBeUndefined();
+  });
+
+  it('does nothing without Redis', async () => {
+    await expect(
+      invalidateNetProfitCache(undefined, 1001),
+    ).resolves.toBeUndefined();
   });
 });
