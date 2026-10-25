@@ -1113,6 +1113,8 @@ model LeadSection {
   order     Int        @default(0)
   columnId  String
   column    LeadColumn @relation(fields: [columnId], references: [id])
+  // "WEBSITE" — sayt lidlari tushadigan o'chirib bo'lmaydigan bo'lim (har filialda bitta).
+  systemKey String?
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
@@ -1130,6 +1132,7 @@ model LeadSection {
   @@index([companyId])
   @@index([deletedAt])
   @@index([columnId])
+  @@unique([columnId, systemKey])
 }
 
 // Managed reference list — where leads come from (Instagram, tavsiya, ...).
