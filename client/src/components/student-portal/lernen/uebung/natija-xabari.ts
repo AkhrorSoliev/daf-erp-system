@@ -1,3 +1,4 @@
+import { msg } from "@/i18n/msg";
 import { interpolate } from "@/i18n/translate";
 import type { Translate } from "../liga";
 import { nishonNomi } from "../nishon";
@@ -8,7 +9,8 @@ import type { FrageFormat, PruefErgebnis, SeansNatijasi } from "../types";
  * `richtig` is a picture URL, so the word comes from `loesungWort` — shown
  * after a correct answer too, because the student may have found the
  * picture without knowing the word yet. A typed word one slip away counts
- * as correct (`tippfehler`) and shows the spelling to learn.
+ * as correct (`tippfehler`) and shows the spelling to learn. A wrong answer
+ * is the soft «almost» with the answer to learn (ADR-0128), never a verdict.
  */
 export function javobPaneliMatni(
   natija: Pick<PruefErgebnis, "isCorrect" | "richtig" | "loesungWort" | "tippfehler">,
@@ -16,7 +18,8 @@ export function javobPaneliMatni(
 ): { sarlavha: string; izoh: string | null; soz: string | null } {
   // The word is the server's answer: data, never through `t`.
   if (!natija.isCorrect) {
-    return { sarlavha: t("Noto'g'ri"), izoh: null, soz: natija.loesungWort ?? natija.richtig };
+    const soz = natija.loesungWort ?? natija.richtig;
+    return { sarlavha: t("Deyarli!"), izoh: soz ? t("To'g'ri javob:") : null, soz };
   }
   if (natija.tippfehler) {
     return {
@@ -26,6 +29,50 @@ export function javobPaneliMatni(
     };
   }
   return { sarlavha: t("To'g'ri!"), izoh: null, soz: natija.loesungWort ?? null };
+}
+
+// The pairing board's slip text and the failed-request line are drawn by the panel AND
+// spoken by the live region; one constant each, so the two can never drift apart.
+const JUFT_QAYTADI = msg(
+  "Hammasi to'g'ri! Ammo bu savolda birinchi urinishda xato bo'lgani uchun u keyinroq yana qaytadi.",
+);
+const YUBORISH_XATO = msg("Yuborib bo'lmadi. Qayta urinib ko'ring");
+
+/**
+ * The panel text of a finished pairing question. The board is green by then, so
+ * a first-try slip is not «almost»: it only means the question comes back later.
+ */
+export function juftPaneliMatni(isCorrect: boolean, t: Translate = interpolate): string {
+  return isCorrect ? t("To'g'ri!") : t(JUFT_QAYTADI);
+}
+
+/** The line under the check button when the request did not go through. */
+export function yuborishXatoMatni(t: Translate = interpolate): string {
+  return t(YUBORISH_XATO);
+}
+
+/**
+ * What a screen reader hears after a check (the session's visually-hidden live
+ * region): the words the bottom bar shows. A wrong answer's word is the server's
+ * and never goes through `t`. A failed request is spoken too; an answer wins
+ * over it; before a check there is nothing to say.
+ */
+export function eshitiladiganMatn(
+  holat: {
+    natija: Pick<PruefErgebnis, "isCorrect" | "richtig" | "loesungWort" | "tippfehler"> | null;
+    /** A `PAAR` / `ZUORDNEN` question: its panel has its own texts. */
+    juftlash: boolean;
+    yuborishXato: boolean;
+  },
+  t: Translate = interpolate,
+): string {
+  const { natija, juftlash, yuborishXato } = holat;
+  if (natija) {
+    if (juftlash) return juftPaneliMatni(natija.isCorrect, t);
+    const panel = javobPaneliMatni(natija, t);
+    return [panel.sarlavha, panel.izoh, panel.soz].filter(Boolean).join(" ");
+  }
+  return yuborishXato ? yuborishXatoMatni(t) : "";
 }
 
 /**

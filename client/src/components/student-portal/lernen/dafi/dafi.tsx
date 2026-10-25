@@ -10,6 +10,11 @@ import type { DafiRig } from "./dafi-rig";
 export interface DafiProps {
   holat?: DafiHolat;
   olcham?: DafiOlcham;
+  /**
+   * Change it to play the same state again: two right answers in a row (or
+   * two right pairs) must cheer twice, though `holat` stays «bayram».
+   */
+  tetik?: number;
   className?: string;
 }
 
@@ -21,7 +26,7 @@ export interface DafiProps {
  * the rig load after mount and only here (the portal bundle stays free of the
  * animation library); the rig overwrites these attributes on its first frame.
  */
-export function Dafi({ holat = "tinch", olcham = "md", className }: DafiProps) {
+export function Dafi({ holat = "tinch", olcham = "md", tetik, className }: DafiProps) {
   const ref = React.useRef<HTMLDivElement>(null);
   const rig = React.useRef<DafiRig | null>(null);
   const hozirgi = React.useRef<DafiHolat>(holat);
@@ -46,7 +51,7 @@ export function Dafi({ holat = "tinch", olcham = "md", className }: DafiProps) {
   React.useEffect(() => {
     hozirgi.current = holat;
     rig.current?.set(RIG_HOLAT[holat]);
-  }, [holat]);
+  }, [holat, tetik]);
 
   const w = DAFI_OLCHAM[olcham];
   return (

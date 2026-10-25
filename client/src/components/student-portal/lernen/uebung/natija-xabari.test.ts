@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { javobPaneliMatni, natijaQatorlari, orinXabari, xatoYorligi } from "./natija-xabari";
+import {
+  eshitiladiganMatn,
+  javobPaneliMatni,
+  juftPaneliMatni,
+  natijaQatorlari,
+  orinXabari,
+  xatoYorligi,
+  yuborishXatoMatni,
+} from "./natija-xabari";
+
+// A marking `t`: every text it receives comes back in brackets, filled in.
+const tr = (s: string, p?: Record<string, string | number>) =>
+  `[${s.replace(/\{(\w+)\}/g, (_, k: string) => String(p?.[k]))}]`;
 
 describe("javobPaneliMatni", () => {
   it("a slip counts as correct and shows the right spelling", () => {
@@ -16,11 +28,19 @@ describe("javobPaneliMatni", () => {
     });
   });
 
-  it("a wrong answer shows the right one", () => {
+  it("a wrong answer is the soft «almost» and shows the right one", () => {
     expect(javobPaneliMatni({ isCorrect: false, richtig: "Bahnhof" })).toEqual({
-      sarlavha: "Noto'g'ri",
-      izoh: null,
+      sarlavha: "Deyarli!",
+      izoh: "To'g'ri javob:",
       soz: "Bahnhof",
+    });
+  });
+
+  it("a wrong answer with no word to show says only «almost»", () => {
+    expect(javobPaneliMatni({ isCorrect: false, richtig: "" })).toEqual({
+      sarlavha: "Deyarli!",
+      izoh: null,
+      soz: "",
     });
   });
 
@@ -28,6 +48,79 @@ describe("javobPaneliMatni", () => {
     const natija = { isCorrect: false, richtig: "https://x/b.jpg", loesungWort: "der Bahnhof" };
     expect(javobPaneliMatni(natija).soz).toBe("der Bahnhof");
     expect(javobPaneliMatni({ ...natija, isCorrect: true }).soz).toBe("der Bahnhof");
+  });
+});
+
+// What the screen reader hears after a check (the visually-hidden live region of the session).
+describe("eshitiladiganMatn", () => {
+  const JUFT_QAYTADI =
+    "Hammasi to'g'ri! Ammo bu savolda birinchi urinishda xato bo'lgani uchun u keyinroq yana qaytadi.";
+  const bosh = { natija: null, juftlash: false, yuborishXato: false };
+
+  it("a right answer is spoken as the panel shows it", () => {
+    expect(eshitiladiganMatn({ ...bosh, natija: { isCorrect: true, richtig: "Bahnhof" } })).toBe("To'g'ri!");
+  });
+
+  it("a slip counts as correct and the right spelling is spoken too", () => {
+    expect(
+      eshitiladiganMatn({ ...bosh, natija: { isCorrect: true, richtig: "Bahnhof", tippfehler: true } }),
+    ).toBe("To'g'ri! Imlosiga e'tibor bering: Bahnhof");
+  });
+
+  it("a wrong answer says «almost» and the right word", () => {
+    expect(
+      eshitiladiganMatn({ ...bosh, natija: { isCorrect: false, richtig: "https://x/b.jpg", loesungWort: "der Bahnhof" } }),
+    ).toBe("Deyarli! To'g'ri javob: der Bahnhof");
+  });
+
+  it("a wrong answer with no word to show says only «almost»", () => {
+    expect(eshitiladiganMatn({ ...bosh, natija: { isCorrect: false, richtig: "" } })).toBe("Deyarli!");
+  });
+
+  it("a finished pairing board with no slip says «correct»", () => {
+    expect(
+      eshitiladiganMatn({ ...bosh, juftlash: true, natija: { isCorrect: true, richtig: "a=b" } }),
+    ).toBe("To'g'ri!");
+  });
+
+  it("a pairing board with a first-try slip says the question comes back, not «almost»", () => {
+    const matn = eshitiladiganMatn({ ...bosh, juftlash: true, natija: { isCorrect: false, richtig: "a=b" } });
+    expect(matn).toBe(JUFT_QAYTADI);
+    expect(matn).not.toContain("Deyarli");
+  });
+
+  it("the panel and the live region share one pairing text", () => {
+    expect(juftPaneliMatni(true)).toBe("To'g'ri!");
+    expect(juftPaneliMatni(false)).toBe(JUFT_QAYTADI);
+    expect(eshitiladiganMatn({ ...bosh, juftlash: true, natija: { isCorrect: false, richtig: "a=b" } })).toBe(
+      juftPaneliMatni(false),
+    );
+  });
+
+  it("a check whose request failed is spoken too, and is the panel's own line", () => {
+    expect(eshitiladiganMatn({ ...bosh, yuborishXato: true })).toBe("Yuborib bo'lmadi. Qayta urinib ko'ring");
+    expect(eshitiladiganMatn({ ...bosh, yuborishXato: true })).toBe(yuborishXatoMatni());
+  });
+
+  it("an answer wins over a failed earlier request", () => {
+    expect(
+      eshitiladiganMatn({ ...bosh, yuborishXato: true, natija: { isCorrect: true, richtig: "x" } }),
+    ).toBe("To'g'ri!");
+  });
+
+  it("says nothing before a check", () => {
+    expect(eshitiladiganMatn(bosh)).toBe("");
+    expect(eshitiladiganMatn({ ...bosh, juftlash: true })).toBe("");
+  });
+
+  it("goes through the page's t, the server's word never does", () => {
+    expect(eshitiladiganMatn({ ...bosh, natija: { isCorrect: false, richtig: "der Bahnhof" } }, tr)).toBe(
+      "[Deyarli!] [To'g'ri javob:] der Bahnhof",
+    );
+    expect(eshitiladiganMatn({ ...bosh, yuborishXato: true }, tr)).toBe("[Yuborib bo'lmadi. Qayta urinib ko'ring]");
+    expect(eshitiladiganMatn({ ...bosh, juftlash: true, natija: { isCorrect: false, richtig: "" } }, tr)).toBe(
+      `[${JUFT_QAYTADI}]`,
+    );
   });
 });
 
@@ -192,15 +285,11 @@ describe("natijaQatorlari", () => {
   });
 });
 
-// A marking `t`: every text it receives comes back in brackets, filled in.
-const tr = (s: string, p?: Record<string, string | number>) =>
-  `[${s.replace(/\{(\w+)\}/g, (_, k: string) => String(p?.[k]))}]`;
-
 describe("the page's t", () => {
   it("translates the client's words, never the exercise data", () => {
     expect(javobPaneliMatni({ isCorrect: false, richtig: "der Bahnhof" }, tr)).toEqual({
-      sarlavha: "[Noto'g'ri]",
-      izoh: null,
+      sarlavha: "[Deyarli!]",
+      izoh: "[To'g'ri javob:]",
       soz: "der Bahnhof",
     });
     expect(

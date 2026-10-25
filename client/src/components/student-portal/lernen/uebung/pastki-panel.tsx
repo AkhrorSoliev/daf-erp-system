@@ -5,6 +5,17 @@ import { cn } from "@/lib/utils";
 import { CONTENT_INSET, type SidebarMode } from "../../lib/sidebar-store";
 
 /**
+ * The bar's own paint: the plain surface before the check, then a soft green
+ * or the soft amber «almost» (ADR-0128) mixed INTO the surface, so the bar
+ * stays opaque over the question it covers.
+ */
+const FON = {
+  bosh: "bg-surface",
+  togri: "bg-[color-mix(in_srgb,var(--success)_14%,var(--surface-card))]",
+  xato: "bg-[color-mix(in_srgb,var(--amber-500)_16%,var(--surface-card))]",
+} as const;
+
+/**
  * A session's fixed bottom bar: the verdict and «Tekshirish»/«Keyingi».
  *
  * `fixed` takes the bar out of the content column, so on its own it spans the
@@ -16,11 +27,16 @@ import { CONTENT_INSET, type SidebarMode } from "../../lib/sidebar-store";
  *
  * The mode is a prop, not read from `useSidebar` here, so a test can render the
  * wiring for every mode (a server render only ever sees the store's `auto`).
+ * `ohang` is the verdict's tint (`panelOhangi`), `null` before the check.
  */
 export function PastkiPanel({
   sidebarMode,
+  ohang = null,
   children,
-}: React.PropsWithChildren<{ sidebarMode: SidebarMode }>) {
+}: React.PropsWithChildren<{
+  sidebarMode: SidebarMode;
+  ohang?: "togri" | "xato" | null;
+}>) {
   return (
     <div
       className={cn(
@@ -28,7 +44,13 @@ export function PastkiPanel({
         CONTENT_INSET[sidebarMode],
       )}
     >
-      <div className="border-t border-line bg-surface px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+      <div
+        className={cn(
+          "border-t border-line px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3",
+          "transition-colors duration-200 motion-reduce:transition-none in-data-[kam-harakat]:transition-none",
+          FON[ohang ?? "bosh"],
+        )}
+      >
         {children}
       </div>
     </div>

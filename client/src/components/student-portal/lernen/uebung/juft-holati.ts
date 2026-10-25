@@ -10,7 +10,7 @@
  * hisoblanadi.
  *
  * `xato` HOLATI YO'Q (ataylab): xato juft ekranda qolmaydi, darhol
- * ro'yxatdan olib tashlanadi va ikkala tugma yana bo'sh bo'ladi. Qizil
+ * ro'yxatdan olib tashlanadi va ikkala tugma yana bo'sh bo'ladi. Amber
  * chaqnash — vaqtinchalik ko'rinish effekti, komponentning ishi, bu
  * yerdagi holat mashinasining ishi emas.
  */
