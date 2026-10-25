@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { CaretRight } from "@phosphor-icons/react";
-import { moreNavItems } from "@/lib/student-nav-items";
+import { featureEnabled, moreNavItems } from "@/lib/student-nav-items";
+import { useChatEnabled } from "./chat/chat-queries";
 import { Screen, ScreenHeader, FadeIn, ListRow, Avatar } from "./lumio";
 import { LogoutButton } from "./student-logout-button";
 import { useStudentProfile } from "./lib/queries";
@@ -13,6 +14,8 @@ import { useT } from "@/i18n/context";
 export function StudentMoreHub() {
   const t = useT();
   const { data: profile } = useStudentProfile();
+  const features = { chat: useChatEnabled() };
+  const items = moreNavItems.filter((i) => featureEnabled(i, features));
   const name = profile
     ? `${profile.firstName} ${profile.lastName}`.trim()
     : t("Profil");
@@ -40,7 +43,7 @@ export function StudentMoreHub() {
       </FadeIn>
 
       <div className="flex flex-col gap-2.5">
-        {moreNavItems.map((item, i) => {
+        {items.map((item, i) => {
           const Icon = item.icon;
           return (
             <FadeIn key={item.url} index={i + 1}>
@@ -53,7 +56,7 @@ export function StudentMoreHub() {
             </FadeIn>
           );
         })}
-        <FadeIn index={moreNavItems.length + 1}>
+        <FadeIn index={items.length + 1}>
           <LogoutButton variant="row" />
         </FadeIn>
       </div>

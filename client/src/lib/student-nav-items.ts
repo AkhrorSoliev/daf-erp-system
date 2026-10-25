@@ -9,6 +9,7 @@ import {
   Info,
   Radio,
   GraduationCap,
+  ChatCircleDots,
   type Icon,
 } from "@/components/student-portal/lumio/icon";
 import type { LumioTone } from "@/components/student-portal/lumio/tones";
@@ -31,6 +32,22 @@ export interface StudentNavItem {
   slot: "tab" | "more" | "both" | "help";
   /** Accent tone for the More-hub icon tile. */
   tone?: LumioTone;
+  /**
+   * The item exists only while this company switch is on. The rail and the
+   * "Ko'proq" hub drop it through `featureEnabled`; the bottom nav has no
+   * feature items.
+   */
+  feature?: "chat";
+}
+
+/** Which optional features are on for this student's company. */
+export type NavFeatures = Record<NonNullable<StudentNavItem["feature"]>, boolean>;
+
+export function featureEnabled(
+  item: StudentNavItem,
+  features: NavFeatures,
+): boolean {
+  return item.feature === undefined || features[item.feature];
 }
 
 // Single source of truth for portal navigation. The floating bottom nav
@@ -85,6 +102,14 @@ export const studentNavItems: StudentNavItem[] = [
     icon: Radio,
     slot: "more",
     tone: "coral",
+  },
+  {
+    title: msg("Chat"),
+    url: "/portal/chat",
+    icon: ChatCircleDots,
+    slot: "more",
+    tone: "sky",
+    feature: "chat",
   },
   {
     title: msg("Sozlamalar"),
@@ -177,4 +202,14 @@ export function isExerciseSessionRoute(pathname: string): boolean {
     /^\/portal\/lernen\/lessons\/[^/]+\/?$/.test(pathname) ||
     /^\/portal\/lernen\/wiederholung\/?$/.test(pathname)
   );
+}
+
+/**
+ * An open chat thread (`/portal/chat/<id>`) owns the bottom edge with its
+ * composer, like a lesson does: no bottom nav and no radio dock. The list,
+ * `/portal/chat/new` and `/portal/chat/settings` keep the normal shell.
+ */
+export function isChatThreadRoute(pathname: string): boolean {
+  const m = /^\/portal\/chat\/([^/]+)\/?$/.exec(pathname);
+  return m !== null && m[1] !== "new" && m[1] !== "settings";
 }
