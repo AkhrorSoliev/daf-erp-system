@@ -703,7 +703,7 @@ Skeleton implementatsiya mavjud (`uzum.service.ts`).
 - [x] Payme integratsiya (Merchant API)
 - [x] Click integratsiya (SHOP-API)
 - [ ] Uzum integratsiya
-- [ ] `providerFee` ni P&L hisobotiga kiritish
+- [x] `providerFee` ni P&L hisobotiga kiritish (ADR-0130: komissiya sof foydadan ayriladi)
 - [ ] Check/kvitansiya chiqarish tizimi
 - [ ] Shartnoma PDF generatsiya
 - [ ] Filial bo'yicha alohida balans hisobi
