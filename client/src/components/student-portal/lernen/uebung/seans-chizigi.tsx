@@ -20,15 +20,19 @@ export function SeansChizigi({
   tugatilgan,
   jami,
   className,
+  "aria-labelledby": ariaLabelledby,
 }: {
   tugatilgan: number;
   jami: number;
   className?: string;
+  /** The id of the element that names the bar (the «3/12» count beside it). */
+  "aria-labelledby"?: string;
 }) {
   const foiz = chiziqFoizi(tugatilgan, jami);
   return (
     <div
       role="progressbar"
+      aria-labelledby={ariaLabelledby}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(foiz)}

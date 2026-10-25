@@ -62,7 +62,7 @@ export function Tanlash({ options, tanlangan, onTanla, natija, kutilmoqda = fals
               "border-line bg-surface text-ink-800",
               natija == null && !kutilmoqda && "active:translate-y-[3px]",
               bosilgan && !natija && "border-coral-500 bg-coral-500/10",
-              togri && "border-success bg-success/10 text-success",
+              togri && "border-success bg-success/10 text-artikel-das",
               xatoTanlov && XATO_SINFI,
               (natija != null || kutilmoqda) && "cursor-default",
             )}

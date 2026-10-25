@@ -13,7 +13,12 @@ describe("tema reyestri", () => {
     }
   });
   it("draws the default for a look that is not built yet", () => {
-    for (const id of LERNEN_TEMA_IDLARI) expect(temaTop(id).TugunBelgisi).toBeTruthy();
+    for (const id of LERNEN_TEMA_IDLARI) {
+      const tema = temaTop(id);
+      expect(tema.TugunBelgisi, `${id}: TugunBelgisi`).toBeTruthy();
+      expect(tema.MukofotFoni, `${id}: MukofotFoni`).toBeTruthy();
+      expect(tema.UnitLavha, `${id}: UnitLavha`).toBeTruthy();
+    }
     expect(temaTop("alp").id).toBe("toza");
   });
 });

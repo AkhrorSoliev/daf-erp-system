@@ -1,14 +1,16 @@
 "use client";
 
+import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
 import { cn } from "@/lib/utils";
 import { Button, Card, FadeIn } from "../../lumio";
 import { useKamHarakat } from "../harakat/use-kam-harakat";
+import { ovozChal } from "../ovoz/ovoz";
 import type { SeansXato } from "../seans-navbat";
 import { useLernenTema } from "../tema/use-lernen-tema";
 import type { SeansNatijasi } from "../types";
-import { natijaHissiyoti } from "./hissiyot";
+import { natijaHissiyoti, natijaSarlavhasi } from "./hissiyot";
 import { KonfetiTuval } from "./konfeti-tuval";
 import { natijaQatorlari, xatoYorligi } from "./natija-xabari";
 import { NatijaSahna } from "./natija-sahna";
@@ -157,6 +159,17 @@ export function NatijaEkrani({
   const korinish = sinov ? sinovKorinishi(sinov, t) : null;
   const hissiyot = natijaHissiyoti(sinov);
 
+  // The reward sound plays ONCE per result screen. The guard lives here, outside the theme's
+  // `MukofotFoni` boundary: were that component's type ever to change, `NatijaSahna` would
+  // remount and a guard inside it would play the sound twice. The ref also outlives React
+  // StrictMode's second effect run; a final test that turns out passed later flips `bayram`.
+  const chalindi = React.useRef(false);
+  React.useEffect(() => {
+    if (!hissiyot.bayram || chalindi.current) return;
+    chalindi.current = true;
+    ovozChal("mukofot");
+  }, [hissiyot.bayram]);
+
   const qator = natijaQatorlari(natija, t);
   // Points and the streak are the scene's cards now; these lines are the rest.
   const yutuqlarBormi =
@@ -177,7 +190,7 @@ export function NatijaEkrani({
             ball={natija?.punkte ?? null}
             serie={natija?.serie ?? null}
             hissiyot={hissiyot}
-            takrorlash={takrorlash}
+            sarlavha={natijaSarlavhasi(sinov, takrorlash)}
           />
         </tema.MukofotFoni>
 

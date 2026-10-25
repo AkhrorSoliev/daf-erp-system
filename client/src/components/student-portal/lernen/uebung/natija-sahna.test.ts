@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { NatijaSahna, type NatijaSahnaProps } from "./natija-sahna";
+import { NatijaSahna, ballMatni, type NatijaSahnaProps } from "./natija-sahna";
 
 const asos: NatijaSahnaProps = {
   togri: 12,
@@ -24,7 +24,15 @@ describe("<NatijaSahna />", () => {
   });
 
   it("a review says so", () => {
-    expect(matn(render({ takrorlash: true }))).toContain("Takrorlash tugadi!");
+    expect(matn(render({ sarlavha: "takrorlash" }))).toContain("Takrorlash tugadi!");
+  });
+
+  // A failed or pending final test must not read as success («Lektion geschafft!»).
+  it("a neutral heading says «Natija», not that the lesson is done", () => {
+    const t = matn(render({ sarlavha: "neytral" }));
+    expect(t).toContain("Natija");
+    expect(t).not.toContain("Dars tugadi!");
+    expect(t).toContain("12 / 15 · 1:05");
   });
 
   it("shows points, accuracy and the streak as three cards", () => {
@@ -69,8 +77,52 @@ describe("<NatijaSahna />", () => {
     expect(html).not.toContain("bg-coral-500");
   });
 
+  // 11px caps over a card that is 77 px wide at 360 and 64 px at 320 (the shell, the page and the
+  // reward background take 48 px a side): German «GENAUIGKEIT» was 78 px and clipped. Below `sm`
+  // the caption is 10 px with normal tracking and 2 px padding (68 px); at 320 it wraps, never clips.
+  it("sets the captions so no word clips on a narrow phone", () => {
+    const html = render({ ball: 20, serie: 4 });
+    const klasslar = [...html.matchAll(/<p class="(bg-coral-700[^"]*)"/g)].map((m) => m[1].split(" "));
+    expect(klasslar).toHaveLength(3);
+    for (const k of klasslar) {
+      for (const sinf of ["px-0.5", "text-[10px]", "tracking-normal", "sm:text-[11px]", "sm:tracking-wide", "break-words", "hyphens-auto"]) {
+        expect(k, sinf).toContain(sinf);
+      }
+      expect(k).not.toContain("tracking-wide");
+      expect(k).not.toContain("text-[11px]");
+      expect(k).not.toContain("px-1");
+    }
+  });
+
+  // The server's 0 points is «0», not «+0»; any gain keeps the plus.
+  it("shows 0 points as 0, without a plus", () => {
+    const t = matn(render({ ball: 0, serie: 4 }));
+    expect(t).toMatch(/Ball 0 /);
+    expect(t).not.toMatch(/\+\d/);
+  });
+
+  it("shows points earned with a plus", () => {
+    expect(matn(render({ ball: 20, serie: 4 }))).toMatch(/Ball \+\d/);
+  });
+
   // The count-up changes every frame; a live region would read each number out.
   it("announces nothing while the points count up", () => {
     expect(render({ ball: 20, serie: 4 })).not.toContain("aria-live");
+  });
+});
+
+describe("ballMatni", () => {
+  it("is a dash until the server answers", () => {
+    expect(ballMatni(null, null)).toBe("—");
+    expect(ballMatni(null, 7)).toBe("—");
+  });
+  it("is a plain 0 when the server says no points, whatever the count-up holds", () => {
+    expect(ballMatni(0, null)).toBe("0");
+    expect(ballMatni(0, 0)).toBe("0");
+  });
+  it("has a plus for points earned, counting up from +0", () => {
+    expect(ballMatni(20, null)).toBe("+0");
+    expect(ballMatni(20, 7)).toBe("+7");
+    expect(ballMatni(20, 20)).toBe("+20");
   });
 });

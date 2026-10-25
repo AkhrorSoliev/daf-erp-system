@@ -35,6 +35,15 @@ describe("<SeansChizigi />", () => {
     expect(html).toContain('aria-valuenow="25"');
   });
 
+  // The bar has no text of its own: the «3/12» count beside it is its name.
+  it("takes its accessible name from the element that holds the count", () => {
+    const named = renderToStaticMarkup(
+      createElement(SeansChizigi, { tugatilgan: 3, jami: 12, "aria-labelledby": "seans-sanoq" }),
+    );
+    expect(named).toContain('aria-labelledby="seans-sanoq"');
+    expect(html).not.toContain("aria-labelledby");
+  });
+
   it("eases with a small overshoot, and jumps instead under reduced motion or the device switch", () => {
     expect(html).toContain("ease-[cubic-bezier(.3,1.2,.4,1)]");
     expect(html).toContain("motion-reduce:transition-none");

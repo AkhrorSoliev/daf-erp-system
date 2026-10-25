@@ -30,6 +30,23 @@ export function natijaHissiyoti(sinov: SinovHolati | null | undefined): NatijaHi
   return sinov.natija.bestanden ? { bayram: true, dafi: "bayram" } : { bayram: false, dafi: "xato" };
 }
 
+export type NatijaSarlavhasi = "dars" | "takrorlash" | "neytral";
+
+/**
+ * Which heading the result screen wears. A review and an ordinary lesson keep
+ * theirs, and so does a final test the server says was passed. A final test
+ * whose celebration is off (pending, failed, or lost to a request error) must
+ * not read as success, so its heading is neutral: «Lektion geschafft!» next to
+ * «Noch nicht bestanden» would contradict itself.
+ */
+export function natijaSarlavhasi(
+  sinov: SinovHolati | null | undefined,
+  takrorlash: boolean,
+): NatijaSarlavhasi {
+  if (takrorlash) return "takrorlash";
+  return natijaHissiyoti(sinov).bayram ? "dars" : "neytral";
+}
+
 /** The result card's accuracy: whole percent of right answers, 0 for an empty session. */
 export function aniqlikFoizi(togri: number, jami: number): number {
   return jami > 0 ? Math.round((togri / jami) * 100) : 0;

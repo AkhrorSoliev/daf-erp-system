@@ -47,7 +47,7 @@ import {
   type JonliJuft,
 } from "./juft-holati";
 import { harakat, koersatma } from "./koersatma";
-import { javobPaneliMatni } from "./natija-xabari";
+import { eshitiladiganMatn, juftPaneliMatni, yuborishXatoMatni } from "./natija-xabari";
 import { OvozTugmasi } from "./ovoz-tugmasi";
 import { PastkiPanel } from "./pastki-panel";
 import { panelOhangi } from "./hissiyot";
@@ -159,7 +159,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
   // (`onJuft`, pastda). `yigilgan` bu ikki format uchun ISHLATILMAYDI.
   const [juftlar, setJuftlar] = React.useState<JonliJuft[]>(boshlaJuftlar());
   // Endigina xato bo'lgan (shu sabab `juftlar`dan olib tashlangan)
-  // juftlar — qisqa vaqt qizil ko'rsatish uchun (`Juftlash`ga
+  // juftlar — qisqa vaqt amber ko'rsatish uchun (`Juftlash`ga
   // `xatoIdxlar` sifatida uzatiladi).
   const [xatoIdxlar, setXatoIdxlar] = React.useState<
     { chapIdx: number; ongIdx: number }[]
@@ -360,7 +360,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
 
           juftXatoSoni.current += 1;
 
-          // Harakatni kamaytirishni so'ragan o'quvchi uchun qizil
+          // Harakatni kamaytirishni so'ragan o'quvchi uchun amber
           // chaqnash UMUMAN ko'rsatilmaydi — juft yuqoridagi
           // `juftJavobKeldi` bilan allaqachon ro'yxatdan olib
           // tashlangan, rang shu zahoti (oraliq holatsiz) "bo'sh"ga
@@ -855,20 +855,11 @@ export function SeansEkrani(props: SeansEkraniProps) {
   // The instruction is the client's own text (`msg()` in `koersatma.ts`).
   const korsatma = koersatma(frage.format);
   // What a screen reader hears after a check: the words the bottom bar shows
-  // (the same `t()` texts), spoken through the live region below.
-  const paneliMatni =
-    natija && !juftlashRejimi ? javobPaneliMatni(natija, t) : null;
-  const javobEshitiladi = paneliMatni
-    ? [paneliMatni.sarlavha, paneliMatni.izoh, paneliMatni.soz]
-        .filter(Boolean)
-        .join(" ")
-    : natija
-      ? natija.isCorrect
-        ? t("To'g'ri!")
-        : t(
-            "Hammasi to'g'ri! Ammo bu savolda birinchi urinishda xato bo'lgani uchun u keyinroq yana qaytadi.",
-          )
-      : "";
+  // (`natija-xabari.ts` holds the texts both draw), spoken through the live region below.
+  const javobEshitiladi = eshitiladiganMatn(
+    { natija, juftlash: juftlashRejimi, yuborishXato },
+    t,
+  );
 
   return (
     <div
@@ -890,8 +881,10 @@ export function SeansEkrani(props: SeansEkraniProps) {
           tugatilgan={holat.tugatilgan}
           jami={holat.jami}
           className="flex-1"
+          aria-labelledby="seans-sanoq"
         />
-        <span className="text-sm font-bold tabular-nums text-ink-500">
+        {/* The count names the bar; one session per page, so a fixed id is safe. */}
+        <span id="seans-sanoq" className="text-sm font-bold tabular-nums text-ink-500">
           {holat.tugatilgan}/{holat.jami}
         </span>
         {/* Radio dock bu yo'lda chizilmaydi (pastki panel seansniki), shu
@@ -1049,7 +1042,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
             juftlashRejimi ? (
               natija.isCorrect ? (
                 <p className="font-display text-lg font-extrabold text-artikel-das">
-                  {t("To'g'ri!")}
+                  {juftPaneliMatni(true, t)}
                 </p>
               ) : (
                 // Jonli juftlashda bu panel `hammasiTogri` chin bo'lgandan
@@ -1067,9 +1060,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
                 // yuqorida, taxtaning o'zida turibdi.
                 <div className="rounded-2xl bg-tint px-4 py-3">
                   <p className="text-sm font-semibold text-ink-700">
-                    {t(
-                      "Hammasi to'g'ri! Ammo bu savolda birinchi urinishda xato bo'lgani uchun u keyinroq yana qaytadi.",
-                    )}
+                    {juftPaneliMatni(false, t)}
                   </p>
                 </div>
               )
@@ -1078,7 +1069,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
             )
           ) : yuborishXato ? (
             <p className="text-sm font-semibold text-danger">
-              {t("Yuborib bo'lmadi. Qayta urinib ko'ring")}
+              {yuborishXatoMatni(t)}
             </p>
           ) : null}
             </div>

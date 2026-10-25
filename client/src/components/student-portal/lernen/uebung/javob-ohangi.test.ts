@@ -21,6 +21,35 @@ const JAVOB_FAYLLARI = [
   "natija-sahna.tsx",
 ];
 
+// Any colour utility on the danger token (`ring-danger`, `fill-danger` …) or a raw red/rose shade.
+// The network-error line in `seans-ekrani.tsx` is the one deliberate red; that file is not scanned.
+const QIZIL_SINF = /\b(?:bg|text|border|ring|fill|stroke|outline|shadow)-danger\b|-(?:red|rose)-\d+/;
+
+describe("the red guard", () => {
+  it("catches the ways a surface can be painted red", () => {
+    for (const sinf of [
+      "bg-danger",
+      "text-danger",
+      "border-danger/40",
+      "ring-danger",
+      "fill-danger",
+      "stroke-danger",
+      "outline-danger",
+      "shadow-danger/20",
+      "bg-red-500",
+      "text-rose-600",
+      "border-red-300",
+    ]) {
+      expect(QIZIL_SINF.test(`flex ${sinf} p-2`), sinf).toBe(true);
+    }
+  });
+  it("lets the soft miss and the right-answer colours through", () => {
+    for (const sinf of ["border-amber-500", "bg-amber-500/10", "text-artikel-das", "text-artikel-die", "border-success"]) {
+      expect(QIZIL_SINF.test(`flex ${sinf} p-2`), sinf).toBe(false);
+    }
+  });
+});
+
 describe("the soft miss", () => {
   it("is amber, never the danger red", () => {
     for (const sinf of [XATO_SINFI, XATO_FONI, XATO_CHEGARASI, XATO_BELGISI, XATO_SARLAVHASI]) {
@@ -31,7 +60,25 @@ describe("the soft miss", () => {
 
   it.each(JAVOB_FAYLLARI)("%s paints no answer red", (fayl) => {
     const manba = readFileSync(path.join(__dirname, fayl), "utf8");
-    expect(manba).not.toMatch(/\b(?:bg|text|border)-danger\b/);
+    expect(manba).not.toMatch(QIZIL_SINF);
+  });
+});
+
+// The mark beside a missed choice is a filled icon (20–28 px): amber-600 is 2.29:1 on white.
+describe("the missed-choice mark", () => {
+  it("takes amber-700 (3:1 for a graphic), not amber-600", () => {
+    expect(XATO_BELGISI).toContain("amber-700");
+    expect(XATO_BELGISI).not.toContain("amber-600");
+  });
+});
+
+// A right answer's text sits on a wash of its own green: the bright success green
+// is 2.3–2.6:1 there, the deep green of the article colours 4.7:1.
+describe("the right answer's text", () => {
+  it.each(["tanlash.tsx", "yozish.tsx", "yigish.tsx"])("%s draws it in the deep green", (fayl) => {
+    const manba = readFileSync(path.join(__dirname, fayl), "utf8");
+    expect(manba).toContain("text-artikel-das");
+    expect(manba).not.toMatch(/\btext-success\b/);
   });
 });
 

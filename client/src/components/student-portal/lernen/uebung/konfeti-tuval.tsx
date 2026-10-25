@@ -5,7 +5,7 @@ import { kamHarakatHozir } from "../harakat/kam-harakat";
 import { KONFETI_KADRLARI, konfetiQadam, konfetiYarat } from "./konfeti";
 
 /**
- * One burst of confetti over the whole screen, then the canvas is cleared.
+ * One burst of confetti over the whole screen, then the canvas is emptied.
  * Never under less motion (system or the device's «Kam harakat»). A remount —
  * React StrictMode's second effect run included — simply throws a fresh burst;
  * the reward sound is not here, so it cannot repeat with it.
@@ -41,8 +41,13 @@ export function KonfetiTuval() {
         ctx.restore();
       }
       kadr += 1;
-      if (kadr < KONFETI_KADRLARI) id = requestAnimationFrame(chiz);
-      else ctx.clearRect(0, 0, w, h);
+      if (kadr < KONFETI_KADRLARI) {
+        id = requestAnimationFrame(chiz);
+      } else {
+        // Width 0 clears the canvas AND frees its bitmap (full screen at 2x is several MB);
+        // the element stays in the DOM, transparent and inert.
+        tuval.width = 0;
+      }
     };
     id = requestAnimationFrame(chiz);
     return () => cancelAnimationFrame(id);

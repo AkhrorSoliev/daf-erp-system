@@ -55,6 +55,15 @@ describe("<NatijaEkrani /> celebrates only what deserves it (ADR-0128)", () => {
     expect(html).not.toContain("danger");
   });
 
+  // The request, not the student, failed: Dafi stays calm, the card is amber, nothing is thrown.
+  it("a request that failed: Dafi calm, an amber card, no confetti and no red", () => {
+    const html = render({ sinov: { tur: "xato" } });
+    expect(html).toContain('data-holat="tinch"');
+    expect(html).not.toContain("<canvas");
+    expect(html).toContain("bg-amber-500/10");
+    expect(html).not.toContain("danger");
+  });
+
   it("a passed final test celebrates", () => {
     const html = render({ sinov: sinov(true) });
     expect(html).toContain('data-holat="bayram"');
@@ -63,6 +72,27 @@ describe("<NatijaEkrani /> celebrates only what deserves it (ADR-0128)", () => {
 
   it("a review says so", () => {
     expect(render({ takrorlash: true })).toContain("Takrorlash tugadi!");
+  });
+});
+
+// «Lektion geschafft!» next to «Noch nicht bestanden» reads as success: only what is celebrated
+// (an ordinary lesson, a review, a passed final test) says the lesson is done.
+describe("<NatijaEkrani /> heading", () => {
+  const sarlavha = (html: string) => /<h1[^>]*>([^<]*)<\/h1>/.exec(html)?.[1];
+
+  it("an ordinary lesson and a passed final test say the lesson is done", () => {
+    expect(sarlavha(render())).toBe("Dars tugadi!");
+    expect(sarlavha(render({ sinov: sinov(true) }))).toBe("Dars tugadi!");
+  });
+
+  it("a review keeps its own heading", () => {
+    expect(sarlavha(render({ takrorlash: true }))).toBe("Takrorlash tugadi!");
+  });
+
+  it("a final test that is pending, failed or lost to a request error is neutral", () => {
+    for (const s of [{ tur: "kutilmoqda" as const }, sinov(false), { tur: "xato" as const }]) {
+      expect(sarlavha(render({ sinov: s }))).toBe("Natija");
+    }
   });
 });
 
