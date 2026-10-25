@@ -22,6 +22,13 @@ describe("breakdownRows", () => {
     expect(rows.reduce((s, r) => s + r.amount, 0)).toBe(b.revenue);
   });
 
+  it("soliq va komissiyalar qatori qo'shiladi va yig'indi tushumga teng bo'lib qoladi", () => {
+    const rows = breakdownRows({ ...b, taxes: 50, netProfit: 200 });
+    expect(rows.find((r) => r.key === "taxes")).toMatchObject({ amount: 50, kind: "cost" });
+    expect(rows.reduce((s, r) => s + r.amount, 0)).toBe(b.revenue);
+    expect(breakdownRows(b).map((r) => r.key)).not.toContain("taxes");
+  });
+
   it("nol qiymatli qator chizilmaydi", () => {
     const rows = breakdownRows({ ...b, refunds: 0 });
     expect(rows.map((r) => r.key)).not.toContain("refunds");

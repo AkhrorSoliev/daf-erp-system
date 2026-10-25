@@ -91,6 +91,7 @@ export interface MissingRecurringExpense {
 export function missingRecurringExpenses(
   lastMonth: ExpenseRow[],
   thisMonth: ExpenseRow[],
+  opts: { skipTaxes?: boolean } = {},
 ): MissingRecurringExpense[] {
   const sum = (rows: ExpenseRow[]) => {
     const out = new Map<RecurringExpenseKey, { amount: number; day: number }>();
@@ -109,6 +110,8 @@ export function missingRecurringExpenses(
   const order: RecurringExpenseKey[] = ['RENT', 'TAXES', 'UTILITIES'];
   const out: MissingRecurringExpense[] = [];
   for (const key of order) {
+    // Aylanma solig'i avtomatik hisoblanganda o'tgan oy solig'i qayta prognoz qilinmaydi.
+    if (key === 'TAXES' && opts.skipTaxes) continue;
     const l = last.get(key);
     if (!l || l.amount <= 0) continue;
     const missing = l.amount - (now.get(key)?.amount ?? 0);

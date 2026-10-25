@@ -23,6 +23,9 @@ export interface ChartProfitBreakdown {
   adminSalary: number;
   operatingExpenses: number;
   refunds: number;
+  /** Soliq va komissiyalar. Eski keshdagi javobda bo'lmasligi mumkin. */
+  taxes?: number;
+  missingRates?: string[];
   netProfit: number;
 }
 

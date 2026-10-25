@@ -379,7 +379,7 @@ export class TelegramGroupDailyReportService {
     const [
       expectedValue,
       salary,
-      canonicalNet,
+      canonical,
       attribution,
       monthCharges,
       taskLine,
@@ -391,6 +391,9 @@ export class TelegramGroupDailyReportService {
       this.computeMonthCharges(companyId, monthKey, branchIds),
       this.computeTaskLine(companyId, branchIds),
     ]);
+
+    const canonicalNet = canonical?.netProfit ?? null;
+    const canonicalMissingRates = canonical?.missingRates ?? [];
 
     // The printed income line reads the ledger tally (`attribution.total`) while
     // the snapshot keeps the `Payment` aggregate — see `logIncomeBasisDrift`.
@@ -497,6 +500,7 @@ export class TelegramGroupDailyReportService {
       mtdCashNet,
       attribution,
       canonicalNet,
+      canonicalMissingRates,
       expectedValue,
       monthCharges,
       salary,
@@ -802,7 +806,7 @@ export class TelegramGroupDailyReportService {
     companyId: number,
     month: string,
     branchIds: ReportBranchIds,
-  ): Promise<number | null> {
+  ): Promise<{ netProfit: number; missingRates: string[] } | null> {
     try {
       const caller = await this.prisma.user.findFirst({
         where: {
@@ -820,7 +824,7 @@ export class TelegramGroupDailyReportService {
         branchIds,
         performedById: caller.id,
       });
-      return np.netProfit;
+      return { netProfit: np.netProfit, missingRates: np.taxes.missingRates };
     } catch (e) {
       this.logger.warn(
         `Canonical net profit failed for company ${companyId} (${month}): ${e}`,
@@ -952,6 +956,8 @@ export interface DailyReportData {
   mtdCashNet: number;
   attribution: IncomeAttribution | null;
   canonicalNet: number | null;
+  /** Kiritilmagan soliq/komissiya stavkalari — bo'sh bo'lmasa «Sof foyda» to'liq emas. */
+  canonicalMissingRates: string[];
   expectedValue: number | null;
   monthCharges: MonthCharges | null;
   salary: SalaryTopUp | null;

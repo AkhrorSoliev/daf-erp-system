@@ -60,6 +60,7 @@ describe("profitLines", () => {
     staff: { total: 13_410_000 },
     expenses: { total: 12_420_000 },
     refunds: 450_000,
+    taxes: { providerFees: 0, employerSocialTax: 0, turnoverTax: 0, bankFees: 0, total: 0, missingRates: [] },
   };
 
   it("adds up to the net profit, in the dialog's order", () => {
@@ -83,6 +84,20 @@ describe("profitLines", () => {
     expect(profitLines({ ...composition, withdrawals: undefined }).map((l) => l.label)).not.toContain(
       "Balansdan yechib olingan",
     );
+  });
+
+  it("adds the four tax lines after refunds, each only when it is not 0", () => {
+    const taxes = { providerFees: 100, employerSocialTax: 200, turnoverTax: 300, bankFees: 40, total: 640, missingRates: [] };
+    const lines = profitLines({ ...composition, taxes });
+    expect(lines.slice(-4)).toEqual([
+      { label: "To'lov komissiyasi", amount: -100 },
+      { label: "Ijtimoiy soliq", amount: -200 },
+      { label: "Aylanma solig'i", amount: -300 },
+      { label: "Bank xarajati", amount: -40 },
+    ]);
+    const some = profitLines({ ...composition, taxes: { ...taxes, providerFees: 0, bankFees: 0, total: 500 } });
+    expect(some.map((l) => l.label)).not.toContain("To'lov komissiyasi");
+    expect(some.map((l) => l.label)).toContain("Aylanma solig'i");
   });
 
   it("never prints «-0», for som(-0) or a zero leg of the equation", () => {

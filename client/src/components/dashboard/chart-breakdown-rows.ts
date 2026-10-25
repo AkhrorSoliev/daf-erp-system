@@ -2,7 +2,7 @@ import { msg } from "@/i18n/msg";
 import type { ChartProfitBreakdown } from "./dashboard-charts-types";
 
 export interface BreakdownRow {
-  key: "teacherSalary" | "adminSalary" | "operatingExpenses" | "refunds" | "netProfit";
+  key: "teacherSalary" | "adminSalary" | "operatingExpenses" | "refunds" | "taxes" | "netProfit";
   label: string;
   amount: number;
   /** Tushumga nisbatan ulush, 0–100. */
@@ -35,6 +35,7 @@ export function breakdownRows(b: ChartProfitBreakdown): BreakdownRow[] {
     { key: "adminSalary", label: msg("Xodim oyligi"), amount: b.adminSalary, pct: pct(b.adminSalary), kind: "cost" },
     { key: "operatingExpenses", label: msg("Operatsion xarajat"), amount: b.operatingExpenses, pct: pct(b.operatingExpenses), kind: "cost" },
     { key: "refunds", label: msg("Qaytarishlar"), amount: b.refunds, pct: pct(b.refunds), kind: "cost" },
+    { key: "taxes", label: msg("Soliq va komissiyalar"), amount: b.taxes ?? 0, pct: pct(b.taxes ?? 0), kind: "cost" },
     { key: "netProfit", label: msg("Qolgani — sof foyda"), amount: b.netProfit, pct: pct(b.netProfit), kind: "profit" },
   ];
 

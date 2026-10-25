@@ -64,10 +64,10 @@ export interface ProfitLine {
 /**
  * «Qanday hisoblandi» as one equation, in order: signed lines that add up to
  * the composition's `netProfit` (the server builds the figure from the same
- * legs). Withdrawals and refunds appear only when they are not 0.
+ * legs). Withdrawals, refunds and each tax line appear only when they are not 0.
  */
 export function profitLines(
-  c: Pick<ProfitComposition, "revenue" | "withdrawals" | "teachers" | "staff" | "expenses" | "refunds">,
+  c: Pick<ProfitComposition, "revenue" | "withdrawals" | "teachers" | "staff" | "expenses" | "refunds" | "taxes">,
   t: Translate = interpolate,
 ): ProfitLine[] {
   const withdrawn = c.withdrawals?.total ?? 0;
@@ -78,5 +78,9 @@ export function profitLines(
     { label: t("Xodimlar oyligi"), amount: -c.staff.total },
     { label: t("Boshqa xarajatlar"), amount: -c.expenses.total },
     ...(c.refunds !== 0 ? [{ label: t("Qaytarilgan pul"), amount: -c.refunds }] : []),
+    ...(c.taxes.providerFees !== 0 ? [{ label: t("To'lov komissiyasi"), amount: -c.taxes.providerFees }] : []),
+    ...(c.taxes.employerSocialTax !== 0 ? [{ label: t("Ijtimoiy soliq"), amount: -c.taxes.employerSocialTax }] : []),
+    ...(c.taxes.turnoverTax !== 0 ? [{ label: t("Aylanma solig'i"), amount: -c.taxes.turnoverTax }] : []),
+    ...(c.taxes.bankFees !== 0 ? [{ label: t("Bank xarajati"), amount: -c.taxes.bankFees }] : []),
   ];
 }

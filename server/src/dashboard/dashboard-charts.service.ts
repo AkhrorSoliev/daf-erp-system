@@ -225,6 +225,8 @@ export class DashboardChartsService {
           adminSalary: np.adminSalary,
           operatingExpenses: np.operatingExpenses,
           refunds: np.refunds,
+          taxes: np.taxes.total,
+          missingRates: np.taxes.missingRates,
           netProfit: np.netProfit,
         }
       : null;

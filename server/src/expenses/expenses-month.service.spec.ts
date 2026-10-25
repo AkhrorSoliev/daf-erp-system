@@ -3,6 +3,7 @@ import { BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { utcMidnightFromDateStr } from '../common/date/tashkent';
 import { ExpensesMonthService } from './expenses-month.service';
+import { TaxSettingsService } from '../tax/tax-settings.service';
 import type { MonthExpenseRow } from './expenses-month';
 
 const NOW = new Date('2026-10-20T07:00:00Z');
@@ -59,6 +60,7 @@ describe('ExpensesMonthService.monthSummary (spec B6 §5.2)', () => {
     branch: { findMany: jest.fn() },
     user: { findMany: jest.fn() },
   };
+  const taxSettings = { loadRates: jest.fn() };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -69,6 +71,10 @@ describe('ExpensesMonthService.monthSummary (spec B6 §5.2)', () => {
         ),
     );
     prisma.branch.findMany.mockResolvedValue(BRANCHES);
+    taxSettings.loadRates.mockResolvedValue({
+      rates: { 'tax.turnoverPercent': [] },
+      bankTiers: [],
+    });
     prisma.user.findMany.mockResolvedValue([
       { id: 10002, firstName: 'Ism', lastName: 'Aliyev' },
       { id: 10001, firstName: 'Ism', lastName: 'Karimov' },
@@ -77,6 +83,7 @@ describe('ExpensesMonthService.monthSummary (spec B6 §5.2)', () => {
       providers: [
         ExpensesMonthService,
         { provide: PrismaService, useValue: prisma },
+        { provide: TaxSettingsService, useValue: taxSettings },
       ],
     }).compile();
     service = moduleRef.get(ExpensesMonthService);
@@ -233,6 +240,16 @@ describe('ExpensesMonthService.monthSummary (spec B6 §5.2)', () => {
     const s = await service.monthSummary(1, null, undefined, NOW);
     expect(s.emptyBranches).toEqual([]);
     expect(s.multiBranch).toBe(false);
+  });
+
+  it('drops the tax gap once the turnover tax is automatic', async () => {
+    taxSettings.loadRates.mockResolvedValue({
+      rates: { 'tax.turnoverPercent': [{ fromMonth: '2026-01', value: 4 }] },
+      bankTiers: [],
+    });
+    const s = await service.monthSummary(1, null, undefined, NOW);
+    expect(s.missing.some((m) => m.key === 'TAXES')).toBe(false);
+    expect(s.missing.some((m) => m.key === 'UTILITIES')).toBe(true);
   });
 
   it('a deleted or inactive branch gets no missing row, an active one still does', async () => {

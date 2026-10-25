@@ -1969,6 +1969,13 @@ const en: Dictionary = {
   "Xodimlar oyligi": "Staff pay",
   "Boshqa xarajatlar": "Other expenses",
   "Qaytarilgan pul": "Refunded money",
+  "To'lov komissiyasi": "Payment fee",
+  "Ijtimoiy soliq": "Social tax",
+  "Aylanma solig'i": "Turnover tax",
+  "Bank xarajati": "Bank fees",
+  "Soliq va komissiyalar": "Taxes and fees",
+  "Hisob to'liq emas: {n} ta stavka kiritilmagan": "Calculation incomplete: {n} rates not entered",
+  "Stavkalarni kiritish →": "Enter the rates →",
   // Payments — list («To'lovlar»)
   "← Umumiy ma'lumotlar": "← Overview",
   "Excel": "Excel",

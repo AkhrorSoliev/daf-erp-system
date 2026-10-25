@@ -1969,6 +1969,13 @@ const ru: Dictionary = {
   "Xodimlar oyligi": "Зарплата сотрудников",
   "Boshqa xarajatlar": "Прочие расходы",
   "Qaytarilgan pul": "Возвращённые деньги",
+  "To'lov komissiyasi": "Комиссия за платёж",
+  "Ijtimoiy soliq": "Социальный налог",
+  "Aylanma solig'i": "Налог с оборота",
+  "Bank xarajati": "Банковские расходы",
+  "Soliq va komissiyalar": "Налоги и комиссии",
+  "Hisob to'liq emas: {n} ta stavka kiritilmagan": "Расчёт неполный: не введено ставок — {n}",
+  "Stavkalarni kiritish →": "Ввести ставки →",
   // Payments — list («To'lovlar»)
   "← Umumiy ma'lumotlar": "← Обзор",
   "Excel": "Excel",

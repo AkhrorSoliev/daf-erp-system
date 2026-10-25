@@ -1969,6 +1969,13 @@ const de: Dictionary = {
   "Xodimlar oyligi": "Gehalt der Mitarbeiter",
   "Boshqa xarajatlar": "Sonstige Ausgaben",
   "Qaytarilgan pul": "Rückerstattetes Geld",
+  "To'lov komissiyasi": "Zahlungsgebühr",
+  "Ijtimoiy soliq": "Sozialsteuer",
+  "Aylanma solig'i": "Steuer auf den Umsatz",
+  "Bank xarajati": "Bankgebühren",
+  "Soliq va komissiyalar": "Steuern und Gebühren",
+  "Hisob to'liq emas: {n} ta stavka kiritilmagan": "Berechnung unvollständig: {n} Sätze fehlen",
+  "Stavkalarni kiritish →": "Sätze eingeben →",
   // Payments — list («To'lovlar»)
   "← Umumiy ma'lumotlar": "← Übersicht",
   "Excel": "Excel",

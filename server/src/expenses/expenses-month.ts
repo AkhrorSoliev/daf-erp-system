@@ -175,6 +175,7 @@ export function missingByBranch(
   lastMonth: readonly MonthExpenseRow[],
   thisMonth: readonly MonthExpenseRow[],
   branchNames: ReadonlyMap<number, string>,
+  opts: { skipTaxes?: boolean } = {},
 ): MissingRow[] {
   const name = (id: number) => branchNames.get(id) ?? '';
   const ids = [...new Set(lastMonth.map((r) => r.branchId))].sort(
@@ -184,6 +185,7 @@ export function missingByBranch(
     missingRecurringExpenses(
       lastMonth.filter((r) => r.branchId === branchId).map(toExpenseRow),
       thisMonth.filter((r) => r.branchId === branchId).map(toExpenseRow),
+      opts,
     ).map((m) => ({
       key: m.key,
       branchId,

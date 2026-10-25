@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { TaxSettingsService } from '../tax/tax-settings.service';
+import { rateForMonth } from '../tax/tax-rates';
 import { PrismaService } from '../prisma/prisma.service';
 import { addMonthsToMonthKey, tashkentMonthKey } from '../common/date/tashkent';
 import {
@@ -25,7 +27,10 @@ import {
  */
 @Injectable()
 export class ExpensesMonthService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private taxSettings: TaxSettingsService,
+  ) {}
 
   async monthSummary(
     companyId: number,
@@ -35,6 +40,13 @@ export class ExpensesMonthService {
   ): Promise<MonthSummary> {
     const month = parseExpenseMonth(oy, now);
     const isCurrentMonth = month === tashkentMonthKey(now);
+    // Aylanma solig'i stavkasi kuchda bo'lsa soliq avtomatik hisoblanadi — «yozilmagan» demaymiz.
+    const book = isCurrentMonth
+      ? await this.taxSettings.loadRates(companyId)
+      : null;
+    const skipTaxes =
+      book !== null &&
+      rateForMonth(book.rates['tax.turnoverPercent'], month) !== null;
     const [thisMonth, lastMonth, branches] = await Promise.all([
       this.loadRows(companyId, branchIds, month),
       this.loadRows(companyId, branchIds, addMonthsToMonthKey(month, -1)),
@@ -71,7 +83,7 @@ export class ExpensesMonthService {
       lastMonthTotal: summarize(lastMonth).total,
       byCategory: buildCategoryRows(thisMonth, lastMonth, isCurrentMonth),
       missing: isCurrentMonth
-        ? missingByBranch(lastMonth, thisMonth, names).filter(
+        ? missingByBranch(lastMonth, thisMonth, names, { skipTaxes }).filter(
             (m) => !closed.has(m.branchId),
           )
         : [],

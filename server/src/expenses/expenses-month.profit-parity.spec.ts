@@ -82,12 +82,12 @@ const lastDay = (month: string) =>
 
 async function both(rows: Row[], month: string, branchIds: ReportBranchIds) {
   const prisma = fakePrisma(rows);
-  const page = await new ExpensesMonthService(prisma).monthSummary(
-    1,
-    branchIds,
-    month,
-    NOW,
-  );
+  const page = await new ExpensesMonthService(prisma, {
+    loadRates: async () => ({
+      rates: { 'tax.turnoverPercent': [] },
+      bankTiers: [],
+    }),
+  } as never).monthSummary(1, branchIds, month, NOW);
   const pl = await new ReportsProfitLossService(prisma).getProfitLoss(1, {
     branchIds,
     startDate: `${month}-01`,

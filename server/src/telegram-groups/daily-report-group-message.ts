@@ -167,6 +167,9 @@ export function renderGroupMessage(d: DailyReportData): string {
   }
   if (d.canonicalNet !== null) {
     lines.push(`• Sof foyda: <b>${formatSignedSum(d.canonicalNet)}</b>`);
+    if (d.canonicalMissingRates.length > 0) {
+      lines.push("⚠️ Hisob to'liq emas: soliq stavkasi kiritilmagan");
+    }
     lines.push(
       `• Kassa harakati (oyliksiz): <b>${formatSignedSum(d.mtdCashNet)}</b>`,
     );

@@ -6,6 +6,7 @@ import { ReportsService } from '../reports/reports.service';
 import type { DebtSplit } from '../reports/debt-split';
 import { TelegramGroupDailyReportService } from './telegram-group-daily-report.service';
 import { formatNumber, formatSum } from './utils/format.util';
+import { emptyTaxCosts } from '../tax/tax-costs';
 
 /**
  * State the fake Prisma reads from. Each field maps to one metric so a test
@@ -273,7 +274,9 @@ function splitOf(
 /** A `ReportsService` that answers the split a test wants and little else. */
 function reportsWithDebt(split: DebtSplit) {
   return {
-    getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 12_345_678 }),
+    getMonthlyNetProfit: jest
+      .fn()
+      .mockResolvedValue({ netProfit: 12_345_678, taxes: emptyTaxCosts() }),
     getDebtSplit: jest.fn().mockResolvedValue(split),
   };
 }
@@ -292,9 +295,10 @@ async function buildService(prisma: any, salary: any, reports?: any) {
         useValue: {
           getDebtSplit: jest.fn().mockResolvedValue(DEBT_SPLIT),
           ...(reports ?? {
-            getMonthlyNetProfit: jest
-              .fn()
-              .mockResolvedValue({ netProfit: 12_345_678 }),
+            getMonthlyNetProfit: jest.fn().mockResolvedValue({
+              netProfit: 12_345_678,
+              taxes: emptyTaxCosts(),
+            }),
           }),
         },
       },
@@ -357,6 +361,7 @@ describe('TelegramGroupDailyReportService', () => {
     // Headline is the canonical figure from the mock; the cash reading moved to
     // its own honestly-named line.
     expect(message).toContain("• Sof foyda: <b>+12 345 678 so'm</b>");
+    expect(message).not.toContain("Hisob to'liq emas");
     expect(message).toContain(
       "• Kassa harakati (oyliksiz): <b>+185 000 000 so'm</b>",
     );
@@ -426,7 +431,9 @@ describe('TelegramGroupDailyReportService', () => {
       .fn()
       .mockResolvedValue({ expectedValue: 155_765_411 });
     const service = await buildService(makePrisma(state), makeSalary(state), {
-      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getMonthlyNetProfit: jest
+        .fn()
+        .mockResolvedValue({ netProfit: 1, taxes: emptyTaxCosts() }),
       getIncomeMonthAttribution,
       getMonthlyExpectation,
     });
@@ -465,7 +472,9 @@ describe('TelegramGroupDailyReportService', () => {
   it('drops each block rather than inventing a figure when it fails', async () => {
     const state = defaultState();
     const service = await buildService(makePrisma(state), makeSalary(state), {
-      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getMonthlyNetProfit: jest
+        .fn()
+        .mockResolvedValue({ netProfit: 1, taxes: emptyTaxCosts() }),
       getIncomeMonthAttribution: jest.fn().mockRejectedValue(new Error('boom')),
       getMonthlyExpectation: jest.fn().mockRejectedValue(new Error('boom')),
     });
@@ -486,7 +495,9 @@ describe('TelegramGroupDailyReportService', () => {
     // computed from a missing numerator would be a fabricated figure.
     const state = defaultState();
     const service = await buildService(makePrisma(state), makeSalary(state), {
-      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getMonthlyNetProfit: jest
+        .fn()
+        .mockResolvedValue({ netProfit: 1, taxes: emptyTaxCosts() }),
       getIncomeMonthAttribution: jest.fn().mockRejectedValue(new Error('boom')),
       getMonthlyExpectation: jest
         .fn()
@@ -523,7 +534,9 @@ describe('TelegramGroupDailyReportService', () => {
   it('breaks the month income into this-month vs each older month', async () => {
     const state = defaultState();
     const service = await buildService(makePrisma(state), makeSalary(state), {
-      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getMonthlyNetProfit: jest
+        .fn()
+        .mockResolvedValue({ netProfit: 1, taxes: emptyTaxCosts() }),
       getIncomeMonthAttribution: jest.fn().mockResolvedValue(fullAttribution()),
       getMonthlyExpectation: jest.fn().mockResolvedValue({ expectedValue: 1 }),
     });
@@ -549,7 +562,9 @@ describe('TelegramGroupDailyReportService', () => {
   it('adds the split up to the printed income figure', async () => {
     const state = defaultState();
     const service = await buildService(makePrisma(state), makeSalary(state), {
-      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getMonthlyNetProfit: jest
+        .fn()
+        .mockResolvedValue({ netProfit: 1, taxes: emptyTaxCosts() }),
       getIncomeMonthAttribution: jest
         .fn()
         .mockResolvedValue(
@@ -582,7 +597,9 @@ describe('TelegramGroupDailyReportService', () => {
   it('prints the advance between this month and old debt, the three shares summing to 100', async () => {
     const state = defaultState();
     const service = await buildService(makePrisma(state), makeSalary(state), {
-      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getMonthlyNetProfit: jest
+        .fn()
+        .mockResolvedValue({ netProfit: 1, taxes: emptyTaxCosts() }),
       getIncomeMonthAttribution: jest
         .fn()
         .mockResolvedValue(
@@ -607,7 +624,9 @@ describe('TelegramGroupDailyReportService', () => {
   it('says there is no old debt in one line when none was settled', async () => {
     const state = defaultState();
     const service = await buildService(makePrisma(state), makeSalary(state), {
-      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getMonthlyNetProfit: jest
+        .fn()
+        .mockResolvedValue({ netProfit: 1, taxes: emptyTaxCosts() }),
       getIncomeMonthAttribution: jest
         .fn()
         .mockResolvedValue(
@@ -631,7 +650,9 @@ describe('TelegramGroupDailyReportService', () => {
     // returned null here and would have dropped the split with it.
     const state = defaultState();
     const service = await buildService(makePrisma(state), makeSalary(state), {
-      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getMonthlyNetProfit: jest
+        .fn()
+        .mockResolvedValue({ netProfit: 1, taxes: emptyTaxCosts() }),
       getIncomeMonthAttribution: jest
         .fn()
         .mockResolvedValue(
@@ -657,7 +678,9 @@ describe('TelegramGroupDailyReportService', () => {
   it('keeps the income line on its old basis when attribution fails', async () => {
     const state = defaultState();
     const service = await buildService(makePrisma(state), makeSalary(state), {
-      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getMonthlyNetProfit: jest
+        .fn()
+        .mockResolvedValue({ netProfit: 1, taxes: emptyTaxCosts() }),
       getIncomeMonthAttribution: jest.fn().mockRejectedValue(new Error('boom')),
       getMonthlyExpectation: jest.fn().mockResolvedValue({ expectedValue: 1 }),
     });
@@ -1004,6 +1027,22 @@ describe('TelegramGroupDailyReportService — canonical Sof foyda', () => {
     expect(message).toContain('• Kassa harakati (oyliksiz):');
   });
 
+  it('warns under Sof foyda when a tax or fee rate is not entered', async () => {
+    const state = defaultState();
+    const svc = await buildService(makePrisma(state), makeSalary(state), {
+      getMonthlyNetProfit: jest.fn().mockResolvedValue({
+        netProfit: 12_345_678,
+        taxes: { ...emptyTaxCosts(), missingRates: ['fees.qr'] },
+      }),
+    });
+
+    const { message } = await svc.build(1, null);
+
+    expect(message).toMatch(
+      /• Sof foyda: <b>[^\n]*<\/b>\n⚠️ Hisob to'liq emas: soliq stavkasi kiritilmagan\n/,
+    );
+  });
+
   it('asks for the Tashkent calendar month of today', async () => {
     const state = defaultState();
     const getMonthlyNetProfit = jest
@@ -1054,7 +1093,9 @@ describe('TelegramGroupDailyReportService — «Bu oy hisoblandi» (ADR-0058)', 
    */
   function reportsMock(overrides: Record<string, unknown> = {}) {
     return {
-      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getMonthlyNetProfit: jest
+        .fn()
+        .mockResolvedValue({ netProfit: 1, taxes: emptyTaxCosts() }),
       getIncomeMonthAttribution: jest.fn().mockResolvedValue({
         total: 142_000_000,
         currentMonth: 142_000_000,
