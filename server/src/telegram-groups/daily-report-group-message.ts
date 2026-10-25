@@ -1,8 +1,4 @@
 import { isMonthlyBillingMonth } from '../reports/month-charges';
-
-/** «Sof foyda» ostidagi ogohlantirish — 21:00 hisobot va rm:cfin kartasi bitta matn ishlatadi. */
-export const MISSING_RATES_WARNING =
-  "⚠️ Hisob to'liq emas: soliq stavkasi kiritilmagan";
 import type { DailyReportData } from './telegram-group-daily-report.service';
 import {
   escapeHtml,
@@ -13,6 +9,10 @@ import {
 import { buildDebtSplitLines } from './utils/debt-split-lines.util';
 import { buildIncomeSplitLines } from './utils/income-split.util';
 import { buildMonthChargesLines } from './utils/month-charges-lines.util';
+
+/** «Sof foyda» ostidagi ogohlantirish — 21:00 hisobot va rm:cfin kartasi bitta matn ishlatadi. */
+export const MISSING_RATES_WARNING =
+  "⚠️ Hisob to'liq emas: soliq stavkasi kiritilmagan";
 
 const WEEKDAYS_UZ = [
   'Yakshanba',
