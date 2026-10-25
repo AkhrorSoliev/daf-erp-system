@@ -1,15 +1,17 @@
 "use client";
 
-import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
 import { cn } from "@/lib/utils";
-import { Clock, Fire, Star, Trophy } from "@phosphor-icons/react";
-import { Button, Card, FadeIn, StatChip } from "../../lumio";
-import { kamHarakatHozir } from "../harakat/kam-harakat";
+import { Button, Card, FadeIn } from "../../lumio";
+import { useKamHarakat } from "../harakat/use-kam-harakat";
 import type { SeansXato } from "../seans-navbat";
+import { useLernenTema } from "../tema/use-lernen-tema";
 import type { SeansNatijasi } from "../types";
+import { natijaHissiyoti } from "./hissiyot";
+import { KonfetiTuval } from "./konfeti-tuval";
 import { natijaQatorlari, xatoYorligi } from "./natija-xabari";
+import { NatijaSahna } from "./natija-sahna";
 import { DeWort } from "./de-wort";
 import { sinovKorinishi, type SinovHolati } from "./sinov-natijasi";
 
@@ -26,54 +28,8 @@ export interface NatijaEkraniProps {
   sinov?: SinovHolati | null;
   /** `sinov.tur === "xato"` bo'lganda natijani qayta yuborish. */
   onNatijaQaytaYubor?: () => void;
-}
-
-/** `durationMs` ni `daqiqa:soniya` ko'rinishiga o'tkazadi — masalan 65_000 → "1:05". */
-function vaqtBelgisi(durationMs: number): string {
-  const jamiSoniya = Math.round(durationMs / 1000);
-  const daqiqa = Math.floor(jamiSoniya / 60);
-  const soniya = jamiSoniya % 60;
-  return `${daqiqa}:${String(soniya).padStart(2, "0")}`;
-}
-
-const SANOQ_DAVOMIYLIGI = 600;
-
-/**
- * `maqsad` gacha noldan sanab chiqadigan qiymat — `requestAnimationFrame`
- * bilan, ~600ms. Harakat kamaytirilgan bo'lsa (tizim yoki qurilma kaliti) animatsiya
- * UMUMAN ishlamaydi, oxirgi qiymat darrov ko'rsatiladi: harakatni
- * kamaytirishni so'ragan o'quvchi uchun raqamning o'zi muhim, uning
- * sakrab o'sishi emas.
- */
-function useSanaladiganBall(maqsad: number | null): number | null {
-  const [qiymat, setQiymat] = React.useState<number | null>(null);
-
-  React.useEffect(() => {
-    if (maqsad == null) {
-      setQiymat(null);
-      return;
-    }
-
-    if (kamHarakatHozir() || maqsad === 0) {
-      setQiymat(maqsad);
-      return;
-    }
-
-    const boshi = performance.now();
-    let frameId: number;
-
-    const kadr = (hozir: number) => {
-      const foiz = Math.min(1, (hozir - boshi) / SANOQ_DAVOMIYLIGI);
-      setQiymat(Math.round(foiz * maqsad));
-      if (foiz < 1) {
-        frameId = requestAnimationFrame(kadr);
-      }
-    };
-    frameId = requestAnimationFrame(kadr);
-    return () => cancelAnimationFrame(frameId);
-  }, [maqsad]);
-
-  return qiymat;
+  /** A review session (it belongs to no lesson): the heading says so. */
+  takrorlash?: boolean;
 }
 
 /**
@@ -96,6 +52,8 @@ function useSanaladiganBall(maqsad: number | null): number | null {
  *    `prompt` bo'sh bo'lgani uchun sobit "Eshitish savoli" yorlig'iga
  *    almashtiriladi — Task 4 ko'rik topilmasi, `natija-xabari.ts`ga
  *    qarang).
+ *
+ * The right answer is the one to learn, so it is bold ink, never red (ADR-0128).
  */
 function XatoQatori({ xato }: { xato: SeansXato }) {
   const t = useT();
@@ -123,7 +81,7 @@ function XatoQatori({ xato }: { xato: SeansXato }) {
             className="flex items-center justify-between gap-3 text-sm"
           >
             <span className="text-ink-600">{j.chap}</span>
-            <span className="font-bold text-danger">{j.ong}</span>
+            <span className="font-bold text-ink-900">{j.ong}</span>
           </li>
         ))}
       </ul>
@@ -136,7 +94,7 @@ function XatoQatori({ xato }: { xato: SeansXato }) {
         <span className="font-semibold text-ink-800">
           {xato.titel ?? t("Dialog")}
         </span>
-        <span className="text-sm font-bold text-danger">{xato.richtig}</span>
+        <span className="text-sm font-bold text-ink-900">{xato.richtig}</span>
       </div>
     );
   }
@@ -155,7 +113,7 @@ function XatoQatori({ xato }: { xato: SeansXato }) {
         ) : null}
         <DeWort text={xatoYorligi(xato.format, xato.prompt, t)} />
       </span>
-      <DeWort text={xato.richtig} className="text-sm font-bold text-danger" />
+      <DeWort text={xato.richtig} className="text-sm font-bold text-ink-900" />
     </div>
   );
 }
@@ -168,6 +126,13 @@ function XatoQatori({ xato }: { xato: SeansXato }) {
  *
  * Ball, seriya va o'rinni server `natija` sifatida qaytaradi — bu ekran
  * faqat ko'rsatadi (spec 2026-10-18 §5).
+ *
+ * The top is `NatijaSahna` inside the theme's reward background; whether it
+ * celebrates is `natijaHissiyoti(sinov)` (ADR-0128). `data-kam-harakat` sits
+ * on the OUTER root and the fades on inner elements: the stylesheet's
+ * less-motion rule is a descendant selector. The confetti canvas is a sibling
+ * of the fading box, not inside it (a transformed ancestor would make its
+ * `fixed` box the fade box for the length of the fade).
  */
 export function NatijaEkrani({
   togri,
@@ -179,38 +144,42 @@ export function NatijaEkrani({
   natija,
   sinov,
   onNatijaQaytaYubor,
+  takrorlash = false,
 }: NatijaEkraniProps) {
   const t = useT();
   const router = useRouter();
+  const { tema } = useLernenTema();
+  // Less motion (device switch or system) resolves the entrance fade at once (globals.css).
+  const kam = useKamHarakat();
   const davomHref = unitId
     ? `/portal/lernen/units/${unitId}`
     : "/portal/lernen";
   const korinish = sinov ? sinovKorinishi(sinov, t) : null;
+  const hissiyot = natijaHissiyoti(sinov);
 
   const qator = natijaQatorlari(natija, t);
-  const sanaladiganBall = useSanaladiganBall(qator.ball);
+  // Points and the streak are the scene's cards now; these lines are the rest.
   const yutuqlarBormi =
-    qator.ball != null ||
-    qator.serie != null ||
-    qator.orin != null ||
-    qator.maqsad != null ||
-    qator.nishonlar.length > 0;
+    qator.orin != null || qator.maqsad != null || qator.nishonlar.length > 0;
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col justify-center gap-4 px-4 py-8">
+    <div
+      data-kam-harakat={kam ? "" : undefined}
+      className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col justify-center gap-4 px-4 py-8"
+    >
+      {hissiyot.bayram ? <KonfetiTuval /> : null}
       <FadeIn className="space-y-4">
-        <Card className="space-y-3 text-center">
-          <Trophy size={48} weight="fill" className="mx-auto text-amber-500" />
-          <div>
-            <p className="font-display text-4xl font-bold text-ink-900">
-              {togri} / {jami}
-            </p>
-            <p className="mt-1 flex items-center justify-center gap-1.5 font-semibold text-ink-500">
-              <Clock size={16} weight="bold" />
-              {vaqtBelgisi(durationMs)}
-            </p>
-          </div>
-        </Card>
+        <tema.MukofotFoni bayram={hissiyot.bayram}>
+          <NatijaSahna
+            togri={togri}
+            jami={jami}
+            durationMs={durationMs}
+            ball={natija?.punkte ?? null}
+            serie={natija?.serie ?? null}
+            hissiyot={hissiyot}
+            takrorlash={takrorlash}
+          />
+        </tema.MukofotFoni>
 
         {korinish ? (
           <Card
@@ -219,7 +188,8 @@ export function NatijaEkrani({
             className={cn(
               "space-y-1 text-center",
               korinish.ohang === "muvaffaqiyat" && "bg-success/10",
-              korinish.ohang === "xavf" && "bg-danger/10",
+              // A failed test or a failed request is the soft amber, never a red wall.
+              korinish.ohang === "xavf" && "bg-amber-500/10",
             )}
           >
             <p className="font-display text-xl font-bold text-ink-900">
@@ -230,30 +200,15 @@ export function NatijaEkrani({
         ) : null}
 
         {yutuqlarBormi ? (
-          <Card className="flex flex-wrap items-center justify-center gap-2 text-center">
-            {qator.ball != null && sanaladiganBall != null ? (
-              <StatChip
-                icon={<Star weight="fill" className="text-amber-500" />}
-                value={t("+{n} ball", { n: sanaladiganBall })}
-              />
-            ) : null}
-            {qator.serie != null ? (
-              <StatChip
-                icon={<Fire weight="fill" className="text-coral-500" />}
-                value={t("{n} kun ketma-ket", { n: qator.serie })}
-                label={t("seriya")}
-              />
-            ) : null}
+          <Card className="space-y-1.5 text-center">
             {qator.orin ? (
-              <p className="w-full text-sm font-semibold text-ink-700">
-                {qator.orin}
-              </p>
+              <p className="text-sm font-semibold text-ink-700">{qator.orin}</p>
             ) : null}
             {qator.maqsad ? (
-              <p className="w-full text-sm font-bold text-success">{qator.maqsad}</p>
+              <p className="text-sm font-bold text-success">{qator.maqsad}</p>
             ) : null}
             {qator.nishonlar.map((matn) => (
-              <p key={matn} className="w-full text-sm font-bold text-ink-900">
+              <p key={matn} className="text-sm font-bold text-ink-900">
                 {matn}
               </p>
             ))}

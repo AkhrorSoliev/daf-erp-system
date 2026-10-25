@@ -5222,8 +5222,6 @@ const ru: Dictionary = {
   "Rasm savoli": "Вопрос по картинке",
   "Soat savoli": "Вопрос по часам",
   "Dialog": "Диалог",
-  "+{n} ball": "баллы: +{n}",
-  "seriya": "серия",
   "Hammasi to'g'ri — ajoyib natija!": "Всё верно — отличный результат!",
   "Qaytarib ko'ring · {n}": "На повторение · {n}",
   "Mashqdan chiqish": "Выйти",
@@ -5294,6 +5292,10 @@ const ru: Dictionary = {
   "Kam harakat": "Меньше движения",
   "Ko'rinishni saqlab bo'lmadi, qayta urinib ko'ring": "Не удалось сохранить вид, попробуйте ещё раз",
   "Deyarli!": "Почти!",
+  "Dars tugadi!": "Урок пройден!",
+  "Takrorlash tugadi!": "Повторение пройдено!",
+  "Ball": "Баллы",
+  "Aniqlik": "Точность",
 };
 
 export default ru;

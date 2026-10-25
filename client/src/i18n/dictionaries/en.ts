@@ -5222,8 +5222,6 @@ const en: Dictionary = {
   "Rasm savoli": "Picture question",
   "Soat savoli": "Clock question",
   "Dialog": "Dialogue",
-  "+{n} ball": "Points: +{n}",
-  "seriya": "streak",
   "Hammasi to'g'ri — ajoyib natija!": "All correct — great result!",
   "Qaytarib ko'ring · {n}": "To review · {n}",
   "Mashqdan chiqish": "Exit",
@@ -5294,6 +5292,10 @@ const en: Dictionary = {
   "Kam harakat": "Less motion",
   "Ko'rinishni saqlab bo'lmadi, qayta urinib ko'ring": "Could not save the look, please try again",
   "Deyarli!": "Almost!",
+  "Dars tugadi!": "Lesson complete!",
+  "Takrorlash tugadi!": "Review complete!",
+  "Ball": "Points",
+  "Aniqlik": "Accuracy",
 };
 
 export default en;

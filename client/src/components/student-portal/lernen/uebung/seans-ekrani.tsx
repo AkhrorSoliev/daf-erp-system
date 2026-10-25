@@ -812,6 +812,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
         }
         sinov={sinovHolati}
         onNatijaQaytaYubor={natijaniQaytaYubor}
+        takrorlash={!darsMi}
       />
     );
   }

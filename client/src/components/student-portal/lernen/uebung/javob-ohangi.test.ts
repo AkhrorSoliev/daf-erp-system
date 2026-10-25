@@ -17,6 +17,8 @@ const JAVOB_FAYLLARI = [
   "yozish.tsx",
   "yigish.tsx",
   "javob-paneli.tsx",
+  "natija-ekrani.tsx",
+  "natija-sahna.tsx",
 ];
 
 describe("the soft miss", () => {
