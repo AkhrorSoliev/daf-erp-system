@@ -13,7 +13,7 @@
 1. **Tanlov hisobda saqlanadi:** `Student.lernenTema` (`String?`, null = `toza`), `PATCH /student-portal/lernen-tema` (`@StudentOnly()`). `User.uiSkin` (xodim skinlari, ADR-0101) bilan aralashtirilmaydi: ro'yxatlar va ustunlar alohida, `server/src/common/lernen-temalar.ts` ↔ `client/src/lib/lernen-temalar.ts` testi bilan bog'langan.
 2. **Temalar faqat ko'rinish.** Yo'l tuzilishi, qulf, ball, mashq oqimi (`yol-tuzilishi`, `fortschritt`, `seans-navbat`) hamma temada bir xil; tema `LernenTema` shartnomasi orqali faqat chizadi (`TugunBelgisi`, keyingi bosqichlarda sahna/lavha/mukofot).
 3. **Qurilma sozlamalari serverga yozilmaydi:** ovoz (`daf.lernen.ovoz`) va «kam harakat» (`daf.lernen.harakat`) — `localStorage`; hisob tanlovining keshi `daf.lernen.tema`. Tizim `prefers-reduced-motion` ni hech qachon bekor qila olmaymiz (ko'proq harakatga qaytarib bo'lmaydi).
-4. **Ovoz tashqi faylsiz:** Web Audio sintezi (marimba/kalimba, arfa — Karplus-Strong, shisha qo'ng'iroq, havo shovqini). Litsenziya va yuklash yo'q; dars audiosi o'ynayotganda effekt chalinmaydi (mukofotdan tashqari).
+4. **Ovoz tashqi faylsiz:** Web Audio sintezi (kalimba, arfa — Karplus-Strong, shisha qo'ng'iroq, havo shovqini). Litsenziya va yuklash yo'q; dars audiosi o'ynayotganda effekt chalinmaydi (mukofotdan tashqari).
 5. **Animatsiya kutubxonasi — `gsap`, faqat lernen'da lazy** (`import("gsap")` Dafi ichida): asosiy portal paketiga kirmaydi. Dafi — 2D SVG bosh, 5 holat; xato holati yumshoq (jazolamaydi).
 
 ## Rad etilgan yo'llar
