@@ -81,10 +81,13 @@ export function useSendMessage(id: string) {
       api
         .post(`/chat/conversations/${id}/messages`, { text })
         .then((r) => r.data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: CHAT_KEYS.messages(id) });
-      qc.invalidateQueries({ queryKey: CHAT_KEYS.list });
-    },
+    // Returned, so mutateAsync resolves only after the thread has the new
+    // message: the page can then drop its pending bubble without a flicker.
+    onSuccess: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: CHAT_KEYS.messages(id) }),
+        qc.invalidateQueries({ queryKey: CHAT_KEYS.list }),
+      ]),
     onError: (err) =>
       toast.error(getErrorMessage(err, t("Xabar yuborilmadi"))),
   });
@@ -95,6 +98,22 @@ export function useMarkRead(id: string) {
   return useMutation({
     mutationFn: () => api.patch(`/chat/conversations/${id}/read`),
     onSuccess: () => qc.invalidateQueries({ queryKey: CHAT_KEYS.list }),
+  });
+}
+
+/** Removes one of my own messages; `id` is the conversation it sits in. */
+export function useRemoveMessage(id: string) {
+  const qc = useQueryClient();
+  const t = useT();
+  return useMutation<unknown, unknown, string>({
+    mutationFn: (messageId) => api.delete(`/chat/messages/${messageId}`),
+    onSuccess: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: CHAT_KEYS.messages(id) }),
+        qc.invalidateQueries({ queryKey: CHAT_KEYS.list }),
+      ]),
+    onError: (err) =>
+      toast.error(getErrorMessage(err, t("Xabarni o'chirib bo'lmadi"))),
   });
 }
 
