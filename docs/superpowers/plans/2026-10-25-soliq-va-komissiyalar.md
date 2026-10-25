@@ -62,7 +62,7 @@
 - `components/settings/edit-employee-form.tsx`, `components/payments/salary/salary-pay-dialog.tsx`
 
 **Docs**
-- `docs/adr/0106-soliq-va-komissiyalar-sof-foydada.md` (take the next free number from `docs/adr/README.md`), `docs/adr/README.md`, `server/CLAUDE.md` («No tax calculation» bullet), `client/src/qollanma/yangiliklar.ts` and the settings page of the user guide.
+- `docs/adr/0130-soliq-va-komissiyalar-sof-foydada.md` (take the next free number from `docs/adr/README.md`), `docs/adr/README.md`, `server/CLAUDE.md` («No tax calculation» bullet), `client/src/qollanma/yangiliklar.ts` and the settings page of the user guide.
 
 ---
 
@@ -1685,7 +1685,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 9: ADR, docs, user guide, full verification
 
 **Files:**
-- Create: `docs/adr/0106-soliq-va-komissiyalar-sof-foydada.md` (use the next free number from `docs/adr/README.md`; 0106 if still free)
+- Create: `docs/adr/0130-soliq-va-komissiyalar-sof-foydada.md` (use the next free number from `docs/adr/README.md`; 0130 if still free)
 - Modify: `docs/adr/README.md` (index row), `server/CLAUDE.md` (the «No tax calculation» bullet under Salary Module; the «One canonical Sof foyda» formula line; `NET_PROFIT_CACHE_VERSION` mention `v5` → `v6`; `PaymentMethod` enum list), `client/src/qollanma/yangiliklar.ts` (one entry), the settings section page under `client/src/qollanma/kontent/` (one paragraph for «Soliq va komissiyalar»)
 
 - [ ] **Step 1: Write the ADR (Uzbek)**
@@ -1694,7 +1694,7 @@ Sections like ADR-0094: **Holati** Qabul qilindi, **Sana** 2026-10-25, **Bog'liq
 
 - [ ] **Step 2: Update `server/CLAUDE.md`**
 
-Replace the «No tax calculation» bullet with: «**Tax and fee costs (ADR-0106).** `TaxCostsService.forMonth` (`src/tax/`) is the one place that computes payment fees, employer social tax, turnover tax and bank fee from the month-dated rates on `/settings/tax`; `buildNetProfit` subtracts `taxes.total`. Never compute them anywhere else.» Update the net-profit formula, the cache version and the `PaymentMethod` list (add `QR`).
+Replace the «No tax calculation» bullet with: «**Tax and fee costs (ADR-0130).** `TaxCostsService.forMonth` (`src/tax/`) is the one place that computes payment fees, employer social tax, turnover tax and bank fee from the month-dated rates on `/settings/tax`; `buildNetProfit` subtracts `taxes.total`. Never compute them anywhere else.» Update the net-profit formula, the cache version and the `PaymentMethod` list (add `QR`).
 
 - [ ] **Step 3: User guide**
 
@@ -1715,7 +1715,7 @@ Expected: build succeeds.
 
 ```bash
 git add docs server/CLAUDE.md client/src/qollanma
-git commit -m "docs: ADR-0106 tax and fee costs in net profit
+git commit -m "docs: ADR-0130 tax and fee costs in net profit
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
