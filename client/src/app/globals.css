@@ -864,6 +864,16 @@
   animation: none;
 }
 
+/* The same switch on a screen root (result screen, unit page) resolves the
+   entrance fades and staggers and the shake at once, exactly as the system
+   setting does in the media query below. */
+.lumio [data-kam-harakat] .lumio-fade-up,
+.lumio [data-kam-harakat] .lumio-stagger > *,
+.lumio [data-kam-harakat] .lumio-shake {
+  animation-duration: 0.001ms;
+  animation-delay: 0ms;
+}
+
 /* Reduced motion → resolve to end-state, drop the stagger delay.
    Halqalar butunlay to'xtaydi: vestibulyar buzilishi bor foydalanuvchi
    uchun doimiy harakat bosh aylanishiga sabab bo'ladi, va bu bezak
