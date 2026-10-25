@@ -60,7 +60,6 @@ export function ChatThreadPage({ id }: { id: string }) {
   const remove = useRemoveMessage(id);
   const { mutate: markRead } = useMarkRead(id);
   const [toDelete, setToDelete] = useState<ThreadItem | null>(null);
-  const endRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   // Follow new height only while the student is at the end (true on open).
   const stick = useRef(true);
@@ -78,16 +77,25 @@ export function ChatThreadPage({ id }: { id: string }) {
   useEffect(() => {
     const list = listRef.current;
     if (!list) return;
+    // Growth of the list must never unstick: only the student moving UP does.
+    let lastY = window.scrollY;
     const onScroll = () => {
-      stick.current = isNearBottom(
-        window.scrollY,
-        window.innerHeight,
-        document.documentElement.scrollHeight,
-      );
+      const y = window.scrollY;
+      if (
+        isNearBottom(y, window.innerHeight, document.documentElement.scrollHeight)
+      ) {
+        stick.current = true;
+      } else if (y < lastY - 2) {
+        stick.current = false;
+      }
+      lastY = y;
     };
     const ro = new ResizeObserver(() => {
       if (stick.current) {
-        endRef.current?.scrollIntoView({ block: "end", behavior: "auto" });
+        window.scrollTo({
+          top: document.documentElement.scrollHeight,
+          behavior: "auto",
+        });
       }
     });
     ro.observe(list);
@@ -152,8 +160,8 @@ export function ChatThreadPage({ id }: { id: string }) {
       <div
         ref={listRef}
         className={cn(
-          "flex flex-col gap-2 pb-4 pt-4",
-          composerShown && "md:pb-32",
+          "flex flex-col gap-2 pt-4",
+          "pb-4", // the layout already clears the fixed composer
         )}
       >
         {state === "loading" && <BubbleSkeleton />}
@@ -197,10 +205,6 @@ export function ChatThreadPage({ id }: { id: string }) {
             </section>
           ))}
         {notice && <div className="pt-2">{notice}</div>}
-        <div
-          ref={endRef}
-          className={composerShown ? "scroll-mb-32" : undefined}
-        />
       </div>
 
       {/* Outside the content column (fixed), so it clears the rail itself. */}
