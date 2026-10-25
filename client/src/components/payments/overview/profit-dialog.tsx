@@ -52,7 +52,7 @@ export function ProfitDialog({
 export function ProfitBreakdown({ month, composition }: { month: string; composition: ProfitComposition }) {
   const t = useT();
   const canEditRates = useCan("settings.tax");
-  const missing = composition.taxes.missingRates.length;
+  const missing = composition.taxes?.missingRates.length ?? 0;
   return (
     <div className="space-y-2 text-sm">
       {profitLines(composition, t).map((line) => (

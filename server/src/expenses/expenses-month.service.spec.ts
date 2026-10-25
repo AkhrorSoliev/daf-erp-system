@@ -252,6 +252,13 @@ describe('ExpensesMonthService.monthSummary (spec B6 §5.2)', () => {
     expect(s.missing.some((m) => m.key === 'UTILITIES')).toBe(true);
   });
 
+  it('a failing tax settings read never breaks the page: the tax gap stays', async () => {
+    taxSettings.loadRates.mockRejectedValue(new Error('settings down'));
+    const s = await service.monthSummary(1, null, undefined, NOW);
+    expect(s.month).toBe('2026-10');
+    expect(s.missing.some((m) => m.key === 'TAXES')).toBe(true);
+  });
+
   it('a deleted or inactive branch gets no missing row, an active one still does', async () => {
     prisma.branch.findMany.mockResolvedValue([
       BRANCHES[0],

@@ -94,8 +94,8 @@ export interface ProfitComposition {
   staff: { total: number };
   expenses: { total: number };
   refunds: number;
-  /** Soliq va komissiyalar — netProfit ularni allaqachon ayirgan. */
-  taxes: {
+  /** Soliq va komissiyalar — netProfit ularni allaqachon ayirgan. Eski serverda/keshda yo'q. */
+  taxes?: {
     providerFees: number;
     employerSocialTax: number;
     turnoverTax: number;

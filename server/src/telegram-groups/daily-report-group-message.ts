@@ -1,4 +1,8 @@
 import { isMonthlyBillingMonth } from '../reports/month-charges';
+
+/** «Sof foyda» ostidagi ogohlantirish — 21:00 hisobot va rm:cfin kartasi bitta matn ishlatadi. */
+export const MISSING_RATES_WARNING =
+  "⚠️ Hisob to'liq emas: soliq stavkasi kiritilmagan";
 import type { DailyReportData } from './telegram-group-daily-report.service';
 import {
   escapeHtml,
@@ -168,7 +172,7 @@ export function renderGroupMessage(d: DailyReportData): string {
   if (d.canonicalNet !== null) {
     lines.push(`• Sof foyda: <b>${formatSignedSum(d.canonicalNet)}</b>`);
     if (d.canonicalMissingRates.length > 0) {
-      lines.push("⚠️ Hisob to'liq emas: soliq stavkasi kiritilmagan");
+      lines.push(MISSING_RATES_WARNING);
     }
     lines.push(
       `• Kassa harakati (oyliksiz): <b>${formatSignedSum(d.mtdCashNet)}</b>`,

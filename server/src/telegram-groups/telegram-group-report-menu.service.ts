@@ -8,6 +8,7 @@ import { ReportsService } from '../reports/reports.service';
 import { isMonthlyBillingMonth } from '../reports/month-charges';
 import type { ReportBranchIds } from '../common/finance/report-branch-scope';
 import { formatSum } from './utils/format.util';
+import { MISSING_RATES_WARNING } from './daily-report-group-message';
 import { buildDebtSplitLines } from './utils/debt-split-lines.util';
 import { buildIncomeSplitLines } from './utils/income-split.util';
 import { buildMonthChargesLines } from './utils/month-charges-lines.util';
@@ -317,8 +318,11 @@ export class TelegramGroupReportMenuService {
         `• Xarajat: <b>${formatSum(o.expenses)}</b>`,
         `• Ustoz oyligi (to'langan): <b>${formatSum(o.salary.paid)}</b>`,
         canonical !== null
-          ? `• Sof foyda: <b>${formatSum(canonical)}</b>`
+          ? `• Sof foyda: <b>${formatSum(canonical.netProfit)}</b>`
           : `• Kassa harakati (oyliksiz): <b>${formatSum(o.netProfit)}</b>`,
+        ...(canonical && canonical.missingRates.length > 0
+          ? [MISSING_RATES_WARNING]
+          : []),
         ...debt,
       ];
       await ctx.reply(lines.join('\n'), { parse_mode: 'HTML' });
@@ -453,7 +457,7 @@ export class TelegramGroupReportMenuService {
     companyId: number,
     month: string,
     branchIds: ReportBranchIds,
-  ): Promise<number | null> {
+  ): Promise<{ netProfit: number; missingRates: string[] } | null> {
     try {
       const ceo = await this.prisma.user.findFirst({
         where: {
@@ -471,7 +475,7 @@ export class TelegramGroupReportMenuService {
         branchIds,
         performedById: ceo.id,
       });
-      return np.netProfit;
+      return { netProfit: np.netProfit, missingRates: np.taxes.missingRates };
     } catch (e: any) {
       this.logger.warn(`Canonical net profit failed: ${e?.message ?? e}`);
       return null;

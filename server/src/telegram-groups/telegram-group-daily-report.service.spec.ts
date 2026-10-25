@@ -1047,7 +1047,7 @@ describe('TelegramGroupDailyReportService — canonical Sof foyda', () => {
     const state = defaultState();
     const getMonthlyNetProfit = jest
       .fn()
-      .mockResolvedValue({ netProfit: 1_000 });
+      .mockResolvedValue({ netProfit: 1_000, taxes: emptyTaxCosts() });
     const svc = await buildService(makePrisma(state), makeSalary(state), {
       getMonthlyNetProfit,
     });

@@ -100,6 +100,20 @@ describe("profitLines", () => {
     expect(some.map((l) => l.label)).toContain("Aylanma solig'i");
   });
 
+  it("reads a composition without taxes (older server or cache) as the old lines, without throwing", () => {
+    const { taxes: _taxes, ...old } = composition;
+    void _taxes;
+    const lines = profitLines(old);
+    expect(lines.map((l) => l.label)).toEqual([
+      "O'tilgan darslar puli",
+      "Balansdan yechib olingan",
+      "Ustozlar oyligi",
+      "Xodimlar oyligi",
+      "Boshqa xarajatlar",
+      "Qaytarilgan pul",
+    ]);
+  });
+
   it("never prints «-0», for som(-0) or a zero leg of the equation", () => {
     expect(som(-0)).toBe("0 so'm");
     // A zero cost leg is negated into -0 by profitLines.

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TaxSettingsService } from '../tax/tax-settings.service';
 import { rateForMonth } from '../tax/tax-rates';
 import { PrismaService } from '../prisma/prisma.service';
@@ -27,6 +27,8 @@ import {
  */
 @Injectable()
 export class ExpensesMonthService {
+  private readonly logger = new Logger(ExpensesMonthService.name);
+
   constructor(
     private prisma: PrismaService,
     private taxSettings: TaxSettingsService,
@@ -41,12 +43,17 @@ export class ExpensesMonthService {
     const month = parseExpenseMonth(oy, now);
     const isCurrentMonth = month === tashkentMonthKey(now);
     // Aylanma solig'i stavkasi kuchda bo'lsa soliq avtomatik hisoblanadi — «yozilmagan» demaymiz.
-    const book = isCurrentMonth
-      ? await this.taxSettings.loadRates(companyId)
-      : null;
-    const skipTaxes =
-      book !== null &&
-      rateForMonth(book.rates['tax.turnoverPercent'], month) !== null;
+    let skipTaxes = false;
+    if (isCurrentMonth) {
+      try {
+        const book = await this.taxSettings.loadRates(companyId);
+        skipTaxes =
+          rateForMonth(book.rates['tax.turnoverPercent'], month) !== null;
+      } catch (e) {
+        // Sozlama o'qilmasa xarajatlar sahifasi yiqilmasin: ogohlantirish avvalgidek.
+        this.logger.warn(`Tax rates not read, tax gap kept: ${e}`);
+      }
+    }
     const [thisMonth, lastMonth, branches] = await Promise.all([
       this.loadRows(companyId, branchIds, month),
       this.loadRows(companyId, branchIds, addMonthsToMonthKey(month, -1)),
