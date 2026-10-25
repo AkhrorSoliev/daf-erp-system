@@ -85,6 +85,30 @@ describe("portal navigation on a phone", () => {
     expect(hrefs(chatClient(true))).toContain("/portal/chat");
   });
 
+  describe("unread dot", () => {
+    const conv = (unread: number) => ({ id: "c", unread });
+    const seeded = (enabled: boolean, unread: number) => {
+      const client = chatClient(enabled);
+      client.setQueryData(["student-portal", "chat", "list"], [conv(unread)]);
+      return client;
+    };
+    const dots = (c: ComponentType, client?: QueryClient) =>
+      render(c, "/portal", client).match(/data-unread-dot/g)?.length ?? 0;
+
+    it("is absent with chat off or nothing unread", () => {
+      for (const c of [LumioBottomNav, LumioSideRail]) {
+        expect(dots(c)).toBe(0);
+        expect(dots(c, seeded(false, 3))).toBe(0);
+        expect(dots(c, seeded(true, 0))).toBe(0);
+      }
+    });
+
+    it("shows on Ko'proq (phone) and Chat (rail) when chat is on with unread", () => {
+      expect(dots(LumioBottomNav, seeded(true, 3))).toBe(1);
+      expect(dots(LumioSideRail, seeded(true, 3))).toBe(1);
+    });
+  });
+
   // Deliberate friction, like settings-nav.test.ts: which screens get a tab is
   // a product decision, so changing it should mean changing this list.
   it("puts the daily destinations on the tab bar", () => {

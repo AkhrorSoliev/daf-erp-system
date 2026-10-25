@@ -231,6 +231,20 @@ export function staffCabinetPath(
     : home;
 }
 
+/**
+ * The chat notice's button: `/tg?next=/portal/chat/<conversationId>`.
+ * Exactly `/portal/chat` or `/portal/chat/<uuid>` — no query, no trailing
+ * slash, nothing encoded. `next` is attacker-writable, so anything else (an
+ * absolute URL, `//host`, `..`, another portal page) falls back to `/portal`.
+ */
+const STUDENT_CHAT_PAGE =
+  /^\/portal\/chat(?:\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?$/i;
+
+/** Where the student Mini App opens: the page the notice names, else `/portal`. */
+export function studentPortalPath(next: string | null | undefined): string {
+  return next && STUDENT_CHAT_PAGE.test(next) ? next : "/portal";
+}
+
 // ── `POST /auth/telegram/webapp` va `…/webapp/staff` javoblari ─────────────
 
 export interface MiniAppStudent {

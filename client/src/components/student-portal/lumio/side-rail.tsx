@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { CaretRight, CaretLineLeft, CaretLineRight } from "./icon";
-import { useChatEnabled } from "../chat/chat-queries";
+import { useChatEnabled, useUnreadChatTotal } from "../chat/chat-queries";
+import { UnreadDot } from "../chat/unread-dot";
 import {
   featureEnabled,
   railNavItems,
@@ -37,10 +38,13 @@ export function RailNavItem({
   item,
   active,
   collapsed,
+  unread = 0,
 }: {
   item: StudentNavItem;
   active: boolean;
   collapsed: boolean;
+  /** Unread count shown as a dot on the icon. */
+  unread?: number;
 }) {
   const t = useT();
   const Icon = item.icon;
@@ -66,7 +70,13 @@ export function RailNavItem({
           className="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-coral-500"
         />
       )}
-      <Icon size={20} weight={active ? "fill" : "bold"} />
+      <span className="relative inline-flex">
+        <Icon size={20} weight={active ? "fill" : "bold"} />
+        <UnreadDot
+          count={unread}
+          className="absolute -right-1 -top-1 ring-2 ring-surface"
+        />
+      </span>
       {/* Collapsed: a long ru/de name («Посещаемость», «Einstellungen»)
           takes a second line and hyphenates instead of being cut. */}
       <span
@@ -90,6 +100,7 @@ export function LumioSideRail({ className }: { className?: string }) {
   const toggle = useSidebar((s) => s.toggle);
   const collapsed = mode === "collapsed";
   const features = { chat: useChatEnabled() };
+  const unreadChat = useUnreadChatTotal();
 
   const fullName = profile
     ? `${profile.firstName} ${profile.lastName}`.trim()
@@ -167,6 +178,7 @@ export function LumioSideRail({ className }: { className?: string }) {
               item={item}
               active={isActive(item.url)}
               collapsed={collapsed}
+              unread={item.feature === "chat" ? unreadChat : 0}
             />
           ))}
         </nav>

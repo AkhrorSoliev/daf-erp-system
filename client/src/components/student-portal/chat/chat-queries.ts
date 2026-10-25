@@ -11,6 +11,7 @@ import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useT } from "@/i18n/context";
 import { msg } from "@/i18n/msg";
+import { unreadTotal } from "./chat-format";
 import type {
   ChatAccess,
   ChatMe,
@@ -57,6 +58,17 @@ export function useConversations(enabled = true) {
     refetchInterval: LIST_POLL_MS,
     refetchIntervalInBackground: false,
   });
+}
+
+/**
+ * Unread messages over all conversations, for the nav dot. The list is asked
+ * only while the company switch is on, so a portal with chat off makes no
+ * request (and shows no dot even if the cache holds an old list).
+ */
+export function useUnreadChatTotal(): number {
+  const enabled = useChatEnabled();
+  const { data } = useConversations(enabled);
+  return enabled ? unreadTotal(data ?? []) : 0;
 }
 
 /** Pages come newest first; `nextCursor` is the id to continue from. */

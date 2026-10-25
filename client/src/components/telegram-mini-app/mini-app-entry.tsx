@@ -28,6 +28,7 @@ import {
   markMiniAppSignedOut,
   miniAppAudienceForHost,
   staffCabinetPath,
+  studentPortalPath,
   wasSignedOutInMiniApp,
   type MiniAppAudience,
   type MiniAppSignInResult,
@@ -107,7 +108,9 @@ export function MiniAppEntry({ staff = false }: { staff?: boolean }) {
         ? { initData: initData.current }
         : { initData: initData.current, studentId },
     );
-    if (data.status === "authenticated") enter(data, "/portal");
+    if (data.status === "authenticated") {
+      enter(data, studentPortalPath(nextPage.current));
+    }
     else if (data.status === "choose") {
       setView({ kind: "choose", students: data.students });
     } else if (data.status === "staff") setView({ kind: "staff_account" });
