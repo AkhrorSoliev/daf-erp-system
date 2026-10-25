@@ -1019,14 +1019,15 @@ describe('ReportsExcelService', () => {
     expect(markaz.getCell(4).value).not.toBe(netProfit.teacherSalary);
     expect(markaz.getCell(5).value).toBe(netProfit.operatingExpenses);
     expect(markaz.getCell(6).value).toBe(netProfit.refunds);
-    expect(markaz.getCell(7).value).toBe(netProfit.netProfit);
+    expect(markaz.getCell(7).value).toBe(netProfit.taxes.total);
+    expect(markaz.getCell(8).value).toBe(netProfit.netProfit);
     // The debt column is the STUDYING debt only (ADR-0059) — not the whole
     // receivable — and its header says so.
-    expect(findRow(ws, 'Filial').getCell(8).value).toBe(
+    expect(findRow(ws, 'Filial').getCell(9).value).toBe(
       "O'qiyotganlar qarzi (hozir)",
     );
-    expect(markaz.getCell(8).value).toBe(debtSplit.studying.total);
-    expect(markaz.getCell(9).value).toBe(studentFlow.inGroup);
+    expect(markaz.getCell(9).value).toBe(debtSplit.studying.total);
+    expect(markaz.getCell(10).value).toBe(studentFlow.inGroup);
 
     // Each row is that branch's OWN report — re-issued single-branch.
     expect(reports.getDebtSplit).toHaveBeenCalledWith(1, { branchIds: [2] });

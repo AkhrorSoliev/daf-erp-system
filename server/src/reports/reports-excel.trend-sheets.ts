@@ -160,6 +160,8 @@ export interface BranchRow {
   teacherSalary: number;
   operatingExpenses: number;
   refunds: number;
+  /** `netProfit.taxes.total`: komissiya, ijtimoiy soliq, aylanma solig'i, bank (ADR-0130). */
+  taxes: number;
   netProfit: number;
   /** «O'qiyotganlar qarzi» only (ADR-0059); the header says so. */
   debt: number;
@@ -180,11 +182,12 @@ export function branchesSheet(
     { width: 17 },
     { width: 15 },
     { width: 15 },
+    { width: 18 },
     { width: 17 },
     { width: 15 },
     { width: 16 },
   ];
-  sheetHead(ws, 'FILIALLAR', periodLine, scopeLine, 9);
+  sheetHead(ws, 'FILIALLAR', periodLine, scopeLine, 10);
   const h = columnHeader(ws, [
     'Filial',
     "O'tilgan darslar qiymati",
@@ -192,12 +195,13 @@ export function branchesSheet(
     'Ustoz oyligi',
     'Xarajat',
     'Qaytarilgan',
+    'Soliq va komissiyalar',
     'SOF FOYDA',
     "O'qiyotganlar qarzi (hozir)",
     "Guruhda o'qiyapti",
   ]);
 
-  const totals = [0, 0, 0, 0, 0, 0, 0, 0];
+  const totals = [0, 0, 0, 0, 0, 0, 0, 0, 0];
   for (const row of rows) {
     const values = [
       row.recognized,
@@ -205,27 +209,28 @@ export function branchesSheet(
       row.teacherSalary,
       row.operatingExpenses,
       row.refunds,
+      row.taxes,
       row.netProfit,
       row.debt,
       row.inGroup,
     ];
     values.forEach((v, i) => (totals[i] += v));
     const r = ws.addRow([row.branchName, ...values]);
-    [2, 3, 4, 5, 6, 7, 8, 9].forEach((c) => (r.getCell(c).numFmt = NUM));
-    r.getCell(7).font = { bold: true };
+    [2, 3, 4, 5, 6, 7, 8, 9, 10].forEach((c) => (r.getCell(c).numFmt = NUM));
+    r.getCell(8).font = { bold: true };
   }
   totalsBar(ws, ['Jami', ...totals]);
   ws.views = [{ state: 'frozen', ySplit: h.number }];
 
-  // The approved columns stay as they are; a branch whose SOF FOYDA carries a
-  // withdrawal (ADR-0055) is named here instead, so the row still explains
-  // itself.
+  // A branch whose SOF FOYDA carries a withdrawal (ADR-0055) is named here, so
+  // the row still explains itself.
   const withdrawn = rows.filter((r) => r.balanceWithdrawals);
   sheetFooter(
     ws,
     [
       "«O'tilgan darslar qiymati» — o'tilgan darslar puli; «Kassaga tushgan pul» — real kirgan pul. Ular teng bo'lishi shart emas.",
       "Bitta ustoz bitta filialda dars o'tadi — oyligi to'liq o'sha filialga yoziladi.",
+      "SOF FOYDA = o'tilgan darslar qiymati − ustoz oyligi − xarajat − qaytarilgan − soliq va komissiyalar (+ balansdan yechilgan pul, bo'lsa — quyida nomlangan).",
       "Filiallar yig'indisi «Xulosa» varag'idagi jami raqamga teng.",
       ...(withdrawn.length
         ? [
@@ -238,6 +243,6 @@ export function branchesSheet(
           ]
         : []),
     ],
-    9,
+    10,
   );
 }

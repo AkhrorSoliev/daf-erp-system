@@ -110,6 +110,7 @@ describe('branchesSheet', () => {
         teacherSalary: 95_834_547,
         operatingExpenses: 41_773_000,
         refunds: 200_000,
+        taxes: 0,
         netProfit: 35_976_444,
         debt: 34_594_323,
         inGroup: 343,
@@ -122,6 +123,7 @@ describe('branchesSheet', () => {
         teacherSalary: 0,
         operatingExpenses: 0,
         refunds: 0,
+        taxes: 0,
         netProfit: 0,
         debt: 0,
         inGroup: 84,
@@ -143,7 +145,7 @@ describe('branchesSheet', () => {
 
     const total = rowFor(ws, 'Jami');
     expect(total[1]).toBe(173_783_991);
-    expect(total[8]).toBe(427);
+    expect(total[9]).toBe(427);
 
     const footer: string[] = [];
     ws.eachRow((r) => footer.push(cellText(r.getCell(1).value)));
@@ -159,6 +161,7 @@ describe('branchesSheet', () => {
       teacherSalary: 400_000,
       operatingExpenses: 100_000,
       refunds: 0,
+      taxes: 0,
       netProfit: 800_000,
       debt: 0,
       inGroup: 10,
@@ -172,5 +175,34 @@ describe('branchesSheet', () => {
     expect(texts.join('\n')).toContain(
       `«SOF FOYDA» ichida balansdan yechib olingan pul bor: Farg'ona filiali — ${(300_000).toLocaleString('ru-RU')} so'm.`,
     );
+  });
+  it('shows the tax column so a row foots: recognised − salary − expense − refund − taxes = SOF FOYDA', () => {
+    const row: BranchRow = {
+      branchName: "Farg'ona filiali",
+      recognized: 1_000_000,
+      balanceWithdrawals: 0,
+      cashIn: 900_000,
+      teacherSalary: 400_000,
+      operatingExpenses: 100_000,
+      refunds: 50_000,
+      taxes: 70_000,
+      netProfit: 380_000,
+      debt: 0,
+      inGroup: 10,
+    };
+    const wb = new Workbook();
+    branchesSheet(wb, [row], 'Davr', 'Barcha filiallar');
+    const ws = wb.getWorksheet('Filiallar')!;
+
+    const h = headerOf(ws, 'Filial');
+    expect(h.indexOf('Soliq va komissiyalar')).toBe(h.indexOf('SOF FOYDA') - 1);
+
+    const [, recognized, , salary, expense, refunds, taxes, profit] = rowFor(
+      ws,
+      "Farg'ona filiali",
+    );
+    expect(taxes).toBe(70_000);
+    expect(recognized - salary - expense - refunds - taxes).toBe(profit);
+    expect(rowFor(ws, 'Jami')[6]).toBe(70_000);
   });
 });

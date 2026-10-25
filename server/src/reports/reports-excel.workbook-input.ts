@@ -412,6 +412,7 @@ function toBranchRow(
     teacherSalary: own.netProfit.teacherSalary + own.netProfit.adminSalary,
     operatingExpenses: own.netProfit.operatingExpenses,
     refunds: own.netProfit.refunds,
+    taxes: own.netProfit.taxes.total,
     netProfit: own.netProfit.netProfit,
     debt: studyingDebt,
     inGroup: flow?.inGroup ?? 0,
