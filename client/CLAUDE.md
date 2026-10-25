@@ -1164,6 +1164,20 @@ work. `student-radio-page.tsx` is only a chooser — playback lives in the shell
 - **Payment statement card** (`statement-card.tsx`, under "Joriy balans"): "To'lovlar hisoboti" + a coral "PDF yuklab olish" (full width under the text on a phone, beside it once the card is wide enough — `@sm:`) that downloads `GET /student-portal/statement.pdf` (ADR-0037) as a blob through `downloadAuthedFile` (`src/lib/download-file.ts`, shared with the admin To'lovlar tab). The file is saved under the name the server sends in `Content-Disposition` (`Surname-I-ID-DD-MM-YYYY.pdf`, `statementFilename`), which the API's CORS config exposes; `downloadAuthedFile` falls back to its second argument only if the header is missing. Inside the Telegram Mini App the button reads «Telegram'ga yuborish» and the bot sends the PDF to the student's chat instead (see "Telegram Mini App" above).
 - **Payme reference docs (UZ)**: `docs/payme-uz/index.html` — 25-page Uzbek-language reference covering Merchant API, Subscribe API, checkout initialization (GET/POST), sandbox testing, error codes, and mobile integration; mirrors the official `developer.help.paycom.uz` structure
 
+### Student chat (`/portal/chat`, spec 2026-10-25)
+
+1-to-1 student chat in the web portal and, through the same pages, the Telegram Mini App. Code: `components/student-portal/chat/`, pages under `app/(student-portal)/portal/chat/`. The server (`/chat/*`) is behind `chat.enabled`.
+
+- **Routes:** list `/portal/chat`, thread `/portal/chat/[id]`, `/portal/chat/new`, `/portal/chat/settings`. The thread draws no bottom nav and no radio dock (`isChatThreadRoute`, `lib/student-nav-items.ts`, used by `student-portal-layout.tsx` next to `isExerciseSessionRoute`): the composer owns the bottom edge.
+- **`ChatGate` wraps every chat page.** While `chat.enabled` is off only `GET /chat/access` is called; the nav item and the unread dot's poll are off too (`useChatEnabled`), so a disabled chat costs one request and shows no entry point.
+- **Who may write is the server's answer, never the client's.** `GET /chat/access` (`{enabled, canWrite, reasons, messages, warning, quota}`) goes through `accessView` (`chat-access-view.ts`) to the banner and the composer; the client computes no minutes, quota or lock reason.
+- **Polling, not SSE:** the open thread refetches every 5 s, the list every 20 s, only while the tab is visible (`refetchIntervalInBackground: false`). The portal has no SSE (the stream is staff-only). Follow-up: a student stream.
+- **Media:** limits (`chat-media.ts`: image 5 MB JPG/PNG/WebP, voice 2 MB and 120 s) mirror the server's, and a test pins them. A file arrives as a signed link from `GET /chat/messages/:id/file`, refreshed once it is older than ~8 minutes (`use-signed-file.ts`); the browser never fetches the storage URL itself (only `<img>`/`<audio>`). Every voice `<audio>` MUST call `registerMedia(el)` (`lib/media-registry.ts`) and unregister on unmount, so listening counts as active time. A purged file draws «Fayl o'chirilgan».
+- **Search and open:** `GET /chat/search?q=` needs 2+ characters. Open a student with `{username}` when the result has one, otherwise `{studentId}`, and open the thread with the id `POST /chat/conversations` returns (an empty conversation is not in the list).
+- **Known gap:** «blocked by me» exists only in the React Query cache (`BLOCKED_KEY`): no endpoint says whom I blocked, so after a reload the peer menu offers «Bloklash» again until the server refuses.
+- **Mini App:** the Telegram notice opens `/portal/chat/<id>` through `studentPortalPath` (anchored allow-list, see «Telegram Mini App»); do not widen it.
+- **Chat texts and names are DATA:** a message, a name or a username never goes through `t()` (in `uz-Cyrl` it would be transliterated). Only the UI strings are translated (`STRICT_FILES`, ru/de/en).
+
 ### Position vs role in the employee form
 
 `edit-employee-form.tsx` asks for **Lavozim** (`position`, required, free text)
