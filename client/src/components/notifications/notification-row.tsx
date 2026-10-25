@@ -60,6 +60,7 @@ const ICON: Record<NotificationType, LucideIcon> = {
   PAYMENT_PROMISE_OVERDUE: Wallet,
   ABSENCE_WARNING: UserX,
   ENROLLMENT_AUTO_PAUSED: CirclePause,
+  CHAT_MESSAGE: MessageSquare,
 };
 
 /** One colour per kind (spec §8 «har turning rangi»); a closed alert turns green. */

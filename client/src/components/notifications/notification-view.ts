@@ -40,6 +40,7 @@ export const NOTIFICATION_TYPES = [
   "PAYMENT_PROMISE_OVERDUE",
   "ABSENCE_WARNING",
   "ENROLLMENT_AUTO_PAUSED",
+  "CHAT_MESSAGE",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
