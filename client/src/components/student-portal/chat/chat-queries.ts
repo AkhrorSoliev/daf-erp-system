@@ -22,6 +22,7 @@ export const CHAT_KEYS = {
   all: ["student-portal", "chat"] as const,
   access: ["student-portal", "chat", "access"] as const,
   list: ["student-portal", "chat", "list"] as const,
+  me: ["student-portal", "chat", "me"] as const,
   messages: (id: string) =>
     ["student-portal", "chat", "messages", id] as const,
 };
@@ -127,5 +128,55 @@ export function useOpenConversation() {
     onSuccess: () => qc.invalidateQueries({ queryKey: CHAT_KEYS.list }),
     onError: (err) =>
       toast.error(getErrorMessage(err, t("Suhbatni ochib bo'lmadi"))),
+  });
+}
+
+const BLOCKED_KEY = ["student-portal", "chat", "blocked"] as const;
+
+/**
+ * Ids of the students I blocked in this browser session. No endpoint tells
+ * who I blocked (GET /chat/me has no such field), so this is filled by the
+ * block/unblock answers and is empty again after a reload.
+ */
+export function useBlockedIds(): number[] {
+  return (
+    useQuery<number[]>({
+      queryKey: BLOCKED_KEY,
+      queryFn: () => [],
+      staleTime: Infinity,
+      gcTime: Infinity,
+    }).data ?? []
+  );
+}
+
+function useBlockMutation(path: "block" | "unblock", failText: string) {
+  const qc = useQueryClient();
+  const t = useT();
+  return useMutation<unknown, unknown, number>({
+    mutationFn: (studentId) => api.post(`/chat/${path}`, { studentId }),
+    onSuccess: (_d, studentId) => {
+      qc.setQueryData<number[]>(BLOCKED_KEY, (old = []) =>
+        path === "block"
+          ? [...old.filter((i) => i !== studentId), studentId]
+          : old.filter((i) => i !== studentId),
+      );
+      return Promise.all([
+        qc.invalidateQueries({ queryKey: CHAT_KEYS.list }),
+        qc.invalidateQueries({ queryKey: CHAT_KEYS.me }),
+      ]);
+    },
+    onError: (err) => toast.error(getErrorMessage(err, t(failText))),
+  });
+}
+
+export const useBlock = () =>
+  useBlockMutation("block", "Bloklab bo'lmadi");
+export const useUnblock = () =>
+  useBlockMutation("unblock", "Blokdan chiqarib bo'lmadi");
+
+/** POST /chat/report; the refusal stays with the caller (shown in the dialog). */
+export function useReportConversation() {
+  return useMutation<unknown, unknown, { conversationId: string; reason: string }>({
+    mutationFn: (body) => api.post("/chat/report", body),
   });
 }

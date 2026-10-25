@@ -10,7 +10,9 @@ import { LoadFailed } from "../load-failed";
 import { loadState } from "../lib/load-state";
 import { CONTENT_INSET, useSidebar } from "../lib/sidebar-store";
 import { groupByDay, peerName } from "./chat-format";
+import { BlockedNotice, PeerMenu } from "./peer-menu";
 import {
+  useBlockedIds,
   useChatAccess,
   useConversations,
   useMarkRead,
@@ -50,6 +52,7 @@ export function ChatThreadPage({ id }: { id: string }) {
   const sidebarMode = useSidebar((s) => s.mode);
   const conversations = useConversations();
   const access = useChatAccess().data;
+  const blockedIds = useBlockedIds();
   const query = useMessages(id);
   const state = loadState(query);
   const { pending, submit, retry, busy } = useThreadSend(id);
@@ -114,7 +117,8 @@ export function ChatThreadPage({ id }: { id: string }) {
             {peer ? peerName(peer) : t("Suhbat")}
           </h1>
         </div>
-        {/* Task 7: right slot (menu trigger). */}
+        <PeerMenu conversationId={id} peer={peer} />
+
       </header>
 
       <div className="flex flex-col gap-2 pb-32 pt-4">
@@ -167,7 +171,9 @@ export function ChatThreadPage({ id }: { id: string }) {
       >
         <div className="border-t border-line bg-surface">
           <div className="mx-auto w-full max-w-[600px] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
-            {!access ? (
+            {peer && blockedIds.includes(peer.id) ? (
+              <BlockedNotice peer={peer} />
+            ) : !access ? (
               <Skeleton className="h-12 w-full rounded-[26px]" />
             ) : access.canWrite ? (
               <ChatComposer
