@@ -131,6 +131,9 @@ describe('SettingsService', () => {
         'participation.minAppPercent.B1': 100,
         'participation.minLessons': 20,
         'participation.maxLatePercent': 20,
+        'chat.enabled': false,
+        'chat.weekMinutesActive': 60,
+        'chat.weekMinutesRadio': 30,
       });
     });
   });
@@ -236,6 +239,9 @@ describe('SettingsService', () => {
         'participation.minAppPercent.B1': [],
         'participation.minLessons': [],
         'participation.maxLatePercent': [],
+        'chat.enabled': [],
+        'chat.weekMinutesActive': [],
+        'chat.weekMinutesRadio': [],
       });
     });
 

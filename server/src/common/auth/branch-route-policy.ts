@@ -910,6 +910,30 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     policy: 'SELF',
     reason:
       "Keyed on `@CurrentUser('studentId')` behind `StudentCardGuard` — the " +
+      "student's own chat (spec 2026-10-25): their access status, username, " +
+      'privacy, blocks, search, and conversations they are a member of. A ' +
+      "conversation or message id that is not the caller's answers 404, and " +
+      'no student id other than a target (block, open) comes from the request.',
+    routes: [
+      'GET /chat/access',
+      'PUT /chat/username',
+      'GET /chat/me',
+      'PATCH /chat/privacy',
+      'POST /chat/block',
+      'POST /chat/unblock',
+      'GET /chat/search',
+      'POST /chat/conversations',
+      'GET /chat/conversations',
+      'GET /chat/conversations/:id/messages',
+      'POST /chat/conversations/:id/messages',
+      'PATCH /chat/conversations/:id/read',
+      'DELETE /chat/messages/:id',
+    ],
+  },
+  {
+    policy: 'SELF',
+    reason:
+      "Keyed on `@CurrentUser('studentId')` behind `StudentCardGuard` — the " +
       "student's own backup number (ADR-0070): read, added or changed behind " +
       'their current password and an SMS code to the new number, or removed ' +
       'behind the password. No student id comes from the request, and the ' +

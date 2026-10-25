@@ -18,7 +18,6 @@ import {
   LEVEL_TEST_PHONE_PROMPT,
   LEVEL_TEST_STALE,
   LEVEL_TEST_STOP_CONFIRM,
-  LEVEL_TEST_STUDENT_DONE,
 } from '../../level-test/level-test.texts';
 import {
   LEVEL_TEST_LEVELS,
@@ -892,7 +891,7 @@ describe('level-test scene («📊 Darajani aniqlash»)', () => {
       });
       const texts = last.reply.mock.calls.map((c: any[]) => c[0]);
       expect(texts).not.toContain(LEVEL_TEST_PHONE_PROMPT);
-      expect(texts[1]).toBe(LEVEL_TEST_STUDENT_DONE);
+      expect(texts.join('\n')).not.toContain('Natijangiz saqlandi');
       expect(last.scene.leave).toHaveBeenCalled();
       expect(makeLead).not.toHaveBeenCalled();
     });

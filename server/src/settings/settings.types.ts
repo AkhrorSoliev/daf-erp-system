@@ -48,7 +48,10 @@ export type SettingKey =
   | 'participation.minAppPercent.A2'
   | 'participation.minAppPercent.B1'
   | 'participation.minLessons'
-  | 'participation.maxLatePercent';
+  | 'participation.maxLatePercent'
+  | 'chat.enabled'
+  | 'chat.weekMinutesActive'
+  | 'chat.weekMinutesRadio';
 
 export interface SettingValueMap {
   'payment.defaultModel': PaymentModel;
@@ -78,6 +81,9 @@ export interface SettingValueMap {
   'participation.minAppPercent.B1': number;
   'participation.minLessons': number;
   'participation.maxLatePercent': number;
+  'chat.enabled': boolean;
+  'chat.weekMinutesActive': number;
+  'chat.weekMinutesRadio': number;
 }
 
 interface SettingDefinition<K extends SettingKey> {
@@ -452,6 +458,25 @@ export const SETTING_DEFINITIONS: {
     defaultValue: 20,
     parse: (raw) =>
       parseIntInRange('participation.maxLatePercent', raw, 0, 100),
+    companyLevelOnly: true,
+  },
+  // Student chat (spec 2026-10-25): read by `ChatAccessService` per company.
+  'chat.enabled': {
+    key: 'chat.enabled',
+    defaultValue: false,
+    parse: (raw) => parseBoolean('chat.enabled', raw),
+    companyLevelOnly: true,
+  },
+  'chat.weekMinutesActive': {
+    key: 'chat.weekMinutesActive',
+    defaultValue: 60,
+    parse: (raw) => parseIntInRange('chat.weekMinutesActive', raw, 0, 1000),
+    companyLevelOnly: true,
+  },
+  'chat.weekMinutesRadio': {
+    key: 'chat.weekMinutesRadio',
+    defaultValue: 30,
+    parse: (raw) => parseIntInRange('chat.weekMinutesRadio', raw, 0, 1000),
     companyLevelOnly: true,
   },
 };
