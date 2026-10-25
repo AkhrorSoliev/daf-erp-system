@@ -2,10 +2,11 @@ import { cn } from "@/lib/utils";
 
 /**
  * Share of the session's questions done, 0–100. The bar takes a percent, not
- * a fraction: 4 of 12 done is 33 %, not 4 %.
+ * a fraction: 4 of 12 done is 33 %, not 4 %. A count that is not a finite
+ * number (NaN, Infinity) reads as nothing done, never as an invalid width.
  */
 export function chiziqFoizi(tugatilgan: number, jami: number): number {
-  if (jami <= 0) return 0;
+  if (!Number.isFinite(tugatilgan) || !Number.isFinite(jami) || jami <= 0) return 0;
   return Math.max(0, Math.min(100, (tugatilgan / jami) * 100));
 }
 
@@ -24,15 +25,22 @@ export function SeansChizigi({
   jami: number;
   className?: string;
 }) {
+  const foiz = chiziqFoizi(tugatilgan, jami);
   return (
-    <div className={cn("inset-well h-4 overflow-hidden rounded-pill bg-sunk", className)}>
+    <div
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(foiz)}
+      className={cn("inset-well h-4 overflow-hidden rounded-pill bg-sunk", className)}
+    >
       <span
         className={cn(
           "relative block h-full overflow-hidden rounded-pill bg-coral-500",
           "transition-[width] duration-500 ease-[cubic-bezier(.3,1.2,.4,1)]",
           "motion-reduce:transition-none in-data-[kam-harakat]:transition-none",
         )}
-        style={{ width: `${chiziqFoizi(tugatilgan, jami)}%` }}
+        style={{ width: `${foiz}%` }}
       >
         <span aria-hidden className="absolute inset-x-2 top-1 h-1 rounded-pill bg-white/25" />
       </span>

@@ -13,6 +13,12 @@ describe("chiziqFoizi", () => {
     expect(chiziqFoizi(5, 4)).toBe(100);
     expect(chiziqFoizi(-1, 4)).toBe(0);
   });
+  it("reads a count that is not a finite number as nothing done", () => {
+    expect(chiziqFoizi(Number.NaN, 4)).toBe(0);
+    expect(chiziqFoizi(2, Number.NaN)).toBe(0);
+    expect(chiziqFoizi(Number.POSITIVE_INFINITY, 4)).toBe(0);
+    expect(chiziqFoizi(2, Number.POSITIVE_INFINITY)).toBe(0);
+  });
 });
 
 describe("<SeansChizigi />", () => {
@@ -20,6 +26,13 @@ describe("<SeansChizigi />", () => {
 
   it("fills the bar to the share done", () => {
     expect(html).toContain("width:25%");
+  });
+
+  it("tells assistive tech how far the session is", () => {
+    expect(html).toContain('role="progressbar"');
+    expect(html).toContain('aria-valuemin="0"');
+    expect(html).toContain('aria-valuemax="100"');
+    expect(html).toContain('aria-valuenow="25"');
   });
 
   it("eases with a small overshoot, and jumps instead under reduced motion or the device switch", () => {

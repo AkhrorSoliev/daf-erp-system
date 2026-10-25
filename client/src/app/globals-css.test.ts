@@ -21,6 +21,25 @@ describe("globals.css @theme", () => {
   });
 });
 
+describe("the amber ink of the «Deyarli!» heading", () => {
+  // Bright amber on its own wash is under 3:1, so the heading has an ink of its
+  // own: dark brown in light mode, the pale amber in dark mode. It is a plain
+  // custom property, not a Tailwind colour name, so the global @theme is left
+  // alone.
+  const css = readFileSync(path.join(__dirname, "globals.css"), "utf8");
+  const block = (selector: string) =>
+    css.match(new RegExp(`^${selector} \\{([\\s\\S]*?)^\\}`, "m"))?.[1] ?? "";
+
+  it("is defined in both the .lumio and the .dark .lumio blocks", () => {
+    expect(block("\\.lumio")).toMatch(/--amber-ink:\s*#[0-9a-f]{6};/i);
+    expect(block("\\.dark \\.lumio")).toMatch(/--amber-ink:\s*#[0-9a-f]{6};/i);
+  });
+
+  it("is not a name in the global @theme", () => {
+    expect(css).not.toContain("--color-amber-ink");
+  });
+});
+
 describe("the device's «Kam harakat» switch", () => {
   // `useKamHarakat` marks a screen root with `data-kam-harakat`; until now only
   // the pulse ring listened to it, so the result screen's fade and the unit

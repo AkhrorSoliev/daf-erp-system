@@ -20,14 +20,14 @@ export function JavobPaneli({ natija }: { natija: PruefErgebnis }) {
       <p
         className={cn(
           "font-display text-lg font-extrabold",
-          natija.isCorrect ? "text-success" : XATO_SARLAVHASI,
+          natija.isCorrect ? "text-artikel-das" : XATO_SARLAVHASI,
         )}
       >
         {sarlavha}
       </p>
       {soz ? (
         <p className="mt-0.5 text-sm font-semibold text-ink-800">
-          {izoh ? <span className="mr-1 text-ink-500">{izoh}</span> : null}
+          {izoh ? <span className="mr-1 text-ink-600">{izoh}</span> : null}
           <DeWort text={soz} />
         </p>
       ) : null}

@@ -12,5 +12,8 @@ export const XATO_FONI = "bg-amber-500/10 text-ink-800";
 export const XATO_CHEGARASI = "border-amber-500";
 /** The mark beside a missed choice (it carries the meaning without colour too). */
 export const XATO_BELGISI = "text-amber-600";
-/** The «Deyarli!» heading: bold and large, where this amber reads well. */
-export const XATO_SARLAVHASI = "text-amber-700";
+/**
+ * The «Deyarli!» heading, on the amber-tinted bar. Bright amber is under 3:1
+ * there, so it takes `--amber-ink` (dark brown, pale amber at night; globals.css).
+ */
+export const XATO_SARLAVHASI = "text-[var(--amber-ink)]";

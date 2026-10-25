@@ -556,6 +556,11 @@
   --artikel-die: #c62828;
   --artikel-das: #137a45;
 
+  /* Amber as TEXT on the amber-tinted answer bar (the «Deyarli!» heading):
+     brand amber is under 3:1 there. A plain property, not a Tailwind colour
+     name, so the global @theme gains nothing. */
+  --amber-ink: #9a5400;
+
   /* --- Radii --- */
   --r-xs: 8px;
   --r-sm: 12px;
@@ -658,6 +663,9 @@
   --artikel-der: #6fb3ff;
   --artikel-die: #ff8a80;
   --artikel-das: #5fd394;
+
+  /* The pale amber (= --amber-400) reads on the dark amber-tinted bar. */
+  --amber-ink: #ffc24d;
 
   /* Neutral clay lips must read DARKER than the surface in dark mode. */
   --clay-neutral: 0 5px 0 #071820, 0 12px 22px rgba(0, 0, 0, 0.35);
