@@ -75,14 +75,22 @@ export class ChatPeopleService {
   }
 
   async getMine(studentId: number, companyId: number) {
-    const [me, privacy] = await Promise.all([
+    const [me, privacy, blocks] = await Promise.all([
       this.prisma.student.findFirst({
         where: { id: studentId, companyId, deletedAt: null },
         select: { username: true },
       }),
       this.privacyOf(studentId),
+      this.prisma.chatBlock.findMany({
+        where: { blockerId: studentId },
+        select: { blockedId: true },
+      }),
     ]);
-    return { username: me?.username ?? null, ...privacy };
+    return {
+      username: me?.username ?? null,
+      ...privacy,
+      blockedIds: blocks.map((b) => b.blockedId),
+    };
   }
 
   async updatePrivacy(

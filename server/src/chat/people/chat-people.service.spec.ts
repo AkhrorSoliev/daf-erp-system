@@ -197,6 +197,29 @@ describe('ChatPeopleService.block', () => {
   });
 });
 
+describe('ChatPeopleService.getMine', () => {
+  it('returns the ids of the students I blocked', async () => {
+    const { service, prisma } = make();
+    prisma.student.findFirst.mockResolvedValue({ username: 'ali' });
+    prisma.chatBlock.findMany.mockResolvedValue([
+      { blockedId: 7 },
+      { blockedId: 9 },
+    ]);
+    const out = await service.getMine(1, 1);
+    expect(out.blockedIds).toEqual([7, 9]);
+    expect(prisma.chatBlock.findMany.mock.calls[0][0].where).toEqual({
+      blockerId: 1,
+    });
+  });
+
+  it('returns an empty list when I blocked nobody', async () => {
+    const { service, prisma } = make();
+    prisma.student.findFirst.mockResolvedValue({ username: null });
+    const out = await service.getMine(1, 1);
+    expect(out.blockedIds).toEqual([]);
+  });
+});
+
 describe('ChatPeopleService.sharesGroup', () => {
   it('asks for a live ACTIVE enrollment in the same live group', async () => {
     const { service, prisma } = make();
