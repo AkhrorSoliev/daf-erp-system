@@ -20,6 +20,7 @@ import {
   useRemoveMessage,
 } from "./chat-queries";
 import {
+  isNearBottom,
   lastPeerMessageId,
   mergePending,
   threadMessages,
@@ -60,7 +61,9 @@ export function ChatThreadPage({ id }: { id: string }) {
   const { mutate: markRead } = useMarkRead(id);
   const [toDelete, setToDelete] = useState<ThreadItem | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
-  const scrolledOnce = useRef(false);
+  const listRef = useRef<HTMLDivElement>(null);
+  // Follow new height only while the student is at the end (true on open).
+  const stick = useRef(true);
   const marked = useRef<string | undefined>(undefined);
   const visible = useSyncExternalStore(subscribeVisibility, isVisible, () => true);
 
@@ -70,24 +73,30 @@ export function ChatThreadPage({ id }: { id: string }) {
   const items = mergePending(messages, pending);
   const lastPeer = lastPeerMessageId(messages);
 
-  // First load: land on the newest message. Older pages never come through here.
+  // ONE scroll mechanism: when the list grows (images, new or optimistic
+  // messages) and the student was near the end, stay at the end.
   useEffect(() => {
-    if (state !== "ready" || scrolledOnce.current) return;
-    scrolledOnce.current = true;
-    endRef.current?.scrollIntoView({ block: "end" });
-  }, [state]);
-
-  // A new peer message while the student is near the end: follow it.
-  const prevPeer = useRef(lastPeer);
-  useEffect(() => {
-    if (prevPeer.current === lastPeer) return;
-    prevPeer.current = lastPeer;
-    if (state !== "ready" || !scrolledOnce.current) return;
-    const end = endRef.current;
-    if (end && end.getBoundingClientRect().top < window.innerHeight + 400) {
-      end.scrollIntoView({ block: "end", behavior: "smooth" });
-    }
-  }, [lastPeer, state]);
+    const list = listRef.current;
+    if (!list) return;
+    const onScroll = () => {
+      stick.current = isNearBottom(
+        window.scrollY,
+        window.innerHeight,
+        document.documentElement.scrollHeight,
+      );
+    };
+    const ro = new ResizeObserver(() => {
+      if (stick.current) {
+        endRef.current?.scrollIntoView({ block: "end", behavior: "auto" });
+      }
+    });
+    ro.observe(list);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
 
   // Read once on open, then whenever a newer peer message is on screen. The
   // ref holds what was last reported, so a poll that changes nothing is silent.
@@ -100,11 +109,18 @@ export function ChatThreadPage({ id }: { id: string }) {
   }, [state, visible, lastPeer, markRead]);
 
   const onSend = (text: string) => {
+    stick.current = true;
     submit(text);
-    requestAnimationFrame(() =>
-      endRef.current?.scrollIntoView({ block: "end", behavior: "smooth" }),
-    );
   };
+
+  // Composer is fixed; every other state is a notice at the end of the thread.
+  const notice =
+    peer && blockedIds.includes(peer.id) ? (
+      <BlockedNotice peer={peer} />
+    ) : access && !access.canWrite ? (
+      <ChatAccessBanner />
+    ) : null;
+  const composerShown = !notice;
 
   const groups = groupByDay(items, new Date(), t);
 
@@ -133,7 +149,13 @@ export function ChatThreadPage({ id }: { id: string }) {
 
       </header>
 
-      <div className="flex flex-col gap-2 pb-4 pt-4 md:pb-32">
+      <div
+        ref={listRef}
+        className={cn(
+          "flex flex-col gap-2 pb-4 pt-4",
+          composerShown && "md:pb-32",
+        )}
+      >
         {state === "loading" && <BubbleSkeleton />}
         {(state === "offline" || state === "failed") && (
           <LoadFailed query={query} />
@@ -144,7 +166,10 @@ export function ChatThreadPage({ id }: { id: string }) {
             size="sm"
             className="self-center"
             loading={query.isFetchingNextPage}
-            onClick={() => query.fetchNextPage()}
+            onClick={() => {
+              stick.current = false; // older pages must not move the view
+              void query.fetchNextPage();
+            }}
           >
             {t("Oldingilarini ko'rsatish")}
           </Button>
@@ -171,34 +196,32 @@ export function ChatThreadPage({ id }: { id: string }) {
               ))}
             </section>
           ))}
-        <div ref={endRef} className="scroll-mb-32" />
+        {notice && <div className="pt-2">{notice}</div>}
+        <div
+          ref={endRef}
+          className={composerShown ? "scroll-mb-32" : undefined}
+        />
       </div>
 
       {/* Outside the content column (fixed), so it clears the rail itself. */}
-      <div
-        className={cn(
-          "fixed inset-x-0 bottom-0 z-20 transition-[padding] duration-200 ease-out",
-          CONTENT_INSET[sidebarMode],
-        )}
-      >
-        <div className="border-t border-line bg-surface">
-          <div className="mx-auto w-full max-w-[600px] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
-            {peer && blockedIds.includes(peer.id) ? (
-              <BlockedNotice peer={peer} />
-            ) : !access ? (
-              <Skeleton className="h-12 w-full rounded-[26px]" />
-            ) : access.canWrite ? (
-              <ChatComposer
-                conversationId={id}
-                onSend={onSend}
-                busy={busy}
-              />
-            ) : (
-              <ChatAccessBanner />
-            )}
+      {composerShown && (
+        <div
+          className={cn(
+            "fixed inset-x-0 bottom-0 z-20 transition-[padding] duration-200 ease-out",
+            CONTENT_INSET[sidebarMode],
+          )}
+        >
+          <div className="border-t border-line bg-surface">
+            <div className="mx-auto w-full max-w-[600px] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+              {access ? (
+                <ChatComposer conversationId={id} onSend={onSend} busy={busy} />
+              ) : (
+                <Skeleton className="h-12 w-full rounded-[26px]" />
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <BottomSheet
         open={toDelete !== null}
