@@ -239,6 +239,22 @@ describe("«Qanday hisoblandi»", () => {
     expect(text).not.toContain("Balansdan yechib olingan");
   });
 
+  it("warns about a hand-entered tax only beside an automatic turnover tax", () => {
+    const warning = "Bu oyda qo'lda yozilgan soliq xarajati bor";
+    const withTaxes = (turnoverTax: number, manualTaxExpenses?: number): ProfitComposition => ({
+      ...COMPOSITION,
+      taxes: { ...COMPOSITION.taxes!, turnoverTax, manualTaxExpenses },
+    });
+    const breakdown = (composition: ProfitComposition) =>
+      render(createElement(ProfitBreakdown, { month: "2026-10", composition }));
+
+    expect(breakdown(withTaxes(4_000_000, 1_500_000))).toContain(`${warning}: ${money(1_500_000)}.`);
+    expect(breakdown(withTaxes(4_000_000, 0))).not.toContain(warning);
+    expect(breakdown(withTaxes(0, 1_500_000))).not.toContain(warning);
+    // An older server sends no field at all.
+    expect(breakdown(withTaxes(4_000_000, undefined))).not.toContain(warning);
+  });
+
   it("says the teacher pay matches the Ish haqi page from 2026-07 only, and only when it was computed", () => {
     const check = "Ustozlar oyligi — Ish haqi sahifasidagi jami bilan bir xil";
     const breakdown = (month: string, composition: ProfitComposition) =>

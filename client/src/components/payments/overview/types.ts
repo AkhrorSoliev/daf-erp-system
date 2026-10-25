@@ -102,6 +102,8 @@ export interface ProfitComposition {
     bankFees: number;
     total: number;
     missingRates: string[];
+    /** Shu oyda qo'lda yozilgan «Soliqlar» xarajati (avtomatik soliq bilan ikki marta sanalmasin). Eski serverda yo'q. */
+    manualTaxExpenses?: number;
   };
   /** A running month only. */
   forecast: { expectedNetProfit: number } | null;

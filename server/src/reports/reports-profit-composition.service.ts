@@ -15,6 +15,7 @@ import {
 import { isTopUpMonth } from '../salary/shared/topup';
 import {
   missingRecurringExpenses,
+  recurringKeyOf,
   monthStatus,
   topWithRest,
   unpaidLeftLessons,
@@ -68,6 +69,12 @@ export interface ProfitComposition {
     bankFees: number;
     total: number;
     missingRates: string[];
+    /**
+     * This month's hand-entered «Soliqlar» expenses (already inside
+     * `expenses`). Shown beside an automatic turnover tax so one tax is not
+     * booked twice.
+     */
+    manualTaxExpenses: number;
   };
   refunds: number;
   /** A running month only: what the month is on course to close at. */
@@ -337,6 +344,9 @@ export class ReportsProfitCompositionService {
         bankFees: np.taxes.bankFees,
         total: np.taxes.total,
         missingRates: np.taxes.missingRates,
+        manualTaxExpenses: expenses
+          .filter((e) => recurringKeyOf(e) === 'TAXES')
+          .reduce((sum, e) => sum + e.amount, 0),
       },
       forecast,
       unpaidLeft: unpaid.students > 0 ? unpaid : null,
@@ -448,6 +458,7 @@ function emptyComposition(
       bankFees: 0,
       total: 0,
       missingRates: [],
+      manualTaxExpenses: 0,
     },
     forecast: null,
     unpaidLeft: null,

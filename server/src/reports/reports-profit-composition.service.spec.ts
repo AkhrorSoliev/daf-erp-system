@@ -271,6 +271,34 @@ describe('ReportsProfitCompositionService', () => {
       bankFees: 0,
       total: 10,
       missingRates: ['fees.qr'],
+      manualTaxExpenses: 0,
+    });
+  });
+
+  describe('manualTaxExpenses (hand-entered tax beside the automatic one)', () => {
+    it("sums the month's TAXES-category and «soliq» OTHER expenses, nothing else", async () => {
+      prisma.expense.findMany.mockReset();
+      const row = (category: string, description: string, amount: number) => ({
+        category,
+        description,
+        amount,
+        date: new Date('2026-09-21T00:00:00Z'),
+        branchId: 1,
+      });
+      prisma.expense.findMany
+        .mockResolvedValueOnce([
+          row('TAXES', 'Aylanma solig‘i', 4_000),
+          row('OTHER', 'Soliqlar', 1_000),
+          row('MARKETING', 'SMM', 9_000),
+        ])
+        .mockResolvedValueOnce([]);
+      const r = await run();
+      expect(r.taxes.manualTaxExpenses).toBe(5_000);
+    });
+
+    it('is 0 when the month has no hand-entered tax', async () => {
+      const r = await run();
+      expect(r.taxes.manualTaxExpenses).toBe(0);
     });
   });
 

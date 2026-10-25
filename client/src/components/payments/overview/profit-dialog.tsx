@@ -53,6 +53,8 @@ export function ProfitBreakdown({ month, composition }: { month: string; composi
   const t = useT();
   const canEditRates = useCan("settings.tax");
   const missing = composition.taxes?.missingRates.length ?? 0;
+  const manualTax = composition.taxes?.manualTaxExpenses ?? 0;
+  const doubleTax = manualTax > 0 && (composition.taxes?.turnoverTax ?? 0) > 0;
   return (
     <div className="space-y-2 text-sm">
       {profitLines(composition, t).map((line) => (
@@ -76,6 +78,13 @@ export function ProfitBreakdown({ month, composition }: { month: string; composi
               </Link>
             </>
           )}
+        </p>
+      )}
+      {doubleTax && (
+        <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+          {t("Bu oyda qo'lda yozilgan soliq xarajati bor: {amount}. Aylanma solig'i avtomatik ayrilgan — bir xil soliq ikki marta hisoblanmasin.", {
+            amount: som(manualTax, t),
+          })}
         </p>
       )}
       {month >= FULL_TEACHER_PAY_MONTH && composition.teacherSalaryBasis === "hisoblangan" && (

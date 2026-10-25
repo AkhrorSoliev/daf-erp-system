@@ -1970,6 +1970,7 @@ const de: Dictionary = {
   "To'lov komissiyasi, oylik, aylanma solig'i va bank xarajati stavkalari": "Zahlungsgebühren, Gehalt, Umsatzsteuer und Bankkosten",
   "Hisob to'liq emas: {n} ta stavka kiritilmagan": "Berechnung unvollständig: {n} Sätze fehlen",
   "Stavkalarni kiritish →": "Sätze eingeben →",
+  "Bu oyda qo'lda yozilgan soliq xarajati bor: {amount}. Aylanma solig'i avtomatik ayrilgan — bir xil soliq ikki marta hisoblanmasin.": "In diesem Monat gibt es eine manuell erfasste Steuerausgabe: {amount}. Die Umsatzsteuer wird bereits automatisch abgezogen – dieselbe Steuer nicht doppelt zählen.",
   // Payments — list («To'lovlar»)
   "← Umumiy ma'lumotlar": "← Übersicht",
   "Excel": "Excel",

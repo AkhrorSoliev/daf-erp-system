@@ -1970,6 +1970,7 @@ const en: Dictionary = {
   "To'lov komissiyasi, oylik, aylanma solig'i va bank xarajati stavkalari": "Payment fees, payroll, turnover tax and bank costs",
   "Hisob to'liq emas: {n} ta stavka kiritilmagan": "Calculation incomplete: {n} rates not entered",
   "Stavkalarni kiritish →": "Enter the rates →",
+  "Bu oyda qo'lda yozilgan soliq xarajati bor: {amount}. Aylanma solig'i avtomatik ayrilgan — bir xil soliq ikki marta hisoblanmasin.": "This month has a hand-entered tax expense: {amount}. The turnover tax is already deducted automatically — do not count the same tax twice.",
   // Payments — list («To'lovlar»)
   "← Umumiy ma'lumotlar": "← Overview",
   "Excel": "Excel",
