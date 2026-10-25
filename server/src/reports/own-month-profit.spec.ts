@@ -1,3 +1,4 @@
+import { emptyTaxCosts } from '../tax/tax-costs';
 import { computeOwnMonthProfit } from './own-month-profit';
 import { NetProfit } from './reports-excel.helpers';
 
@@ -14,7 +15,8 @@ const np = (over: Partial<NetProfit>): NetProfit =>
     refunds: 0,
     netProfit: 0,
     netMarginPercent: 0,
-    memo: { writeOffs: 0, providerFees: 0, advances: 0 },
+    taxes: emptyTaxCosts(),
+    memo: { writeOffs: 0, advances: 0 },
     ...over,
   }) as NetProfit;
 

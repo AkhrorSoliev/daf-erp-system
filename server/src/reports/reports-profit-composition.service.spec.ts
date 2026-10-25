@@ -1,3 +1,4 @@
+import { emptyTaxCosts } from '../tax/tax-costs';
 import { ReportsProfitCompositionService } from './reports-profit-composition.service';
 
 /** A held lesson as `valueHeldLessons` returns it. */
@@ -37,7 +38,8 @@ describe('ReportsProfitCompositionService', () => {
     refunds: 0,
     netProfit: 80_000,
     netMarginPercent: 40,
-    memo: { writeOffs: 0, providerFees: 0, advances: 0 },
+    taxes: emptyTaxCosts(),
+    memo: { writeOffs: 0, advances: 0 },
   };
 
   beforeEach(() => {

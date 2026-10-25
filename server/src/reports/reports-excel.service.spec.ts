@@ -1,7 +1,9 @@
+import { emptyTaxCosts } from '../tax/tax-costs';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Workbook, Worksheet } from 'exceljs';
 import { BadRequestException } from '@nestjs/common';
 import { ReportsExcelService } from './reports-excel.service';
+import { TaxCostsService } from '../tax/tax-costs.service';
 import { ReportsService } from './reports.service';
 import type { DebtSplit } from './debt-split';
 import {
@@ -13,6 +15,7 @@ import {
 
 describe('ReportsExcelService', () => {
   let service: ReportsExcelService;
+  let taxCosts: { forMonth: jest.Mock };
   let reports: any;
 
   // ---- Mock data tuned so every Tekshiruv tie reconciles (MOS). ----
@@ -224,7 +227,8 @@ describe('ReportsExcelService', () => {
     refunds: 10_000,
     netProfit: 290_000,
     netMarginPercent: 29,
-    memo: { writeOffs: 5_000, providerFees: 0, advances: 20_000 },
+    taxes: emptyTaxCosts(),
+    memo: { writeOffs: 5_000, advances: 20_000 },
   };
   const ownMonthProfit = {
     month: '2026-06',
@@ -428,10 +432,12 @@ describe('ReportsExcelService', () => {
 
   beforeEach(async () => {
     reports = baseMocks();
+    taxCosts = { forMonth: jest.fn().mockResolvedValue(emptyTaxCosts()) };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ReportsExcelService,
         { provide: ReportsService, useValue: reports },
+        { provide: TaxCostsService, useValue: taxCosts },
       ],
     }).compile();
     service = module.get(ReportsExcelService);
@@ -682,6 +688,89 @@ describe('ReportsExcelService', () => {
     expect(
       cellText(findRow(check, '= Sof foyda (yig‘indi)').getCell(5).value),
     ).toBe('MOS');
+  });
+
+  describe('tax and fee costs (spec 2026-10-25)', () => {
+    const taxes = {
+      ...emptyTaxCosts(),
+      providerFees: 10_000,
+      employerSocialTax: 15_000,
+      turnoverTax: 20_000,
+      bankFees: 5_000,
+      total: 50_000,
+      missingRates: ['bank.turnoverTiers' as const],
+    };
+
+    it('subtracts them in «Xulosa» and the Tekshiruv footing', async () => {
+      taxCosts.forMonth.mockResolvedValue(taxes);
+      const wb = await buildWorkbook(
+        {},
+        {
+          startDate: '2026-06-01',
+          endDate: '2026-06-30',
+          include: ['buxgalteriya'],
+        },
+      );
+      // 290 000 without taxes (see the pre-top-up case above) − 50 000.
+      const xulosa = wb.getWorksheet('Xulosa')!;
+      expect(findRow(xulosa, '=  SOF FOYDA').getCell(2).value).toBe(240_000);
+      expect(findRow(xulosa, '−  Soliq va komissiyalar').getCell(2).value).toBe(
+        50_000,
+      );
+
+      const check = wb.getWorksheet('Tekshiruv')!;
+      expect(findRow(check, '− Soliq va komissiyalar').getCell(2).value).toBe(
+        50_000,
+      );
+      expect(
+        cellText(findRow(check, '= Sof foyda (yig‘indi)').getCell(5).value),
+      ).toBe('MOS');
+    });
+
+    it('prints no tax row in «Xulosa» when nothing was booked', async () => {
+      const wb = await buildWorkbook(
+        {},
+        { startDate: '2026-06-01', endDate: '2026-06-30' },
+      );
+      expect(
+        findRow(wb.getWorksheet('Xulosa')!, '−  Soliq va komissiyalar'),
+      ).toBeNull();
+    });
+
+    it('single month: asks for the month with the export salaries', async () => {
+      await buildWorkbook(
+        {},
+        { startDate: '2026-06-01', endDate: '2026-06-30' },
+      );
+      expect(taxCosts.forMonth).toHaveBeenCalledWith(
+        1,
+        '2026-06',
+        null,
+        salaryMonthly,
+      );
+    });
+
+    it('multi-month: one window for every leg, each month on its own salaries', async () => {
+      taxCosts.forMonth.mockImplementation((_c, month) =>
+        Promise.resolve({
+          ...emptyTaxCosts(),
+          turnoverTax: month === '2026-06' ? 10_000 : 20_000,
+          total: month === '2026-06' ? 10_000 : 20_000,
+        }),
+      );
+      const wb = await buildWorkbook(
+        {},
+        { startDate: '2026-06-01', endDate: '2026-07-31' },
+      );
+      const asked = taxCosts.forMonth.mock.calls.map((c) => c[1]).sort();
+      expect(asked).toEqual(['2026-06', '2026-07']);
+      // Σ over the two months, not the first month alone.
+      expect(
+        findRow(wb.getWorksheet('Xulosa')!, '−  Soliq va komissiyalar').getCell(
+          2,
+        ).value,
+      ).toBe(30_000);
+    });
   });
 
   it('reads withdrawals once over every month of a multi-month export', async () => {

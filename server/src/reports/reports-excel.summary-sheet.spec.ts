@@ -1,3 +1,4 @@
+import { emptyTaxCosts } from '../tax/tax-costs';
 import { Workbook, Worksheet } from 'exceljs';
 import { summarySheetV2, SummaryInput } from './reports-excel.summary-sheet';
 import { cellText } from './reports-excel.helpers';
@@ -14,7 +15,8 @@ const np = (over: any = {}) => ({
   refunds: 200_000,
   netProfit: 35_976_444,
   netMarginPercent: 20.7,
-  memo: { writeOffs: 0, providerFees: 0, advances: 16_430_000 },
+  taxes: emptyTaxCosts(),
+  memo: { writeOffs: 0, advances: 16_430_000 },
   ...over,
 });
 
@@ -149,6 +151,26 @@ describe('summarySheetV2', () => {
     expect(t).toContain('DARSLARINING PULI QAYERDAN KELGAN');
     expect(t).toContain('5.  PUL QAYERGA KETDI');
     expect(t).toContain("6.  O'QUVCHILAR");
+  });
+
+  it('adds a tax-and-fee row only for a month that has one', () => {
+    expect(valueFor(ws, '−  Soliq va komissiyalar')).toBeUndefined();
+
+    const wb = new Workbook();
+    summarySheetV2(
+      wb,
+      input({
+        cur: {
+          np: np({ taxes: { ...emptyTaxCosts(), total: 1_200_000 } }),
+          covered: 80_321_275,
+          centerFunded: 15_513_272,
+          recognized: 173_783_991,
+        },
+      }),
+    );
+    expect(
+      valueFor(wb.getWorksheet('Xulosa')!, '−  Soliq va komissiyalar'),
+    ).toBe(1_200_000);
   });
 
   it('adds a withdrawal row only for a month that has one', () => {

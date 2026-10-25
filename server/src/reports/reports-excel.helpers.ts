@@ -6,6 +6,7 @@
  */
 import { Cell, CellValue, Worksheet, Row } from 'exceljs';
 import { isTopUpMonth } from '../salary/shared/topup';
+import { TaxCosts, emptyTaxCosts } from '../tax/tax-costs';
 
 /**
  * Read a cell as the text a person would see in Excel.
@@ -138,8 +139,10 @@ export interface NetProfit {
   refunds: number;
   netProfit: number;
   netMarginPercent: number;
+  /** Soliq va komissiyalar (spec 2026-10-25), ayriladi. */
+  taxes: TaxCosts;
   /** Shown but NOT subtracted from netProfit (per product decision). */
-  memo: { writeOffs: number; providerFees: number; advances: number };
+  memo: { writeOffs: number; advances: number };
 }
 
 /**
@@ -155,6 +158,7 @@ export interface NetProfit {
  *   − Operatsion xarajatlar (avanssiz — advance is prepaid salary, already
  *     inside the deserved figure, so it is NOT double-counted here)
  *   − Qaytarishlar (refund — real cash returned, subtracted nowhere else)
+ *   − Soliq va komissiyalar (taxes.total)
  *   = SOF FOYDA
  *
  * Teacher salary is the month-appropriate deserved figure, gated by
@@ -167,8 +171,8 @@ export interface NetProfit {
  * When the salary month has no lesson data (config-gap month, covered/deserved
  * null), it falls back to the cash-paid teacher salary from the P&L so the figure
  * is never fabricated. `month` omitted → legacy full-deserved (back-compat).
- * Write-offs (non-cash loss) and gateway fees are carried as a memo, not
- * subtracted (product decision).
+ * Write-offs (non-cash loss) are carried as a memo, not subtracted (product
+ * decision). Gateway fees moved into `taxes` and ARE subtracted.
  */
 export function buildNetProfit(
   pl: any,
@@ -181,7 +185,9 @@ export function buildNetProfit(
   month?: string,
   recognizedRevenue?: number,
   balanceWithdrawals = 0,
+  taxes: TaxCosts | null = null,
 ): NetProfit {
+  const tax = taxes ?? emptyTaxCosts();
   // Revenue basis: prefer the "dars tushumi" (recognized — lessons held this
   // month) figure when supplied; fall back to cash COMPLETED payments (pl).
   const useRecognized = typeof recognizedRevenue === 'number';
@@ -217,7 +223,8 @@ export function buildNetProfit(
     teacherSalary -
     adminSalary -
     operatingExpenses -
-    refunds;
+    refunds -
+    tax.total;
   const earned = revenue + withdrawn;
   return {
     revenue,
@@ -234,11 +241,11 @@ export function buildNetProfit(
     operatingExpenses,
     refunds,
     netProfit,
+    taxes: tax,
     netMarginPercent:
       earned > 0 ? Math.round((netProfit / earned) * 1000) / 10 : 0,
     memo: {
       writeOffs: outflows?.writeOffs ?? 0,
-      providerFees: outflows?.providerFees ?? 0,
       advances: pl?.costOfServices?.teacherAdvances ?? 0,
     },
   };

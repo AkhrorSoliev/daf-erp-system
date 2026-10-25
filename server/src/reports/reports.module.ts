@@ -35,6 +35,7 @@ import { SalaryModule } from '../salary/salary.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { OutreachModule } from '../outreach/outreach.module';
 import { SettingsModule } from '../settings/settings.module';
+import { TaxModule } from '../tax/tax.module';
 import { AttendanceFactsLoader } from './attendance-stats/attendance-facts.loader';
 import { AttendanceStatsController } from './attendance-stats/attendance-stats.controller';
 import { AttendanceStatsService } from './attendance-stats/attendance-stats.service';
@@ -49,6 +50,7 @@ import { AudienceService } from './audience/audience.service';
     SalaryModule,
     PaymentsModule,
     SettingsModule,
+    TaxModule,
     OutreachModule,
   ],
   controllers: [

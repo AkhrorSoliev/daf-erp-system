@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ReportsService } from './reports.service';
+import { TaxCostsService } from '../tax/tax-costs.service';
+import { emptyTaxCosts } from '../tax/tax-costs';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { ReportsOverviewService } from './reports-overview.service';
@@ -112,6 +114,7 @@ function mockTeacherChangeDepartures(prisma: any) {
 
 describe('ReportsService', () => {
   let service: ReportsService;
+  let taxCosts: { forMonth: jest.Mock };
   let prisma: any;
   let redis: any;
 
@@ -192,9 +195,11 @@ describe('ReportsService', () => {
       getActiveHolidaysInRange: jest.fn().mockResolvedValue([]),
     };
 
+    taxCosts = { forMonth: jest.fn().mockResolvedValue(emptyTaxCosts()) };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ReportsService,
+        { provide: TaxCostsService, useValue: taxCosts },
         ReportsOverviewService,
         ReportsAttendanceAnalyticsService,
         ReportsFinancialService,
@@ -870,6 +875,49 @@ describe('ReportsService', () => {
       expect(out.netProfit.balanceWithdrawals).toBe(30_000);
       // 100 000 lessons + 30 000 withdrawn − 70 000 teachers.
       expect(out.netProfit.netProfit).toBe(60_000);
+    });
+
+    it('subtracts the tax and fee costs of the month (spec 2026-10-25)', async () => {
+      const svc: any = service;
+      const salaries = { totals: { covered: 70_000, fullDeserved: 70_000 } };
+      jest
+        .spyOn(svc.financial, 'valueHeldLessons')
+        .mockResolvedValue([{ value: 100_000 }]);
+      jest
+        .spyOn(svc.financial, 'getPeriodOutflows')
+        .mockResolvedValue({ refunds: 0, writeOffs: 0, providerFees: 0 });
+      jest.spyOn(svc, 'getSalaryMonthly').mockResolvedValue(salaries);
+      jest.spyOn(svc, 'getProfitLoss').mockResolvedValue({
+        costOfServices: {},
+        operatingExpenses: { adminSalaries: 0, byCategory: [] },
+      });
+      jest
+        .spyOn(svc, 'getBalanceWithdrawals')
+        .mockResolvedValue({ total: 0, teacherCredited: 0, students: [] });
+      const taxes = {
+        ...emptyTaxCosts(),
+        providerFees: 2_000,
+        turnoverTax: 3_000,
+        total: 5_000,
+      };
+      taxCosts.forMonth.mockResolvedValue(taxes);
+
+      const out = await svc.assembleMonthlyNetProfit(1001, {
+        month: '2026-10',
+        branchIds: [1],
+        performedById: 10001,
+      });
+
+      expect(taxCosts.forMonth).toHaveBeenCalledWith(
+        1001,
+        '2026-10',
+        [1],
+        salaries,
+      );
+      expect(out.taxes).toBe(taxes);
+      expect(out.netProfit.taxes).toBe(taxes);
+      // 100 000 − 70 000 payroll − 5 000 tax and fees.
+      expect(out.netProfit.netProfit).toBe(25_000);
     });
 
     /**

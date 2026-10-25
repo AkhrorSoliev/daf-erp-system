@@ -31,7 +31,8 @@ import {
  * The headline the CEO asked for: ONE authoritative net-profit figure that
  * subtracts EVERY real outflow — teacher salary on the HISOBLANGAN (deserved)
  * basis (not the ~0 cash-paid figure that made the legacy "Sof foyda" look 4×
- * too high), operating expenses, and student refunds. Write-offs + gateway fees
+ * too high), operating expenses, student refunds, and the tax and fee costs
+ * (gateway commission, employer social tax, turnover tax, bank fee). Write-offs
  * are shown as a memo, not subtracted. `np` is pre-assembled by `buildNetProfit`
  * from data already in the workbook, so this sheet is pure presentation.
  */
@@ -83,6 +84,25 @@ export function netProfitSheet(wb: Workbook, np: NetProfit, period: string) {
     np.refunds,
     'O‘quvchilarga qaytarilgan real naqd pul — avval hech qayerda ayirilmasdi.',
   );
+  kvRow(
+    ws,
+    '−  To‘lov komissiyasi',
+    np.taxes.providerFees,
+    'Payme/Click/Uzum, integratsiya, QR',
+  );
+  kvRow(
+    ws,
+    '−  Ijtimoiy soliq (korxona)',
+    np.taxes.employerSocialTax,
+    'Rasmiy oylikdan',
+  );
+  kvRow(
+    ws,
+    '−  Aylanma solig‘i',
+    np.taxes.turnoverTax,
+    'Naqd bo‘lmagan tushumdan',
+  );
+  kvRow(ws, '−  Bank xarajati', np.taxes.bankFees, 'Aylanmaga qarab');
 
   // Bottom-line — big, bold, green/red.
   const t = ws.addRow([
@@ -111,6 +131,14 @@ export function netProfitSheet(wb: Workbook, np: NetProfit, period: string) {
   m.getCell(2).numFmt = PCT;
   m.getCell(2).font = { bold: true };
   m.getCell(3).font = { italic: true, size: 9, color: { argb: SUBTLE } };
+  if (np.taxes.missingRates.length > 0) {
+    kvRow(
+      ws,
+      'Diqqat: hisob to‘liq emas',
+      '',
+      `Stavka kiritilmagan: ${np.taxes.missingRates.join(', ')}`,
+    );
+  }
 
   sectionHeader(ws, 'Ma‘lumot uchun (foydadan AYIRILMAGAN)');
   kvRow(
@@ -118,12 +146,6 @@ export function netProfitSheet(wb: Workbook, np: NetProfit, period: string) {
     'Kechirilgan qarz (write-off)',
     np.memo.writeOffs,
     'Hisobdan chiqarilgan qarzlar — naqd emas, lekin real iqtisodiy zarar. Foydadan ayirilmadi (qaror bo‘yicha).',
-  );
-  kvRow(
-    ws,
-    'Gateway komissiyasi (Payme/Click)',
-    np.memo.providerFees,
-    'To‘lov tizimi ushlab qolgan komissiya. Hozir 0 (yozilmayapti). Foydadan ayirilmadi.',
   );
   kvRow(
     ws,
@@ -136,11 +158,11 @@ export function netProfitSheet(wb: Workbook, np: NetProfit, period: string) {
     ws,
     [
       'Bu — savolga aniq javob: BARCHA real chiqimlardan keyin markazda qancha sof foyda qolgani.',
-      'SOF FOYDA = Tushum − Ustoz oyligi (hisoblangan) − Admin oyligi − Operatsion xarajatlar (avanssiz) − Qaytarishlar.',
+      'SOF FOYDA = Tushum − Ustoz oyligi (hisoblangan) − Admin oyligi − Operatsion xarajatlar (avanssiz) − Qaytarishlar − Soliq va komissiyalar.',
       'Ustoz oyligi HISOBLANGAN asosda (naqd emas): naqd oylik odatda keyingi oy chiqqani uchun «naqd» asosda bu raqam 0 ko‘rinib, foydani sun‘iy oshirardi. Markaz qo‘shimchasi (qarzdor o‘quvchilar darsi uchun) faqat 2026-07 dan qo‘shiladi — undan oldingi oylarda ustoz haqi = o‘quvchilar to‘lagani (covered), chunki o‘shanda markaz qo‘shimcha bermagan.',
       'Ustoz avansi ikki marta hisoblanmaydi: u «hisoblangan oylik» ichida bor, shuning uchun «Operatsion xarajatlar»dan chiqarilgan (avanssiz).',
       'Tushum va ustoz oyligi BIR XIL asosda — shu oy o‘tilgan darslar bo‘yicha (dars tushumi = recognized). Shuning uchun kech kelgan to‘lovlar bu oyni bo‘yamaydi (o‘z darsi oyiga ketadi) va oldindan to‘lovlar kelajak oyga qoladi. Har oy o‘zining toza foydasini ko‘rsatadi.',
-      'Kechirilgan qarz va gateway komissiyasi — pastda «ma‘lumot uchun», foydadan ayirilmagan.',
+      'Kechirilgan qarz — pastda «ma‘lumot uchun», foydadan ayirilmagan. To‘lov komissiyasi, soliq va bank xarajati esa foydadan ayiriladi (Sozlamalar → Soliq va komissiyalar).',
     ],
     3,
   );
