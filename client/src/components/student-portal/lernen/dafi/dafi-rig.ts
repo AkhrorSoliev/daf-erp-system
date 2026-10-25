@@ -33,8 +33,11 @@ export class DafiRig {
       chL: q(".chL"), chR: q(".chR"), fq: q(".fq"), fs: q(".fs"), fst: q(".fst"), fxl: q(".fxl"),
     };
     this.r = { ...neytral(), breath: 0, hidle: 0, blink: 0, gx: 0, gy: 0, eL: 0, eR: 0, starRot: 0 };
-    gsap.ticker.add(this.tick);
-    if (!opts.reduce) this.layers();
+    // Reduced motion is a still pose: no per-frame step(), no idle layers.
+    if (!opts.reduce) {
+      gsap.ticker.add(this.tick);
+      this.layers();
+    }
     this.render();
   }
 
@@ -156,11 +159,16 @@ export class DafiRig {
 
   set(state: RigState) {
     const { gsap, r } = this;
+    if (this.opts.reduce) {
+      // No ticker runs in this mode, so a tween would never be drawn: snap to the calm pose.
+      Object.assign(r, neytral());
+      this.render();
+      return;
+    }
     this.tl?.kill();
     gsap.killTweensOf(r, Object.keys(neytral()).join(","));
     const tl = (this.tl = gsap.timeline({ defaults: { overwrite: "auto" } }));
     tl.to(r, { ...neytral(), duration: 0.35, ease: "back.out(1.6)" }, 0);
-    if (this.opts.reduce) return;
     if (state === "wave") this.wave(tl, 0.3);
     else if (state === "cheer") this.cheer(tl, 0.12);
     else if (state === "think") this.think(tl, 0.3);

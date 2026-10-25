@@ -35,6 +35,8 @@ export const STRICT_FILES: string[] = [
   "components/header-user-menu.tsx",
   "lib/ui-skins.ts",
   "lib/lernen-temalar.ts",
+  "components/student-portal/lernen/tema/toza/toza-tugun.tsx",
+  "components/student-portal/lernen/tema/use-lernen-tema.ts",
   "components/global-search/search-dropdown-utils.ts",
   "components/global-search/search-dropdown-empty-state.tsx",
   "components/global-search/search-dropdown-results.tsx",

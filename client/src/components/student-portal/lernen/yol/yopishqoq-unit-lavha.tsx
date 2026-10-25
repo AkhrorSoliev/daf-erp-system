@@ -16,10 +16,14 @@ const FON: Record<string, string> = {
 export function YopishqoqUnitLavha({ matn, daraja }: { matn: string; daraja: string }) {
   return (
     <div
-      aria-live="polite"
+      // Hidden from screen readers: it repeats the unit headers and would re-announce while scrolling.
+      // `data-yol-banner` lets the auto-scroll measure its height.
+      aria-hidden="true"
+      data-yol-banner=""
       className={cn(
-        "sticky top-2 z-10 rounded-2xl px-4 py-3 font-display text-base font-extrabold text-white",
-        "shadow-[0_5px_0_rgba(0,0,0,.22)] transition-colors duration-500 motion-reduce:transition-none",
+        "sticky top-[max(0.5rem,env(safe-area-inset-top))] z-10 rounded-2xl px-4 py-3 font-display text-base font-extrabold text-white",
+        // `in-data-…`: LernenYol marks its root while the device's less-motion switch is on.
+        "shadow-[0_5px_0_rgba(0,0,0,.22)] transition-colors duration-500 motion-reduce:transition-none in-data-[kam-harakat]:transition-none",
         FON[daraja] ?? FON.A1,
       )}
     >

@@ -5,7 +5,8 @@ const INK = "#2a1a14";
 
 /**
  * Dafi's head as inline SVG (ADR-0125). Classes (.all, .earL, .eL, .mo, …) are
- * what `DafiRig` animates. Ported 1:1 from the approved mockup's `ART`.
+ * what `DafiRig` animates. It is the approved mockup's `ART` plus calm starting
+ * attributes (neutral mouth, state-only layers hidden) so the server-rendered head is right.
  */
 export const DAFI_SVG = `<svg viewBox="30 20 140 125" aria-hidden="true" style="overflow:visible;display:block;width:100%;height:100%">
 <ellipse class="sh" cx="100" cy="140" rx="46" ry="6" fill="#000" opacity=".15"/>

@@ -74,7 +74,7 @@ function olish(): Zanjir {
 /** Resume the context from a user gesture (browsers keep it suspended before). */
 export function motorniUygot(): void {
   const z = olish();
-  if (z.c.state === "suspended") void z.c.resume();
+  if (z.c.state === "suspended") z.c.resume().catch(() => {});
 }
 
 function out(z: Zanjir, node: AudioNode, pan = 0) {
@@ -262,6 +262,6 @@ const HODISALAR: Record<OvozHodisa, (z: Zanjir, t: number) => void> = {
 
 export function motorChal(hodisa: OvozHodisa): void {
   const z = olish();
-  if (z.c.state === "suspended") void z.c.resume();
+  if (z.c.state === "suspended") z.c.resume().catch(() => {});
   HODISALAR[hodisa](z, z.c.currentTime);
 }

@@ -34,13 +34,20 @@ describe("lernen temalar", () => {
     expect(lernenTemaOrDefault("neon")).toBe("toza");
   });
 
-  it("lists exactly the ids the server accepts", () => {
-    const server = readFileSync(
+  const server = () =>
+    readFileSync(
       path.join(__dirname, "..", "..", "..", "server", "src", "common", "lernen-temalar.ts"),
       "utf8",
     );
-    const body = server.split("LERNEN_TEMA_IDLARI = [")[1].split("] as const")[0];
+
+  it("lists exactly the ids the server accepts", () => {
+    const body = server().split("LERNEN_TEMA_IDLARI = [")[1].split("] as const")[0];
     const serverIds = [...body.matchAll(/'([a-z]+)'/g)].map((m) => m[1]);
     expect(serverIds).toEqual([...LERNEN_TEMA_IDLARI]);
+  });
+
+  it("has the same default look as the server", () => {
+    const m = server().match(/DEFAULT_LERNEN_TEMA\s*:[^=]*=\s*'([a-z]+)'/);
+    expect(m?.[1]).toBe(DEFAULT_LERNEN_TEMA);
   });
 });

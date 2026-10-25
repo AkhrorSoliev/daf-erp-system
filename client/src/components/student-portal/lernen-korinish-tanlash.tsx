@@ -9,7 +9,7 @@ import { Card, ListRow, Section } from "./lumio";
 import { useLernenTema } from "./lernen/tema/use-lernen-tema";
 import { ovozChal, ovozniUygot } from "./lernen/ovoz/ovoz";
 import { ovozYoqilganmi, ovozniSaqla } from "./lernen/ovoz/ovoz-sozlama";
-import { harakatniSaqla, qurilmaHarakatSozlamasi } from "./lernen/harakat/kam-harakat";
+import { harakatniSaqla, kamHarakatHozir } from "./lernen/harakat/kam-harakat";
 
 /**
  * Settings → «Ta'lim ko'rinishi» (ADR-0125): the look is the account's choice;
@@ -23,7 +23,8 @@ export function LernenKorinishTanlash() {
 
   React.useEffect(() => {
     setOvoz(ovozYoqilganmi());
-    setKam(qurilmaHarakatSozlamasi() === true);
+    // The EFFECTIVE state (device switch OR system setting): a phone set to reduce motion shows «Yoqilgan».
+    setKam(kamHarakatHozir());
   }, []);
 
   return (
@@ -41,15 +42,16 @@ export function LernenKorinishTanlash() {
                 onClick={() => void tanla(tema.id)}
                 className={cn(
                   "flex items-center gap-3 rounded-2xl border-2 p-3 text-left transition-colors",
-                  tanlangan ? "border-coral-500 bg-coral-100" : "border-line bg-surface",
+                  // A translucent tint over the card surface: it follows the theme, unlike the fixed light `coral-100`.
+                  tanlangan ? "border-coral-500 bg-coral-500/15" : "border-line bg-surface",
                 )}
               >
                 <span aria-hidden className="size-8 shrink-0 rounded-full" style={{ background: tema.swatch }} />
                 <span className="min-w-0 flex-1">
                   <span className="block font-display font-extrabold text-ink-900">{t(tema.label)}</span>
-                  <span className="block text-xs font-semibold text-ink-500">{t(tema.hint)}</span>
+                  <span className={cn("block text-xs font-semibold", tanlangan ? "text-ink-600" : "text-ink-500")}>{t(tema.hint)}</span>
                 </span>
-                {tanlangan ? <Check size={20} weight="bold" className="text-coral-600" /> : null}
+                {tanlangan ? <Check size={20} weight="bold" className="text-coral-600 dark:text-coral-400" /> : null}
               </button>
             );
           })}
@@ -81,7 +83,8 @@ export function LernenKorinishTanlash() {
         onClick={() => {
           const yangi = !kam;
           harakatniSaqla(yangi);
-          setKam(yangi);
+          // Toggles the device switch; the row shows the result, which the system setting can still keep on.
+          setKam(kamHarakatHozir());
         }}
       />
     </Section>

@@ -52,6 +52,7 @@ export function useLernenTema() {
 
   const tanla = React.useCallback(
     async (yangi: LernenTemaId) => {
+      if (yangi === id) return; // tapping the look that is already chosen must not PATCH
       await temaniSaqla({
         qc,
         profilKaliti: PROFIL_KALITI,
@@ -64,7 +65,7 @@ export function useLernenTema() {
         onXato: (e) => toast.error(getErrorMessage(e, t("Ko'rinishni saqlab bo'lmadi, qayta urinib ko'ring"))),
       });
     },
-    [qc, t],
+    [qc, t, id],
   );
 
   return { id, tema: temaTop(id), tanla };

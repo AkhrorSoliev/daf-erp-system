@@ -28,12 +28,14 @@ export function Dafi({ holat = "tinch", olcham = "md", className }: DafiProps) {
 
   React.useEffect(() => {
     let tugadi = false;
-    void Promise.all([import("gsap"), import("./dafi-rig")]).then(([{ gsap }, { DafiRig }]) => {
-      if (tugadi || !ref.current) return;
-      const r = new DafiRig(ref.current, gsap, { reduce: kamHarakatHozir() });
-      rig.current = r;
-      r.set(RIG_HOLAT[hozirgi.current]);
-    });
+    void Promise.all([import("gsap"), import("./dafi-rig")])
+      .then(([{ gsap }, { DafiRig }]) => {
+        if (tugadi || !ref.current) return;
+        const r = new DafiRig(ref.current, gsap, { reduce: kamHarakatHozir() });
+        rig.current = r;
+        r.set(RIG_HOLAT[hozirgi.current]);
+      })
+      .catch(() => {}); // chunk failed to load: Dafi simply stays as the calm static SVG
     return () => {
       tugadi = true;
       rig.current?.destroy();

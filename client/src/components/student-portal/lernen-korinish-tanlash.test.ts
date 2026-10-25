@@ -29,6 +29,15 @@ describe("LernenKorinishTanlash (server markup)", () => {
     expect(first[1]).toContain("Toza");
   });
 
+  it("paints the chosen card with a tint that remaps in dark mode, not a fixed light pink", () => {
+    const [first] = radios(render());
+    expect(first[0]).toContain("border-coral-500");
+    expect(first[0]).toContain("bg-coral-500/15");
+    expect(first[0]).not.toContain("bg-coral-100");
+    // The hint is one step darker (ink-600) on the tint: ink-500 is only 3.4:1 there in light mode.
+    expect(first[1]).toContain("text-ink-600");
+  });
+
   it("has the sound and the less-motion rows, each saying whether it is on", () => {
     const html = render();
     expect(html).toContain("Ovozlar");

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { kamHarakatHozir } from "../harakat/kam-harakat";
 
 /** O'lchovlar — hammasi OYNAGA nisbatan (oyna tepasidan), piksellarda. */
 export interface YolSkrollOlchami {
@@ -49,6 +50,15 @@ export function yolSkrollSiljishi(o: YolSkrollOlchami): number | null {
 
 /** Sarlavha oyna chetiga yopishib qolmasin — `main`ning tepa bo'shlig'i ustiga. */
 const TEPA_NAFAS = 8;
+
+/**
+ * Yuqoridagi zaxira: `main`ning tepa bo'shlig'i + nafas + yopishqoq unit
+ * lavhasining balandligi. Lavha oyna tepasida turadi, shuning uchun usiz
+ * unit qatori aynan uning ostida qolib ketardi (brauzerda ~33 px yopilgan).
+ */
+export function yolTepaZaxirasi(mainTepaBoshlig: number, lavhaBalandligi: number): number {
+  return mainTepaBoshlig + TEPA_NAFAS + lavhaBalandligi;
+}
 
 /**
  * Element sahifa boshidan qancha pastda — `transform`siz.
@@ -112,17 +122,17 @@ export function useYolSkroll(kalit: number | null) {
         seansTepa,
         seansPast: seansTepa + seans.offsetHeight,
         oyna: window.innerHeight,
-        tepaZaxira: (parseFloat(uslub?.paddingTop ?? "") || 0) + TEPA_NAFAS,
+        tepaZaxira: yolTepaZaxirasi(
+          parseFloat(uslub?.paddingTop ?? "") || 0,
+          document.querySelector("[data-yol-banner]")?.getBoundingClientRect().height ?? 0,
+        ),
         pastZaxira: parseFloat(uslub?.paddingBottom ?? "") || 0,
       });
       if (siljish == null) return;
 
-      const kamHarakat = window.matchMedia(
-        "(prefers-reduced-motion: reduce)",
-      ).matches;
       window.scrollBy({
         top: siljish,
-        behavior: kamHarakat ? "auto" : "smooth",
+        behavior: kamHarakatHozir() ? "auto" : "smooth",
       });
     });
 

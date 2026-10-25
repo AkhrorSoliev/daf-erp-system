@@ -22,7 +22,8 @@ export function ovozChal(hodisa: OvozHodisa): void {
 /** Call from a first tap so the browser lets the context start. */
 export function ovozniUygot(): void {
   try {
-    if (typeof window === "undefined") return;
+    // A muted student must not get an AudioContext built or resumed.
+    if (typeof window === "undefined" || !ovozYoqilganmi()) return;
     void import("./ovoz-motor").then((m) => m.motorniUygot()).catch(() => {});
   } catch {
     /* silent by design */

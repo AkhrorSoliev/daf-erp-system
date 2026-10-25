@@ -3,6 +3,7 @@ import {
   HARAKAT_KALITI,
   HARAKAT_OZGARDI,
   harakatniSaqla,
+  kamHarakatHozir,
   kamHarakatQarori,
   yengilRejimmi,
 } from "./kam-harakat";
@@ -17,6 +18,34 @@ describe("kamHarakatQarori", () => {
   });
   it("never turns motion back on against the system setting", () => {
     expect(kamHarakatQarori(false, true)).toBe(true);
+  });
+});
+
+describe("kamHarakatHozir", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const brauzer = (tizim: boolean, qurilma: string | null) => {
+    vi.stubGlobal("window", { matchMedia: () => ({ matches: tizim }) });
+    vi.stubGlobal("localStorage", { getItem: () => qurilma });
+  };
+
+  it("counts the system setting even when the device switch was never touched", () => {
+    brauzer(true, null);
+    expect(kamHarakatHozir()).toBe(true);
+  });
+  it("counts the device switch without the system setting", () => {
+    brauzer(false, "1");
+    expect(kamHarakatHozir()).toBe(true);
+  });
+  it("is off when neither asks for less motion", () => {
+    brauzer(false, "0");
+    expect(kamHarakatHozir()).toBe(false);
+  });
+  it("is off on the server (no window)", () => {
+    vi.stubGlobal("window", undefined);
+    expect(kamHarakatHozir()).toBe(false);
   });
 });
 
