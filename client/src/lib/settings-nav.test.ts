@@ -42,7 +42,7 @@ function blocksOf(url: string, roleIds: number[]): string[] {
 }
 
 describe("getVisibleSettingsSections — /settings da kim nimani ko'radi", () => {
-  it("the CEO sees all 13 pages in five topic sections", () => {
+  it("the CEO sees all 14 pages in five topic sections", () => {
     const sections = getVisibleSettingsSections(canForRoles([CEO]), true);
     expect(sections.map((section) => section.title)).toEqual([
       "Markaz",
@@ -51,7 +51,7 @@ describe("getVisibleSettingsSections — /settings da kim nimani ko'radi", () =>
       "To'lov va lidlar",
       "Telegram va arxiv",
     ]);
-    expect(sections.flatMap((section) => section.items)).toHaveLength(13);
+    expect(sections.flatMap((section) => section.items)).toHaveLength(14);
   });
 
   it("no section is named after a role: every viewer meets only topic headings", () => {
@@ -181,6 +181,14 @@ describe("canOpenSettingsPath — SettingsLayoutShell shu qoida bilan qaytaradi"
     expect(canOpenSettingsPath("/settings/employees/10042", canForRoles([ADMINISTRATOR]))).toBe(false);
     expect(canOpenSettingsPath("/settings/payment", canForRoles([ADMINISTRATOR]))).toBe(false);
     expect(canOpenSettingsPath("/settings/archive", canForRoles([BRANCH_DIRECTOR]))).toBe(false);
+  });
+
+  it("«Soliq va komissiyalar» (/settings/tax) — standart bo'yicha faqat CEO uchun, boshqalar URL bilan ham kirmaydi", () => {
+    expect(canOpenSettingsPath("/settings/tax", canForRoles([CEO]), true)).toBe(true);
+    for (const role of [BRANCH_DIRECTOR, ADMINISTRATOR, CASHIER, TEACHER]) {
+      expect(canOpenSettingsPath("/settings/tax", canForRoles([role]))).toBe(false);
+    }
+    expect(findSettingsItem("/settings/tax")?.permission).toBe("settings.tax");
   });
 
   it("ko'rinadigan sahifa va uning ichki sahifalari ochiladi", () => {

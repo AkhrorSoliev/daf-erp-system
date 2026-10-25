@@ -1974,6 +1974,7 @@ const en: Dictionary = {
   "Aylanma solig'i": "Turnover tax",
   "Bank xarajati": "Bank fees",
   "Soliq va komissiyalar": "Taxes and fees",
+  "To'lov komissiyasi, oylik, aylanma solig'i va bank xarajati stavkalari": "Payment fees, payroll, turnover tax and bank costs",
   "Hisob to'liq emas: {n} ta stavka kiritilmagan": "Calculation incomplete: {n} rates not entered",
   "Stavkalarni kiritish →": "Enter the rates →",
   // Payments — list («To'lovlar»)

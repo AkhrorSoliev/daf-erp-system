@@ -38,6 +38,7 @@ export const routeLabels: Record<string, string> = {
   // dars krediti, hisob-kitob kuni). "payments" (ko'plik) esa /payments —
   // Moliya bo'limi, alohida kalit yuqorida.
   payment: msg("To'lov"),
+  tax: msg("Soliq va komissiyalar"),
   branches: msg("Filiallar"),
   employees: msg("Xodimlar"),
   rooms: msg("Xonalar"),

@@ -1974,6 +1974,7 @@ const de: Dictionary = {
   "Aylanma solig'i": "Steuer auf den Umsatz",
   "Bank xarajati": "Bankgebühren",
   "Soliq va komissiyalar": "Steuern und Gebühren",
+  "To'lov komissiyasi, oylik, aylanma solig'i va bank xarajati stavkalari": "Zahlungsgebühren, Gehalt, Umsatzsteuer und Bankkosten",
   "Hisob to'liq emas: {n} ta stavka kiritilmagan": "Berechnung unvollständig: {n} Sätze fehlen",
   "Stavkalarni kiritish →": "Sätze eingeben →",
   // Payments — list («To'lovlar»)

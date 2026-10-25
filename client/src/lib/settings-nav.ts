@@ -13,6 +13,7 @@ import {
   UserCheck,
   Scale,
   Landmark,
+  Percent,
   UsersRound,
   GraduationCap,
   Banknote,
@@ -215,6 +216,15 @@ export const settingsNavSections: SettingsNavSection[] = [
         description: msg("Kurs to'lov modeli va hisob-kitob qoidalari"),
         keywords: ["pul", "model", "oylik to'lov", "qarz", "hisob-kitob"],
         permission: "settings.payment",
+      },
+      {
+        // GET/PATCH /settings/tax check `settings.tax` (CEO by default).
+        title: msg("Soliq va komissiyalar"),
+        url: "/settings/tax",
+        icon: Percent,
+        description: msg("To'lov komissiyasi, oylik, aylanma solig'i va bank xarajati stavkalari"),
+        keywords: ["soliq", "komissiya", "stavka", "foiz", "bank", "payme", "click", "uzum", "ijtimoiy"],
+        permission: "settings.tax",
       },
       {
         // Both writes are `@CeoOnly()` (ADR-0093, ADR-0096): identity, not a

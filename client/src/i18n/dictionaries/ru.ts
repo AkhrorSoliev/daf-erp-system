@@ -1974,6 +1974,7 @@ const ru: Dictionary = {
   "Aylanma solig'i": "Налог с оборота",
   "Bank xarajati": "Банковские расходы",
   "Soliq va komissiyalar": "Налоги и комиссии",
+  "To'lov komissiyasi, oylik, aylanma solig'i va bank xarajati stavkalari": "Комиссии за оплату, зарплата, налог с оборота и банковские расходы",
   "Hisob to'liq emas: {n} ta stavka kiritilmagan": "Расчёт неполный: не введено ставок — {n}",
   "Stavkalarni kiritish →": "Ввести ставки →",
   // Payments — list («To'lovlar»)
