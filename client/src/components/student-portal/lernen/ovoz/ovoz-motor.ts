@@ -22,6 +22,13 @@ const N = {
 
 const R = (a: number, b: number) => a + Math.random() * (b - a);
 
+/**
+ * Nothing above ~20 kHz is audible, and browsers log a warning for every oscillator
+ * set past ±24 kHz (the reward's glass shimmer reached about 32 kHz). A partial above
+ * this is not created at all.
+ */
+const ENG_YUQORI_CHASTOTA = 20_000;
+
 function qur(): Zanjir {
   const Ctor: typeof AudioContext =
     window.AudioContext ??
@@ -113,6 +120,7 @@ function kalimba(z: Zanjir, f: number, t: number, vol = 0.3, pan = 0, d = 0.7) {
   env(g, t, 0.008, vol, d);
   out(z, g, pan);
   ([[1, 1, d], [5.4, 0.3, d * 0.2], [12.1, 0.05, d * 0.08]] as const).forEach(([r, a, dd]) => {
+    if (f * r * 1.012 > ENG_YUQORI_CHASTOTA) return;
     const o = c.createOscillator();
     const og = c.createGain();
     o.frequency.setValueAtTime(f * r * 1.012, t);
@@ -133,9 +141,11 @@ function glass(z: Zanjir, f: number, t: number, vol = 0.15, d = 2, pan = 0) {
   out(z, g, pan);
   ([[1, 1, 1], [2.756, 0.62, 0.7], [5.404, 0.36, 0.5], [8.933, 0.12, 0.28]] as const).forEach(([r, a, k]) =>
     ([-0.9, 0.9] as const).forEach((det) => {
+      const hz = f * r + det * (r > 1 ? 1.6 : 1);
+      if (hz > ENG_YUQORI_CHASTOTA) return;
       const o = c.createOscillator();
       const og = c.createGain();
-      o.frequency.value = f * r + det * (r > 1 ? 1.6 : 1);
+      o.frequency.value = hz;
       og.gain.setValueAtTime(a * 0.5, t);
       og.gain.exponentialRampToValueAtTime(0.001, t + d * k);
       o.connect(og).connect(g);

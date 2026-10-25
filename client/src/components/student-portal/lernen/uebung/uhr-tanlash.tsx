@@ -4,6 +4,7 @@ import { CheckCircle, XCircle } from "@phosphor-icons/react";
 import { useT } from "@/i18n/use-t";
 import { cn } from "@/lib/utils";
 import type { PruefErgebnis } from "../types";
+import { XATO_BELGISI, XATO_CHEGARASI } from "./javob-ohangi";
 import { Uhr } from "./uhr";
 
 export interface UhrTanlashProps {
@@ -48,7 +49,7 @@ export function UhrTanlash({
               "border-transparent",
               bosilgan && !natija && "border-coral-500",
               togri && "border-success",
-              xatoTanlov && "border-danger",
+              xatoTanlov && XATO_CHEGARASI,
               (natija != null || kutilmoqda) && "cursor-default",
             )}
           >
@@ -57,9 +58,9 @@ export function UhrTanlash({
               {i + 1}
             </span>
             {togri ? (
-              <CheckCircle size={28} weight="fill" className="absolute right-2 top-2 rounded-full bg-white text-success" />
+              <CheckCircle size={28} weight="fill" className="absolute right-2 top-2 rounded-full bg-surface text-artikel-das" />
             ) : xatoTanlov ? (
-              <XCircle size={28} weight="fill" className="absolute right-2 top-2 rounded-full bg-white text-danger" />
+              <XCircle size={28} weight="fill" className={cn("absolute right-2 top-2 rounded-full bg-surface", XATO_BELGISI)} />
             ) : null}
           </button>
         );

@@ -5186,7 +5186,6 @@ const de: Dictionary = {
   "Barcha so'zlaringiz hali muddatidan oldin — ertaga qayting.": "Keines Ihrer Wörter ist schon fällig — kommen Sie morgen wieder.",
   "Yo'lga qaytish": "Zum Lernpfad",
   "Soat rasmi": "Uhr",
-  "Noto'g'ri": "Falsch",
   "To'g'ri!": "Richtig!",
   "Imlosiga e'tibor bering:": "Achten Sie auf die Schreibweise:",
   "Hammasi to'g'ri! Ammo bu savolda birinchi urinishda xato bo'lgani uchun u keyinroq yana qaytadi.": "Alles richtig! Bei dieser Frage gab es beim ersten Versuch aber einen Fehler, deshalb kommt sie später noch einmal.",
@@ -5223,8 +5222,6 @@ const de: Dictionary = {
   "Rasm savoli": "Bildfrage",
   "Soat savoli": "Uhrzeitfrage",
   "Dialog": "Dialog",
-  "+{n} ball": "Punkte: +{n}",
-  "seriya": "Serie",
   "Hammasi to'g'ri — ajoyib natija!": "Alles richtig — tolles Ergebnis!",
   "Qaytarib ko'ring · {n}": "Zum Wiederholen · {n}",
   "Mashqdan chiqish": "Beenden",
@@ -5294,6 +5291,11 @@ const de: Dictionary = {
   "Ovozlar": "Töne",
   "Kam harakat": "Weniger Bewegung",
   "Ko'rinishni saqlab bo'lmadi, qayta urinib ko'ring": "Die Ansicht konnte nicht gespeichert werden, bitte erneut versuchen",
+  "Deyarli!": "Fast!",
+  "Dars tugadi!": "Lektion geschafft!",
+  "Takrorlash tugadi!": "Wiederholung geschafft!",
+  "Ball": "Punkte",
+  "Aniqlik": "Genauigkeit",
 };
 
 export default de;

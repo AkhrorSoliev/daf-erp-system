@@ -1,13 +1,17 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/portal/lernen/units/7",
   useRouter: () => ({ push() {}, replace() {}, back() {}, prefetch() {} }),
   useSearchParams: () => new URLSearchParams(),
 }));
+
+// The hook reads the device switch in an effect, which a static render never runs.
+const kam = vi.hoisted(() => ({ on: false }));
+vi.mock("./harakat/use-kam-harakat", () => ({ useKamHarakat: () => kam.on }));
 
 import { LernenUnitPage } from "./lernen-unit-page";
 import type { LernenSeans, LernenUnit } from "./types";
@@ -76,7 +80,7 @@ const unit: LernenUnit = {
   ],
 };
 
-async function matn(): Promise<string> {
+async function html(): Promise<string> {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
@@ -87,7 +91,11 @@ async function matn(): Promise<string> {
       { client },
       createElement(LernenUnitPage, { unitId: 7 }),
     ),
-  )
+  );
+}
+
+async function matn(): Promise<string> {
+  return (await html())
     .replace(/<[^>]*>/g, " ")
     .replace(/&#x27;/g, "'")
     .replace(/\s+/g, " ");
@@ -108,5 +116,68 @@ describe("the unit page counts a section's words (ADR-0071)", () => {
   it("draws no counter for a section the server sent no counts for", async () => {
     const text = await matn();
     expect(text.match(/So'zlar:/g)).toHaveLength(2);
+  });
+});
+
+// Spec §8: the unit page is not a bare list. Fixture order (one lock chain over
+// the unit): 1 done, 2 current, 5 done, 3 and 4 locked.
+describe("the unit page draws its lessons as places", () => {
+  it("opens with the theme's banner: the unit's line and Dafi waving hello", async () => {
+    const h = await html();
+    expect(h).toContain("A1 · Essen und Trinken");
+    expect(h).toContain('data-holat="salom"');
+  });
+
+  it("offers «Boshlash» on the current lesson only", async () => {
+    expect((await matn()).match(/Boshlash/g)).toHaveLength(1);
+  });
+
+  it("keeps a locked lesson pressable for the locked sound, but tells it is closed", async () => {
+    const h = await html();
+    expect(h.match(/aria-disabled="true"/g)).toHaveLength(2);
+    expect(h).not.toMatch(/<button[^>]*\sdisabled=""/);
+    expect(h).toContain("Tanishuv — hali ochilmagan");
+  });
+});
+
+// Controller rule (Task 2's CSS): the less-motion marker sits on the page's OUTER
+// root and the stagger lives strictly inside it, never on the same element.
+describe("the less-motion marker", () => {
+  afterEach(() => {
+    kam.on = false;
+  });
+
+  it("is on the outer root, ahead of the stagger, never on the stagger itself", async () => {
+    kam.on = true;
+    const h = await html();
+    expect(h.match(/data-kam-harakat=""/g)).toHaveLength(1);
+    expect(h.indexOf("data-kam-harakat")).toBeLessThan(h.indexOf("lumio-stagger"));
+    expect(h).not.toMatch(/lumio-stagger[^>]*data-kam-harakat/);
+  });
+
+  it("is absent while the student keeps full motion", async () => {
+    expect(await html()).not.toContain("data-kam-harakat");
+  });
+});
+
+// New text on the page needs 4.5:1. Light-mode numbers: ink-600 on the page 5.80
+// and on white 6.58 (ink-500 is 3.50 / 3.97, ink-400 2.22 / 2.52); the article
+// green 4.75 on the page (the bright success green is 2.30); amber-ink 5.77 on
+// white (coral-600 is 3.60). The banner is the theme's and keeps the path's palette.
+describe("the unit page's own text is readable", () => {
+  it("uses none of the grey, bright green or bright coral text classes", async () => {
+    expect(await html()).not.toMatch(/\btext-(?:ink-500|ink-400|success|coral-600)\b/);
+  });
+
+  it("writes the words-left caption in the amber ink", async () => {
+    expect(await html()).toMatch(/text-\[var\(--amber-ink\)\][^>]*>Yana mashq qilish/);
+  });
+
+  // White on coral-500 is 2.82:1; on its darker lip (72% with black) it is 5.06:1
+  // (teal 4.56:1, grape 7.10:1).
+  it("draws the «Boshlash» pill on the darker lip of the level colour", async () => {
+    expect(await html()).toMatch(
+      /text-white[^>]*style="background:color-mix\(in srgb, var\(--coral-500\) 72%, black\)">Boshlash</,
+    );
   });
 });

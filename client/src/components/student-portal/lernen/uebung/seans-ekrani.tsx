@@ -9,10 +9,13 @@ import { Books, CheckCircle, X } from "@phosphor-icons/react";
 import { msg } from "@/i18n/msg";
 import { useT } from "@/i18n/use-t";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { Button, EmptyState, LoadingCards, ProgressBar } from "../../lumio";
+import { Button, EmptyState, LoadingCards } from "../../lumio";
 import { RadioSessionToggle } from "../../radio/radio-session-toggle";
 import { useSidebar } from "../../lib/sidebar-store";
 import { kamHarakatHozir } from "../harakat/kam-harakat";
+import { useKamHarakat } from "../harakat/use-kam-harakat";
+import { Dafi } from "../dafi/dafi";
+import { ovozniUygot } from "../ovoz/ovoz";
 import { LernenLessonPage } from "../lernen-lesson-page";
 import {
   sozHisobiniEskirt,
@@ -44,8 +47,12 @@ import {
   type JonliJuft,
 } from "./juft-holati";
 import { harakat, koersatma } from "./koersatma";
+import { eshitiladiganMatn, juftPaneliMatni, yuborishXatoMatni } from "./natija-xabari";
 import { OvozTugmasi } from "./ovoz-tugmasi";
 import { PastkiPanel } from "./pastki-panel";
+import { panelOhangi } from "./hissiyot";
+import { SeansChizigi } from "./seans-chizigi";
+import { useJavobSezgisi } from "./use-javob-sezgisi";
 import { Tanlash } from "./tanlash";
 import { RasmTanlash, SavolRasmi, SuhbatRasmi } from "./rasm-tanlash";
 import { Uhr } from "./uhr";
@@ -127,6 +134,11 @@ export function SeansEkrani(props: SeansEkraniProps) {
   const ersatzSorov = useErsatz();
   const abschluss = useAbschluss();
   const wiederholungAbschluss = useWiederholungAbschluss();
+  // The verdict's sound and Dafi's reaction (ADR-0128). Fired from the
+  // mutation callbacks below, never from an effect on `natija`: the pairing
+  // formats set a made-up final `natija` that must stay silent.
+  const sezgi = useJavobSezgisi();
+  const kam = useKamHarakat();
   // The bottom bar is `fixed`; it needs the rail's width to stay clear of it.
   const sidebarMode = useSidebar((s) => s.mode);
 
@@ -147,7 +159,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
   // (`onJuft`, pastda). `yigilgan` bu ikki format uchun ISHLATILMAYDI.
   const [juftlar, setJuftlar] = React.useState<JonliJuft[]>(boshlaJuftlar());
   // Endigina xato bo'lgan (shu sabab `juftlar`dan olib tashlangan)
-  // juftlar — qisqa vaqt qizil ko'rsatish uchun (`Juftlash`ga
+  // juftlar — qisqa vaqt amber ko'rsatish uchun (`Juftlash`ga
   // `xatoIdxlar` sifatida uzatiladi).
   const [xatoIdxlar, setXatoIdxlar] = React.useState<
     { chapIdx: number; ongIdx: number }[]
@@ -174,6 +186,17 @@ export function SeansEkrani(props: SeansEkraniProps) {
     xatoFlashTaymerlari.current.clear();
   }, []);
   React.useEffect(() => tozalaFlashTaymerlari, [tozalaFlashTaymerlari]);
+  // False once the screen is gone. A pair's verdict arrives through a promise
+  // (see `onJuft`), which — unlike a per-call `mutate` callback — still runs
+  // after the student left the session; it must then stay silent. The effect
+  // sets it true again so React StrictMode's second run does not leave it false.
+  const tirik = React.useRef(true);
+  React.useEffect(() => {
+    tirik.current = true;
+    return () => {
+      tirik.current = false;
+    };
+  }, []);
   const [natija, setNatija] = React.useState<PruefErgebnis | null>(null);
   const [savolBoshi, setSavolBoshi] = React.useState(() => Date.now());
   const [seansBoshi, setSeansBoshi] = React.useState(() => Date.now());
@@ -225,6 +248,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
     // qator amalda yetib bo'lmaydi, lekin Enter klaviatura ushlagichi
     // ham shu funksiyani chaqiradi — himoya qatlami sifatida qoladi.
     if (frage.format === "PAAR" || frage.format === "ZUORDNEN") return;
+    // Inside the tap (and the Enter key): iOS and Telegram let audio start only
+    // here, and the verdict sound comes later, from the answer.
+    ovozniUygot();
     pruefen.mutate(
       {
         itemType: frage.itemType,
@@ -240,7 +266,12 @@ export function SeansEkrani(props: SeansEkraniProps) {
         attemptNo: holat ? urinishRaqami(holat, frage) : 1,
         lessonId: darsMi ? darsLessonId : undefined,
       },
-      { onSuccess: setNatija },
+      {
+        onSuccess: (javob) => {
+          setNatija(javob);
+          sezgi.javobKeldi(javob.isCorrect);
+        },
+      },
     );
   };
 
@@ -265,8 +296,16 @@ export function SeansEkrani(props: SeansEkraniProps) {
     setJuftlar(keyingiJuftlar);
 
     const { chapUstun, ongUstun } = juftUstunlar(frage.options, format);
-    juftTekshir.mutate(
-      {
+    ovozniUygot();
+    // `mutateAsync(...).then(ok, err)`, NOT `mutate(body, { onSuccess, onError })`:
+    // all pairs share this one mutation, and TanStack Query v5 keeps only the LAST
+    // `mutate` call's callbacks, so with two pairs in flight the first pair's
+    // verdict was dropped and it stayed waiting for good. Every promise settles
+    // for its own call. `.then(ok, err)` (not `.catch`) keeps a throw inside the
+    // success handler from being read as a network error; the trailing empty
+    // `.catch` only keeps such a throw from becoming an unhandled rejection.
+    juftTekshir
+      .mutateAsync({
         // `frage.itemType` kengroq turga ega (`MaterialTyp`), lekin
         // server PAAR uchun HAR DOIM `WORT`, ZUORDNEN uchun HAR DOIM
         // `PHRASE` beradi (`wort-fragen.ts`/`satz-fragen.ts`) — shuning
@@ -292,9 +331,10 @@ export function SeansEkrani(props: SeansEkraniProps) {
         questionIndex: frage.index,
         attemptNo: holat ? urinishRaqami(holat, frage) : 1,
         lessonId: darsMi ? darsLessonId : undefined,
-      },
-      {
-        onSuccess: (javob) => {
+      })
+      .then(
+        (javob) => {
+          if (!tirik.current) return;
           // `juftJavobKeldi` endi `{ juftlar, xato }` qaytaradi (ko'rik
           // topilmasi tuzatildi): "shu javob birinchi urinishdagi
           // xatomi" degan qaror endi sof `juft-holati.ts` modulida.
@@ -302,6 +342,9 @@ export function SeansEkrani(props: SeansEkraniProps) {
             (prev) =>
               juftJavobKeldi(prev, chapIdx, ongIdx, javob.isCorrect).juftlar,
           );
+          // One sound and one Dafi reaction per pair (the final made-up
+          // `natija` of the board stays silent).
+          sezgi.javobKeldi(javob.isCorrect);
 
           // `xato` ni `setJuftlar` YOPILISHI ICHIDA yozib, keyingi qatorda
           // O'QISH MUMKIN EMAS: React yangilovchini sinxron chaqirishga
@@ -317,7 +360,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
 
           juftXatoSoni.current += 1;
 
-          // Harakatni kamaytirishni so'ragan o'quvchi uchun qizil
+          // Harakatni kamaytirishni so'ragan o'quvchi uchun amber
           // chaqnash UMUMAN ko'rsatilmaydi — juft yuqoridagi
           // `juftJavobKeldi` bilan allaqachon ro'yxatdan olib
           // tashlangan, rang shu zahoti (oraliq holatsiz) "bo'sh"ga
@@ -333,7 +376,8 @@ export function SeansEkrani(props: SeansEkraniProps) {
           }, 500);
           xatoFlashTaymerlari.current.add(taymerId);
         },
-        onError: (err) => {
+        (err) => {
+          if (!tirik.current) return;
           // Aloqa uzilsa juft OSILIB QOLMASLIGI kerak — eng yomon holat
           // shu bo'lardi, chunki savol hech qachon tugamas edi.
           // `juftJavobKeldi(..., false)` bilan ikkala tugma yana bo'sh
@@ -346,8 +390,8 @@ export function SeansEkrani(props: SeansEkraniProps) {
           );
           toast.error(getErrorMessage(err, t("Yuborib bo'lmadi. Qayta bosing")));
         },
-      },
-    );
+      )
+      .catch(() => {});
   };
 
   // Juftlash savoli tugaganda (hamma juft yashil): `javobBerildi`ga
@@ -415,6 +459,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
 
     setHolat(keyingiHolat);
     setNatija(null);
+    sezgi.yangiSavol();
     setTanlangan(null);
     setYozilgan("");
     setYigilgan([]);
@@ -544,6 +589,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
     tugashDavomiyligi.current = null;
     setHolat(boshla(data));
     setNatija(null);
+    sezgi.yangiSavol();
     setTanlangan(null);
     setYozilgan("");
     setYigilgan([]);
@@ -786,6 +832,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
         }
         sinov={sinovHolati}
         onNatijaQaytaYubor={natijaniQaytaYubor}
+        takrorlash={!darsMi}
       />
     );
   }
@@ -807,9 +854,19 @@ export function SeansEkrani(props: SeansEkraniProps) {
   const juftlashRejimi = frage.format === "PAAR" || frage.format === "ZUORDNEN";
   // The instruction is the client's own text (`msg()` in `koersatma.ts`).
   const korsatma = koersatma(frage.format);
+  // What a screen reader hears after a check: the words the bottom bar shows
+  // (`natija-xabari.ts` holds the texts both draw), spoken through the live region below.
+  const javobEshitiladi = eshitiladiganMatn(
+    { natija, juftlash: juftlashRejimi, yuborishXato },
+    t,
+  );
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col px-4 pb-40 pt-4">
+    <div
+      // Less motion (device switch or system): the progress fill and the bar's tint stop sliding.
+      data-kam-harakat={kam ? "" : undefined}
+      className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col px-4 pb-40 pt-4"
+    >
       {/* Tepa: chiqish, ilgarilash chizig'i, sanoq */}
       <header className="flex items-center gap-3">
         <button
@@ -820,13 +877,14 @@ export function SeansEkrani(props: SeansEkraniProps) {
         >
           <X size={22} />
         </button>
-        {/* Lumio `ProgressBar` FOIZ oladi (0–100), kasr emas — `value`ga
-            `tugatilgan`ni bersak, 12 dan 4 chizig'ning 4 % ini bo'yardi. */}
-        <ProgressBar
-          value={holat.jami ? (holat.tugatilgan / holat.jami) * 100 : 0}
+        <SeansChizigi
+          tugatilgan={holat.tugatilgan}
+          jami={holat.jami}
           className="flex-1"
+          aria-labelledby="seans-sanoq"
         />
-        <span className="text-sm font-bold tabular-nums text-ink-500">
+        {/* The count names the bar; one session per page, so a fixed id is safe. */}
+        <span id="seans-sanoq" className="text-sm font-bold tabular-nums text-ink-500">
           {holat.tugatilgan}/{holat.jami}
         </span>
         {/* Radio dock bu yo'lda chizilmaydi (pastki panel seansniki), shu
@@ -959,15 +1017,33 @@ export function SeansEkrani(props: SeansEkraniProps) {
         ) : null}
       </main>
 
+      {/* The verdict appears without moving focus, so it is spoken from this
+          always-mounted live region (the bar itself holds buttons too). */}
+      <p role="status" className="sr-only">
+        {javobEshitiladi}
+      </p>
+
       {/* Pastdagi yopishqoq panel — natija ham, tugma ham shu yerda. */}
-      <PastkiPanel sidebarMode={sidebarMode}>
+      <PastkiPanel
+        sidebarMode={sidebarMode}
+        ohang={panelOhangi(natija, juftlashRejimi)}
+      >
         <div className="mx-auto w-full max-w-2xl space-y-2.5">
+          {/* Dafi stays for the whole session: he thinks over each question,
+              then cheers or takes the soft miss with every verdict. */}
+          <div className="flex items-center gap-3">
+            <Dafi
+              holat={sezgi.dafi.holat}
+              tetik={sezgi.dafi.tetik}
+              olcham="sm"
+            />
+            <div className="min-w-0 flex-1">
           {natija ? (
             juftlashRejimi ? (
               natija.isCorrect ? (
-                <div className="rounded-2xl bg-success/10 px-4 py-3">
-                  <p className="font-bold text-success">{t("To'g'ri!")}</p>
-                </div>
+                <p className="font-display text-lg font-extrabold text-artikel-das">
+                  {juftPaneliMatni(true, t)}
+                </p>
               ) : (
                 // Jonli juftlashda bu panel `hammasiTogri` chin bo'lgandan
                 // KEYIN ko'rinadi — ya'ni tepadagi TAXTA ALLAQACHON
@@ -984,9 +1060,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
                 // yuqorida, taxtaning o'zida turibdi.
                 <div className="rounded-2xl bg-tint px-4 py-3">
                   <p className="text-sm font-semibold text-ink-700">
-                    {t(
-                      "Hammasi to'g'ri! Ammo bu savolda birinchi urinishda xato bo'lgani uchun u keyinroq yana qaytadi.",
-                    )}
+                    {juftPaneliMatni(false, t)}
                   </p>
                 </div>
               )
@@ -995,9 +1069,11 @@ export function SeansEkrani(props: SeansEkraniProps) {
             )
           ) : yuborishXato ? (
             <p className="text-sm font-semibold text-danger">
-              {t("Yuborib bo'lmadi. Qayta urinib ko'ring")}
+              {yuborishXatoMatni(t)}
             </p>
           ) : null}
+            </div>
+          </div>
           {juftlashRejimi ? (
             // Juftlashda "Tekshirish" bosqichi yo'q — tugma FAQAT
             // «Keyingi», va u hamma juft yashil bo'lgandagina (`natija`

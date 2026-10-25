@@ -65,7 +65,7 @@ export class ChatNotifyService {
       if (!recipient || !sender) return;
       const name = `${sender.firstName} ${sender.lastName}`.trim();
       if (recipient.userId) await this.bell(recipient.userId, name, i);
-      // A chat the bot marked disconnected is skipped (ADR-0128, ADR-0117 precedent).
+      // A chat the bot marked disconnected is skipped (ADR-0129, ADR-0117 precedent).
       if (recipient.telegramChatId && !recipient.telegramDisconnectedAt) {
         await this.telegram(i, name, now);
       }

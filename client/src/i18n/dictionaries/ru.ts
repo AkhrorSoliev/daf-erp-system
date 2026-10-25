@@ -5186,7 +5186,6 @@ const ru: Dictionary = {
   "Barcha so'zlaringiz hali muddatidan oldin — ertaga qayting.": "Вашим словам ещё рано на повторение — возвращайтесь завтра.",
   "Yo'lga qaytish": "К учебному пути",
   "Soat rasmi": "Часы",
-  "Noto'g'ri": "Неверно",
   "To'g'ri!": "Верно!",
   "Imlosiga e'tibor bering:": "Обратите внимание на написание:",
   "Hammasi to'g'ri! Ammo bu savolda birinchi urinishda xato bo'lgani uchun u keyinroq yana qaytadi.": "Всё верно! Но в этом вопросе была ошибка с первой попытки, поэтому он вернётся позже.",
@@ -5223,8 +5222,6 @@ const ru: Dictionary = {
   "Rasm savoli": "Вопрос по картинке",
   "Soat savoli": "Вопрос по часам",
   "Dialog": "Диалог",
-  "+{n} ball": "баллы: +{n}",
-  "seriya": "серия",
   "Hammasi to'g'ri — ajoyib natija!": "Всё верно — отличный результат!",
   "Qaytarib ko'ring · {n}": "На повторение · {n}",
   "Mashqdan chiqish": "Выйти",
@@ -5294,6 +5291,11 @@ const ru: Dictionary = {
   "Ovozlar": "Звуки",
   "Kam harakat": "Меньше движения",
   "Ko'rinishni saqlab bo'lmadi, qayta urinib ko'ring": "Не удалось сохранить вид, попробуйте ещё раз",
+  "Deyarli!": "Почти!",
+  "Dars tugadi!": "Урок пройден!",
+  "Takrorlash tugadi!": "Повторение пройдено!",
+  "Ball": "Баллы",
+  "Aniqlik": "Точность",
 };
 
 export default ru;

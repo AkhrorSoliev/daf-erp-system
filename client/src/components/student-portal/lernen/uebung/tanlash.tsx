@@ -5,6 +5,7 @@ import { CheckCircle, XCircle } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import type { PruefErgebnis } from "../types";
 import { DeWort } from "./de-wort";
+import { XATO_BELGISI, XATO_SINFI } from "./javob-ohangi";
 
 export interface TanlashProps {
   options: string[];
@@ -55,11 +56,14 @@ export function Tanlash({ options, tanlangan, onTanla, natija, kutilmoqda = fals
             disabled={natija != null || kutilmoqda}
             onClick={() => onTanla(opt)}
             className={cn(
-              "flex w-full items-center gap-2.5 rounded-2xl border-2 px-4 py-3.5 text-left font-semibold transition-colors",
-              "border-transparent bg-tint text-ink-800",
+              // A chunky option with a darker lip that sinks when pressed (the «Toza» look, duo.html `.opt`).
+              "flex w-full items-center gap-2.5 rounded-2xl border-2 border-b-[5px] px-4 py-3.5 text-left font-semibold",
+              "transition-[color,background-color,border-color,transform] duration-150 motion-reduce:transition-none",
+              "border-line bg-surface text-ink-800",
+              natija == null && !kutilmoqda && "active:translate-y-[3px]",
               bosilgan && !natija && "border-coral-500 bg-coral-500/10",
-              togri && "border-success bg-success/10 text-success",
-              xatoTanlov && "border-danger bg-danger/10 text-danger",
+              togri && "border-success bg-success/10 text-artikel-das",
+              xatoTanlov && XATO_SINFI,
               (natija != null || kutilmoqda) && "cursor-default",
             )}
           >
@@ -71,10 +75,10 @@ export function Tanlash({ options, tanlangan, onTanla, natija, kutilmoqda = fals
             {togri ? (
               <CheckCircle size={20} weight="fill" />
             ) : xatoTanlov ? (
-              <XCircle size={20} weight="fill" />
+              <XCircle size={20} weight="fill" className={XATO_BELGISI} />
             ) : null}
             {/* Article colours only before the check: after it, green and
-                red mean right and wrong, and a green «das» must not look
+                amber mean right and «almost», and a green «das» must not look
                 like a right answer. */}
             <span className="min-w-0 flex-1">
               {natija ? opt : <DeWort text={opt} />}

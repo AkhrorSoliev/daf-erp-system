@@ -1,4 +1,4 @@
-# 0128. O'quvchilar chati: «yangi xabar» Telegram xabari darhol yuboriladi
+# 0129. O'quvchilar chati: «yangi xabar» Telegram xabari darhol yuboriladi
 
 - Holati: Qabul qilindi
 - Sana: 2026-10-26

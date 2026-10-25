@@ -4,6 +4,7 @@ import * as React from "react";
 import { useT } from "@/i18n/use-t";
 import { cn } from "@/lib/utils";
 import type { PruefErgebnis } from "../types";
+import { XATO_FONI, XATO_SINFI } from "./javob-ohangi";
 import { tugmaBosildi, type JonliJuft, type Tanlov, type Tomon } from "./juft-holati";
 
 /**
@@ -76,7 +77,7 @@ interface JuftlashDaJonliProps {
   juftlar: JonliJuft[];
   /**
    * Endigina xato bo'lgan (shu sabab `juftlar`dan olib tashlangan)
-   * juftlarning indekslari — qisqa vaqt (≈500ms) qizil ko'rsatish uchun.
+   * juftlarning indekslari — qisqa vaqt (≈500ms) amber ko'rsatish uchun.
    * `prefers-reduced-motion` yoqilgan bo'lsa chaqiruvchi bu ro'yxatga
    * umuman qo'shmaydi (`seans-ekrani.tsx`) — rang darhol "bo'sh"ga qaytadi.
    */
@@ -172,8 +173,8 @@ function GapTuzish({ options, tanlangan, onOzgar, natija, kutilmoqda }: IchkiPro
         className={cn(
           "flex min-h-[3.25rem] flex-wrap items-center gap-2 rounded-2xl border-2 p-3",
           "border-transparent bg-tint",
-          natija?.isCorrect && "border-success bg-success/10 text-success",
-          natija != null && !natija.isCorrect && "border-danger bg-danger/10 text-danger",
+          natija?.isCorrect && "border-success bg-success/10 text-artikel-das",
+          natija != null && !natija.isCorrect && XATO_SINFI,
         )}
       >
         {tanlangan.length === 0 ? (
@@ -197,7 +198,7 @@ function GapTuzish({ options, tanlangan, onOzgar, natija, kutilmoqda }: IchkiPro
                 natija != null
                   ? cn(
                       "cursor-default",
-                      natija.isCorrect ? "bg-success/10 text-success" : "bg-danger/10 text-danger",
+                      natija.isCorrect ? "bg-success/10 text-artikel-das" : XATO_FONI,
                     )
                   : qulflangan
                     ? "cursor-default bg-white text-ink-800 opacity-70"
@@ -247,9 +248,9 @@ type TugmaHolati = "bosh" | "tanlab" | "kutilmoqda" | "togri" | "xato";
 function tugmaSinfi(holat: TugmaHolati): string {
   switch (holat) {
     case "togri":
-      return "border-success bg-success/10 text-success";
+      return "border-success bg-success/10 text-artikel-das";
     case "xato":
-      return "border-danger bg-danger/10 text-danger";
+      return XATO_SINFI;
     case "tanlab":
       return "border-coral-500 bg-coral-500/10";
     case "kutilmoqda":
