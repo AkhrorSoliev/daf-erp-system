@@ -47,15 +47,15 @@ export function NewChatPage() {
         autoFocus
         value={raw}
         onChange={(e) => setRaw(e.target.value)}
-        placeholder={t("Ism yoki @username")}
+        placeholder={t("Ism yoki @nom")}
         iconBefore={<MagnifyingGlass />}
         maxLength={40}
-        aria-label={t("Ism yoki @username")}
+        aria-label={t("Ism yoki @nom")}
       />
       <div className="mt-3 flex flex-col gap-2.5">
         {typed.kind === "invalid" && (
           <p className="px-1 text-sm font-semibold text-ink-500">
-            {t("@username 5–32 belgidan iborat: lotin harf, raqam va _")}
+            {t("@nom 5–32 belgidan iborat: lotin harf, raqam va _")}
           </p>
         )}
         {typed.kind === "username" && (

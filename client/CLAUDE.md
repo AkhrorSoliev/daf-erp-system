@@ -1174,7 +1174,7 @@ work. `student-radio-page.tsx` is only a chooser — playback lives in the shell
 - **Polling, not SSE:** the open thread refetches every 5 s, the list every 20 s, only while the tab is visible (`refetchIntervalInBackground: false`). The portal has no SSE (the stream is staff-only). Follow-up: a student stream.
 - **Media:** limits (`chat-media.ts`: image 5 MB JPG/PNG/WebP, voice 2 MB and 120 s) mirror the server's, and a test pins them. A file arrives as a signed link from `GET /chat/messages/:id/file`, refreshed once it is older than ~8 minutes (`use-signed-file.ts`); the browser never fetches the storage URL itself (only `<img>`/`<audio>`). Every voice `<audio>` MUST call `registerMedia(el)` (`lib/media-registry.ts`) and unregister on unmount, so listening counts as active time. A purged file draws «Fayl o'chirilgan».
 - **Search and open:** `GET /chat/search?q=` needs 2+ characters. Open a student with `{username}` when the result has one, otherwise `{studentId}`, and open the thread with the id `POST /chat/conversations` returns (an empty conversation is not in the list).
-- **Known gap:** «blocked by me» exists only in the React Query cache (`BLOCKED_KEY`): no endpoint says whom I blocked, so after a reload the peer menu offers «Bloklash» again until the server refuses.
+- **Whom I blocked** comes from `GET /chat/me` -> `blockedIds` (`useBlockedIds`); block/unblock update that cache entry.
 - **Mini App:** the Telegram notice opens `/portal/chat/<id>` through `studentPortalPath` (anchored allow-list, see «Telegram Mini App»); do not widen it.
 - **Chat texts and names are DATA:** a message, a name or a username never goes through `t()` (in `uz-Cyrl` it would be transliterated). Only the UI strings are translated (`STRICT_FILES`, ru/de/en).
 
