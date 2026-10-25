@@ -1973,14 +1973,12 @@ function make(o: { access?: Error | null; blocked?: object; privacy?: object; sh
     findByUsername: jest.fn(),
   };
   const gateway = { sendToUser: jest.fn() };
-  const redis = {};
   const rate = o.rate ?? 1;
   const service = new ChatConversationsService(
     prisma as never,
     access as never,
     people as never,
     gateway as never,
-    redis as never,
     { hit: jest.fn().mockResolvedValue(rate) } as never,
   );
   return { service, prisma, tx, access, people, gateway };
@@ -2149,8 +2147,6 @@ export class ChatConversationsService {
     private readonly access: ChatAccessService,
     private readonly people: ChatPeopleService,
     private readonly gateway: NotificationsGateway,
-    // kept for Plan B (media purge reuses it); unused here
-    private readonly redis: RedisService,
     @Inject(CHAT_RATE_LIMITER) private readonly limiter: RateLimiter,
   ) {}
 
