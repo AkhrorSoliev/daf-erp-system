@@ -57,12 +57,12 @@ export function VoicePlayer({
       return;
     }
     if (Date.now() - file.updatedAt > SIGNED_URL_STALE_MS) {
+      // React owns `src`: never set it by hand. The effect above plays once
+      // the new URL has been applied; an unchanged URL plays right here.
+      playWhenReady.current = true;
       const fresh = await file.refresh();
-      if (fresh && fresh !== el.src) {
-        const at = el.currentTime;
-        el.src = fresh;
-        el.currentTime = at;
-      }
+      if (!fresh || fresh !== file.url) return;
+      playWhenReady.current = false;
     }
     el.playbackRate = fast ? 1.5 : 1;
     void el.play().catch(() => {});
@@ -83,6 +83,9 @@ export function VoicePlayer({
         preload="none"
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
+        // A new `src` empties the element without a pause event.
+        onEmptied={() => setPlaying(false)}
+        onAbort={() => setPlaying(false)}
         onEnded={() => setPos(0)}
         onTimeUpdate={(e) => setPos(e.currentTarget.currentTime)}
         onError={() => {
