@@ -1,5 +1,10 @@
 import { EntityHistoryController } from './entity-history.controller';
-import { defaultRolesOf, routeAccess } from '../permissions/testing';
+import {
+  defaultRolesOf,
+  fakePermissions,
+  routeAccess,
+} from '../permissions/testing';
+import type { EntityHistoryService } from './entity-history.service';
 
 describe('EntityHistoryController — route access', () => {
   it('is gated by the capability of every page that shows a history tab', () => {
@@ -23,5 +28,26 @@ describe('EntityHistoryController — route access', () => {
       'Branch Director',
       'CEO',
     ]);
+  });
+});
+
+describe('EntityHistoryController — pay data', () => {
+  const read = async (roleId: number) => {
+    const getHistory = jest.fn().mockResolvedValue({ data: [] });
+    const controller = new EntityHistoryController(
+      { getHistory } as unknown as EntityHistoryService,
+      fakePermissions([roleId]),
+    );
+    await controller.getHistory('User', '10001', {}, 1, 7, ['x']);
+    return getHistory.mock.calls[0][3];
+  };
+
+  it("tells the service whether the reader may see an employee's pay", async () => {
+    expect(await read(1)).toEqual(
+      expect.objectContaining({ canViewSalary: true }),
+    );
+    expect(await read(3)).toEqual(
+      expect.objectContaining({ canViewSalary: false }),
+    );
   });
 });

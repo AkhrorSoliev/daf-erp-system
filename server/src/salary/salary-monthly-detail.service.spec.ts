@@ -2,6 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalaryMonthlyDetailService } from './salary-monthly-detail.service';
 import { SalaryMonthlyService } from './salary-monthly.service';
+import { TaxSettingsService } from '../tax/tax-settings.service';
 
 const PERIOD = {
   periodStart: new Date('2026-08-31T19:00:00Z'),
@@ -93,6 +94,7 @@ function makePrisma() {
 describe('SalaryMonthlyDetailService', () => {
   let prisma: ReturnType<typeof makePrisma>;
   let monthly: { getMonthlyForUser: jest.Mock };
+  let tax: { loadRates: jest.Mock };
   let service: SalaryMonthlyDetailService;
 
   const answer = (row: unknown) =>
@@ -107,9 +109,23 @@ describe('SalaryMonthlyDetailService', () => {
   beforeEach(() => {
     prisma = makePrisma();
     monthly = { getMonthlyForUser: jest.fn() };
+    tax = {
+      loadRates: jest.fn().mockResolvedValue({
+        rates: {
+          'payroll.employeeWithholdingPercent': [
+            { fromMonth: '2026-01', value: 12 },
+          ],
+          'payroll.employerSocialPercent': [
+            { fromMonth: '2026-01', value: 12 },
+          ],
+        },
+        bankTiers: [],
+      }),
+    };
     service = new SalaryMonthlyDetailService(
       prisma as unknown as PrismaService,
       monthly as unknown as SalaryMonthlyService,
+      tax as unknown as TaxSettingsService,
     );
   });
 
@@ -298,6 +314,75 @@ describe('SalaryMonthlyDetailService', () => {
       await expect(
         service.getPeriod(10001, { month: '2026-09' }, 1, 10009),
       ).rejects.toEqual(new NotFoundException('Bu oyda xodim topilmadi'));
+    });
+  });
+
+  describe('official split (spec 2026-10-25)', () => {
+    const withOfficial = (officialSalary: number | null) =>
+      prisma.user.findFirst.mockResolvedValue({
+        mainBranch: 3,
+        officialSalary,
+      });
+
+    it('returns the split for a teacher with an official salary', async () => {
+      withOfficial(2_000_000);
+      answer(
+        teacherRow({
+          fullDeserved: 2_500_000,
+          covered: 1_000_000,
+          advances: 0,
+          netToPay: 2_500_000,
+        }),
+      );
+
+      const res = await detail();
+
+      expect(res.official).toEqual({
+        official: 2_000_000,
+        withholding: 240_000,
+        employerSocial: 240_000,
+        toHand: 2_260_000,
+      });
+    });
+
+    it('a staff row splits what the month paid, and toHand follows netToPay (advances)', async () => {
+      withOfficial(1_000_000);
+      answer(staffRow());
+
+      const res = await detail();
+
+      expect(res.official).toEqual({
+        official: 1_000_000,
+        withholding: 120_000,
+        employerSocial: 120_000,
+        toHand: 2_380_000,
+      });
+    });
+
+    it('official part is capped by what was earned', async () => {
+      withOfficial(5_000_000);
+      answer(
+        teacherRow({
+          fullDeserved: 1_000_000,
+          advances: 0,
+          netToPay: 1_000_000,
+        }),
+      );
+
+      expect((await detail()).official).toMatchObject({
+        official: 1_000_000,
+        withholding: 120_000,
+      });
+    });
+
+    it('is null, and the rates are not read, without an official salary', async () => {
+      withOfficial(null);
+      answer(teacherRow());
+      expect((await detail()).official).toBeNull();
+
+      withOfficial(0);
+      expect((await detail()).official).toBeNull();
+      expect(tax.loadRates).not.toHaveBeenCalled();
     });
   });
 });

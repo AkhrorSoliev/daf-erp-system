@@ -9,6 +9,8 @@ import { UploadService } from '../upload/upload.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { PHONE_HELD_BY_STAFF_MESSAGE } from '../common/auth/phone-account-rules';
 import { OWN_SIGN_IN_KEYS_MESSAGE } from '../common/auth/own-sign-in-keys';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import { fakePermissions } from '../common/permissions/testing';
 
 const PASSWORD = 'secret1';
 const SELF_ID = 10;
@@ -88,6 +90,7 @@ describe('UsersService — own sign-in keys (ADR-0031)', () => {
     const module = await Test.createTestingModule({
       providers: [
         UsersService,
+        { provide: PermissionsService, useValue: fakePermissions([1]) },
         { provide: PrismaService, useValue: prisma },
         // Written when a status change blocks or unblocks the account (ADR-0028).
         { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },

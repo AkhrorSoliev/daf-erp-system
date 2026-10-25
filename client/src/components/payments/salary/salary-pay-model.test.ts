@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { accountsByKind, buildPayBody, payTitle, payToast, sliceCheck } from "./salary-pay-model";
+import { formatPrice } from "@/lib/format-utils";
+import { accountsByKind, buildPayBody, officialLines, payTitle, payToast, sliceCheck } from "./salary-pay-model";
 import type { SalaryDetail } from "./salary-types";
 
 // Intl writes a no-break space between thousands; the expectations use a plain one.
@@ -100,5 +101,22 @@ describe("payToast", () => {
 describe("payTitle", () => {
   it("names the person and the month in lower case", () => {
     expect(payTitle("Madina", "2026-09")).toBe("Madina — sentabr oyligi berildi");
+  });
+});
+
+describe("officialLines", () => {
+  it("names the official part, the budget part and what the employee takes home", () => {
+    const lines = officialLines({
+      official: 2_000_000,
+      withholding: 240_000,
+      employerSocial: 240_000,
+      toHand: 2_260_000,
+    });
+    expect(lines.split).toBe(
+      `Rasmiy qism: ${formatPrice(2_000_000)} so'm · Budjetga: ${formatPrice(240_000)} so'm · Xodim qo'liga: ${formatPrice(2_260_000)} so'm`,
+    );
+    expect(lines.social).toBe(
+      `Korxona ijtimoiy solig'i: ${formatPrice(240_000)} so'm (alohida to'lanadi)`,
+    );
   });
 });

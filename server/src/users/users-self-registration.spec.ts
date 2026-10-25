@@ -6,6 +6,8 @@ import { UploadService } from '../upload/upload.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { RedisService } from '../redis/redis.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import { fakePermissions } from '../common/permissions/testing';
 
 /**
  * A staff member registering THEMSELVES through the Telegram bot has no
@@ -66,6 +68,7 @@ describe('UsersService — self-registration through the bot', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
+        { provide: PermissionsService, useValue: fakePermissions([1]) },
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         {

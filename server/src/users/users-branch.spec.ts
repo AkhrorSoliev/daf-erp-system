@@ -6,6 +6,8 @@ import { UploadService } from '../upload/upload.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { RedisService } from '../redis/redis.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import { fakePermissions } from '../common/permissions/testing';
 
 /**
  * `PATCH /users/:id` has been branch-confined since the object-level sweep.
@@ -80,6 +82,7 @@ describe('UsersService — branch confinement', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
+        { provide: PermissionsService, useValue: fakePermissions([1]) },
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         {

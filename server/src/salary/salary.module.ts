@@ -23,9 +23,10 @@ import { SalaryAdvanceCalendarService } from './salary-advance-calendar.service'
 import { SalaryPeriodSettingsService } from './salary-period-settings.service';
 import { SalaryUserLifecycleListener } from './salary-user-lifecycle.listener';
 import { TransactionsModule } from '../transactions/transactions.module';
+import { TaxModule } from '../tax/tax.module';
 
 @Module({
-  imports: [TransactionsModule],
+  imports: [TransactionsModule, TaxModule],
   controllers: [SalaryController],
   providers: [
     SalaryService,

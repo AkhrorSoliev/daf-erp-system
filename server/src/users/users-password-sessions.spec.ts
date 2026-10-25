@@ -6,6 +6,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UploadService } from '../upload/upload.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { RedisService } from '../redis/redis.service';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import { fakePermissions } from '../common/permissions/testing';
 
 /**
  * A password write on an employee account ends that account's other sessions
@@ -77,6 +79,7 @@ describe('UsersService — a password write ends the other sessions', () => {
     const module = await Test.createTestingModule({
       providers: [
         UsersService,
+        { provide: PermissionsService, useValue: fakePermissions([1]) },
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },

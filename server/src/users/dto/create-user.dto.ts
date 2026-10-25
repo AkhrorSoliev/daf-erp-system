@@ -7,6 +7,8 @@ import {
   MinLength,
   MaxLength,
   Matches,
+  Min,
+  Max,
 } from 'class-validator';
 
 export class CreateUserDto {
@@ -48,6 +50,12 @@ export class CreateUserDto {
   })
   @MaxLength(60, { message: 'Lavozim 60 ta belgidan oshmasligi kerak' })
   position: string;
+
+  @IsOptional()
+  @IsInt({ message: "Rasmiy oylik butun son bo'lishi kerak" })
+  @Min(0, { message: "Rasmiy oylik manfiy bo'lmaydi" })
+  @Max(2_000_000_000, { message: 'Rasmiy oylik juda katta' })
+  officialSalary?: number;
 
   @IsOptional()
   @IsArray()

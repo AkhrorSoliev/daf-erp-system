@@ -5,6 +5,8 @@ import { UploadService } from '../upload/upload.service';
 import { RedisService } from '../redis/redis.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import { fakePermissions } from '../common/permissions/testing';
 
 /**
  * Archiving an employee from the employee page (`DELETE /users/:id`) must leave
@@ -58,6 +60,7 @@ describe('UsersService.softDelete — the archived row', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
+        { provide: PermissionsService, useValue: fakePermissions([1]) },
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
