@@ -149,7 +149,13 @@ export class ChatPeopleService {
     });
   }
 
-  /** The card another student sees, with the photo hidden when its owner limited it. */
+  /**
+   * The card another student sees, with the photo hidden when its owner limited it.
+   * The lookup is by id only (no `deletedAt` filter) so a conversation whose
+   * peer was later archived still renders. Precondition: call it only with an
+   * id taken from a `ChatConversation` the viewer belongs to (conversations are
+   * created after a company-scoped lookup), never with an id from a request.
+   */
   async peerSummary(viewerId: number, peerId: number): Promise<PeerSummary> {
     const [peer, privacy] = await Promise.all([
       this.prisma.student.findFirst({

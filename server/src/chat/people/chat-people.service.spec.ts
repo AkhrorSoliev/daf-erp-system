@@ -75,6 +75,94 @@ describe('ChatPeopleService.search', () => {
     const out = await service.search(1, 1, 'ab');
     expect(out[0].photo).toBeNull();
   });
+
+  it('name search is scoped to live ACTIVE students of the company, not the viewer', async () => {
+    const { service, prisma } = make();
+    await service.search(1, 7, 'ab');
+    const where = prisma.student.findMany.mock.calls[0][0].where;
+    expect(where.companyId).toBe(7);
+    expect(where.deletedAt).toBeNull();
+    expect(where.status).toBe('ACTIVE');
+    expect(where.id).toEqual({ not: 1 });
+  });
+
+  it('an exact @username is found even when the owner switched name search off', async () => {
+    const { service, prisma } = make();
+    prisma.student.findFirst.mockResolvedValue(row(9, { username: 'x_01' }));
+    prisma.chatPrivacy.findMany.mockResolvedValue([
+      { studentId: 9, whoCanFind: 'NOBODY', whoSeesPhoto: 'EVERYONE' },
+    ]);
+    const out = await service.search(1, 1, '@x_01');
+    expect(out.map((p) => p.id)).toEqual([9]);
+  });
+
+  it('the @username path drops the viewer themselves', async () => {
+    const { service, prisma } = make();
+    prisma.student.findFirst.mockResolvedValue(row(1, { username: 'me_01' }));
+    expect(await service.search(1, 1, '@me_01')).toEqual([]);
+  });
+
+  it('the @username path drops a student who blocked the viewer', async () => {
+    const { service, prisma } = make();
+    prisma.student.findFirst.mockResolvedValue(row(9, { username: 'x_01' }));
+    prisma.chatBlock.findMany.mockResolvedValue([
+      { blockerId: 9, blockedId: 1 },
+    ]);
+    expect(await service.search(1, 1, '@x_01')).toEqual([]);
+    expect(prisma.chatBlock.findMany.mock.calls[0][0].where).toEqual({
+      blockerId: { in: [9] },
+      blockedId: 1,
+    });
+  });
+
+  it('keeps the photo of a group-mate when the owner limited it to group-mates', async () => {
+    const { service, prisma } = make();
+    prisma.student.findMany.mockResolvedValue([row(2)]);
+    prisma.chatPrivacy.findMany.mockResolvedValue([
+      { studentId: 2, whoCanFind: 'EVERYONE', whoSeesPhoto: 'GROUPMATES' },
+    ]);
+    prisma.enrollment.findFirst.mockResolvedValue({ id: 'e' });
+    const out = await service.search(1, 1, 'ab');
+    expect(out[0].photo).toBe('p2');
+  });
+
+  it('hides the photo when the owner chose NOBODY, even for a group-mate', async () => {
+    const { service, prisma } = make();
+    prisma.student.findMany.mockResolvedValue([row(2)]);
+    prisma.chatPrivacy.findMany.mockResolvedValue([
+      { studentId: 2, whoCanFind: 'EVERYONE', whoSeesPhoto: 'NOBODY' },
+    ]);
+    prisma.enrollment.findFirst.mockResolvedValue({ id: 'e' });
+    const out = await service.search(1, 1, 'ab');
+    expect(out[0].photo).toBeNull();
+  });
+});
+
+describe('ChatPeopleService.updatePrivacy', () => {
+  it('writes only the sent key', async () => {
+    const { service, prisma } = make();
+    prisma.chatPrivacy.upsert.mockResolvedValue({
+      whoCanWrite: 'NOBODY',
+      whoCanFind: 'EVERYONE',
+      whoSeesPhoto: 'EVERYONE',
+    });
+    await service.updatePrivacy(5, { whoCanWrite: 'NOBODY' } as never);
+    expect(prisma.chatPrivacy.upsert).toHaveBeenCalledWith({
+      where: { studentId: 5 },
+      create: { studentId: 5, whoCanWrite: 'NOBODY' },
+      update: { whoCanWrite: 'NOBODY' },
+    });
+  });
+});
+
+describe('ChatPeopleService.peerSummary', () => {
+  it('throws when the peer row is missing', async () => {
+    const { service, prisma } = make();
+    prisma.student.findFirst.mockResolvedValue(null);
+    await expect(service.peerSummary(1, 2)).rejects.toThrow(
+      BadRequestException,
+    );
+  });
 });
 
 describe('ChatPeopleService.block', () => {
