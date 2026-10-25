@@ -1,5 +1,11 @@
-import { describe, expect, it } from "vitest";
-import { kamHarakatQarori, yengilRejimmi } from "./kam-harakat";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  HARAKAT_KALITI,
+  HARAKAT_OZGARDI,
+  harakatniSaqla,
+  kamHarakatQarori,
+  yengilRejimmi,
+} from "./kam-harakat";
 
 describe("kamHarakatQarori", () => {
   it("follows the system setting when the student made no choice", () => {
@@ -22,5 +28,42 @@ describe("yengilRejimmi", () => {
   it("is full on a normal device or when the browser says nothing", () => {
     expect(yengilRejimmi({ yadro: 8, xotira: 8 })).toBe(false);
     expect(yengilRejimmi({})).toBe(false);
+  });
+});
+
+describe("harakatniSaqla", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function fakeStorage() {
+    const data = new Map<string, string>();
+    return {
+      data,
+      setItem: (k: string, v: string) => void data.set(k, v),
+      getItem: (k: string) => data.get(k) ?? null,
+    };
+  }
+
+  it("saves the choice and tells mounted consumers in the same tab", () => {
+    const storage = fakeStorage();
+    const dispatchEvent = vi.fn();
+    vi.stubGlobal("localStorage", storage);
+    vi.stubGlobal("window", { dispatchEvent });
+
+    harakatniSaqla(true);
+
+    expect(storage.data.get(HARAKAT_KALITI)).toBe("1");
+    expect(dispatchEvent).toHaveBeenCalledTimes(1);
+    expect(dispatchEvent.mock.calls[0][0].type).toBe(HARAKAT_OZGARDI);
+  });
+
+  it("does not throw when there is no window (server)", () => {
+    const storage = fakeStorage();
+    vi.stubGlobal("localStorage", storage);
+    vi.stubGlobal("window", undefined);
+
+    expect(() => harakatniSaqla(false)).not.toThrow();
+    expect(storage.data.get(HARAKAT_KALITI)).toBe("0");
   });
 });

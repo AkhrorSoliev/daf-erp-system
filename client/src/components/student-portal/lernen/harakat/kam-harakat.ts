@@ -1,6 +1,12 @@
 /** Device setting: "reduce motion" chosen by the student (ADR-0125). */
 export const HARAKAT_KALITI = "daf.lernen.harakat";
 
+/** Same-tab signal sent by `harakatniSaqla`; `useKamHarakat` listens to it next to `storage`. */
+export const HARAKAT_OZGARDI = "daf-lernen-harakat";
+
+/** The system "reduce motion" media query, shared by the decision and the hook. */
+export const KAM_HARAKAT_MEDIA = "(prefers-reduced-motion: reduce)";
+
 /** `true` = the student asked for less motion, `false` = chose full, `null` = never chose. */
 export function qurilmaHarakatSozlamasi(): boolean | null {
   try {
@@ -14,6 +20,8 @@ export function qurilmaHarakatSozlamasi(): boolean | null {
 export function harakatniSaqla(kam: boolean): void {
   try {
     localStorage.setItem(HARAKAT_KALITI, kam ? "1" : "0");
+    // The `storage` event fires only in OTHER tabs, so tell this tab's mounted hooks ourselves.
+    if (typeof window !== "undefined") window.dispatchEvent(new Event(HARAKAT_OZGARDI));
   } catch {
     /* the choice is just not remembered */
   }
@@ -36,7 +44,7 @@ export function yengilRejimmi(q: { yadro?: number; xotira?: number }): boolean {
 /** Reads the browser; safe to call during an effect, not during render on the server. */
 export function kamHarakatHozir(): boolean {
   try {
-    const tizim = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const tizim = window.matchMedia(KAM_HARAKAT_MEDIA).matches;
     return kamHarakatQarori(qurilmaHarakatSozlamasi(), tizim);
   } catch {
     return false;
