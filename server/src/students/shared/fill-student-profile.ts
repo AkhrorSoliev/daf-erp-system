@@ -38,27 +38,35 @@ export async function fillStudentProfile(
   input: ProfileInput,
   actorUserId?: number,
 ): Promise<ProfileWritten> {
-  const data: { gender?: Gender; dateOfBirth?: Date } = {};
   const written: ProfileWritten = {};
 
-  if (input.gender && !student.gender) {
-    data.gender = input.gender;
-    written.gender = input.gender;
-  }
+  // Sana tekshiruvi har qanday yozishdan oldin.
   if (input.dateOfBirth && !student.dateOfBirth) {
     const problem = birthDateProblem(input.dateOfBirth);
     if (problem) throw new BadRequestException(problem);
-    data.dateOfBirth = utcMidnightFromDateStr(input.dateOfBirth);
-    written.dateOfBirth = input.dateOfBirth;
   }
-  if (Object.keys(data).length === 0) return {};
+  // Har maydon alohida va shartli: xodim yoki ikkinchi so'rov oldin yozgan bo'lsa count=0.
+  if (input.gender && !student.gender) {
+    const { count } = await deps.prisma.student.updateMany({
+      where: { id: student.id, gender: null },
+      data: { gender: input.gender },
+    });
+    if (count > 0) written.gender = input.gender;
+  }
+  if (input.dateOfBirth && !student.dateOfBirth) {
+    const { count } = await deps.prisma.student.updateMany({
+      where: { id: student.id, dateOfBirth: null },
+      data: { dateOfBirth: utcMidnightFromDateStr(input.dateOfBirth) },
+    });
+    if (count > 0) written.dateOfBirth = input.dateOfBirth;
+  }
+  if (!written.gender && !written.dateOfBirth) return {};
 
-  await deps.prisma.student.update({ where: { id: student.id }, data });
-  if (data.gender && student.userId) {
+  if (written.gender && student.userId) {
     // Hisob kartadagi jinsni aks ettiradi (`User.gender`).
     await deps.prisma.user.update({
       where: { id: student.userId },
-      data: { gender: data.gender },
+      data: { gender: written.gender },
     });
   }
 

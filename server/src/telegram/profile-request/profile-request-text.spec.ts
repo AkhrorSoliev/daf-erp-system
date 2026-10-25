@@ -1,5 +1,6 @@
 import {
   PROFILE_REQUEST_MARKER,
+  buildCancelKeyboard,
   buildRequestKeyboard,
   buildRequestText,
   missingProfileFields,
@@ -24,17 +25,23 @@ describe('missingProfileFields', () => {
 });
 
 describe('buildRequestText', () => {
-  it('names the missing things and always carries the marker', () => {
+  it('gives a true reason per variant and always carries the marker', () => {
     const both = buildRequestText('Aziz', ['gender', 'dateOfBirth']);
-    expect(both).toContain("jinsingiz va tug'ilgan sanangiz");
-    expect(both).toContain(PROFILE_REQUEST_MARKER);
-    expect(buildRequestText('Aziz', ['gender'])).toContain("jinsingiz yo'q");
-    expect(buildRequestText('Aziz', ['dateOfBirth'])).toContain(
-      "tug'ilgan sanangiz yo'q",
-    );
-    expect(buildRequestText('Aziz', ['gender'])).toContain(
-      PROFILE_REQUEST_MARKER,
-    );
+    const g = buildRequestText('Aziz', ['gender']);
+    const d = buildRequestText('Aziz', ['dateOfBirth']);
+    expect(both).toContain("Kartangizda jinsingiz va tug'ilgan sanangiz yo'q.");
+    expect(both).toContain('markaz hisobotlari uchun kerak');
+    expect(g).toContain("Kartangizda jinsingiz yo'q.");
+    expect(g).not.toContain('shartnoma');
+    expect(d).toContain("Kartangizda tug'ilgan sanangiz yo'q.");
+    expect(d).toContain('shartnoma va ishtirok guvohnomasi');
+    for (const t of [both, g, d]) {
+      expect(t).toContain('Assalomu alaykum, Aziz!');
+      expect(t).toContain(PROFILE_REQUEST_MARKER);
+      expect(t).toContain(
+        'Pastdagi tugmalar orqali kiriting — bir daqiqa. Rahmat!',
+      );
+    }
   });
   it('escapes the name for HTML', () => {
     expect(buildRequestText('<b>x', ['gender'])).toContain('&lt;b&gt;x');
@@ -59,10 +66,15 @@ describe('callbacks', () => {
       step: 'gender',
     });
   });
-  it.each(['pf:g:abc:M', 'pf:g:5:X', 'pf:x:5', 'other', 'pf:d:', 'pf:d:1.5'])(
-    'rejects %s',
-    (bad) => expect(parseProfileCallback(bad)).toBeNull(),
-  );
+  it.each([
+    'pf:g:abc:M',
+    'pf:g:5:X',
+    'pf:x:5',
+    'other',
+    'pf:x',
+    'pf:d:',
+    'pf:d:1.5',
+  ])('rejects %s', (bad) => expect(parseProfileCallback(bad)).toBeNull());
 });
 
 describe('buildRequestKeyboard', () => {
@@ -87,6 +99,16 @@ describe('buildRequestKeyboard', () => {
   });
 });
 
+describe('buildCancelKeyboard', () => {
+  it('has one cancel button with pf:x', () => {
+    const b =
+      buildCancelKeyboard().reply_markup.inline_keyboard.flat() as any[];
+    expect(b).toHaveLength(1);
+    expect(b[0].text).toBe('Bekor qilish');
+    expect(b[0].callback_data).toBe('pf:x');
+  });
+});
+
 describe('parseBirthDateInput', () => {
   const today = '2026-10-25';
   it('accepts dd.mm.yyyy and loose separators', () => {
@@ -108,13 +130,17 @@ describe('parseBirthDateInput', () => {
   );
   it('returns the rule message for impossible or out-of-range dates', () => {
     const feb = parseBirthDateInput('30.02.2005', today);
-    expect(feb).toEqual({ ok: false, message: "Tug'ilgan sana noto'g'ri" });
+    expect(feb).toEqual({
+      ok: false,
+      message: "Tug'ilgan sana noto'g'ri. Qayta yozing, masalan: 15.03.2005",
+    });
     const future = parseBirthDateInput('01.01.2030', today);
     expect(future.ok).toBe(false);
     const young = parseBirthDateInput('01.01.2024', today);
     expect(young).toEqual({
       ok: false,
-      message: "Yosh 5 dan 100 gacha bo'lishi kerak",
+      message:
+        "Yosh 5 dan 100 gacha bo'lishi kerak. Qayta yozing, masalan: 15.03.2005",
     });
   });
 });

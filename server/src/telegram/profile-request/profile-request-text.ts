@@ -3,9 +3,8 @@ import { birthDateProblem } from '../../students/shared/student-onboarding';
 
 export type ProfileField = 'gender' | 'dateOfBirth';
 
-/** Har variantdagi o'zgarmas jumla: takror yuborishni to'xtatish kaliti. */
-export const PROFILE_REQUEST_MARKER =
-  'Shartnoma va ishtirok guvohnomasi kabi hujjatlar';
+/** Har variantdagi o'zgarmas jumla: takror yuborishni to'xtatish kaliti (sababga bog'liq emas). */
+export const PROFILE_REQUEST_MARKER = 'Pastdagi tugmalar orqali kiriting';
 
 export const DATE_PROMPT =
   "Tug'ilgan sanangizni kun.oy.yil ko'rinishida yozing. Masalan: 15.03.2005";
@@ -35,17 +34,24 @@ export function buildRequestText(
   firstName: string,
   missing: ProfileField[],
 ): string {
-  const what =
+  const reason =
     missing.length === 2
-      ? "jinsingiz va tug'ilgan sanangiz"
+      ? "Kartangizda jinsingiz va tug'ilgan sanangiz yo'q. Tug'ilgan sana shartnoma va ishtirok guvohnomasi to'g'ri tuzilishi uchun, jins esa markaz hisobotlari uchun kerak."
       : missing[0] === 'gender'
-        ? 'jinsingiz'
-        : "tug'ilgan sanangiz";
+        ? "Kartangizda jinsingiz yo'q. U markaz hisobotlari to'g'ri chiqishi uchun kerak."
+        : "Kartangizda tug'ilgan sanangiz yo'q. U shartnoma va ishtirok guvohnomasi to'g'ri tuzilishi uchun kerak.";
   return (
     `Assalomu alaykum, ${esc(firstName)}!\n\n` +
-    `Kartangizda ${what} yo'q. ${PROFILE_REQUEST_MARKER} to'g'ri tuzilishi uchun kerak.\n\n` +
-    `Pastdagi tugmalar orqali kiriting — bir daqiqa. Rahmat!`
+    `${reason}\n\n` +
+    `${PROFILE_REQUEST_MARKER} — bir daqiqa. Rahmat!`
   );
+}
+
+/** Sana scene'idan chiqish tugmasi (`pf:x` scene ichida ushlanadi). */
+export function buildCancelKeyboard() {
+  return Markup.inlineKeyboard([
+    [Markup.button.callback('Bekor qilish', 'pf:x')],
+  ]);
 }
 
 export type ProfileAction =
@@ -114,5 +120,7 @@ export function parseBirthDateInput(
   if (!m) return { ok: false, message: DATE_FORMAT_HELP };
   const iso = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
   const problem = birthDateProblem(iso, today);
-  return problem ? { ok: false, message: problem } : { ok: true, iso };
+  return problem
+    ? { ok: false, message: `${problem}. Qayta yozing, masalan: 15.03.2005` }
+    : { ok: true, iso };
 }

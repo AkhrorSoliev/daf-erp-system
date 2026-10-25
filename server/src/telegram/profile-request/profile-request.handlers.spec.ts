@@ -23,7 +23,7 @@ function setup(found: object | null, chatId = 111) {
     prisma: {
       student: {
         findFirst: jest.fn().mockResolvedValue(found),
-        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       user: { update: jest.fn().mockResolvedValue({}) },
     },
@@ -67,7 +67,7 @@ describe('handleProfileTap', () => {
       studentId: 7,
       gender: 'MALE',
     });
-    expect(raw.prisma.student.update).not.toHaveBeenCalled();
+    expect(raw.prisma.student.updateMany).not.toHaveBeenCalled();
     expect(ctx.answerCbQuery).toHaveBeenCalledWith(NOT_YOURS);
   });
 
@@ -78,8 +78,8 @@ describe('handleProfileTap', () => {
       studentId: 7,
       gender: 'FEMALE',
     });
-    expect(raw.prisma.student.update).toHaveBeenCalledWith({
-      where: { id: 7 },
+    expect(raw.prisma.student.updateMany).toHaveBeenCalledWith({
+      where: { id: 7, gender: null },
       data: { gender: Gender.FEMALE },
     });
     expect(ctx.reply).toHaveBeenCalledWith(GENDER_SAVED);
@@ -106,7 +106,7 @@ describe('handleProfileTap', () => {
       studentId: 7,
       gender: 'FEMALE',
     });
-    expect(raw.prisma.student.update).not.toHaveBeenCalled();
+    expect(raw.prisma.student.updateMany).not.toHaveBeenCalled();
     expect(ctx.reply).toHaveBeenCalledWith(ALREADY_FILLED);
   });
 
@@ -126,7 +126,7 @@ describe('handleProfileTap', () => {
     const { deps, ctx, raw } = setup(null);
     await handleProfileTap(deps, ctx, { kind: 'preview', step: 'gender' });
     expect(raw.prisma.student.findFirst).not.toHaveBeenCalled();
-    expect(raw.prisma.student.update).not.toHaveBeenCalled();
+    expect(raw.prisma.student.updateMany).not.toHaveBeenCalled();
     expect(ctx.reply).toHaveBeenCalledWith(`${PREVIEW_NOTE}\n\n${DATE_PROMPT}`);
   });
 });
@@ -135,8 +135,8 @@ describe('submitBirthDate', () => {
   it('saves a valid date and finishes', async () => {
     const { deps, ctx, raw } = setup(row());
     expect(await submitBirthDate(deps, ctx, 7, '15.03.2005')).toBe('done');
-    expect(raw.prisma.student.update).toHaveBeenCalledWith({
-      where: { id: 7 },
+    expect(raw.prisma.student.updateMany).toHaveBeenCalledWith({
+      where: { id: 7, dateOfBirth: null },
       data: { dateOfBirth: new Date('2005-03-15T00:00:00.000Z') },
     });
     expect(ctx.reply).toHaveBeenCalledWith(THANKS);
@@ -145,14 +145,14 @@ describe('submitBirthDate', () => {
   it('explains the problem and asks again; nothing is saved', async () => {
     const { deps, ctx, raw } = setup(row());
     expect(await submitBirthDate(deps, ctx, 7, '01.01.2030')).toBe('retry');
-    expect(raw.prisma.student.update).not.toHaveBeenCalled();
+    expect(raw.prisma.student.updateMany).not.toHaveBeenCalled();
     expect(ctx.reply).toHaveBeenCalledTimes(1);
   });
 
   it('refuses a chat that does not own the card', async () => {
     const { deps, ctx, raw } = setup(null);
     expect(await submitBirthDate(deps, ctx, 7, '15.03.2005')).toBe('done');
-    expect(raw.prisma.student.update).not.toHaveBeenCalled();
+    expect(raw.prisma.student.updateMany).not.toHaveBeenCalled();
     expect(ctx.reply).toHaveBeenCalledWith(NOT_YOURS);
   });
 });

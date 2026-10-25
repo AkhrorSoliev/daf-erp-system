@@ -10,7 +10,7 @@ Telegram — yana bir yo'l, ikkinchisining o'rniga emas.
 
 ## Qamrov (bir martalik kampaniya)
 
-`send-student-ids.ts` qamrovi: `deletedAt: null`, `status: ACTIVE`, faol/pauzadagi
+Qamrov: `deletedAt: null`, `status: ACTIVE`, faol/pauzadagi
 guruhda ACTIVE yozuv, `telegramChatId` bor, `telegramDisconnectedAt` yo'q va
 `gender IS NULL OR dateOfBirth IS NULL`.
 

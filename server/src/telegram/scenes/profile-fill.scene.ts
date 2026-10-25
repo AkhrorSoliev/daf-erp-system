@@ -9,6 +9,7 @@ import {
 } from '../profile-request/profile-request.handlers';
 import {
   CANCELLED,
+  buildCancelKeyboard,
   DATE_PROMPT,
 } from '../profile-request/profile-request-text';
 
@@ -23,7 +24,13 @@ export function createProfileFillScene(
   const scene = new Scenes.BaseScene<BotContext>(SCENES.PROFILE_FILL);
 
   scene.enter(async (ctx) => {
-    await ctx.reply(DATE_PROMPT);
+    await ctx.reply(DATE_PROMPT, buildCancelKeyboard());
+  });
+
+  scene.action('pf:x', async (ctx) => {
+    await ctx.answerCbQuery();
+    await ctx.reply(CANCELLED);
+    await ctx.scene.leave();
   });
 
   scene.command('cancel', async (ctx) => {

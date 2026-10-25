@@ -465,7 +465,7 @@ export type ProfileField = 'gender' | 'dateOfBirth';
 
 /** Har variantdagi o'zgarmas jumla: takror yuborishni to'xtatish kaliti. */
 export const PROFILE_REQUEST_MARKER =
-  'Shartnoma va ishtirok guvohnomasi kabi hujjatlar';
+  'Pastdagi tugmalar orqali kiriting';
 
 export const DATE_PROMPT =
   "Tug'ilgan sanangizni kun.oy.yil ko'rinishida yozing. Masalan: 15.03.2005";
@@ -503,7 +503,7 @@ export function buildRequestText(
         : "tug'ilgan sanangiz";
   return (
     `Assalomu alaykum, ${esc(firstName)}!\n\n` +
-    `Kartangizda ${what} yo'q. ${PROFILE_REQUEST_MARKER} to'g'ri tuzilishi uchun kerak.\n\n` +
+    `${reason}\n\n` + // variant-specific reason, see final code
     `Pastdagi tugmalar orqali kiriting — bir daqiqa. Rahmat!`
   );
 }

@@ -144,3 +144,5 @@ matni. Yozish ilova bilan bir xil funksiyadan o'tadi
 qayta yozilmaydi, tarix yoziladi. Ilova eshigi o'zgarmadi — Telegram qo'shimcha
 yo'l. Tugma ichidagi o'quvchi raqamiga ishonilmaydi: karta shu chatga
 bog'langan bo'lsagina yoziladi.
+
+Jins markaz auditoriya hisobotlarida, tug'ilgan sana esa shartnoma va ishtirok guvohnomasida ishlatiladi.

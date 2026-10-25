@@ -1,3 +1,4 @@
+import { PROFILE_REQUEST_MARKER } from '../../src/telegram/profile-request/profile-request-text';
 import { UsageError } from './apply-expect-args';
 import {
   buildPreviewMessages,
@@ -40,7 +41,12 @@ describe('buildPreviewMessages', () => {
     expect(msgs.length).toBeGreaterThanOrEqual(4);
     expect(msgs.filter((m) => m.keyboard).length).toBe(3);
     const joined = msgs.map((m) => m.text).join('\n');
-    expect(joined).toContain("jinsingiz va tug'ilgan sanangiz");
+    expect(joined).toContain(
+      "Kartangizda jinsingiz va tug'ilgan sanangiz yo'q",
+    );
+    expect(
+      msgs.filter((m) => m.text.includes(PROFILE_REQUEST_MARKER)).length,
+    ).toBe(3);
     expect(joined).toContain("Rahmat! Ma'lumotingiz saqlandi");
   });
   it('preview buttons never carry a student id', () => {

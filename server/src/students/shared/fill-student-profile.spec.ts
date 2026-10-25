@@ -14,7 +14,7 @@ const target = (o: object = {}) => ({
 function makeDeps() {
   return {
     prisma: {
-      student: { update: jest.fn().mockResolvedValue({}) },
+      student: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
       user: { update: jest.fn().mockResolvedValue({}) },
     },
     entityHistory: { recordUpdate: jest.fn().mockResolvedValue(undefined) },
@@ -34,12 +34,13 @@ describe('fillStudentProfile', () => {
       gender: Gender.FEMALE,
       dateOfBirth: '2005-03-15',
     });
-    expect(d.prisma.student.update).toHaveBeenCalledWith({
-      where: { id: 7 },
-      data: {
-        gender: Gender.FEMALE,
-        dateOfBirth: new Date('2005-03-15T00:00:00.000Z'),
-      },
+    expect(d.prisma.student.updateMany).toHaveBeenCalledWith({
+      where: { id: 7, gender: null },
+      data: { gender: Gender.FEMALE },
+    });
+    expect(d.prisma.student.updateMany).toHaveBeenCalledWith({
+      where: { id: 7, dateOfBirth: null },
+      data: { dateOfBirth: new Date('2005-03-15T00:00:00.000Z') },
     });
     expect(d.entityHistory.recordUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -59,7 +60,7 @@ describe('fillStudentProfile', () => {
       { gender: Gender.FEMALE, dateOfBirth: '2005-03-15' },
     );
     expect(written).toEqual({});
-    expect(d.prisma.student.update).not.toHaveBeenCalled();
+    expect(d.prisma.student.updateMany).not.toHaveBeenCalled();
     expect(d.entityHistory.recordUpdate).not.toHaveBeenCalled();
   });
 
@@ -71,7 +72,19 @@ describe('fillStudentProfile', () => {
         dateOfBirth: '2005-02-30',
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
-    expect(d.prisma.student.update).not.toHaveBeenCalled();
+    expect(d.prisma.student.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('count 0 means nothing written: no mirror, no history', async () => {
+    const d = makeDeps();
+    d.prisma.student.updateMany.mockResolvedValue({ count: 0 });
+    const written = await fillStudentProfile(d as any, target({ userId: 5 }), {
+      gender: Gender.MALE,
+      dateOfBirth: '2005-03-15',
+    });
+    expect(written).toEqual({});
+    expect(d.prisma.user.update).not.toHaveBeenCalled();
+    expect(d.entityHistory.recordUpdate).not.toHaveBeenCalled();
   });
 
   it('mirrors gender onto the linked account only', async () => {
