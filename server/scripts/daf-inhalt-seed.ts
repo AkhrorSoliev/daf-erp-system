@@ -24,6 +24,7 @@ import type {
 } from '../src/daf/inhalt/unit-inhalt.types';
 import type { DialogAudioManifest } from '../src/daf/inhalt/dialog-audio';
 import type { SatzAudioManifest } from '../src/daf/inhalt/satz-audio';
+import type { PhraseAudioManifest } from '../src/daf/inhalt/phrase-audio';
 import type { BildManifest } from '../src/daf/media/bild-keys';
 import type { BildPlan } from '../src/daf/inhalt/bild-plan';
 import type {
@@ -75,6 +76,7 @@ async function main(): Promise<void> {
       : {};
   const bilder = readOptional<BildManifest>('bilder.json');
   const satzAudio = readOptional<SatzAudioManifest>('satz-audio.json');
+  const phraseAudio = readOptional<PhraseAudioManifest>('phrase-audio.json');
   const bildPlan = readOptional<BildPlan>('bild-plan.json');
   const dialogBilder = readOptional<BildManifest>('dialog-bilder.json');
   // Clock times: no file → `undefined`, and the seed leaves the clock table
@@ -99,6 +101,7 @@ async function main(): Promise<void> {
     audio,
     dialogAudio,
     satzAudio,
+    phraseAudio,
     bilder,
     bildPlan,
     dialogBilder,
