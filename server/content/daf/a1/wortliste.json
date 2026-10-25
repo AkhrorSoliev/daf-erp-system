@@ -4953,20 +4953,6 @@
    "grund": "A1 mavzu lug'ati: Kinoga boramizmi? (ADR-0071)"
   },
   {
-   "wort": "Festspiel",
-   "artikel": "das",
-   "section": "u06-s3",
-   "core": true,
-   "grund": "A1 mavzu lug'ati: Kinoga boramizmi? (ADR-0071)"
-  },
-  {
-   "wort": "Kulturfestival",
-   "artikel": "das",
-   "section": "u06-s3",
-   "core": true,
-   "grund": "A1 mavzu lug'ati: Kinoga boramizmi? (ADR-0071)"
-  },
-  {
    "wort": "Theater-Festival",
    "artikel": "das",
    "section": "u06-s3",
@@ -4975,34 +4961,6 @@
   },
   {
    "wort": "Orchester",
-   "artikel": "das",
-   "section": "u06-s3",
-   "core": true,
-   "grund": "A1 mavzu lug'ati: Kinoga boramizmi? (ADR-0071)"
-  },
-  {
-   "wort": "dirigieren",
-   "artikel": null,
-   "section": "u06-s3",
-   "core": true,
-   "grund": "A1 mavzu lug'ati: Kinoga boramizmi? (ADR-0071)"
-  },
-  {
-   "wort": "Solist",
-   "artikel": "der",
-   "section": "u06-s3",
-   "core": true,
-   "grund": "A1 mavzu lug'ati: Kinoga boramizmi? (ADR-0071)"
-  },
-  {
-   "wort": "Solistin",
-   "artikel": "die",
-   "section": "u06-s3",
-   "core": true,
-   "grund": "A1 mavzu lug'ati: Kinoga boramizmi? (ADR-0071)"
-  },
-  {
-   "wort": "Requiem",
    "artikel": "das",
    "section": "u06-s3",
    "core": true,
@@ -5485,13 +5443,6 @@
   },
   {
    "wort": "Open-Air-Kino",
-   "artikel": "das",
-   "section": "u06-s5",
-   "core": true,
-   "grund": "A1 mavzu lug'ati: Uchrashuvni kelishish (ADR-0071)"
-  },
-  {
-   "wort": "Jahrestreffen",
    "artikel": "das",
    "section": "u06-s5",
    "core": true,
@@ -8889,8 +8840,9 @@
   {
    "wort": "Kurs",
    "artikel": "der",
-   "section": "u10-s2",
-   "core": true
+   "section": "u06-s1",
+   "core": true,
+   "grund": "CEO qarori (17.10.2026): xat, e'lon va kurs matnlarida kerak — u06 ga ko'chirildi"
   },
   {
    "wort": "Unterricht",
@@ -10169,8 +10121,9 @@
   {
    "wort": "Karte",
    "artikel": "die",
-   "section": "u11-s3",
-   "core": true
+   "section": "u06-s3",
+   "core": true,
+   "grund": "CEO qarori (17.10.2026): xat, e'lon va kurs matnlarida kerak — u06 ga ko'chirildi"
   },
   {
    "wort": "Kreditkarte",
@@ -11560,14 +11513,16 @@
   {
    "wort": "liebe",
    "artikel": null,
-   "section": "u12-s5",
-   "core": true
+   "section": "u06-s3",
+   "core": true,
+   "grund": "CEO qarori (17.10.2026): xat, e'lon va kurs matnlarida kerak — u06 ga ko'chirildi"
   },
   {
    "wort": "Gruß",
    "artikel": "der",
-   "section": "u12-s5",
-   "core": true
+   "section": "u06-s5",
+   "core": true,
+   "grund": "CEO qarori (17.10.2026): xat, e'lon va kurs matnlarida kerak — u06 ga ko'chirildi"
   },
   {
    "wort": "Gästebuch",
@@ -11923,6 +11878,40 @@
    "wort": "Schinken",
    "artikel": "der",
    "grund": "CEO qarori (03.10.2026): cho'chqa go'shti va spirtli ichimlik oddiy so'z sifatida o'rgatilmaydi, faqat rad etish uchun"
+  },
+  {
+   "wort": "Festspiel",
+   "artikel": "das",
+   "grund": "CEO qarori (11.10.2026): Netzwerk kitobidagi bitta matnga (festival va konsert dasturi) tegishli, A1 o'quvchisiga kerak emas"
+  },
+  {
+   "wort": "Kulturfestival",
+   "artikel": "das",
+   "grund": "CEO qarori (11.10.2026): Netzwerk kitobidagi bitta matnga (festival va konsert dasturi) tegishli, A1 o'quvchisiga kerak emas"
+  },
+  {
+   "wort": "dirigieren",
+   "grund": "CEO qarori (11.10.2026): Netzwerk kitobidagi bitta matnga (festival va konsert dasturi) tegishli, A1 o'quvchisiga kerak emas"
+  },
+  {
+   "wort": "Solist",
+   "artikel": "der",
+   "grund": "CEO qarori (11.10.2026): Netzwerk kitobidagi bitta matnga (festival va konsert dasturi) tegishli, A1 o'quvchisiga kerak emas"
+  },
+  {
+   "wort": "Solistin",
+   "artikel": "die",
+   "grund": "CEO qarori (11.10.2026): Netzwerk kitobidagi bitta matnga (festival va konsert dasturi) tegishli, A1 o'quvchisiga kerak emas"
+  },
+  {
+   "wort": "Requiem",
+   "artikel": "das",
+   "grund": "CEO qarori (11.10.2026): Netzwerk kitobidagi bitta matnga (festival va konsert dasturi) tegishli, A1 o'quvchisiga kerak emas"
+  },
+  {
+   "wort": "Jahrestreffen",
+   "artikel": "das",
+   "grund": "CEO qarori (11.10.2026): Netzwerk kitobidagi bitta matnga (festival va konsert dasturi) tegishli, A1 o'quvchisiga kerak emas"
   }
  ]
 }

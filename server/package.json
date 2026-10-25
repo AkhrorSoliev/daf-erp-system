@@ -45,6 +45,7 @@
     "daf:gen-satz-audio": "ts-node scripts/daf-gen-satz-audio.ts",
     "daf:gen-uhr-audio": "ts-node scripts/daf-gen-uhr-audio.ts",
     "daf:gen-dialog-audio": "ts-node scripts/daf-gen-dialog-audio.ts",
+    "daf:gen-dialog-ambient": "ts-node scripts/daf-gen-dialog-ambient.ts",
     "daf:gen-bilder": "ts-node scripts/daf-gen-bilder.ts",
     "daf:polster-dialog-audio": "ts-node scripts/daf-polster-dialog-audio.ts",
     "daf:upload-dialog-bilder": "ts-node scripts/daf-upload-dialog-bilder.ts"

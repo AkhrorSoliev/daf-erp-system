@@ -16,7 +16,7 @@ export interface InviteAudience {
 }
 
 /**
- * Taklif kimga boradi (ADR-0126):
+ * Taklif kimga boradi (ADR-0127):
  *  - hamma holatdagi o'quvchilar (faol, muzlatilgan, chetlatilgan, bitirgan),
  *    karta o'chirilmagan va bot yeta oladigan chat (`telegramDisconnectedAt` null);
  *  - kanal tekshiruvidagi odamlar, agar o'quvchi chatlaridan biri bo'lmasa

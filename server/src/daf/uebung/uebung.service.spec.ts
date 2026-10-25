@@ -3272,7 +3272,7 @@ describe('HOEREN_WAHL', () => {
         { itemType: 'WORT', itemId: 1, format: 'HOEREN_WAHL', given: 'gut' },
         ctx,
       ),
-    ).rejects.toThrow('HOEREN_WAHL savoli faqat eshitish savoliga tegishli');
+    ).rejects.toThrow('HOEREN_WAHL savoli faqat tushunish savoliga tegishli');
   });
 });
 

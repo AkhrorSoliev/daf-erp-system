@@ -1,5 +1,5 @@
 /**
- * «Darajani aniqlash» taklifi (ADR-0126): namuna yuborish va auditoriyani sanash.
+ * «Darajani aniqlash» taklifi (ADR-0127): namuna yuborish va auditoriyani sanash.
  *
  *   railway run npx ts-node --transpile-only scripts/level-test-invite-sample.ts --count
  *   railway run npx ts-node --transpile-only scripts/level-test-invite-sample.ts --send=<chatId>

@@ -43,6 +43,8 @@ export const FORMAT_SKILL: Record<FrageFormat, DafSkill> = {
   AUDIO_WORT: 'HOEREN',
   // Suhbatni eshitib savolga javob — tinglash.
   HOEREN_WAHL: 'HOEREN',
+  // Matnni (chat, e-mail, plakat, jadval) o'qib savolga javob — tushunib o'qish.
+  LESEN_WAHL: 'LESEN',
   // Gapni eshitib bo'laklardan tuzish — avval eshitadi.
   SATZ_HOEREN: 'HOEREN',
   WORT_TIPPEN: 'SCHREIBEN',

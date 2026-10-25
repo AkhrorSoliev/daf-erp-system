@@ -93,11 +93,30 @@ export function tokensOf(text: string): string[] {
     .filter((t) => t !== '');
 }
 
-/** Matndagi hali o'rgatilmagan so'zlar. Bo'sh massiv — matn toza. */
+/**
+ * Matndagi hali o'rgatilmagan so'zlar. Bo'sh massiv — matn toza.
+ *
+ * O'qish matnlari (jadval, e'lon, elektron xat) so'z bo'lmagan belgilarni
+ * ham olib keladi: ikki nuqta, tire, qo'shtirnoq, raqam. Ular so'z emas va
+ * «notanish» deb sanalmaydi; raqam esa har kimga tanish. Chiziqcha bilan
+ * yozilgan qo'shma so'z («Basketball-Kurs») bo'laklarga ajratiladi va HAR
+ * BO'LAGI tanish bo'lishi kerak — butun yozuv lug'atda turmasa ham.
+ */
 export function unknownWordsIn(
   text: string,
   known: Set<string>,
   hilfs: Set<string>,
 ): string[] {
-  return tokensOf(text).filter((t) => !known.has(t) && !hilfs.has(t));
+  const isKnown = (t: string): boolean => known.has(t) || hilfs.has(t);
+  const cleaned = text
+    .replace(/[„“”"‚‘:;()|·/]/g, ' ')
+    .replace(/(^|\s)[–—-]+(?=\s|$)/g, ' ');
+  return tokensOf(cleaned).flatMap((t) => {
+    if (/^\d+$/.test(t) || isKnown(t)) return [];
+    const parts = t.split('-').filter((p) => p !== '');
+    if (parts.length > 1) {
+      return parts.filter((p) => !/^\d+$/.test(p) && !isKnown(p));
+    }
+    return [t];
+  });
 }

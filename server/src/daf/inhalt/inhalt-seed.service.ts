@@ -3,6 +3,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import type {
   DialogeFile,
   GrammatikFile,
+  HoerFrage,
+  LesetexteFile,
   RedemittelFile,
   SaetzeFile,
   WoerterFile,
@@ -26,6 +28,13 @@ export interface InhaltFiles {
   woerter: WoerterFile;
   saetze: SaetzeFile;
   dialoge: DialogeFile;
+  /**
+   * `lesetexte.json` — plakat, chat, e-mail, jadval (audiosiz). Ixtiyoriy:
+   * hamma unitda yo'q. Bazada `DafDialog` qatori (`art` bilan), shuning
+   * uchun «faylda yo'q» tozalash dialoglar bilan BIR XAT: ikkala fayl
+   * kodlari birga hisoblanadi.
+   */
+  lesetexte?: LesetexteFile;
   grammatik: GrammatikFile;
   redemittel: RedemittelFile;
   /**
@@ -67,6 +76,8 @@ export interface InhaltSeedReport {
   woerter: number;
   saetze: number;
   dialoge: number;
+  /** O'qish matnlari (`lesetexte.json`) — `dialoge` hisobiga kirmaydi. */
+  lesetexte: number;
   zeilen: number;
   regeln: number;
   phrasen: number;
@@ -80,6 +91,25 @@ export interface InhaltSeedReport {
    * shuning uchun drift ko'rinadigan bo'ladi va inson qaror qiladi.
    */
   staleWoerter: number;
+}
+
+/** `DafDialog` ga yoziladigan matn: audio dialog yoki o'qish matni. */
+interface SeedText {
+  id: string;
+  section: string;
+  art: string;
+  titelDe: string;
+  titelUz: string;
+  sahnaUz?: string;
+  zeilen: Array<{
+    sprecher: string;
+    de: string;
+    tts?: string;
+    uz: string;
+    izohUz?: string;
+  }>;
+  fragen?: HoerFrage[];
+  mitAudio: boolean;
 }
 
 /**
@@ -149,6 +179,16 @@ export class InhaltSeedService {
     const sectionId = new Map(rows.map((r) => [r.code, r.id]));
 
     this.assertSectionsKnown(files, sectionId);
+    // Audio dialoglar va o'qish matnlari bitta jadvalda (`DafDialog`) turadi:
+    // tozalash va yozish ikkalasini BIRGA ko'radi.
+    const texte: SeedText[] = [
+      ...files.dialoge.dialoge.map((d) => ({
+        ...d,
+        art: d.art ?? 'DIALOG',
+        mitAudio: true,
+      })),
+      ...(files.lesetexte?.texte ?? []).map((t) => ({ ...t, mitAudio: false })),
+    ];
     // Clock times are checked before any write, like the section keys.
     const uhrPlan = files.uhrzeiten
       ? this.uhrPlan(unitCode, files.uhrzeiten, sectionId)
@@ -175,7 +215,7 @@ export class InhaltSeedService {
     await this.assertNotEmptyFileWipe(
       unitCode,
       unit.id,
-      files.dialoge.dialoge.length === 0,
+      texte.length === 0,
       'dialoge',
       () => this.prisma.dafDialog.count({ where: { unitId: unit.id } }),
     );
@@ -260,6 +300,7 @@ export class InhaltSeedService {
         wordCount: s.wordCount,
         origin: s.origin,
         akzeptiert: s.akzeptiert ?? [],
+        kontextUz: s.kontextUz ?? null,
         // Manifest is the source, and only an entry made from THIS text
         // counts: an edited sentence keeps no recording of its old words.
         audioKey: satzAudioSchluessel(files.satzAudio ?? {}, s),
@@ -278,7 +319,7 @@ export class InhaltSeedService {
     // Faylda endi yo'q dialoglarni butunlay o'chiramiz. Avval SATRLARI —
     // FK `ON DELETE RESTRICT`, aks holda dialogni o'chirish rad etiladi.
     // Hech kim boshqa joydan bunga ishora qilmaydi — o'chirish xavfsiz.
-    const dialogCodes = files.dialoge.dialoge.map((d) => d.id);
+    const dialogCodes = texte.map((d) => d.id);
     const staleDialoge = await this.prisma.dafDialog.findMany({
       where: { unitId: unit.id, code: { notIn: dialogCodes } },
       select: { id: true },
@@ -300,16 +341,19 @@ export class InhaltSeedService {
     }
 
     let dialoge = 0;
+    let lesetexte = 0;
     let zeilen = 0;
     let hoerFragen = 0;
-    for (const d of files.dialoge.dialoge) {
+    for (const d of texte) {
       const data = {
         unitId: unit.id,
         sectionId: sectionId.get(d.section) as number,
         titelDe: d.titelDe,
         titelUz: d.titelUz,
         sahnaUz: d.sahnaUz ?? null,
-        audioKey: files.dialogAudio?.[d.id]?.key ?? null,
+        art: d.art,
+        // O'qish matnida audio yo'q — manifestda kalit bo'lsa ham yozilmaydi.
+        audioKey: d.mitAudio ? (files.dialogAudio?.[d.id]?.key ?? null) : null,
         imageKey: bildSchluesselFuer(files.dialogBilder ?? {}, d.id),
       };
       const row = await this.prisma.dafDialog.upsert({
@@ -317,7 +361,8 @@ export class InhaltSeedService {
         create: { code: d.id, ...data },
         update: data,
       });
-      dialoge += 1;
+      if (d.mitAudio) dialoge += 1;
+      else lesetexte += 1;
 
       for (const [i, z] of d.zeilen.entries()) {
         const order = i + 1;
@@ -485,6 +530,7 @@ export class InhaltSeedService {
       woerter,
       saetze,
       dialoge,
+      lesetexte,
       zeilen,
       regeln,
       phrasen,
@@ -559,6 +605,7 @@ export class InhaltSeedService {
       ...files.woerter.woerter.map((w) => w.section),
       ...files.saetze.saetze.map((s) => s.section),
       ...files.dialoge.dialoge.map((d) => d.section),
+      ...(files.lesetexte?.texte ?? []).map((t) => t.section),
       ...files.grammatik.regeln.map((r) => r.section),
       ...files.redemittel.phrasen.map((p) => p.section),
     ]);

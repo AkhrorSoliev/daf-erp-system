@@ -152,9 +152,16 @@ export function geminiDialog(
   for (const z of dialog.zeilen) {
     if (!sprecher.includes(z.sprecher)) sprecher.push(z.sprecher);
   }
-  if (sprecher.length < 2) {
+  // E'lon (`ANSAGE`) — bitta ovoz: Gemini'ning bitta ovozli rejimida yasaladi.
+  const minSprecher = dialog.art === 'ANSAGE' ? 1 : 2;
+  if (sprecher.length < minSprecher) {
     throw new Error(
-      `${dialog.id}: suhbat rejimiga kamida 2 ta gapiruvchi kerak, bu dialogda ${sprecher.length} ta.`,
+      `${dialog.id}: suhbat rejimiga kamida ${minSprecher} ta gapiruvchi kerak, bu dialogda ${sprecher.length} ta.`,
+    );
+  }
+  if (dialog.art === 'ANSAGE' && sprecher.length > 1) {
+    throw new Error(
+      `${dialog.id}: e'londa aynan bitta ovoz bo'ladi, bu yerda ${sprecher.length} ta.`,
     );
   }
   for (const s of sprecher) {
@@ -369,7 +376,13 @@ async function main(): Promise<void> {
   );
   for (const d of mischen) geminiDialog(d, stimmen, regie);
 
-  const zeichen = gesamtZeichenDialoge([...anfrageById.values()]);
+  const einzelnModus = process.argv.includes('--einzeln');
+  const zeichen = einzelnModus
+    ? [...anfrageById.values()].reduce(
+        (n, a) => n + zeichenMehrstimmig(teileMehrstimmig(a, true)),
+        0,
+      )
+    : gesamtZeichenDialoge([...anfrageById.values()]);
   console.log(
     `Jami belgi: ${zeichen} (≈ $${((zeichen / 1000) * NARX_1000_BELGI).toFixed(3)}).`,
   );
@@ -437,7 +450,8 @@ async function main(): Promise<void> {
         fetch,
         polstereMp3,
         erstelleMische(regie, uploader, mischDeps),
-        erstelleMehrstimmig(fal, fetch, ABLEHNUNG_VERSUCHE),
+        erstelleMehrstimmig(fal, fetch, ABLEHNUNG_VERSUCHE, einzelnModus),
+        einzelnModus,
       ),
       speichere,
     );

@@ -1,4 +1,4 @@
-# 0126. «Darajani aniqlash» taklifi: botdan foydalana oladigan hammaga bir martalik yuborish
+# 0127. «Darajani aniqlash» taklifi: botdan foydalana oladigan hammaga bir martalik yuborish
 
 - Holati: Qabul qilindi
 - Sana: 2026-10-25
@@ -20,6 +20,6 @@ Botning hamma foydalanuvchisi ro'yxati yo'q: o'quvchi kartasiga bog'langan chatl
 
 ## Oqibatlar
 
-- Migratsiya `20261025130000_level_test_invite`.
+- Migratsiya `20261025140000_level_test_invite`.
 - Kanal tekshiruvi jadvalidagi odamlarning bot yeta olishi oldindan noma'lum: ularning bir qismiga xabar ketmay `FAILED` bo'ladi.
 - /start bosgan, lekin hech qayerda saqlanmagan odamga yuborib bo'lmaydi. Kelajakda har /start ni yozib borish alohida qaror.

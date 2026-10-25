@@ -208,6 +208,20 @@ export class FalClient {
         ...(ton ? { style_instructions: ton[1] } : {}),
       };
     });
+    // Bitta ovoz (e'lon): Gemini suhbat rejimi aynan ikki ovoz so'raydi, shuning
+    // uchun bitta ovozli rejim; har satr yangi qatorda — jumlalar orasida pauza.
+    if (dialog.speakers.length === 1) {
+      const solo = await this.run(TTS_GEMINI_MODEL, {
+        prompt: turns.map((t) => t.text).join('\n'),
+        voice: dialog.speakers[0].voice,
+        style_instructions: dialog.styleInstructions,
+      });
+      const soloUrl = solo?.audio?.url;
+      if (typeof soloUrl !== 'string') {
+        throw new Error("fal.ai e'lon ovozini qaytarmadi");
+      }
+      return soloUrl;
+    }
     const out = await this.run(TTS_GEMINI_MODEL, {
       speakers: dialog.speakers.map((s) => ({
         speaker_id: s.speakerId,

@@ -18,6 +18,7 @@ import type {
   GrammatikFile,
   RedemittelFile,
   DialogeFile,
+  LesetexteFile,
   SaetzeFile,
   HilfswoerterFile,
 } from './unit-inhalt.types';
@@ -356,20 +357,43 @@ describe.each(UNITS)('%s — dialoglar', (unit) => {
     expect(notat.map((d) => d.id)).toEqual([]);
   });
 
+  const suhbatlar = dialoge.dialoge.filter(
+    (d) => (d.art ?? 'DIALOG') === 'DIALOG',
+  );
+  const ansagen = dialoge.dialoge.filter((d) => d.art === 'ANSAGE');
+
+  it('art faqat DIALOG yoki ANSAGE', () => {
+    const notri = dialoge.dialoge.filter(
+      (d) => d.art !== undefined && d.art !== 'DIALOG' && d.art !== 'ANSAGE',
+    );
+    expect(notri.map((d) => d.id)).toEqual([]);
+  });
+
   it('har dialogda 4 dan 8 gacha satr bor', () => {
     // To'rttadan kam bo'lsa suhbat emas, sakkiztadan ko'p bo'lsa A1
     // uchun uzun: o'quvchi boshini yo'qotadi.
-    const notri = dialoge.dialoge.filter(
+    const notri = suhbatlar.filter(
       (d) => d.zeilen.length < 4 || d.zeilen.length > 8,
     );
     expect(notri.map((d) => `${d.id}:${d.zeilen.length}`)).toEqual([]);
   });
 
   it('har dialogda kamida ikki gapiruvchi bor', () => {
-    const yakka = dialoge.dialoge.filter(
+    const yakka = suhbatlar.filter(
       (d) => new Set(d.zeilen.map((z) => z.sprecher)).size < 2,
     );
     expect(yakka.map((d) => d.id)).toEqual([]);
+  });
+
+  it('e`londa (ANSAGE) 2 dan 6 gacha satr va aynan bitta ovoz bor', () => {
+    // E'lon — bitta ovoz (radio, kassa, bekat). Ikki ovoz bo'lsa u dialog.
+    const notri = ansagen.filter(
+      (d) =>
+        d.zeilen.length < 2 ||
+        d.zeilen.length > 6 ||
+        new Set(d.zeilen.map((z) => z.sprecher)).size !== 1,
+    );
+    expect(notri.map((d) => `${d.id}:${d.zeilen.length}`)).toEqual([]);
   });
 
   it('dialog kaliti takrorlanmaydi', () => {
@@ -444,8 +468,9 @@ describe.each(UNITS)('%s — dialoglar', (unit) => {
           unbekannt.add(`${d.id}: ${w}`);
         }
       }
-      if (unbekannteWoerter(d.section, d.titelDe).length > 0) {
-        unbekannt.add(`titelDe: ${d.titelDe}`);
+      const titelFremd = unbekannteWoerter(d.section, d.titelDe);
+      if (titelFremd.length > 0) {
+        unbekannt.add(`titelDe: ${d.titelDe} (${titelFremd.join(', ')})`);
       }
     }
     expect([...unbekannt]).toEqual([]);
@@ -465,6 +490,107 @@ describe.each(UNITS)('%s — dialoglar', (unit) => {
     // aytadi — bu qoida buni commit'dan OLDIN ushlaydi.
     const manifest = readOrEmpty<DialogAudioManifest>({}, 'dialog-audio.json');
     expect(validateDialogAudio(dialoge.dialoge, manifest)).toEqual([]);
+  });
+});
+
+describe.each(UNITS)('%s — o`qish matnlari', (unit) => {
+  // `lesetexte.json` ixtiyoriy: yo'q bo'lsa unitda o'qish savoli yo'q.
+  const datei = readOrEmpty<LesetexteFile>(
+    { unit, texte: [] },
+    unit,
+    'lesetexte.json',
+  );
+  const sections = new Set(sectionsOf(unit));
+  const notLotin = /[Ѐ-ԯ؀-ۿ]/;
+
+  it('art faqat CHAT, TEXT yoki TABELLE; bo`lim va kalit to`g`ri', () => {
+    const dialogIds = new Set(
+      readOrEmpty<DialogeFile>(
+        { unit, dialoge: [] },
+        unit,
+        'dialoge.json',
+      ).dialoge.map((d) => d.id),
+    );
+    const ids = datei.texte.map((t) => t.id);
+    const xato = datei.texte.flatMap((t) => [
+      ...(['CHAT', 'TEXT', 'TABELLE'].includes(t.art) ? [] : [`${t.id}: art`]),
+      ...(sections.has(t.section) ? [] : [`${t.id}: bo'lim ${t.section}`]),
+      ...(dialogIds.has(t.id)
+        ? [`${t.id}: dialog kaliti bilan to'qnashadi`]
+        : []),
+    ]);
+    expect(xato).toEqual([]);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('har matnda 2 dan 12 gacha satr, har satrning o`zbekchasi bor', () => {
+    const xato = datei.texte.flatMap((t) => [
+      ...(t.zeilen.length < 2 || t.zeilen.length > 12
+        ? [`${t.id}: ${t.zeilen.length} satr`]
+        : []),
+      ...t.zeilen
+        .filter((z) => z.de.trim() === '' || z.uz.trim() === '')
+        .map(() => `${t.id}: bo'sh satr`),
+    ]);
+    expect(xato).toEqual([]);
+  });
+
+  it('CHAT — kamida ikki gapiruvchi; TEXT va TABELLE — gapiruvchi bo`sh', () => {
+    const xato = datei.texte.filter((t) =>
+      t.art === 'CHAT'
+        ? new Set(t.zeilen.map((z) => z.sprecher)).size < 2 ||
+          t.zeilen.some((z) => z.sprecher.trim() === '')
+        : t.zeilen.some((z) => z.sprecher !== ''),
+    );
+    expect(xato.map((t) => t.id)).toEqual([]);
+  });
+
+  it('TABELLE — har qatorda bir xil, kamida ikki katak (` | `)', () => {
+    const xato = datei.texte
+      .filter((t) => t.art === 'TABELLE')
+      .filter((t) => {
+        const n = t.zeilen[0].de.split(' | ').length;
+        return n < 2 || t.zeilen.some((z) => z.de.split(' | ').length !== n);
+      });
+    expect(xato.map((t) => t.id)).toEqual([]);
+  });
+
+  it('sarlavha va o`zbekcha matn lotincha, sahna ikki nuqtasiz', () => {
+    const xato = datei.texte.flatMap((t) => [
+      ...(notLotin.test(t.titelUz) ? [`${t.id}: titelUz`] : []),
+      ...t.zeilen
+        .filter((z) => notLotin.test(z.uz))
+        .map((z) => `${t.id}: ${z.uz}`),
+      ...(t.sahnaUz !== undefined &&
+      (t.sahnaUz.trim() === '' ||
+        t.sahnaUz.includes(':') ||
+        notLotin.test(t.sahnaUz))
+        ? [`${t.id}: sahnaUz`]
+        : []),
+    ]);
+    expect(xato).toEqual([]);
+  });
+
+  it('matnlarda shu bo`lim yoki oldingisidan tashqari notanish so`z yo`q', () => {
+    const unbekannt = new Set<string>();
+    for (const t of datei.texte) {
+      for (const text of [t.titelDe, ...t.zeilen.map((z) => z.de)]) {
+        for (const w of unbekannteWoerter(
+          t.section,
+          text.replace(/\|/g, ' '),
+        )) {
+          unbekannt.add(`${t.id}: ${w}`);
+        }
+      }
+    }
+    expect([...unbekannt]).toEqual([]);
+  });
+
+  it('har matnda 2 ta tushunish savoli bor va ular qoidadan o`tadi', () => {
+    const problems = datei.texte.flatMap((t) =>
+      validateHoerFragen(t, (text) => unbekannteWoerter(t.section, text)),
+    );
+    expect(problems).toEqual([]);
   });
 });
 
@@ -514,6 +640,19 @@ describe.each(UNITS)('%s — gaplar', (unit) => {
 
   it('har gapning o`zbekchasi bor', () => {
     expect(saetze.saetze.filter((s) => s.uz.trim() === '')).toEqual([]);
+  });
+
+  it('gap sahnasi (kontextUz) bo`sh emas, lotincha, ikki nuqtasiz', () => {
+    // Mijoz uni gap oldida bitta qator qilib chiqaradi; «:» yoki kirill
+    // harfi shu qatorni buzadi.
+    const yomon = saetze.saetze.filter(
+      (s) =>
+        s.kontextUz !== undefined &&
+        (s.kontextUz.trim() === '' ||
+          s.kontextUz.includes(':') ||
+          /[Ѐ-ԯ؀-ۿ]/.test(s.kontextUz)),
+    );
+    expect(yomon.map((s) => s.sourceId)).toEqual([]);
   });
 
   it('gap kaliti takrorlanmaydi', () => {

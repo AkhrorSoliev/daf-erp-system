@@ -101,6 +101,24 @@ describe('geminiDialog', () => {
     );
   });
 
+  it("e'lon (ANSAGE) bitta ovoz bilan quriladi, ikkita ovoz bilan emas", () => {
+    const ansage: Dialog = {
+      ...d('u06-d6'),
+      art: 'ANSAGE',
+      zeilen: [
+        { sprecher: 'Anna', de: 'Guten Abend!', uz: 'x' },
+        { sprecher: 'Anna', de: 'Viel Spaß!', uz: 'x' },
+      ],
+    };
+    const regie = { 'u06-d6': { szene: 'x', toene: [null, null] } };
+    const anfrage = geminiDialog(ansage, stimmen, regie);
+    expect(anfrage.speakers).toEqual([{ speakerId: 'Anna', voice: 'Erinome' }]);
+    const zwei: Dialog = { ...ansage, zeilen: d('x').zeilen };
+    expect(() => geminiDialog(zwei, stimmen, regie)).toThrow(
+      /aynan bitta ovoz/,
+    );
+  });
+
   it('stops on a speaker name the model cannot use as a prefix', () => {
     const dialog: Dialog = {
       ...d('u02-d2'),

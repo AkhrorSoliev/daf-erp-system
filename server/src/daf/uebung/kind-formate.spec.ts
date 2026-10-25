@@ -71,6 +71,7 @@ describe('bevorzugteFormate', () => {
       'AUDIO_WORT',
       'WORT_TIPPEN',
       'HOEREN_WAHL',
+      'LESEN_WAHL',
       'BILD_WORT',
       'AUDIO_BILD',
       'BILD_TIPPEN',

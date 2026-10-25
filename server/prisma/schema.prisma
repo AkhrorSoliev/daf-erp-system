@@ -955,7 +955,7 @@ enum LevelTestInviteStatus {
   FAILED
 }
 
-/// «Darajani aniqlash» taklifi (ADR-0126): har chatga BIR MARTA. Qator
+/// «Darajani aniqlash» taklifi (ADR-0127): har chatga BIR MARTA. Qator
 /// yuborishdan OLDIN `FAILED` bilan yoziladi (kim yozdi, o'sha yuboradi), xabar
 /// ketgach `SENT` bo'ladi. Jarayon yiqilsa qator `FAILED` bo'lib qoladi va
 /// qayta urinilmaydi: ikki marta yuborishdan ko'ra yubormaslik yaxshi.
@@ -4183,6 +4183,10 @@ model DafDialog {
   /// (`daf/bild/<hex>.jpg`). `null` — rasm yo'q. Manba —
   /// `content/daf/a1/dialog-bilder.json`.
   imageKey  String?
+  /// Matn turi: `DIALOG`, `ANSAGE` (bitta ovoz) — audio bor, `HOEREN_WAHL`;
+  /// `CHAT`, `TEXT`, `TABELLE` — audio yo'q, `LESEN_WAHL`. Manba —
+  /// `dialoge.json` (`DIALOG`/`ANSAGE`) va `lesetexte.json` (qolgani).
+  art       String   @default("DIALOG")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -4645,6 +4649,10 @@ model DafSentence {
   /// displey uchun. Eski (yangi unit matnidan oldingi) qatorlarda
   /// `null` qoladi, shuning uchun ixtiyoriy.
   sourceId   String?           @unique
+  /// Gap qaysi vaziyatdan olingani (o'zbekcha, ikki nuqtasiz): «Kassada.
+  /// Claudia aytadi». Gap formatlarida gapdan OLDIN ko'rsatiladi, shunda
+  /// yakka gap ham ma'noli bo'ladi. `null` — kontekst yo'q.
+  kontextUz  String?
 
   unit    DafUnit     @relation(fields: [unitId], references: [id])
   section DafSection? @relation(fields: [sectionId], references: [id])

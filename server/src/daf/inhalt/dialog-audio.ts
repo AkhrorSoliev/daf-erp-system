@@ -49,6 +49,10 @@ export type DialogAudioManifest = Record<
     rohKey?: string;
     /** `hoerspielHash` of the mix the `key` file was made with. */
     hoerspiel?: string;
+    /** Ambient-only dialogs: the file `key` was made from (no ambience), so a new ambience is a free remix. */
+    basisKey?: string;
+    /** `ambientHash` of the ambience laid over `basisKey` (`daf-gen-dialog-ambient.ts`). */
+    ambient?: string;
   }
 >;
 

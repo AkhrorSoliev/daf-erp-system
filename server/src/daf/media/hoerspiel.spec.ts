@@ -239,3 +239,34 @@ describe('mischFfmpegArgs', () => {
     expect(args[args.length - 1]).toBe('/t/out.mp3');
   });
 });
+
+describe('stimmfilter (radio, karnay, telefon)', () => {
+  it('faqat ma`lum filtrlarni qabul qiladi', () => {
+    expect(pruefeHoerspiel({ stimmfilter: 'funk' }, 4)).toEqual([]);
+    expect(pruefeHoerspiel({ stimmfilter: 'karnay' }, 4)).toEqual([]);
+    expect(pruefeHoerspiel({ stimmfilter: 'telefon' }, 4)).toEqual([]);
+    expect(pruefeHoerspiel({ stimmfilter: 'yomon' as never }, 4)).toHaveLength(
+      1,
+    );
+  });
+
+  it('har ovoz bo`lagi filtrdan o`tadi, effekt o`tmaydi, aralashma xeshi o`zgaradi', () => {
+    const h: HoerspielRegie = {
+      stimmfilter: 'funk',
+      geraeusche: [{ vor: 1, sfx: 'jingle', sek: 3 }],
+    };
+    const plan = mischPlan({
+      dauer: 6,
+      schnitte: [3],
+      regie: h,
+      geraeuschDauer: new Map([[geraeuschId({ sfx: 'jingle', sek: 3 }), 3]]),
+    });
+    const roh = plan.clips.filter((c) => c.quelle === 'roh');
+    expect(roh).toHaveLength(2);
+    expect(roh.every((c) => c.filter?.includes('highpass'))).toBe(true);
+    expect(plan.clips.find((c) => c.quelle !== 'roh')?.filter).toBeUndefined();
+    expect(hoerspielHash(h)).not.toBe(
+      hoerspielHash({ geraeusche: h.geraeusche }),
+    );
+  });
+});

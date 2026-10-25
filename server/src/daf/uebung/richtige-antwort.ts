@@ -77,6 +77,7 @@ export function richtigeAntwort(
       // `itemType === 'WORT'` sharti buni allaqachon ta'minlaydi).
       return { richtig: material.de, akzeptiert: [] };
     case 'HOEREN_WAHL':
+    case 'LESEN_WAHL':
       // `ladeMaterial` `de`ga `DafHoerFrage.richtig`ni qo'yadi.
       // `akzeptiert` bo'sh: variantlar aynan, yozish yo'q.
       return { richtig: material.de, akzeptiert: [] };

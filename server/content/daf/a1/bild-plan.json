@@ -574,5 +574,221 @@
   "u05-s5-hausaufgabe": {
     "szene": "a school exercise book open on a desk with handwritten maths sums, a pencil and an eraser beside it, a child's hand writing",
     "tippen": true
+  },
+  "u06-s1-buch": {
+    "szene": "a thick closed hardcover book with a plain blue cover lying flat",
+    "tippen": true
+  },
+  "u06-s1-comic": {
+    "szene": "an open comic book with colorful panels showing a smiling cartoon superhero flying, the speech bubbles empty",
+    "tippen": true
+  },
+  "u06-s1-kamera": {
+    "szene": "a black compact digital camera with a big round lens seen from the front",
+    "tippen": true
+  },
+  "u06-s1-zeichnung": {
+    "szene": "a pencil drawing of a small house with a tree on a white sheet of paper, a pencil lying on it",
+    "tippen": true
+  },
+  "u06-s1-lesen": {
+    "szene": "a girl sitting in an armchair reading an open book",
+    "tippen": false
+  },
+  "u06-s1-fotografieren": {
+    "szene": "a smiling person seen from the front holding a camera up to their face to take a photo, upper body visible",
+    "tippen": false
+  },
+  "u06-s1-malen": {
+    "szene": "a person painting a colorful picture on an easel with a brush and a paint palette",
+    "tippen": false
+  },
+  "u06-s1-zeichnen": {
+    "szene": "a person drawing with a pencil on a sheet of paper at a desk",
+    "tippen": false
+  },
+  "u06-s1-tanzen": {
+    "szene": "a happy couple dancing together in motion",
+    "tippen": false
+  },
+  "u06-s1-wandern": {
+    "szene": "a hiker with a backpack and two walking sticks walking up a mountain trail",
+    "tippen": false
+  },
+  "u06-s1-fahrradtour": {
+    "szene": "a family of three cycling with helmets along a river trail",
+    "tippen": false
+  },
+  "u06-s1-wuerfeln": {
+    "szene": "two large white six-sided dice with clearly visible black dots lying on a wooden table, close-up, centered",
+    "tippen": false
+  },
+  "u06-s2-fussball": {
+    "szene": "a classic black and white football lying on green grass",
+    "tippen": true
+  },
+  "u06-s2-basketball": {
+    "szene": "an orange basketball with black lines on a wooden court floor",
+    "tippen": true
+  },
+  "u06-s2-tennis": {
+    "szene": "a tennis racket and a yellow tennis ball on a green tennis court",
+    "tippen": true
+  },
+  "u06-s2-yoga": {
+    "szene": "a woman in a calm yoga tree pose on a yoga mat",
+    "tippen": true
+  },
+  "u06-s2-karate": {
+    "szene": "a person in a plain white karate uniform with a black belt doing a high kick, whole body visible, nothing else in the picture",
+    "tippen": true
+  },
+  "u06-s2-marathon": {
+    "szene": "a large crowd of runners in colorful shirts running together along a street, plain shirts, no street signs, no numbers",
+    "tippen": true
+  },
+  "u06-s2-ski": {
+    "szene": "a pair of red skis standing upright in white snow next to two ski poles",
+    "tippen": true
+  },
+  "u06-s2-schwimmen": {
+    "szene": "a swimmer with a swim cap and goggles swimming the front crawl in a blue pool, side view, whole body visible, nothing else in the picture",
+    "tippen": false
+  },
+  "u06-s2-laufen": {
+    "szene": "a full-body runner in a blue t-shirt and shorts running to the right on a red running track, whole body visible",
+    "tippen": false
+  },
+  "u06-s2-klettern": {
+    "szene": "a climber in an orange jacket and helmet shown large in the frame, climbing a rock wall on a rope, whole body visible",
+    "tippen": false
+  },
+  "u06-s2-rad-fahren": {
+    "szene": "a person riding a bicycle along a country road",
+    "tippen": false
+  },
+  "u06-s2-singen": {
+    "szene": "a girl singing into a microphone with her mouth open and musical notes around her",
+    "tippen": false
+  },
+  "u06-s2-chor": {
+    "szene": "a group of ten singers standing in two rows with open mouths, all wearing matching blue shirts",
+    "tippen": true
+  },
+  "u06-s2-cd": {
+    "szene": "a silver compact disc with a rainbow shine next to a clear plastic case",
+    "tippen": true
+  },
+  "u06-s2-geige": {
+    "szene": "a brown violin with a bow lying next to it",
+    "tippen": true
+  },
+  "u06-s2-trompete": {
+    "szene": "a shiny golden trumpet",
+    "tippen": true
+  },
+  "u06-s2-saxofon": {
+    "szene": "a shiny golden saxophone",
+    "tippen": true
+  },
+  "u06-s2-buehne": {
+    "szene": "an empty theatre stage with open red curtains and a bright spotlight on the wooden floor",
+    "tippen": true
+  },
+  "u06-s3-theater": {
+    "szene": "a grand theatre building with tall columns and a triangular roof in the evening with warm lit windows",
+    "tippen": true
+  },
+  "u06-s3-film": {
+    "szene": "a film clapperboard next to an old film reel and a bowl of popcorn",
+    "tippen": true
+  },
+  "u06-s3-disco": {
+    "szene": "a sparkling mirror disco ball hanging from a ceiling with colorful light beams",
+    "tippen": true
+  },
+  "u06-s3-schwimmbad": {
+    "szene": "an indoor swimming pool seen from the side with blue water, lane ropes and a metal ladder, no clouds, no steam",
+    "tippen": true
+  },
+  "u06-s3-ticket": {
+    "szene": "a single orange paper admission ticket with a zigzag perforated edge and one big yellow star in the middle, a completely blank ticket without any writing",
+    "tippen": true
+  },
+  "u06-s3-plakat": {
+    "szene": "a large event poster on a wall with colorful abstract shapes and a big yellow star",
+    "tippen": true
+  },
+  "u06-s3-orchester": {
+    "szene": "many musicians in black clothes playing violins, a cello and flutes together while a conductor with a baton stands in front",
+    "tippen": true
+  },
+  "u06-s4-sonne": {
+    "szene": "a big bright yellow sun with short rays in a clear blue sky",
+    "tippen": true
+  },
+  "u06-s4-regen": {
+    "szene": "heavy rain falling from a dark grey cloud onto a puddle with ripples",
+    "tippen": true
+  },
+  "u06-s4-schnee": {
+    "szene": "a big white snowflake crystal in the center on a dark blue background with a few small snowflakes",
+    "tippen": true
+  },
+  "u06-s4-wind": {
+    "szene": "strong wind blowing a kite and bending a tree, with curved white wind lines",
+    "tippen": true
+  },
+  "u06-s4-wolke": {
+    "szene": "one single big white fluffy cloud in a blue sky",
+    "tippen": true
+  },
+  "u06-s4-kalt": {
+    "szene": "a shivering man in a thick winter coat, scarf and hat next to a blue thermometer showing a low temperature",
+    "tippen": false
+  },
+  "u06-s4-heiss": {
+    "szene": "a sweating man in shorts fanning himself under a hot sun next to a red thermometer showing a high temperature",
+    "tippen": false
+  },
+  "u06-s4-fruehling": {
+    "szene": "a spring meadow with a blooming pink cherry blossom tree, yellow tulips and a butterfly",
+    "tippen": true
+  },
+  "u06-s4-sommer": {
+    "szene": "a hot summer beach scene with a big yellow sun, blue sea, sand and a red beach umbrella",
+    "tippen": true
+  },
+  "u06-s4-herbst": {
+    "szene": "an autumn park path covered with orange and red fallen leaves between trees with orange leaves",
+    "tippen": true
+  },
+  "u06-s4-winter": {
+    "szene": "a snowy village landscape with bare trees, cold blue light and a small house with smoke from its chimney",
+    "tippen": true
+  },
+  "u06-s5-stadtpark": {
+    "szene": "a city park with a pond, benches, green trees and a path, tall city buildings in the far background",
+    "tippen": true
+  },
+  "u06-s5-einladung": {
+    "szene": "a cream envelope with a red heart-shaped wax seal and a decorated greeting card with two balloons drawn on it sticking halfway out of the envelope",
+    "tippen": true
+  },
+  "u06-s5-party": {
+    "szene": "five cheerful friends dancing with colorful balloons and confetti",
+    "tippen": true
+  },
+  "u06-s5-geburtstag": {
+    "szene": "a birthday cake with five lit candles on a table with balloons",
+    "tippen": true
+  },
+  "u06-s5-geschenk": {
+    "szene": "a gift box wrapped in red paper with a golden ribbon bow",
+    "tippen": true
+  },
+  "u06-s5-picknick": {
+    "szene": "a picnic blanket on grass with a wicker basket, sandwiches and fruit in a park",
+    "tippen": true
   }
 }

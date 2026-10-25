@@ -1,5 +1,5 @@
 /**
- * «Darajani aniqlash» taklifi (ADR-0126). Matn CEO tasdiqlagan, so'zma-so'z:
+ * «Darajani aniqlash» taklifi (ADR-0127). Matn CEO tasdiqlagan, so'zma-so'z:
  * o'zgartirishdan oldin ADR va CEO bilan kelishing. HTML (`parse_mode: 'HTML'`).
  */
 export const LEVEL_TEST_INVITE_TEXT = [

@@ -28,7 +28,7 @@ export interface InviteRunResult {
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 /**
- * Bir martalik «Darajani aniqlash» taklifi (ADR-0126).
+ * Bir martalik «Darajani aniqlash» taklifi (ADR-0127).
  *
  * `LEVEL_TEST_INVITE` = `off` (standart) | `log` (auditoriyani sanab yozadi,
  * yubormaydi) | `on`. `LEVEL_TEST_INVITE_DATE` = `YYYY-MM-DD` (Toshkent kuni):

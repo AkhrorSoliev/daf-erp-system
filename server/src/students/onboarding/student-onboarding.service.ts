@@ -10,14 +10,13 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { EskizService } from '../../eskiz/eskiz.service';
 import { EntityHistoryService } from '../../common/entity-history';
-import { utcMidnightFromDateStr } from '../../common/date/tashkent';
 import {
   OnboardingStep,
-  birthDateProblem,
   canVerifyBySms,
   isPhoneVerified,
   missingOnboardingSteps,
 } from '../shared/student-onboarding';
+import { fillStudentProfile } from '../shared/fill-student-profile';
 import { markPhoneVerified } from '../shared/mark-phone-verified';
 import { findStudentAccountOnNumber } from '../shared/extra-phone-rule';
 import { planPhoneChange } from '../../common/auth/phone-account-rules';
@@ -114,45 +113,14 @@ export class StudentOnboardingService {
   ): Promise<OnboardingStatus> {
     const student = await this.load(studentId);
 
-    const data: { gender?: Gender; dateOfBirth?: Date } = {};
-    if (dto.gender && !student.gender) data.gender = dto.gender;
-    if (dto.dateOfBirth && !student.dateOfBirth) {
-      const problem = birthDateProblem(dto.dateOfBirth);
-      if (problem) throw new BadRequestException(problem);
-      data.dateOfBirth = utcMidnightFromDateStr(dto.dateOfBirth);
-    }
-    if (Object.keys(data).length === 0) return this.toStatus(student);
-
-    const updated = await this.prisma.student.update({
-      where: { id: studentId },
-      data,
-      select: STUDENT_SELECT,
-    });
-    if (data.gender && student.userId) {
-      // The account mirrors the card's gender (`User.gender`), as the name and
-      // photo writes in StudentPortalWriteService do.
-      await this.prisma.user.update({
-        where: { id: student.userId },
-        data: { gender: data.gender },
-      });
-    }
-
-    await this.entityHistory.recordUpdate({
-      entityType: 'Student',
-      entityId: studentId,
-      oldValues: {
-        ...(data.gender && { gender: null }),
-        ...(data.dateOfBirth && { dateOfBirth: null }),
-      },
-      newValues: {
-        ...(data.gender && { gender: data.gender }),
-        ...(data.dateOfBirth && { dateOfBirth: dto.dateOfBirth }),
-      },
-      changedById: userId,
-      companyId: student.companyId,
-    });
-
-    return this.toStatus(updated);
+    const written = await fillStudentProfile(
+      { prisma: this.prisma, entityHistory: this.entityHistory },
+      student,
+      dto,
+      userId,
+    );
+    if (!written.gender && !written.dateOfBirth) return this.toStatus(student);
+    return this.toStatus(await this.load(studentId));
   }
 
   /** «Ha, bu mening raqamim» — a 4-digit code to the number on the card. */
