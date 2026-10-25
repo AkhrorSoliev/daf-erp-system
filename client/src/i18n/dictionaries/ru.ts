@@ -5285,6 +5285,7 @@ const ru: Dictionary = {
   "Suv osti dunyosi": "Подводный мир",
   "Nemis sayohati": "Путешествие по Германии",
   "Tongdan tungacha": "От рассвета до ночи",
+  "Boshlash": "Начать",
 };
 
 export default ru;

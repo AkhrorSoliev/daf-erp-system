@@ -817,6 +817,7 @@ export const STRICT_FILES: string[] = [
   "components/student-portal/lernen/lernen-lesson-page.tsx",
   "components/student-portal/lernen/yol/yol-tuzilishi.ts",
   "components/student-portal/lernen/yol/lernen-yol.tsx",
+  "components/student-portal/lernen/yol/seans-varaq.tsx",
   "components/student-portal/lernen/yol/maqsad-kartasi.tsx",
   "components/student-portal/lernen/yol/yol-tepasi.tsx",
   "components/student-portal/lernen/reyting/reyting-ekrani.tsx",

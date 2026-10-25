@@ -5285,6 +5285,7 @@ const de: Dictionary = {
   "Suv osti dunyosi": "Eine Unterwasserwelt",
   "Nemis sayohati": "Deutschlandreise",
   "Tongdan tungacha": "Von der Dämmerung bis zur Nacht",
+  "Boshlash": "Starten",
 };
 
 export default de;
