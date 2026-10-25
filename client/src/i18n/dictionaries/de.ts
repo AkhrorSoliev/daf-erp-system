@@ -5286,6 +5286,12 @@ const de: Dictionary = {
   "Nemis sayohati": "Deutschlandreise",
   "Tongdan tungacha": "Von der Dämmerung bis zur Nacht",
   "Boshlash": "Starten",
+
+  // Ta'lim look picker (lernen-korinish-tanlash.tsx); «Yoqilgan» and «O'chiq» already exist
+  "Ta'lim ko'rinishi": "Lern-Ansicht",
+  "Ovozlar": "Töne",
+  "Kam harakat": "Weniger Bewegung",
+  "Ko'rinishni saqlab bo'lmadi, qayta urinib ko'ring": "Die Ansicht konnte nicht gespeichert werden, bitte erneut versuchen",
 };
 
 export default de;

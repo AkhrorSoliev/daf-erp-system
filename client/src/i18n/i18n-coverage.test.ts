@@ -773,6 +773,7 @@ export const STRICT_FILES: string[] = [
   "components/student-portal/lumio/theme-segmented.tsx",
   "components/student-portal/lumio/input.tsx",
   "components/student-portal/student-settings-page.tsx",
+  "components/student-portal/lernen-korinish-tanlash.tsx",
   "lib/student-nav-items.ts",
   "components/student-portal/lumio/bottom-nav.tsx",
   "components/student-portal/lumio/side-rail.tsx",

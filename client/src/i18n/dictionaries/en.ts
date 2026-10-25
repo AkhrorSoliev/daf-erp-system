@@ -5286,6 +5286,12 @@ const en: Dictionary = {
   "Nemis sayohati": "German journey",
   "Tongdan tungacha": "From dawn to night",
   "Boshlash": "Start",
+
+  // Ta'lim look picker (lernen-korinish-tanlash.tsx); «Yoqilgan» and «O'chiq» already exist
+  "Ta'lim ko'rinishi": "Learning look",
+  "Ovozlar": "Sounds",
+  "Kam harakat": "Less motion",
+  "Ko'rinishni saqlab bo'lmadi, qayta urinib ko'ring": "Could not save the look, please try again",
 };
 
 export default en;
