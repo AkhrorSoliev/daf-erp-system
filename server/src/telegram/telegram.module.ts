@@ -7,6 +7,7 @@ import { TelegramStatementController } from './telegram-statement.controller';
 import { TelegramStatementService } from './telegram-statement.service';
 import { MockExamAnnounceListener } from './mock-exam-announce.listener';
 import { MockExamPaidListener } from './mock-exam-paid.listener';
+import { LevelTestInviteService } from './level-test-invite/level-test-invite.service';
 import { JoinRequestNotifier } from './join-request-notifier';
 import { UploadModule } from '../upload/upload.module';
 import { UsersModule } from '../users/users.module';
@@ -41,6 +42,7 @@ import { LevelTestModule } from '../level-test/level-test.module';
     TelegramChannelGateStatsService,
     MockExamAnnounceListener,
     MockExamPaidListener,
+    LevelTestInviteService,
     JoinRequestNotifier,
   ],
   exports: [TelegramService, TelegramChannelGateStatsService],

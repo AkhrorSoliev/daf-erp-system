@@ -950,6 +950,25 @@ model LevelTestAttempt {
   @@index([companyId, createdAt])
 }
 
+enum LevelTestInviteStatus {
+  SENT
+  FAILED
+}
+
+/// «Darajani aniqlash» taklifi (ADR-0126): har chatga BIR MARTA. Qator
+/// yuborishdan OLDIN `FAILED` bilan yoziladi (kim yozdi, o'sha yuboradi), xabar
+/// ketgach `SENT` bo'ladi. Jarayon yiqilsa qator `FAILED` bo'lib qoladi va
+/// qayta urinilmaydi: ikki marta yuborishdan ko'ra yubormaslik yaxshi.
+model LevelTestInvite {
+  id        String                @id @default(uuid())
+  chatId    String                @unique
+  status    LevelTestInviteStatus @default(FAILED)
+  /// Telegram rad etgan bo'lsa sababi (qisqa).
+  note      String?
+  createdAt DateTime              @default(now())
+  sentAt    DateTime?
+}
+
 enum LeadOwnershipKind {
   CLAIM
   ASSIGN
