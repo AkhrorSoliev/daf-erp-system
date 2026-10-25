@@ -195,6 +195,7 @@ buni ko'rib chiquvchi qo'lda tekshiradi.
 | [0126](0126-vaziyat-asosidagi-kontent-oqish-matni-va-gap-sahnasi.md) | Kontent vaziyat asosida quriladi: o'qish matni (`LESEN_WAHL`), e'lon (`ANSAGE`) va gap sahnasi; Netzwerk topshiriqlari ko'chirilmaydi, onlayn shaklga moslanadi | Qabul qilindi | 2026-10-17 |
 | [0127](0127-daraja-testi-taklifi-bir-martalik-yuborish.md) | «Darajani aniqlash» taklifi botdan foydalana oladigan hammaga BIR marta: auditoriya (hamma holatdagi o'quvchilar + kanal tekshiruvidagi odamlar, xodimlarsiz), `LevelTestInvite` yuborishdan oldin egallanadi, `LEVEL_TEST_INVITE` off/log/on va sana, cron 20:00 | Qabul qilindi | 2026-10-25 |
 | [0128](0128-lernen-mashq-natija-tema-orinlari-yumshoq-xato.md) | Ta'lim mashq va natija ekrani: `LernenTema` ga `MukofotFoni` va `UnitLavha`; xato javob yumshoq (amber «Deyarli!», qizil yo'q); natija bayrami faqat server o'tdi deganda (yakuniy sinov); javob ovozi server hukmidan; «Kam harakat» fade/stagger/shake ga ham | Qabul qilindi | 2026-10-25 |
+| [0129](0129-oquvchilar-chati-telegram-xabari-darhol.md) | O'quvchilar chatida «yangi xabar» Telegram xabari darhol (ADR-0025 ning «darhol» ro'yxatiga): `SmsService.sendToStudent`, mazmunsiz, bir suhbatdan o'qilmaguncha bitta, 22:00–08:00 da ushlanib 08:00 da, `web_app` tugmasi Mini App chatiga | Qabul qilindi | 2026-10-26 |
 
 > 0001–0007 **retroaktiv** yozilgan (2026-08-19): qarorlar o'sha sanalarda amalda qabul qilingan, ADR keyinroq rasmiylashtirilgan. Sana ustunida qaror sanasi turadi, yozilgan sana emas.
 

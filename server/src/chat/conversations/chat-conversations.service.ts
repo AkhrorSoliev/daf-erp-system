@@ -21,6 +21,7 @@ import {
   RESTRICTED_MESSAGE,
 } from '../chat.constants';
 import { mayWrite } from '../people/chat-people.rules';
+import { ChatNotifyService } from '../notify/chat-notify.service';
 import {
   ChatPeopleService,
   type PeerSummary,
@@ -33,6 +34,12 @@ export interface MessageView {
   mine: boolean;
   kind: 'TEXT' | 'IMAGE' | 'VOICE';
   text: string | null;
+  file: {
+    mime: string;
+    sizeBytes: number | null;
+    durationSec: number | null;
+    purged: boolean;
+  } | null;
   createdAt: string;
 }
 
@@ -73,6 +80,7 @@ export class ChatConversationsService {
     private readonly access: ChatAccessService,
     private readonly people: ChatPeopleService,
     private readonly gateway: NotificationsGateway,
+    private readonly notify: ChatNotifyService,
     @Inject(CHAT_RATE_LIMITER) private readonly limiter: RateLimiter,
   ) {}
 
@@ -82,6 +90,10 @@ export class ChatConversationsService {
       senderId: number;
       kind: string;
       text: string | null;
+      mime?: string | null;
+      sizeBytes?: number | null;
+      durationSec?: number | null;
+      mediaPurgedAt?: Date | null;
       createdAt: Date;
     },
     me: number,
@@ -92,12 +104,22 @@ export class ChatConversationsService {
       mine: m.senderId === me,
       kind: m.kind as MessageView['kind'],
       text: m.text,
+      // The storage key never leaves the server: the client asks for a signed link.
+      file:
+        m.kind === 'TEXT'
+          ? null
+          : {
+              mime: m.mime ?? '',
+              sizeBytes: m.sizeBytes ?? null,
+              durationSec: m.durationSec ?? null,
+              purged: m.mediaPurgedAt != null,
+            },
       createdAt: m.createdAt.toISOString(),
     };
   }
 
   /** The conversation, or 404 — the same answer for "missing" and "not yours". */
-  private async mine(me: number, conversationId: string) {
+  async mine(me: number, conversationId: string) {
     const c = await this.prisma.chatConversation.findUnique({
       where: { id: conversationId },
     });
@@ -291,21 +313,36 @@ export class ChatConversationsService {
     };
   }
 
-  async send(
+  /** Every check a message needs, in the agreed order; returns the other side. */
+  async prepareSend(
     me: number,
     companyId: number,
     conversationId: string,
-    text: string,
-  ): Promise<MessageView> {
+  ): Promise<{ peerId: number }> {
     await this.access.assertCanWrite(me, companyId);
     const { peerId } = await this.mine(me, conversationId);
     await this.assertMayReach(me, peerId);
-
     await this.countAgainstLimit(`chat:rate:${me}`, RATE_PER_MINUTE);
+    return { peerId };
+  }
 
+  async commitMessage(
+    me: number,
+    companyId: number,
+    conversationId: string,
+    peerId: number,
+    data: {
+      kind: 'TEXT' | 'IMAGE' | 'VOICE';
+      text?: string;
+      fileKey?: string;
+      mime?: string;
+      sizeBytes?: number;
+      durationSec?: number | null;
+    },
+  ): Promise<MessageView> {
     const row = await this.prisma.$transaction(async (tx) => {
       const m = await tx.chatMessage.create({
-        data: { conversationId, senderId: me, kind: 'TEXT', text },
+        data: { conversationId, senderId: me, ...data },
       });
       await tx.chatConversation.update({
         where: { id: conversationId },
@@ -325,7 +362,27 @@ export class ChatConversationsService {
       conversationId,
       message: this.view(row, peerId),
     });
+    // After the commit, not awaited: the notifier never throws and Telegram is slow.
+    void this.notify.onMessage({
+      conversationId,
+      senderId: me,
+      recipientId: peerId,
+      companyId,
+    });
     return this.view(row, me);
+  }
+
+  async send(
+    me: number,
+    companyId: number,
+    conversationId: string,
+    text: string,
+  ): Promise<MessageView> {
+    const { peerId } = await this.prepareSend(me, companyId, conversationId);
+    return this.commitMessage(me, companyId, conversationId, peerId, {
+      kind: 'TEXT',
+      text,
+    });
   }
 
   async markRead(me: number, conversationId: string): Promise<{ ok: true }> {
@@ -336,6 +393,7 @@ export class ChatConversationsService {
       create: { conversationId, studentId: me, lastReadAt: readAt },
       update: { lastReadAt: readAt },
     });
+    await this.notify.onRead(me, conversationId);
     await this.pushToPeer(peerId, {
       type: 'chat.read',
       conversationId,

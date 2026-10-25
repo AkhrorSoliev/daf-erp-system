@@ -174,6 +174,20 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
   {
     policy: 'COMPANY_WIDE',
     reason:
+      'Student chat reports and the ban (spec 2026-10-25): reports and ' +
+      '`Student.chatBannedAt` are company data: the CEO acts across all branches. ' +
+      'CEO-only through `@CeoOnly()`.',
+    routes: [
+      'GET /chat/admin/reports',
+      'GET /chat/admin/reports/:id',
+      'PATCH /chat/admin/reports/:id',
+      'POST /chat/admin/students/:studentId/ban',
+      'POST /chat/admin/students/:studentId/unban',
+    ],
+  },
+  {
+    policy: 'COMPANY_WIDE',
+    reason:
       '«Dars baholari» switch (spec 2026-10-13 §6.1): `lessonRating.enabled` is a ' +
       'company-level setting (`companyLevelOnly`) — one value for every branch. ' +
       'CEO-only through `@CeoOnly()`. The three reads take `@BranchScope()`.',
@@ -928,6 +942,9 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /chat/conversations/:id/messages',
       'PATCH /chat/conversations/:id/read',
       'DELETE /chat/messages/:id',
+      'POST /chat/conversations/:id/files',
+      'GET /chat/messages/:id/file',
+      'POST /chat/report',
     ],
   },
   {

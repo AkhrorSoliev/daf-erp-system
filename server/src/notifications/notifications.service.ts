@@ -52,6 +52,7 @@ export class NotificationsService {
       params.type,
       new Date(),
       params.actionRequired,
+      params.relatedEntityId,
     );
     const row = await this.prisma.notification.create({
       data: {

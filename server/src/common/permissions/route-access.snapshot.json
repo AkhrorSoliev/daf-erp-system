@@ -272,6 +272,12 @@
   "GET /chat/access": [
     "Student"
   ],
+  "GET /chat/admin/reports": [
+    "CEO"
+  ],
+  "GET /chat/admin/reports/:id": [
+    "CEO"
+  ],
   "GET /chat/conversations": [
     "Student"
   ],
@@ -279,6 +285,9 @@
     "Student"
   ],
   "GET /chat/me": [
+    "Student"
+  ],
+  "GET /chat/messages/:id/file": [
     "Student"
   ],
   "GET /chat/search": [
@@ -1108,11 +1117,20 @@
     "Branch Director",
     "CEO"
   ],
+  "PATCH /chat/admin/reports/:id": [
+    "CEO"
+  ],
   "PATCH /chat/conversations/:id/read": [
     "Student"
   ],
   "PATCH /chat/privacy": [
     "Student"
+  ],
+  "POST /chat/admin/students/:studentId/ban": [
+    "CEO"
+  ],
+  "POST /chat/admin/students/:studentId/unban": [
+    "CEO"
   ],
   "POST /chat/block": [
     "Student"
@@ -1120,7 +1138,13 @@
   "POST /chat/conversations": [
     "Student"
   ],
+  "POST /chat/conversations/:id/files": [
+    "Student"
+  ],
   "POST /chat/conversations/:id/messages": [
+    "Student"
+  ],
+  "POST /chat/report": [
     "Student"
   ],
   "POST /chat/unblock": [

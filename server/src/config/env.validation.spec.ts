@@ -137,6 +137,18 @@ describe('validateEnv', () => {
       ).not.toThrow();
     });
 
+    it('rejects R2_CHAT_BUCKET_NAME set without any R2 key', () => {
+      expect(() =>
+        validateEnv({ ...minimal, R2_CHAT_BUCKET_NAME: 'daf-chat' }),
+      ).toThrow(/R2_CHAT_BUCKET_NAME/);
+    });
+
+    it('accepts R2_CHAT_BUCKET_NAME together with the full R2 group', () => {
+      expect(() =>
+        validateEnv({ ...minimal, ...r2, R2_CHAT_BUCKET_NAME: 'daf-chat' }),
+      ).not.toThrow();
+    });
+
     it('rejects a group where one key was blanked out rather than removed', () => {
       expect(() =>
         validateEnv({ ...minimal, ...r2, R2_BUCKET_NAME: '' }),
