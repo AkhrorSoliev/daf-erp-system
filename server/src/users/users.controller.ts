@@ -103,7 +103,7 @@ export class UsersController {
     @CurrentUser('id') callerId: number,
   ) {
     this.logger.log(
-      `Creating user: ${JSON.stringify({ ...dto, password: dto.password ? '***' : undefined, companyId })}`,
+      `Creating user: ${JSON.stringify({ ...dto, password: dto.password ? '***' : undefined, officialSalary: dto.officialSalary === undefined ? undefined : '***', companyId })}`,
     );
     return this.usersService.create(
       { ...dto, companyId },
