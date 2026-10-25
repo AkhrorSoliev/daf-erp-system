@@ -129,14 +129,15 @@ const FULL = {
 };
 
 describe('ChatReportsService.resolve', () => {
-  it('closes only an open report of this company and may ban the reported student', async () => {
+  it('bans first, then closes only an open report of this company', async () => {
     const { service, prisma, ban } = make();
-    prisma.chatReport.findUnique.mockResolvedValue(FULL);
+    prisma.chatReport.findUnique.mockResolvedValue({ ...FULL, status: 'OPEN' });
     await service.resolve(7, 99, 'r1', {
       outcome: 'RESOLVED',
       banReported: true,
       note: 'Ogohlantirildi',
     });
+    expect(ban.ban).toHaveBeenCalledWith(2, 7, 99);
     expect(prisma.chatReport.updateMany).toHaveBeenCalledWith({
       where: { id: 'r1', companyId: 7, status: 'OPEN' },
       data: expect.objectContaining({
@@ -145,15 +146,28 @@ describe('ChatReportsService.resolve', () => {
         resolutionNote: 'Ogohlantirildi',
       }),
     });
-    expect(ban.ban).toHaveBeenCalledWith(2, 7, 99);
+    expect(ban.ban.mock.invocationCallOrder[0]).toBeLessThan(
+      prisma.chatReport.updateMany.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('leaves the report open when the ban fails', async () => {
+    const { service, prisma, ban } = make();
+    prisma.chatReport.findUnique.mockResolvedValue({ ...FULL, status: 'OPEN' });
+    ban.ban.mockRejectedValue(new Error('boom'));
+    await expect(
+      service.resolve(7, 99, 'r1', { outcome: 'RESOLVED', banReported: true }),
+    ).rejects.toThrow('boom');
+    expect(prisma.chatReport.updateMany).not.toHaveBeenCalled();
   });
 
   it('is a 409 when the report is already closed, and bans nobody', async () => {
-    const { service, prisma, ban } = make({ updated: 0 });
+    const { service, prisma, ban } = make();
     prisma.chatReport.findUnique.mockResolvedValue({
       id: 'r1',
       reportedId: 2,
       companyId: 7,
+      status: 'RESOLVED',
     });
     await expect(
       service.resolve(7, 99, 'r1', { outcome: 'DISMISSED', banReported: true }),

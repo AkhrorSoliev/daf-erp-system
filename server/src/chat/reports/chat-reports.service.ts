@@ -178,6 +178,11 @@ export class ChatReportsService {
     if (!r || r.companyId !== companyId) {
       throw new NotFoundException('Shikoyat topilmadi');
     }
+    if (r.status !== 'OPEN') {
+      throw new ConflictException("Shikoyat allaqachon ko'rib chiqilgan");
+    }
+    // Ban first (idempotent): a failing ban leaves the report OPEN for a retry.
+    if (dto.banReported) await this.ban.ban(r.reportedId, companyId, actorId);
     const { count } = await this.prisma.chatReport.updateMany({
       where: { id, companyId, status: 'OPEN' },
       data: {
@@ -190,7 +195,6 @@ export class ChatReportsService {
     if (count === 0) {
       throw new ConflictException("Shikoyat allaqachon ko'rib chiqilgan");
     }
-    if (dto.banReported) await this.ban.ban(r.reportedId, companyId, actorId);
     return this.get(companyId, id);
   }
 }

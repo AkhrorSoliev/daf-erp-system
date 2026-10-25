@@ -7,6 +7,7 @@ import { NotificationsGateway } from '../../notifications/notifications.gateway'
 import { NotificationsService } from '../../notifications/notifications.service';
 import { PushService } from '../../notifications/push.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SettingsService } from '../../settings/settings.service';
 import { SmsService } from '../../sms/sms.service';
 import {
   chatDeepLink,
@@ -42,6 +43,7 @@ export class ChatNotifyService {
     private readonly push: PushService,
     private readonly sms: SmsService,
     private readonly config: ConfigService,
+    private readonly settings: SettingsService,
   ) {}
 
   async onMessage(i: ChatNotifyInput, now: Date = new Date()): Promise<void> {
@@ -49,7 +51,11 @@ export class ChatNotifyService {
       const [recipient, sender] = await Promise.all([
         this.prisma.student.findFirst({
           where: { id: i.recipientId, deletedAt: null },
-          select: { userId: true, telegramChatId: true },
+          select: {
+            userId: true,
+            telegramChatId: true,
+            telegramDisconnectedAt: true,
+          },
         }),
         this.prisma.student.findFirst({
           where: { id: i.senderId },
@@ -59,7 +65,10 @@ export class ChatNotifyService {
       if (!recipient || !sender) return;
       const name = `${sender.firstName} ${sender.lastName}`.trim();
       if (recipient.userId) await this.bell(recipient.userId, name, i);
-      if (recipient.telegramChatId) await this.telegram(i, name, now);
+      // A chat the bot marked disconnected is skipped (ADR-0128, ADR-0117 precedent).
+      if (recipient.telegramChatId && !recipient.telegramDisconnectedAt) {
+        await this.telegram(i, name, now);
+      }
     } catch (err) {
       this.warn('notice', i.recipientId, err);
     }
@@ -227,7 +236,22 @@ export class ChatNotifyService {
               ...(read && { createdAt: { gt: read.lastReadAt } }),
             },
           });
-          if (unread > 0 && needsTelegram(p, read?.lastReadAt ?? null)) {
+          const [recipient, enabled] = await Promise.all([
+            this.prisma.student.findFirst({
+              where: { id: p.studentId, deletedAt: null },
+              select: { telegramChatId: true, telegramDisconnectedAt: true },
+            }),
+            this.settings.get(conversation.companyId, 'chat.enabled'),
+          ]);
+          const reachable =
+            enabled &&
+            recipient?.telegramChatId &&
+            !recipient.telegramDisconnectedAt;
+          if (
+            reachable &&
+            unread > 0 &&
+            needsTelegram(p, read?.lastReadAt ?? null)
+          ) {
             const sender = await this.prisma.student.findFirst({
               where: { id: senderId },
               select: { firstName: true, lastName: true },

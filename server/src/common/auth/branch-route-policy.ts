@@ -175,7 +175,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     policy: 'COMPANY_WIDE',
     reason:
       'Student chat reports and the ban (spec 2026-10-25): reports and ' +
-      '`Student.chatBannedAt` are company-wide data with no branch dimension. ' +
+      '`Student.chatBannedAt` are company data: the CEO acts across all branches. ' +
       'CEO-only through `@CeoOnly()`.',
     routes: [
       'GET /chat/admin/reports',

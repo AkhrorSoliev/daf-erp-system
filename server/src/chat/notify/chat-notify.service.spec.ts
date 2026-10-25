@@ -15,6 +15,8 @@ function make(
     read?: object | null;
     existingBell?: boolean;
     chat?: boolean;
+    disconnected?: boolean;
+    switchOff?: boolean;
     smsFails?: boolean;
   } = {},
 ) {
@@ -22,7 +24,11 @@ function make(
     student: {
       findFirst: jest.fn(async ({ where }: { where: { id: number } }) =>
         where.id === 2
-          ? { userId: 22, telegramChatId: o.chat === false ? null : '555' }
+          ? {
+              userId: 22,
+              telegramChatId: o.chat === false ? null : '555',
+              telegramDisconnectedAt: o.disconnected ? new Date() : null,
+            }
           : { firstName: 'Ali', lastName: 'Valiyev' },
       ),
     },
@@ -56,6 +62,9 @@ function make(
       : jest.fn().mockResolvedValue({}),
   };
   const config = { get: jest.fn(() => 'https://student.dafzentrum.uz/tg') };
+  const settings = {
+    get: jest.fn().mockResolvedValue(o.switchOff ? false : true),
+  };
   const service = new ChatNotifyService(
     prisma as never,
     notifications as never,
@@ -63,8 +72,9 @@ function make(
     push as never,
     sms as never,
     config as never,
+    settings as never,
   );
-  return { service, prisma, notifications, gateway, push, sms };
+  return { service, prisma, notifications, gateway, push, sms, settings };
 }
 
 describe('ChatNotifyService.onMessage', () => {
@@ -145,6 +155,19 @@ describe('ChatNotifyService.onMessage', () => {
   });
 });
 
+describe('ChatNotifyService disconnected chat', () => {
+  it('still writes the bell and push but skips Telegram and the state', async () => {
+    const { service, notifications, push, sms, prisma } = make({
+      disconnected: true,
+    });
+    await service.onMessage(input, DAY);
+    expect(notifications.create).toHaveBeenCalled();
+    expect(push.sendToUser).toHaveBeenCalled();
+    expect(sms.sendToStudent).not.toHaveBeenCalled();
+    expect(prisma.chatNotifyState.upsert).not.toHaveBeenCalled();
+  });
+});
+
 describe('ChatNotifyService.onRead', () => {
   it('marks the conversation bell rows read', async () => {
     const { service, prisma } = make();
@@ -201,5 +224,48 @@ describe('ChatNotifyService.sendMorning', () => {
     expect(prisma.chatNotifyState.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: { pendingSince: null } }),
     );
+  });
+
+  const pendingRow = [
+    {
+      conversationId: 'c1',
+      studentId: 2,
+      notifiedAt: null,
+      pendingSince: new Date('2026-10-25T18:00:00Z'),
+    },
+  ];
+  const cleared = {
+    where: { conversationId_studentId: { conversationId: 'c1', studentId: 2 } },
+    data: { pendingSince: null },
+  };
+
+  it('clears the wait and sends nothing for a deleted recipient', async () => {
+    const { service, prisma, sms } = make();
+    prisma.chatNotifyState.findMany.mockResolvedValue(pendingRow);
+    (prisma.student.findFirst as jest.Mock).mockImplementation(
+      async ({ where }: { where: { id: number; deletedAt?: null } }) =>
+        where.id === 2 && where.deletedAt === null
+          ? null
+          : { firstName: 'Ali', lastName: 'Valiyev' },
+    );
+    await service.sendMorning(new Date('2026-10-26T03:05:00Z'));
+    expect(sms.sendToStudent).not.toHaveBeenCalled();
+    expect(prisma.chatNotifyState.update).toHaveBeenCalledWith(cleared);
+  });
+
+  it('clears the wait and sends nothing for a disconnected recipient', async () => {
+    const { service, prisma, sms } = make({ disconnected: true });
+    prisma.chatNotifyState.findMany.mockResolvedValue(pendingRow);
+    await service.sendMorning(new Date('2026-10-26T03:05:00Z'));
+    expect(sms.sendToStudent).not.toHaveBeenCalled();
+    expect(prisma.chatNotifyState.update).toHaveBeenCalledWith(cleared);
+  });
+
+  it('clears the wait and sends nothing while the chat switch is off', async () => {
+    const { service, prisma, sms } = make({ switchOff: true });
+    prisma.chatNotifyState.findMany.mockResolvedValue(pendingRow);
+    await service.sendMorning(new Date('2026-10-26T03:05:00Z'));
+    expect(sms.sendToStudent).not.toHaveBeenCalled();
+    expect(prisma.chatNotifyState.update).toHaveBeenCalledWith(cleared);
   });
 });
