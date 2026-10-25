@@ -8,9 +8,12 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { useT } from "@/i18n/use-t";
 import type { LernenTemaId } from "@/lib/lernen-temalar";
 import { useStudentProfile } from "../../lib/queries";
-import type { StudentProfile } from "../../lib/types";
 import { TEMA_KESH_KALITI, joriyTemaId } from "./tema-tanlash";
+import { temaniSaqla } from "./tema-saqlash";
 import { temaTop } from "./tema-reyestri";
+
+/** Must stay equal to the key `useStudentProfile` uses. */
+const PROFIL_KALITI = ["student-portal", "profile"] as const;
 
 function keshOqi(): string | null {
   try {
@@ -20,16 +23,26 @@ function keshOqi(): string | null {
   }
 }
 
+function keshYoz(v: string | null) {
+  try {
+    if (v) localStorage.setItem(TEMA_KESH_KALITI, v);
+    else localStorage.removeItem(TEMA_KESH_KALITI);
+  } catch {
+    /* cache only */
+  }
+}
+
 /**
  * The student's Ta'lim look (ADR-0125): the account's choice, cached on the
  * device. `tanla` changes it optimistically and puts the old look back if the
- * save fails.
+ * save fails; one save at a time, a tap made meanwhile is ignored.
  */
 export function useLernenTema() {
   const t = useT();
   const qc = useQueryClient();
   const { data: profil } = useStudentProfile();
   const [kesh, setKesh] = React.useState<string | null>(null);
+  const band = React.useRef(false);
 
   React.useEffect(() => {
     setKesh(keshOqi());
@@ -39,24 +52,17 @@ export function useLernenTema() {
 
   const tanla = React.useCallback(
     async (yangi: LernenTemaId) => {
-      const eski = qc.getQueryData<StudentProfile>(["student-portal", "profile"]);
-      const yoz = (v: LernenTemaId | null) => {
-        qc.setQueryData<StudentProfile | undefined>(["student-portal", "profile"], (p) => (p ? { ...p, lernenTema: v } : p));
-        try {
-          if (v) localStorage.setItem(TEMA_KESH_KALITI, v);
-          else localStorage.removeItem(TEMA_KESH_KALITI);
-        } catch {
-          /* cache only */
-        }
-        setKesh(v);
-      };
-      yoz(yangi);
-      try {
-        await api.patch("/student-portal/lernen-tema", { tema: yangi });
-      } catch (e) {
-        yoz((eski?.lernenTema as LernenTemaId | null | undefined) ?? null);
-        toast.error(getErrorMessage(e, t("Ko'rinishni saqlab bo'lmadi, qayta urinib ko'ring")));
-      }
+      await temaniSaqla({
+        qc,
+        profilKaliti: PROFIL_KALITI,
+        yangi,
+        band,
+        patch: (tema) => api.patch("/student-portal/lernen-tema", { tema }),
+        keshOqi,
+        keshYoz,
+        setKesh,
+        onXato: (e) => toast.error(getErrorMessage(e, t("Ko'rinishni saqlab bo'lmadi, qayta urinib ko'ring"))),
+      });
     },
     [qc, t],
   );
