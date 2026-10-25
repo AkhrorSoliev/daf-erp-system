@@ -73,3 +73,30 @@ ADR-0039 ga bitta qator qo'shiladi (Telegram — qo'shimcha yo'l). Yangi ADR yo'
 
 Avtomatik takror eslatma, yangi o'quvchini avtomatik so'rash, Mini App ichida forma.
 Kampaniya natijasi yetmasa — keyin alohida qaror.
+
+## 25.10 o'zgarishi: sana tugmalar bilan tanlanadi
+
+**Nega.** Matn bilan yozilgan sana (`KK.OO.YYYY`) ko'pincha xato chiqadi: o'quvchilar
+formatni to'g'ri yozmaydi. Scene va matn tahlili olib tashlandi, o'rniga tugmalar.
+
+**5 ekran** (hammasi bitta xabarni joyida tahrirlaydi; har birida «Bekor qilish», 2–5-da «⬅️ Orqaga»):
+1. `Tug'ilgan yilingizni tanlang:` — o'n yilliklar (`1980–1989`), yangisi birinchi, qatorda 2 ta.
+   Yillar oralig'i: joriy Toshkent yili − 100 … − 5 (`MAX/MIN_STUDENT_AGE`).
+2. `Yilni tanlang:` — shu o'n yillikdagi yillar, qatorda 5 ta.
+3. `Oyni tanlang:` — 12 oy, qatorda 3 ta.
+4. `Kunni tanlang:` — 1…N (kabisa yilini hisobga oladi), qatorda 7 ta.
+5. `Tug'ilgan sana: 15-mart, 2005. To'g'rimi?` — «✅ Ha, saqlash» / «↩️ Qaytadan».
+
+**Holatsiz.** Hamma holat `callback_data`da (≤ 64 bayt): `pf:d:<id>`, `pf:dd:<id>:<o'n yillik>`,
+`pf:dy:<id>:<yil>`, `pf:dm:<id>:<yil>-<oy>`, `pf:dc:<id>:<sana>`, `pf:ds:<id>:<sana>`, `pf:x`.
+Sessiya ham, scene ham yo'q. `studentId` foydalanuvchi qo'lida, shuning uchun egalik
+tekshiruvi (id VA `telegramChatId`) HAR bir tugmada takrorlanadi, faqat saqlashda emas.
+Sana qoidasi o'zgarmadi: `birthDateProblem`; yozuv — `fillStudentProfile`.
+
+**Ko'rinish (preview).** O'quvchi raqami 0 — ko'rinish belgisi (haqiqiy raqamlar 10000 dan).
+`pf:d:0` haqiqiy tanlagichni bazasiz ochadi, saqlash bosqichi hech narsa yozmaydi
+(«Ko'rinish: hech narsa saqlanmadi»). 0 hech qachon `fillStudentProfile`ga yetmaydi.
+
+**Matnlar.** Salom, so'ng sabab, so'ng yopuvchi jumla («Tugmani bosib kiriting. Rahmat!»,
+ikkalasi yo'q bo'lsa «Tugmalarni …»). Takror yuborish kaliti: `bosib kiriting. Rahmat!`.
+Tugma yorlig'i: «📅 Sanani kiritish».

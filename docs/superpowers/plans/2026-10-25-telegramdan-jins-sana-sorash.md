@@ -1,3 +1,5 @@
+> 25.10 o'zgarishi: sana matn bilan emas, tugmalar bilan tanlanadi (scene va `KK.OO.YYYY` o'chirildi) — spec oxiridagi bo'limga qarang.
+
 # Telegramdan jins va tug'ilgan sanani so'rash — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

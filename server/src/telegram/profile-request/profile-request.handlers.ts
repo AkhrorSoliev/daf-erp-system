@@ -1,35 +1,66 @@
 import { PrismaService } from '../../prisma/prisma.service';
 import { EntityHistoryService } from '../../common/entity-history';
+import { tashkentDateStr } from '../../common/date/tashkent';
+import { birthDateProblem } from '../../students/shared/student-onboarding';
 import {
   ProfileTarget,
   fillStudentProfile,
 } from '../../students/shared/fill-student-profile';
-import { SCENES } from '../constants';
+import {
+  PickerScreen,
+  YEAR_PROMPT,
+  confirmScreen,
+  daysScreen,
+  decadeStarts,
+  decadesScreen,
+  isRealIsoDate,
+  monthsScreen,
+  retryKeyboard,
+  validYearRange,
+  yearsScreen,
+} from './profile-date-picker';
 import {
   ALREADY_FILLED,
-  DATE_PROMPT,
+  CANCELLED,
   GENDER_SAVED,
   NOT_YOURS,
   PREVIEW_NOTE,
+  PREVIEW_STUDENT_ID,
   ProfileAction,
   THANKS,
-  parseBirthDateInput,
 } from './profile-request-text';
 
 export interface ProfileCtx {
   chat?: { id: number | string };
   reply(text: string, extra?: any): Promise<unknown>;
+  editMessageText(text: string, extra?: any): Promise<unknown>;
   answerCbQuery(text?: string): Promise<unknown>;
-  scene: {
-    enter(id: string, state?: object): Promise<unknown>;
-    leave(): Promise<unknown>;
-  };
 }
 
 export interface ProfileDeps {
   prisma: PrismaService;
   entityHistory: EntityHistoryService;
 }
+
+const NO_KEYBOARD = { reply_markup: { inline_keyboard: [] } };
+
+/** Bir xil matnni qayta yozish Telegramda xato beradi; faqat shuni yutamiz. */
+async function edit(
+  ctx: ProfileCtx,
+  text: string,
+  extra: object = NO_KEYBOARD,
+) {
+  try {
+    await ctx.editMessageText(text, extra);
+  } catch (e) {
+    if (!/message is not modified/i.test(String((e as Error)?.message))) {
+      throw e;
+    }
+  }
+}
+
+const show = (ctx: ProfileCtx, s: PickerScreen, prefix = '') =>
+  edit(ctx, prefix + s.text, { reply_markup: s.keyboard.reply_markup });
 
 /**
  * Karta SHU chatga bog'langan bo'lsagina qaytadi. Tugma ichidagi `studentId`
@@ -57,16 +88,116 @@ async function loadOwned(
   });
 }
 
+/** Tugmadagi qiymat kalendarga va tanlash mumkin oraliqqa to'g'ri keladimi. */
+function paramsValid(a: ProfileAction, today: string): boolean {
+  const { min, max } = validYearRange(today);
+  switch (a.kind) {
+    case 'decade':
+      return decadeStarts(today).includes(a.decade);
+    case 'year':
+      return a.year >= min && a.year <= max;
+    case 'month':
+      return a.year >= min && a.year <= max && a.month >= 1 && a.month <= 12;
+    case 'confirm':
+    case 'save':
+      return isRealIsoDate(a.iso);
+    default:
+      return true;
+  }
+}
+
+type PickerAction = Extract<
+  ProfileAction,
+  { kind: 'date' | 'decade' | 'year' | 'month' | 'confirm' | 'save' }
+>;
+
+async function handlePicker(
+  deps: ProfileDeps,
+  ctx: ProfileCtx,
+  a: PickerAction,
+  today: string,
+): Promise<void> {
+  const id = a.studentId;
+  let student: ProfileTarget | null = null;
+  if (id !== PREVIEW_STUDENT_ID) {
+    student = await loadOwned(deps, ctx, id);
+    if (!student) {
+      await ctx.answerCbQuery(NOT_YOURS);
+      return;
+    }
+    await ctx.answerCbQuery();
+    if (student.dateOfBirth) {
+      await edit(ctx, ALREADY_FILLED);
+      return;
+    }
+  } else {
+    await ctx.answerCbQuery();
+  }
+
+  switch (a.kind) {
+    case 'date':
+      return show(ctx, decadesScreen(id, today));
+    case 'decade':
+      return show(ctx, yearsScreen(id, a.decade, today));
+    case 'year':
+      return show(ctx, monthsScreen(id, a.year));
+    case 'month':
+      return show(ctx, daysScreen(id, a.year, a.month));
+    case 'confirm':
+      return show(ctx, confirmScreen(id, a.iso));
+    case 'save': {
+      if (!student) {
+        // Ko'rinish rejimi: hech narsa yozilmaydi.
+        return edit(ctx, PREVIEW_NOTE);
+      }
+      const problem = birthDateProblem(a.iso, today);
+      if (problem) {
+        return edit(ctx, `${problem}. Qaytadan tanlang.`, {
+          reply_markup: retryKeyboard(id).reply_markup,
+        });
+      }
+      await fillStudentProfile(
+        deps,
+        student,
+        { dateOfBirth: a.iso },
+        student.userId ?? undefined,
+      );
+      return edit(ctx, THANKS);
+    }
+  }
+}
+
 export async function handleProfileTap(
   deps: ProfileDeps,
   ctx: ProfileCtx,
   action: ProfileAction,
+  today: string = tashkentDateStr(new Date()),
 ): Promise<void> {
-  if (action.kind === 'preview') {
-    // Ko'rinish rejimi: bazaga tegmaydi, faqat keyingi qadam matnini ko'rsatadi.
+  if (action.kind === 'cancel') {
     await ctx.answerCbQuery();
-    await ctx.reply(`${PREVIEW_NOTE}\n\n${DATE_PROMPT}`);
+    await edit(ctx, CANCELLED);
     return;
+  }
+  if (action.kind === 'preview') {
+    // Ko'rinish rejimi: bazaga tegmaydi, faqat keyingi qadamni ko'rsatadi.
+    await ctx.answerCbQuery();
+    await ctx.reply(`${PREVIEW_NOTE}\n\n${YEAR_PROMPT}`, {
+      reply_markup: decadesScreen(PREVIEW_STUDENT_ID, today).keyboard
+        .reply_markup,
+    });
+    return;
+  }
+  // 0 — faqat ko'rinish belgisi: u hech qachon haqiqiy kartaga yetmaydi.
+  if (action.kind === 'gender' && action.studentId === PREVIEW_STUDENT_ID) {
+    await ctx.answerCbQuery(NOT_YOURS);
+    return;
+  }
+  if (!paramsValid(action, today)) {
+    await ctx.answerCbQuery();
+    return;
+  }
+  if (action.kind !== 'gender') {
+    return handlePicker(deps, ctx, action, today);
   }
 
   const student = await loadOwned(deps, ctx, action.studentId);
@@ -75,18 +206,8 @@ export async function handleProfileTap(
     return;
   }
   await ctx.answerCbQuery();
-
-  if (action.kind === 'date') {
-    if (student.dateOfBirth) {
-      await ctx.reply(ALREADY_FILLED);
-      return;
-    }
-    await ctx.scene.enter(SCENES.PROFILE_FILL, { studentId: student.id });
-    return;
-  }
-
   if (student.gender) {
-    await ctx.reply(ALREADY_FILLED);
+    await edit(ctx, ALREADY_FILLED);
     return;
   }
   await fillStudentProfile(
@@ -96,40 +217,8 @@ export async function handleProfileTap(
     student.userId ?? undefined,
   );
   if (student.dateOfBirth) {
-    await ctx.reply(THANKS);
+    await edit(ctx, THANKS);
     return;
   }
-  await ctx.reply(GENDER_SAVED);
-  await ctx.scene.enter(SCENES.PROFILE_FILL, { studentId: student.id });
-}
-
-/** 'retry' — sana qabul qilinmadi, scene ochiq qoladi. */
-export async function submitBirthDate(
-  deps: ProfileDeps,
-  ctx: ProfileCtx,
-  studentId: number,
-  text: string,
-): Promise<'done' | 'retry'> {
-  const parsed = parseBirthDateInput(text);
-  if (!parsed.ok) {
-    await ctx.reply(parsed.message);
-    return 'retry';
-  }
-  const student = await loadOwned(deps, ctx, studentId);
-  if (!student) {
-    await ctx.reply(NOT_YOURS);
-    return 'done';
-  }
-  if (student.dateOfBirth) {
-    await ctx.reply(ALREADY_FILLED);
-    return 'done';
-  }
-  await fillStudentProfile(
-    deps,
-    student,
-    { dateOfBirth: parsed.iso },
-    student.userId ?? undefined,
-  );
-  await ctx.reply(THANKS);
-  return 'done';
+  await show(ctx, decadesScreen(student.id, today), `${GENDER_SAVED}\n\n`);
 }

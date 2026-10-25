@@ -41,20 +41,18 @@ describe('buildPreviewMessages', () => {
     expect(msgs.length).toBeGreaterThanOrEqual(4);
     expect(msgs.filter((m) => m.keyboard).length).toBe(3);
     const joined = msgs.map((m) => m.text).join('\n');
-    expect(joined).toContain(
-      "Kartangizda jinsingiz va tug'ilgan sanangiz yo'q",
-    );
+    expect(joined).toContain("Jinsingiz va tug'ilgan sanangiz bizda yo'q");
     expect(
       msgs.filter((m) => m.text.includes(PROFILE_REQUEST_MARKER)).length,
     ).toBe(3);
     expect(joined).toContain("Rahmat! Ma'lumotingiz saqlandi");
   });
-  it('preview buttons never carry a student id', () => {
+  it('preview buttons carry no real student id (0 is the preview marker)', () => {
     for (const m of msgs) {
       const data = (m.keyboard?.reply_markup.inline_keyboard ?? [])
         .flat()
         .map((b: any) => b.callback_data);
-      for (const d of data) expect(d).toMatch(/^pf:p:[gd]$/);
+      for (const d of data) expect(d).toMatch(/^pf:(p:g|d:0)$/);
     }
   });
 });

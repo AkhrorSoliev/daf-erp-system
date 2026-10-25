@@ -1,11 +1,11 @@
 import {
   ALREADY_FILLED,
-  DATE_PROMPT,
   GENDER_SAVED,
   THANKS,
   buildRequestKeyboard,
   buildRequestText,
 } from '../../src/telegram/profile-request/profile-request-text';
+import { YEAR_PROMPT } from '../../src/telegram/profile-request/profile-date-picker';
 import { UsageError, parseApplyExpectArgs } from './apply-expect-args';
 
 export type RunMode =
@@ -61,10 +61,10 @@ export function buildPreviewMessages() {
       text:
         '👁 <b>Botning javoblari</b> (namuna):\n\n' +
         `Jins tanlangach: ${GENDER_SAVED}\n` +
-        `Keyin: ${DATE_PROMPT}\n` +
-        `Sana saqlangach: ${THANKS}\n` +
-        `Eski tugma bosilsa: ${ALREADY_FILLED}\n` +
-        "Sana xato bo'lsa (masalan 01.01.2030): Tug'ilgan sana kelajakda bo'lishi mumkin emas",
+        `Keyin: ${YEAR_PROMPT} (yil, oy, kun tugmalari)\n` +
+        "Oxirida: sana ko'rsatiladi va «Ha, saqlash» so'raladi\n" +
+        `Saqlangach: ${THANKS}\n` +
+        `Eski tugma bosilsa: ${ALREADY_FILLED}`,
     },
   ];
 }
