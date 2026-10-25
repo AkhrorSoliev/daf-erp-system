@@ -106,6 +106,28 @@ describe('SettingsController — branch scope', () => {
     expect(result.branchOverrides).toBeUndefined();
   });
 
+  it('GET and PATCH /settings/payment never carry the tax and fee keys', async () => {
+    prisma.user.findFirst.mockResolvedValue(ceoUser);
+    settingsService.getMany.mockResolvedValue({
+      'payment.defaultModel': 'LESSON_PACK',
+      'tax.turnoverPercent': [{ fromMonth: '2026-10', value: 4 }],
+      'bank.turnoverTiers': [],
+    });
+    settingsService.getBranchOverrides.mockResolvedValue({
+      'payment.defaultModel': [],
+      'fees.qr': [],
+    });
+    const got = await controller.getPayment({}, 1, 1001);
+    expect(Object.keys(got.settings)).toEqual(['payment.defaultModel']);
+    expect(Object.keys(got.branchOverrides!)).toEqual(['payment.defaultModel']);
+    const patched = await controller.updatePayment(
+      { defaultModel: 'MONTHLY' } as any,
+      1,
+      1001,
+    );
+    expect(Object.keys(patched.settings)).toEqual(['payment.defaultModel']);
+  });
+
   it('CEO may write to an explicit branch after it is confirmed to exist', async () => {
     prisma.user.findFirst.mockResolvedValue(ceoUser);
     await controller.updatePayment(
