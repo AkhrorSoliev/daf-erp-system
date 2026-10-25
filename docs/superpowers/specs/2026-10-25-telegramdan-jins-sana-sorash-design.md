@@ -88,8 +88,9 @@ formatni to'g'ri yozmaydi. Scene va matn tahlili olib tashlandi, o'rniga tugmala
 5. `Tug'ilgan sana: 15-mart, 2005. To'g'rimi?` — «✅ Ha, saqlash» / «↩️ Qaytadan».
 
 **Holatsiz.** Hamma holat `callback_data`da (≤ 64 bayt): `pf:d:<id>`, `pf:dd:<id>:<o'n yillik>`,
-`pf:dy:<id>:<yil>`, `pf:dm:<id>:<yil>-<oy>`, `pf:dc:<id>:<sana>`, `pf:ds:<id>:<sana>`, `pf:x`.
-Sessiya ham, scene ham yo'q. `studentId` foydalanuvchi qo'lida, shuning uchun egalik
+`pf:dy:<id>:<yil>`, `pf:dm:<id>:<yil>-<oy>`, `pf:dc:<id>:<sana>`, `pf:ds:<id>:<sana>`, `pf:x:<id>`.
+«Bekor qilish» so'rovni o'chirmaydi: xabar yetishmayotgan maydonlar tugmalariga qaytadi.
+Sana saqlangach jins hali yo'q bo'lsa, jins tugmalari chiqadi. Sessiya ham, scene ham yo'q. `studentId` foydalanuvchi qo'lida, shuning uchun egalik
 tekshiruvi (id VA `telegramChatId`) HAR bir tugmada takrorlanadi, faqat saqlashda emas.
 Sana qoidasi o'zgarmadi: `birthDateProblem`; yozuv — `fillStudentProfile`.
 
