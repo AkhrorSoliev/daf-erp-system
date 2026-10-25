@@ -6,6 +6,12 @@ describe("tema reyestri", () => {
   it("has a theme for every look marked as finished", () => {
     for (const t of TAYYOR_TEMALAR) expect(TEMALAR[t.id]).toBeDefined();
   });
+  it("every finished theme draws the result background and the unit header (ADR-0128)", () => {
+    for (const tema of Object.values(TEMALAR)) {
+      expect(tema?.MukofotFoni, `${tema?.id}: MukofotFoni`).toBeTruthy();
+      expect(tema?.UnitLavha, `${tema?.id}: UnitLavha`).toBeTruthy();
+    }
+  });
   it("draws the default for a look that is not built yet", () => {
     for (const id of LERNEN_TEMA_IDLARI) expect(temaTop(id).TugunBelgisi).toBeTruthy();
     expect(temaTop("alp").id).toBe("toza");
