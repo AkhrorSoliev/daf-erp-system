@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -9,7 +10,9 @@ import {
   Post,
   Put,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { CurrentUser } from '../common/decorators';
 import { StudentCardGuard } from '../common/guards';
@@ -24,8 +27,11 @@ import {
   SendMessageDto,
   SetUsernameDto,
   UpdatePrivacyDto,
+  UploadChatFileDto,
 } from './dto/chat.dto';
 import { ChatConversationsService } from './conversations/chat-conversations.service';
+import { ChatFileUploadInterceptor } from './media/chat-file-upload.interceptor';
+import { ChatMediaService } from './media/chat-media.service';
 import { ChatPeopleService } from './people/chat-people.service';
 import { ChatUsernameService } from './username/chat-username.service';
 
@@ -42,6 +48,7 @@ export class ChatController {
     private readonly usernames: ChatUsernameService,
     private readonly people: ChatPeopleService,
     private readonly conversations: ChatConversationsService,
+    private readonly media: ChatMediaService,
   ) {}
 
   @Post('conversations')
@@ -80,6 +87,30 @@ export class ChatController {
     @Body() dto: SendMessageDto,
   ) {
     return this.conversations.send(studentId, companyId, id, dto.text);
+  }
+
+  @Post('conversations/:id/files')
+  @UseInterceptors(ChatFileUploadInterceptor)
+  upload(
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Body() dto: UploadChatFileDto,
+  ) {
+    if (!file) throw new BadRequestException('Fayl yuklanmadi');
+    return this.media.upload(studentId, companyId, id, {
+      buffer: file.buffer,
+      durationSec: dto.durationSec,
+    });
+  }
+
+  @Get('messages/:id/file')
+  fileUrl(
+    @CurrentUser('studentId') studentId: number,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.media.signedUrl(studentId, id);
   }
 
   @Patch('conversations/:id/read')

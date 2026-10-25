@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { RedisService } from '../redis/redis.service';
+import { SmsModule } from '../sms/sms.module';
 import { SettingsModule } from '../settings/settings.module';
 import { ChatAccessService } from './access/chat-access.service';
 import { ChatEnabledGuard } from './chat-enabled.guard';
@@ -10,11 +11,15 @@ import {
   ChatConversationsService,
   redisRateLimiter,
 } from './conversations/chat-conversations.service';
+import { ChatFileStorage } from './media/chat-file-storage';
+import { ChatFileUploadInterceptor } from './media/chat-file-upload.interceptor';
+import { ChatMediaService } from './media/chat-media.service';
+import { ChatNotifyService } from './notify/chat-notify.service';
 import { ChatPeopleService } from './people/chat-people.service';
 import { ChatUsernameService } from './username/chat-username.service';
 
 @Module({
-  imports: [SettingsModule, NotificationsModule],
+  imports: [SettingsModule, NotificationsModule, SmsModule],
   controllers: [ChatController],
   providers: [
     ChatEnabledGuard,
@@ -22,6 +27,10 @@ import { ChatUsernameService } from './username/chat-username.service';
     ChatPeopleService,
     ChatUsernameService,
     ChatConversationsService,
+    ChatFileStorage,
+    ChatFileUploadInterceptor,
+    ChatMediaService,
+    ChatNotifyService,
     {
       provide: CHAT_RATE_LIMITER,
       useFactory: redisRateLimiter,

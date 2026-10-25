@@ -66,6 +66,10 @@ function make(
     findByUsername: jest.fn(),
   };
   const gateway = { sendToUser: jest.fn() };
+  const notify = {
+    onMessage: jest.fn().mockResolvedValue(undefined),
+    onRead: jest.fn().mockResolvedValue(undefined),
+  };
   const rate = o.rate ?? 1;
   const limiter = { hit: jest.fn().mockResolvedValue(rate) };
   const service = new ChatConversationsService(
@@ -73,9 +77,10 @@ function make(
     access as never,
     people as never,
     gateway as never,
+    notify as never,
     limiter as never,
   );
-  return { service, prisma, tx, access, people, gateway, limiter };
+  return { service, prisma, tx, access, people, gateway, limiter, notify };
 }
 
 describe('ChatConversationsService.send', () => {
@@ -512,5 +517,95 @@ describe('ChatConversationsService.removeOwn', () => {
     });
     prisma.chatMessage.findFirst.mockResolvedValue(null);
     await expect(service.removeOwn(1, 'zz')).rejects.toThrow(NotFoundException);
+  });
+});
+
+describe('prepareSend / commitMessage', () => {
+  it('send() = prepareSend + commitMessage and tells the notifier after the commit', async () => {
+    const { service, notify } = make();
+    const out = await service.send(1, 1, 'c1', 'salom');
+    expect(out).toMatchObject({
+      id: 'm1',
+      mine: true,
+      text: 'salom',
+      file: null,
+    });
+    expect(notify.onMessage).toHaveBeenCalledWith({
+      conversationId: 'c1',
+      senderId: 1,
+      recipientId: 2,
+      companyId: 1,
+    });
+  });
+
+  it('commitMessage writes a media row with its file fields and exposes file without the key', async () => {
+    const { service, tx } = make();
+    tx.chatMessage.create.mockResolvedValue({
+      id: 'm2',
+      conversationId: 'c1',
+      senderId: 1,
+      kind: 'IMAGE',
+      text: null,
+      fileKey: 'chat/1/c1/x.png',
+      mime: 'image/png',
+      sizeBytes: 1234,
+      durationSec: null,
+      mediaPurgedAt: null,
+      createdAt: new Date('2026-10-25T07:00:00Z'),
+    });
+    const out = await service.commitMessage(1, 1, 'c1', 2, {
+      kind: 'IMAGE',
+      fileKey: 'chat/1/c1/x.png',
+      mime: 'image/png',
+      sizeBytes: 1234,
+      durationSec: null,
+    });
+    expect(tx.chatMessage.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        conversationId: 'c1',
+        senderId: 1,
+        kind: 'IMAGE',
+        fileKey: 'chat/1/c1/x.png',
+        mime: 'image/png',
+        sizeBytes: 1234,
+      }),
+    });
+    expect(out.file).toEqual({
+      mime: 'image/png',
+      sizeBytes: 1234,
+      durationSec: null,
+      purged: false,
+    });
+    expect(JSON.stringify(out)).not.toContain('chat/1/c1/x.png');
+  });
+
+  it('a purged file is reported as purged', async () => {
+    const { service, prisma } = make();
+    prisma.chatMessage.findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'm3',
+        senderId: 2,
+        kind: 'VOICE',
+        text: null,
+        mime: 'audio/ogg',
+        sizeBytes: 10,
+        durationSec: 5,
+        mediaPurgedAt: new Date(),
+        createdAt: new Date(),
+      },
+    ]);
+    const out = await service.messages(1, 'c1');
+    expect(out.data[0].file).toEqual({
+      mime: 'audio/ogg',
+      sizeBytes: 10,
+      durationSec: 5,
+      purged: true,
+    });
+  });
+
+  it('markRead tells the notifier so the bell row closes', async () => {
+    const { service, notify } = make();
+    await service.markRead(1, 'c1');
+    expect(notify.onRead).toHaveBeenCalledWith(1, 'c1');
   });
 });

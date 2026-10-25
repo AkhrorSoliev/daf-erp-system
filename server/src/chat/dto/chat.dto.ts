@@ -83,3 +83,14 @@ export class MessagesQueryDto {
   @Max(50)
   limit?: number;
 }
+
+export class UploadChatFileDto {
+  @IsOptional()
+  @Transform(({ value }) =>
+    value === undefined || value === '' ? undefined : Number(value),
+  )
+  @IsInt()
+  @Min(0)
+  @Max(3600)
+  durationSec?: number;
+}
