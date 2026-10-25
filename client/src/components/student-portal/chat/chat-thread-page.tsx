@@ -133,7 +133,7 @@ export function ChatThreadPage({ id }: { id: string }) {
 
       </header>
 
-      <div className="flex flex-col gap-2 pb-32 pt-4 md:pb-12">
+      <div className="flex flex-col gap-2 pb-4 pt-4 md:pb-32">
         {state === "loading" && <BubbleSkeleton />}
         {(state === "offline" || state === "failed") && (
           <LoadFailed query={query} />
