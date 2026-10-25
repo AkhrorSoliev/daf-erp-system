@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { CaretRight, CaretLineLeft, CaretLineRight } from "./icon";
+import { useChatEnabled } from "../chat/chat-queries";
 import {
+  featureEnabled,
   railNavItems,
   moreRoutes,
   settingsHelpItems,
@@ -87,6 +89,7 @@ export function LumioSideRail({ className }: { className?: string }) {
   const mode = useSidebar((s) => s.mode);
   const toggle = useSidebar((s) => s.toggle);
   const collapsed = mode === "collapsed";
+  const features = { chat: useChatEnabled() };
 
   const fullName = profile
     ? `${profile.firstName} ${profile.lastName}`.trim()
@@ -158,7 +161,7 @@ export function LumioSideRail({ className }: { className?: string }) {
 
         {/* Nav */}
         <nav className="flex flex-col gap-1">
-          {railNavItems.map((item) => (
+          {railNavItems.filter((i) => featureEnabled(i, features)).map((item) => (
             <RailNavItem
               key={item.url}
               item={item}

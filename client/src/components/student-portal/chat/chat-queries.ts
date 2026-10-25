@@ -36,6 +36,11 @@ export function useChatAccess() {
   });
 }
 
+/** The company switch, as the nav sees it: hidden until the answer is known. */
+export function useChatEnabled(): boolean {
+  return useChatAccess().data?.enabled === true;
+}
+
 export function useConversations(enabled = true) {
   return useQuery<ConversationView[]>({
     queryKey: CHAT_KEYS.list,

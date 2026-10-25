@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
 
 import { railNavItems, studentNavItems } from "@/lib/student-nav-items";
 import { LumioBottomNav } from "./lumio/bottom-nav";
-import { RailNavItem } from "./lumio/side-rail";
+import { LumioSideRail, RailNavItem } from "./lumio/side-rail";
 import { StudentMoreHub } from "./student-more-hub";
 import { StudentAttendanceHistory } from "./student-attendance-history";
 import { StudentRadioPage } from "./student-radio-page";
@@ -25,9 +25,12 @@ import { LernenLevelsPage } from "./lernen/lernen-levels-page";
 import { StudentScheduleView } from "./student-schedule-view";
 import { StudentPaymentSummary } from "./student-payment-summary";
 
-function render(component: ComponentType, pathname = "/portal"): string {
+function render(
+  component: ComponentType,
+  pathname = "/portal",
+  client = new QueryClient(),
+): string {
   nav.pathname = pathname;
-  const client = new QueryClient();
   return renderToStaticMarkup(
     createElement(QueryClientProvider, { client }, createElement(component)),
   );
@@ -51,13 +54,35 @@ describe("portal navigation on a phone", () => {
       ...links(render(StudentMoreHub, "/portal/more")),
     ].map((l) => l.href);
 
-    for (const item of studentNavItems) {
+    // Only items whose feature is on: no chat access answer means off.
+    for (const item of studentNavItems.filter((i) => !i.feature)) {
       if (item.url === "/portal/more") continue; // the hub's own tab
       expect(
         reachable.filter((href) => href === item.url),
         `${item.title} (${item.url})`,
       ).toHaveLength(1);
     }
+  });
+
+  const chatClient = (enabled: boolean) => {
+    const client = new QueryClient();
+    client.setQueryData(["student-portal", "chat", "access"], { enabled });
+    return client;
+  };
+
+  it("hides Chat in the Ko'proq hub until the company switch is on", () => {
+    const hrefs = (client?: QueryClient) =>
+      links(render(StudentMoreHub, "/portal/more", client)).map((l) => l.href);
+    expect(hrefs()).not.toContain("/portal/chat");
+    expect(hrefs(chatClient(false))).not.toContain("/portal/chat");
+    expect(hrefs(chatClient(true)).filter((h) => h === "/portal/chat")).toHaveLength(1);
+  });
+
+  it("hides Chat in the tablet rail until the company switch is on", () => {
+    const hrefs = (client?: QueryClient) =>
+      links(render(LumioSideRail, "/portal", client)).map((l) => l.href);
+    expect(hrefs(chatClient(false))).not.toContain("/portal/chat");
+    expect(hrefs(chatClient(true))).toContain("/portal/chat");
   });
 
   // Deliberate friction, like settings-nav.test.ts: which screens get a tab is
