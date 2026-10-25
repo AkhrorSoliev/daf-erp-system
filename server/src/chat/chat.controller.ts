@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Put,
@@ -14,10 +17,14 @@ import { StudentOnly } from '../common/permissions/access.decorators';
 import { ChatAccessService } from './access/chat-access.service';
 import {
   BlockDto,
+  MessagesQueryDto,
+  OpenConversationDto,
   SearchQueryDto,
+  SendMessageDto,
   SetUsernameDto,
   UpdatePrivacyDto,
 } from './dto/chat.dto';
+import { ChatConversationsService } from './conversations/chat-conversations.service';
 import { ChatPeopleService } from './people/chat-people.service';
 import { ChatUsernameService } from './username/chat-username.service';
 
@@ -33,7 +40,62 @@ export class ChatController {
     private readonly access: ChatAccessService,
     private readonly usernames: ChatUsernameService,
     private readonly people: ChatPeopleService,
+    private readonly conversations: ChatConversationsService,
   ) {}
+
+  @Post('conversations')
+  open(
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+    @Body() dto: OpenConversationDto,
+  ) {
+    return this.conversations.open(studentId, companyId, dto);
+  }
+
+  @Get('conversations')
+  list(@CurrentUser('studentId') studentId: number) {
+    return this.conversations.list(studentId);
+  }
+
+  @Get('conversations/:id/messages')
+  messages(
+    @CurrentUser('studentId') studentId: number,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: MessagesQueryDto,
+  ) {
+    return this.conversations.messages(
+      studentId,
+      id,
+      query.cursor,
+      query.limit,
+    );
+  }
+
+  @Post('conversations/:id/messages')
+  send(
+    @CurrentUser('studentId') studentId: number,
+    @CurrentUser('companyId') companyId: number,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SendMessageDto,
+  ) {
+    return this.conversations.send(studentId, companyId, id, dto.text);
+  }
+
+  @Patch('conversations/:id/read')
+  markRead(
+    @CurrentUser('studentId') studentId: number,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.conversations.markRead(studentId, id);
+  }
+
+  @Delete('messages/:id')
+  removeOwn(
+    @CurrentUser('studentId') studentId: number,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.conversations.removeOwn(studentId, id);
+  }
 
   @Get('me')
   me(
