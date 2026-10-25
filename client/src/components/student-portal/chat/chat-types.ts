@@ -39,6 +39,11 @@ export interface ChatPrivacy {
   whoSeesPhoto: ChatWho;
 }
 
+/** GET /chat/me. */
+export interface ChatMe extends ChatPrivacy {
+  username: string | null;
+}
+
 /** What another student may see: never a phone, a debt or a balance. */
 export interface PeerSummary {
   id: number;

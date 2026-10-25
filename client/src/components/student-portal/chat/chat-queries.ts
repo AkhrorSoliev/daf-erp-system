@@ -10,8 +10,10 @@ import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useT } from "@/i18n/context";
+import { msg } from "@/i18n/msg";
 import type {
   ChatAccess,
+  ChatMe,
   ConversationView,
   MessageView,
   MessagesPage,
@@ -149,7 +151,18 @@ export function useBlockedIds(): number[] {
   );
 }
 
-function useBlockMutation(path: "block" | "unblock", failText: string) {
+/** GET /chat/me: my @username (null until set) and my three privacy choices. */
+export function useChatMe() {
+  return useQuery<ChatMe>({
+    queryKey: CHAT_KEYS.me,
+    queryFn: () => api.get("/chat/me").then((r) => r.data),
+  });
+}
+
+function useBlockMutation(
+  path: "block" | "unblock",
+  failText: string,
+) {
   const qc = useQueryClient();
   const t = useT();
   return useMutation<unknown, unknown, number>({
@@ -170,9 +183,9 @@ function useBlockMutation(path: "block" | "unblock", failText: string) {
 }
 
 export const useBlock = () =>
-  useBlockMutation("block", "Bloklab bo'lmadi");
+  useBlockMutation("block", msg("Bloklab bo'lmadi"));
 export const useUnblock = () =>
-  useBlockMutation("unblock", "Blokdan chiqarib bo'lmadi");
+  useBlockMutation("unblock", msg("Blokdan chiqarib bo'lmadi"));
 
 /** POST /chat/report; the refusal stays with the caller (shown in the dialog). */
 export function useReportConversation() {

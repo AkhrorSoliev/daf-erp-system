@@ -1,5 +1,4 @@
-// Mirrors server/src/chat/username/chat-username.rules.ts (5–32, a-z0-9_).
-const USERNAME = /^[a-z][a-z0-9_]{4,31}$/;
+import { USERNAME_RE as USERNAME } from "./chat-username-rules";
 
 export type ChatQuery =
   | { kind: "empty" }
