@@ -44,3 +44,33 @@ describe("lesson bottom bar beside the side rail", () => {
     ]);
   });
 });
+
+/** Classes of the painted inner layer. */
+function innerClasses(ohang?: "togri" | "xato" | null): string {
+  const html = renderToStaticMarkup(
+    createElement(PastkiPanel, { sidebarMode: "auto", ohang }, "Tekshirish"),
+  );
+  return html.match(/^<div class="[^"]*"><div class="([^"]*)"/)?.[1] ?? "";
+}
+
+describe("the bar's tint after a check (ADR-0128)", () => {
+  it("is the plain surface before the check", () => {
+    expect(innerClasses()).toContain("bg-surface");
+    expect(innerClasses(null)).toContain("bg-surface");
+  });
+
+  it("is a soft green after a right answer", () => {
+    expect(innerClasses("togri")).toContain("var(--success)");
+  });
+
+  it("is the soft amber after a miss, never red", () => {
+    const c = innerClasses("xato");
+    expect(c).toContain("var(--amber-500)");
+    expect(c).not.toContain("danger");
+  });
+
+  it("stops fading under reduced motion and the device switch", () => {
+    expect(innerClasses("xato")).toContain("motion-reduce:transition-none");
+    expect(innerClasses("xato")).toContain("in-data-[kam-harakat]:transition-none");
+  });
+});
