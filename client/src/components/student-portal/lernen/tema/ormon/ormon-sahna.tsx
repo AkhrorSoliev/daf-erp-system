@@ -73,7 +73,7 @@ export function OrmonSahnaChizma({ unitTartibi, plan, kam, tinch, ref }: OrmonSa
 }
 
 /**
- * «O'rmon»'s `Sahna` (spec §8, ADR-0131): three biomes by the unit, a scroll
+ * «O'rmon»'s `Sahna` (spec §8, ADR-0132): three biomes by the unit, a scroll
  * parallax, fireflies, light shafts and mist. A weak device draws half,
  * «Kam harakat» a still picture, and it holds still while hidden.
  */

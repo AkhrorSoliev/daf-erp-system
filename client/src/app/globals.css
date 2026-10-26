@@ -243,7 +243,7 @@
 .form-theme h2,
 .form-theme h3,
 .form-theme .font-display {
-  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-display), var(--font-body), ui-sans-serif, system-ui, sans-serif;
   letter-spacing: -0.01em;
 }
 
@@ -561,7 +561,7 @@
      name, so the global @theme gains nothing. */
   --amber-ink: #9a5400;
 
-  /* «O'rmon» theme's reward background (ADR-0131): a pale mint in light
+  /* «O'rmon» theme's reward background (ADR-0132): a pale mint in light
      mode, so the result's ink-900 and ink-600 text keep 4.5:1 on it, deep
      green in dark mode; ormon-kontrast.test.ts measures them. Plain custom
      properties, not Tailwind colour names. */
@@ -792,7 +792,7 @@
   }
 
   /* While a theme's scene stands behind the page (its root carries
-     data-sahna, ADR-0131) the glass chrome floating over it — the bottom-nav
+     data-sahna, ADR-0132) the glass chrome floating over it — the bottom-nav
      pill, the radio dock and the side rail — draws no blur: the scene's
      ambient layers animate all the time, so a backdrop blur would be
      recomputed every frame on a weak WebView. All three are mostly opaque
@@ -1094,9 +1094,34 @@
   .lumio h3,
   .lumio .font-display {
     font-family:
-      var(--font-display), "Baloo 2", ui-sans-serif, system-ui, sans-serif;
+      var(--font-display), "Baloo 2", var(--font-body), "Nunito", ui-sans-serif, system-ui, sans-serif;
     letter-spacing: -0.01em;
   }
+}
+
+/* Baloo 2 has no Cyrillic letters, and next/font adds a local Arial-based
+   fallback right after it that would catch them. So in the Cyrillic languages
+   (html lang is the locale) the display text is Rubik: chunky and rounded like
+   Baloo, and it has Uzbek's Қ Ғ Ҳ Ў. */
+html:lang(ru) .lumio h1,
+html:lang(ru) .lumio h2,
+html:lang(ru) .lumio h3,
+html:lang(ru) .lumio .font-display,
+html:lang(ru) .form-theme h1,
+html:lang(ru) .form-theme h2,
+html:lang(ru) .form-theme h3,
+html:lang(ru) .form-theme .font-display,
+html:lang(uz-Cyrl) .lumio h1,
+html:lang(uz-Cyrl) .lumio h2,
+html:lang(uz-Cyrl) .lumio h3,
+html:lang(uz-Cyrl) .lumio .font-display,
+html:lang(uz-Cyrl) .form-theme h1,
+html:lang(uz-Cyrl) .form-theme h2,
+html:lang(uz-Cyrl) .form-theme h3,
+html:lang(uz-Cyrl) .form-theme .font-display {
+  font-family:
+    var(--font-display-cyr), var(--font-body), ui-sans-serif, system-ui,
+    sans-serif;
 }
 
 a {
@@ -1310,7 +1335,7 @@ body:has(.lumio [data-sahna]) :is([data-slot="sheet-overlay"], [data-slot="dialo
 }
 
 /* ============================================================
-   Ta'lim · «O'rmon» theme (ADR-0131): the scene behind the path and
+   Ta'lim · «O'rmon» theme (ADR-0132): the scene behind the path and
    the unit page, the node ring, the places and the reward. Only
    transform and opacity animate. Everything stops under the device's
    «Kam harakat» switch and the system setting; the drifting decor

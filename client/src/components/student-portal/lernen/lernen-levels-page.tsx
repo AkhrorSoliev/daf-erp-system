@@ -148,7 +148,7 @@ export function LernenLevelsPage() {
             <h2
               className={cn(
                 "font-display text-sm font-bold uppercase tracking-wide",
-                // On a scene the heading sits on a plate, in the ink that reads there (ADR-0131).
+                // On a scene the heading sits on a plate, in the ink that reads there (ADR-0132).
                 Sahna ? ["text-ink-600", SAHNA_PARDASI_KICHIK] : "text-ink-500",
               )}
             >

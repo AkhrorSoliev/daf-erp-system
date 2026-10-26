@@ -5,6 +5,7 @@ import { CaretDown, Check, Translate } from "@phosphor-icons/react";
 import { useLocale, useT } from "@/i18n/use-t";
 import { LOCALES, isUiLocale, type UiLocale } from "@/i18n/locales";
 import { cn } from "@/lib/utils";
+import { SelectField } from "./select-field";
 
 type SetLocale = (next: UiLocale, options?: { save?: boolean }) => Promise<boolean>;
 
@@ -35,7 +36,7 @@ export interface LanguagePickerProps {
    * "list" — a row per language (Settings), "compact" — a small Lumio menu
    * (sign-in page), "plain" — the same menu in the page's own theme (public pages).
    */
-  variant?: "list" | "compact" | "plain";
+  variant?: "list" | "compact" | "plain" | "field";
   className?: string;
 }
 
@@ -55,6 +56,20 @@ export function LanguagePicker({ variant = "list", className }: LanguagePickerPr
     pick(next);
     e.currentTarget.parentElement?.querySelector<HTMLButtonElement>(`[lang="${next}"]`)?.focus();
   };
+
+  // Settings: one full-width dropdown instead of five always-open rows.
+  if (variant === "field") {
+    return (
+      <SelectField
+        label={t("Til")}
+        value={locale}
+        onChange={pick}
+        icon={<Translate size={20} weight="bold" />}
+        options={LOCALES.map(({ id, label }) => ({ value: id, label, lang: id }))}
+        className={className}
+      />
+    );
+  }
 
   if (variant === "compact" || variant === "plain") {
     // A native select: on a phone it opens the system's own list. "plain" uses

@@ -37,8 +37,19 @@ const fontDisplay = Baloo_2({
 
 const fontBody = Nunito({
   variable: "--font-body",
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext", "cyrillic", "cyrillic-ext"],
   display: "swap",
+});
+
+// Lumio headings in Cyrillic. Baloo 2 has no Cyrillic letters, so the display
+// stack falls to this one for Russian and Uzbek-Cyrillic: Rubik is chunky and
+// rounded like Baloo. `preload: false` — only fetched when such a heading shows.
+const fontDisplayCyr = Rubik({
+  variable: "--font-display-cyr",
+  subsets: ["cyrillic", "cyrillic-ext"],
+  weight: ["600", "700", "800"],
+  display: "swap",
+  preload: false,
 });
 
 // The staff portals' other design skins (ADR-0101). Each is loaded only when
@@ -94,6 +105,7 @@ export default function RootLayout({
         "antialiased",
         plexSans.variable,
         fontDisplay.variable,
+        fontDisplayCyr.variable,
         fontBody.variable,
         rubik.variable,
         montserrat.variable,

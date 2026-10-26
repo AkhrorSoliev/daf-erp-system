@@ -85,7 +85,7 @@ function SozlarQatori({ hisob, className }: { hisob: SozHisoblagichi; className?
  * seans «navbatdagi» bo'lib ko'rinardi (har bo'limda bittadan).
  *
  * The header and the places are the theme's (`LernenTema.UnitLavha`,
- * `LernenTema.UnitJoyi`; ADR-0128, ADR-0131): the page decides, the theme draws.
+ * `LernenTema.UnitJoyi`; ADR-0128, ADR-0132): the page decides, the theme draws.
  */
 export function LernenUnitPage({ unitId }: { unitId: number }) {
   const t = useT();

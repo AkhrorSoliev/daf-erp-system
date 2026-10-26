@@ -6,7 +6,7 @@ import { OrmonSahna } from "./ormon-sahna";
 import { OrmonTugun } from "./ormon-tugun";
 import { OrmonUnitLavha } from "./ormon-unit-lavha";
 
-/** «O'rmon» (spec §8, ADR-0131): a soft layered forest in three biomes. */
+/** «O'rmon» (spec §8, ADR-0132): a soft layered forest in three biomes. */
 export const ormonTema: LernenTema = {
   id: "ormon",
   TugunBelgisi: OrmonTugun,

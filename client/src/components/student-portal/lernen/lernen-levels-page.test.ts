@@ -63,7 +63,7 @@ function render({ tema, levels }: { tema?: string; levels?: LernenLevel[] }): st
   return renderToStaticMarkup(createElement(QueryClientProvider, { client }, createElement(LernenLevelsPage)));
 }
 
-describe("the path page in the «O'rmon» look (ADR-0131)", () => {
+describe("the path page in the «O'rmon» look (ADR-0132)", () => {
   it("stands the forest while the path is still loading: no gaps (spec §10)", () => {
     const h = render({ tema: "ormon" });
     expect(h).toContain('data-sahna="ormon"');

@@ -31,12 +31,12 @@ export interface UnitLavhaProps {
   daraja: DafLevel;
   /** «A1 · Essen und Trinken»: data, drawn as it comes. */
   matn: string;
-  /** The unit's order in its level (1-based): a theme with a scene tints its header by it (ADR-0131). */
+  /** The unit's order in its level (1-based): a theme with a scene tints its header by it (ADR-0132). */
   unitTartibi?: number;
 }
 
 /**
- * One lesson of the unit page drawn as a «place» (spec §8, ADR-0131). The page
+ * One lesson of the unit page drawn as a «place» (spec §8, ADR-0132). The page
  * has already decided everything — the name, the lock state, the words-left
  * caption; the theme only draws it.
  */
@@ -56,14 +56,14 @@ export interface UnitJoyiProps {
   onBosilmagan: () => void;
 }
 
-/** The background a theme draws behind the path and the unit page (spec §5, ADR-0131). */
+/** The background a theme draws behind the path and the unit page (spec §5, ADR-0132). */
 export interface SahnaProps {
   /** The order (1-based, within its level) of the unit the student is looking at; 1 while it is unknown. */
   unitTartibi: number;
 }
 
 /**
- * What a theme supplies to Ta'lim (ADR-0125, ADR-0128, ADR-0131). A theme only
+ * What a theme supplies to Ta'lim (ADR-0125, ADR-0128, ADR-0132). A theme only
  * DRAWS: the path, locks, points, the exercise screen, the confetti and the
  * sound/Dafi decisions are the same in every theme.
  */

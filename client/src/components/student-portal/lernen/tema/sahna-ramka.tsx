@@ -19,7 +19,7 @@ export const SAHNA_PARDASI_KICHIK = "w-fit rounded-full bg-surface px-2.5 py-0.5
 export const SAHNA_KARTASI = "rounded-[28px] bg-surface shadow-lumio-card";
 
 /**
- * The frame every theme's scene is drawn in (ADR-0131): the whole screen,
+ * The frame every theme's scene is drawn in (ADR-0132): the whole screen,
  * behind the page's content (the page root is `isolate`, the frame `-z-10`),
  * clear of the side rail — it is `fixed`, so the content column's inset does
  * not reach it — and never in the way of a tap or a screen reader. The rail

@@ -183,7 +183,7 @@ describe("the unit page's own text is readable", () => {
   });
 });
 
-// ADR-0131: «O'rmon» stands the unit's forest behind the page and draws the
+// ADR-0132: «O'rmon» stands the unit's forest behind the page and draws the
 // lessons as places in it; «Toza» stays exactly as it was.
 async function ormonHtml(order = unit.order): Promise<string> {
   const client = new QueryClient({
@@ -196,7 +196,7 @@ async function ormonHtml(order = unit.order): Promise<string> {
   );
 }
 
-describe("the unit page in the «O'rmon» look (ADR-0131)", () => {
+describe("the unit page in the «O'rmon» look (ADR-0132)", () => {
   it("stands the unit's forest in a frame behind the content (unit 4: the dawn again)", async () => {
     const h = await ormonHtml();
     expect(h).toContain('data-sahna="ormon"');

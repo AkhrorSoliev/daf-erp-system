@@ -92,7 +92,7 @@ Spec, 1–2-bosqich qoidalari va CEO qarorlaridan; har task uchun majburiy:
 - `client/src/components/student-portal/lernen-korinish-tanlash.tsx` (+test), `client/src/lib/lernen-temalar.ts` (+test).
 - `client/src/app/globals.css` (+`globals-css.test.ts`), `client/src/i18n/i18n-coverage.test.ts`.
 
-**Hujjatlar:** `docs/adr/0131-lernen-ormon-tema-sahna-va-joy-orinlari.md`, `docs/adr/README.md`, `client/CLAUDE.md`.
+**Hujjatlar:** `docs/adr/0132-lernen-ormon-tema-sahna-va-joy-orinlari.md`, `docs/adr/README.md`, `client/CLAUDE.md`.
 
 Yo'l qisqartmasi: quyida `L/` = `client/src/components/student-portal/lernen/`, `O/` = `L/tema/ormon/`.
 
@@ -188,7 +188,7 @@ Old:
 New:
 
 ```ts
-  it("every finished theme draws the result background, the unit header and the lesson places (ADR-0128, ADR-0131)", () => {
+  it("every finished theme draws the result background, the unit header and the lesson places (ADR-0128, ADR-0132)", () => {
     for (const tema of Object.values(TEMALAR)) {
       expect(tema?.MukofotFoni, `${tema?.id}: MukofotFoni`).toBeTruthy();
       expect(tema?.UnitLavha, `${tema?.id}: UnitLavha`).toBeTruthy();
@@ -261,12 +261,12 @@ export interface UnitLavhaProps {
   daraja: DafLevel;
   /** «A1 · Essen und Trinken»: data, drawn as it comes. */
   matn: string;
-  /** The unit's order in its level (1-based): a theme with a scene tints its header by it (ADR-0131). */
+  /** The unit's order in its level (1-based): a theme with a scene tints its header by it (ADR-0132). */
   unitTartibi?: number;
 }
 
 /**
- * One lesson of the unit page drawn as a «place» (spec §8, ADR-0131). The page
+ * One lesson of the unit page drawn as a «place» (spec §8, ADR-0132). The page
  * has already decided everything — the name, the lock state, the words-left
  * caption; the theme only draws it.
  */
@@ -286,14 +286,14 @@ export interface UnitJoyiProps {
   onBosilmagan: () => void;
 }
 
-/** The background a theme draws behind the path and the unit page (spec §5, ADR-0131). */
+/** The background a theme draws behind the path and the unit page (spec §5, ADR-0132). */
 export interface SahnaProps {
   /** The order (1-based, within its level) of the unit the student is looking at; 1 while it is unknown. */
   unitTartibi: number;
 }
 
 /**
- * What a theme supplies to Ta'lim (ADR-0125, ADR-0128, ADR-0131). A theme only
+ * What a theme supplies to Ta'lim (ADR-0125, ADR-0128, ADR-0132). A theme only
  * DRAWS: the path, locks, points, the exercise screen, the confetti and the
  * sound/Dafi decisions are the same in every theme.
  */
@@ -514,7 +514,7 @@ function SozlarQatori({ hisob }: { hisob: SozHisoblagichi }) {
  * seans «navbatdagi» bo'lib ko'rinardi (har bo'limda bittadan).
  *
  * The header and the places are the theme's (`LernenTema.UnitLavha`,
- * `LernenTema.UnitJoyi`; ADR-0128, ADR-0131): the page decides, the theme draws.
+ * `LernenTema.UnitJoyi`; ADR-0128, ADR-0132): the page decides, the theme draws.
  */
 export function LernenUnitPage({ unitId }: { unitId: number }) {
   const t = useT();
@@ -702,7 +702,7 @@ git add client/src/components/student-portal/lernen/tema/tema-turlari.ts client/
 git commit -m "refactor(lernen): theme contract gains UnitJoyi, Sahna and Miniatyura slots
 
 The unit page's place card moves verbatim into Toza's UnitJoyi, so a theme
-with its own scene can draw lessons as places (ADR-0131).
+with its own scene can draw lessons as places (ADR-0132).
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
@@ -1458,7 +1458,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 `client/src/app/globals-css.test.ts` faylining OXIRIGA qo'shing (importlar allaqachon bor):
 
 ```ts
-describe("the «O'rmon» scene's motion (ADR-0131)", () => {
+describe("the «O'rmon» scene's motion (ADR-0132)", () => {
   const css = readFileSync(path.join(__dirname, "globals.css"), "utf8");
   const flat = css.replace(/\s+/g, " ");
   const list = ":is(.ormon-spark, .ormon-leaf, .ormon-rays, .ormon-mist, .ormon-ring, .ormon-burst, .ormon-bob)";
@@ -1567,7 +1567,7 @@ New (old matn o'zgarmaydi, ostiga blok qo'shiladi; izohlar deklaratsiya ichida E
 }
 
 /* ============================================================
-   Ta'lim · «O'rmon» theme (ADR-0131): the scene behind the path and
+   Ta'lim · «O'rmon» theme (ADR-0132): the scene behind the path and
    the unit page, the node ring, the places and the reward. Only
    transform and opacity animate. Everything stops under the device's
    «Kam harakat» switch and the system setting; the drifting decor
@@ -2104,7 +2104,7 @@ export function OrmonSahnaChizma({ unitTartibi, plan, kam, tinch, ref }: OrmonSa
 }
 
 /**
- * «O'rmon»'s `Sahna` (spec §8, ADR-0131): three biomes by the unit, a scroll
+ * «O'rmon»'s `Sahna` (spec §8, ADR-0132): three biomes by the unit, a scroll
  * parallax, fireflies, light shafts and mist. A weak device draws half,
  * «Kam harakat» a still picture, and it holds still while hidden.
  */
@@ -2926,7 +2926,7 @@ New:
 ```css
   --amber-ink: #9a5400;
 
-  /* «O'rmon» theme's reward background (ADR-0131): a pale mint in light
+  /* «O'rmon» theme's reward background (ADR-0132): a pale mint in light
      mode, so the result's ink-900 and ink-600 text keep 4.5:1 on it, deep
      green in dark mode; ormon-kontrast.test.ts measures them. Plain custom
      properties, not Tailwind colour names. */
@@ -3012,7 +3012,7 @@ import { OrmonSahna } from "./ormon-sahna";
 import { OrmonTugun } from "./ormon-tugun";
 import { OrmonUnitLavha } from "./ormon-unit-lavha";
 
-/** «O'rmon» (spec §8, ADR-0131): a soft layered forest in three biomes. */
+/** «O'rmon» (spec §8, ADR-0132): a soft layered forest in three biomes. */
 export const ormonTema: LernenTema = {
   id: "ormon",
   TugunBelgisi: OrmonTugun,
@@ -3240,7 +3240,7 @@ function render({ tema, levels }: { tema?: string; levels?: LernenLevel[] }): st
   return renderToStaticMarkup(createElement(QueryClientProvider, { client }, createElement(LernenLevelsPage)));
 }
 
-describe("the path page in the «O'rmon» look (ADR-0131)", () => {
+describe("the path page in the «O'rmon» look (ADR-0132)", () => {
   it("stands the forest while the path is still loading: no gaps (spec §10)", () => {
     const h = render({ tema: "ormon" });
     expect(h).toContain('data-sahna="ormon"');
@@ -3275,7 +3275,7 @@ import { SAHNA_PARDASI } from "./tema/sahna-ramka";
 Fayl OXIRIGA:
 
 ```ts
-// ADR-0131: «O'rmon» stands the unit's forest behind the page and draws the
+// ADR-0132: «O'rmon» stands the unit's forest behind the page and draws the
 // lessons as places in it; «Toza» stays exactly as it was.
 async function ormonHtml(): Promise<string> {
   const client = new QueryClient({
@@ -3288,7 +3288,7 @@ async function ormonHtml(): Promise<string> {
   );
 }
 
-describe("the unit page in the «O'rmon» look (ADR-0131)", () => {
+describe("the unit page in the «O'rmon» look (ADR-0132)", () => {
   it("stands the unit's forest in a frame behind the content (unit 4: the dawn again)", async () => {
     const h = await ormonHtml();
     expect(h).toContain('data-sahna="ormon"');
@@ -3360,7 +3360,7 @@ export const SAHNA_PARDASI_KICHIK = "w-fit rounded-full bg-surface px-2.5 py-0.5
 export const SAHNA_KARTASI = "rounded-[28px] bg-surface shadow-lumio-card";
 
 /**
- * The frame every theme's scene is drawn in (ADR-0131): the whole screen,
+ * The frame every theme's scene is drawn in (ADR-0132): the whole screen,
  * behind the page's content (the page root is `isolate`, the frame `-z-10`),
  * clear of the side rail — it is `fixed`, so the content column's inset does
  * not reach it — and never in the way of a tap or a screen reader. The rail
@@ -3440,7 +3440,7 @@ New:
 ```ts
 export interface LernenYolProps {
   levels: LernenLevel[];
-  /** Told the id of the unit the student is scrolling through; the page's scene follows it (ADR-0131). */
+  /** Told the id of the unit the student is scrolling through; the page's scene follows it (ADR-0132). */
   onUnitKorindi?: (unitId: number) => void;
 }
 ```
@@ -3465,7 +3465,7 @@ function DarajaYorligi({ matn, sahnali }: { matn: string; sahnali: boolean }) {
       <span
         className={cn(
           "font-display text-sm font-extrabold uppercase tracking-wide text-ink-500",
-          // On a theme's scene the caption sits on the plain surface (ADR-0131).
+          // On a theme's scene the caption sits on the plain surface (ADR-0132).
           sahnali && SAHNA_PARDASI_KICHIK,
         )}
       >
@@ -3498,7 +3498,7 @@ New:
   tugun: YolTugun;
   align: (typeof TEKISLASH)[number];
   ostyozuvKorinsinmi: boolean;
-  /** The theme draws a scene: the section name above the node sits on the plain surface (ADR-0131). */
+  /** The theme draws a scene: the section name above the node sits on the plain surface (ADR-0132). */
   sahnali: boolean;
 ```
 
@@ -3556,7 +3556,7 @@ New:
 
 ```tsx
   const korinayotganUnit = unitlar[Math.min(joriyUnit, unitlar.length - 1)];
-  // The page's scene follows the unit on screen (its biome, ADR-0131).
+  // The page's scene follows the unit on screen (its biome, ADR-0132).
   const korinayotganUnitId = korinayotganUnit?.id ?? null;
   React.useEffect(() => {
     if (korinayotganUnitId != null) onUnitKorindi?.(korinayotganUnitId);
@@ -3886,14 +3886,14 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 10: Client — Sozlamalarda «O'rmon» (miniatyura, `tayyor`), ADR-0131 va hujjatlar
+### Task 10: Client — Sozlamalarda «O'rmon» (miniatyura, `tayyor`), ADR-0132 va hujjatlar
 
 **Files:**
 - Create: `O/ormon-miniatyura.tsx`
 - Modify: `O/ormon-tema.ts`, `O/ormon-tema.test.ts`
 - Modify: `client/src/lib/lernen-temalar.ts` (+`client/src/lib/lernen-temalar.test.ts`)
 - Modify: `client/src/components/student-portal/lernen-korinish-tanlash.tsx` (+`lernen-korinish-tanlash.test.ts`)
-- Create: `docs/adr/0131-lernen-ormon-tema-sahna-va-joy-orinlari.md`
+- Create: `docs/adr/0132-lernen-ormon-tema-sahna-va-joy-orinlari.md`
 - Modify: `docs/adr/README.md`, `client/CLAUDE.md`
 
 **Interfaces:**
@@ -4087,14 +4087,14 @@ Expected: `export const LERNEN_TEMA_IDLARI = ['toza', 'ormon', 'dengiz', 'alp'] 
 Run: `cd client && npx vitest run src/lib/lernen-temalar.test.ts src/components/student-portal/lernen-korinish-tanlash.test.ts src/components/student-portal/lernen/tema src/i18n`
 Expected: PASS (klient↔server nusxa testi yashil; `"O'rmon"` va `"Yumshoq qatlamli o'rmon"` lug'atlarda bor — yangi kalit yo'q).
 
-- [ ] **Step 6: Write ADR-0131**
+- [ ] **Step 6: Write ADR-0132**
 
 Avval raqamni tekshiring: `ls docs/adr | tail -3` va `grep -n "^| \[013" docs/adr/README.md`. Eng oxirgisi 0130 bo'lsa — 0131; `main` da yangisi paydo bo'lgan bo'lsa, keyingi bo'sh raqamni oling va fayl nomi, sarlavha va README qatorini shunga moslang.
 
-`docs/adr/0131-lernen-ormon-tema-sahna-va-joy-orinlari.md`:
+`docs/adr/0132-lernen-ormon-tema-sahna-va-joy-orinlari.md`:
 
 ```markdown
-# ADR-0131 — Ta'lim «O'rmon» temasi: shartnomaga sahna va joy o'rinlari, sahna unumdorligi qoidalari
+# ADR-0132 — Ta'lim «O'rmon» temasi: shartnomaga sahna va joy o'rinlari, sahna unumdorligi qoidalari
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-26
@@ -4142,7 +4142,7 @@ New:
 
 ```markdown
 | [0130](0130-soliq-va-komissiyalar-sof-foydada.md) | Soliq va komissiyalar sof foydadan ayriladi: stavkalar `Setting` da oydan kuchga kiradigan ro'yxat (kodda yo'q), kanallar xaritasi `feeChannelOf`, yangi `QR` usuli, komissiya to'lov oyiga va ijtimoiy soliq oylik oyiga, `rasmiy = min(officialSalary, hisoblangan oylik)`, hisob bitta joyda `TaxCostsService`, kesh `v6`, `settings.tax` (faqat CEO); dividend 2-bosqichda | Qabul qilindi | 2026-10-25 |
-| [0131](0131-lernen-ormon-tema-sahna-va-joy-orinlari.md) | Ta'lim «O'rmon» temasi: `LernenTema` ga `UnitJoyi`, `Sahna`, `Miniatyura`; sahnani sahifa `SahnaRamka` da chizadi (fixed, rail'dan chiqib, yuklanayotganda ham); biom unit tartibidan; faqat transform/opacity, bitta rAF, yashirin/ekrandan tashqarida pauza, zaif qurilmada yarmi, ≤ 1500 element; sahnadagi umumiy matn parda ustida | Qabul qilindi | 2026-10-26 |
+| [0131](0132-lernen-ormon-tema-sahna-va-joy-orinlari.md) | Ta'lim «O'rmon» temasi: `LernenTema` ga `UnitJoyi`, `Sahna`, `Miniatyura`; sahnani sahifa `SahnaRamka` da chizadi (fixed, rail'dan chiqib, yuklanayotganda ham); biom unit tartibidan; faqat transform/opacity, bitta rAF, yashirin/ekrandan tashqarida pauza, zaif qurilmada yarmi, ≤ 1500 element; sahnadagi umumiy matn parda ustida | Qabul qilindi | 2026-10-26 |
 ```
 
 (Agar `main` dan yangi qator qo'shilgan bo'lsa — Old sifatida jadvalning haqiqiy oxirgi qatorini oling.)
@@ -4158,7 +4158,7 @@ A theme only DRAWS — `LernenTema.TugunBelgisi` (the path node), `MukofotFoni` 
 New:
 
 ```markdown
-A theme only DRAWS — `LernenTema.TugunBelgisi` (the path node), `MukofotFoni` (the result screen's reward background), `UnitLavha` (the unit page header), `UnitJoyi` (a lesson on the unit page), the optional `Sahna` (the background scene) and the optional `Miniatyura` (its card picture in Sozlamalar), ADR-0128 and ADR-0131 — while the path, locks, points, the exercise screen, the confetti and the sound/Dafi decisions are shared and untouched.
+A theme only DRAWS — `LernenTema.TugunBelgisi` (the path node), `MukofotFoni` (the result screen's reward background), `UnitLavha` (the unit page header), `UnitJoyi` (a lesson on the unit page), the optional `Sahna` (the background scene) and the optional `Miniatyura` (its card picture in Sozlamalar), ADR-0128 and ADR-0132 — while the path, locks, points, the exercise screen, the confetti and the sound/Dafi decisions are shared and untouched.
 ```
 
 Old:
@@ -4170,16 +4170,16 @@ The unit page's place cards use the Toza node model (`tema/toza/toza-tugun-model
 New:
 
 ```markdown
-**Scenes and places (ADR-0131).** The unit page draws every lesson through `tema.UnitJoyi` (Toza: the node-badge card, `tema/toza/toza-unit-joyi.tsx`; O'rmon: a hut, bridge, cave or castle by the lesson's kind, `placeForKind`). A theme's `Sahna` is drawn by the PAGE inside `SahnaRamka` (`tema/sahna-ramka.tsx`: `fixed`, `-z-10` under an `isolate` page root, `CONTENT_INSET` so it clears the rail, `aria-hidden`), before the loading state, so it stands while the data loads; it is told `unitTartibi`, the visible unit's order in its level (the path reports the unit through `LernenYol`'s `onUnitKorindi`; `joriyUnitTartibi` finds the order). Scene rules: only `transform` and `opacity` animate (`globals-css.test.ts` checks the `ormon-*` keyframes); one `requestAnimationFrame` per scene for the parallax (`harakat/use-sahna.ts`: `useParallaks` moves every `[data-omil]` layer by `layerOffset`), held while the tab is hidden or the scene is off screen (`useSahnaPauza`, `data-tinch`); layers are SVG tiles that wrap, so the DOM never grows with the path; blur is baked into the SVG, never a CSS `filter` on a moving layer, and nothing above a scene takes a `backdrop-filter`; a biome change is an opacity cross-fade of stacks that stay in the DOM (`visibility: hidden` when not shown); a weak device (`useYengilRejim`, assumed until the browser answers) draws half; «Kam harakat» is a still picture; at most 1500 elements (`ormon-sahna.test.ts`). Text the page draws straight on a scene sits on an opaque `bg-surface` plate (`SAHNA_PARDASI`, `SAHNA_PARDASI_KICHIK`, `SAHNA_KARTASI`) only when the theme has a scene, so «Toza»'s markup is unchanged; a theme's own text over its scene is measured at 4.5:1 or more from the real tokens (`ormon-kontrast.test.ts`, helpers in `test-support/hex-contrast.ts`). O'rmon (`tema/ormon/`): three biomes (`biomeForUnit`: tong, ko'l, kuz by the unit's order), its reward tokens `--ormon-*` in `.lumio` and `.dark .lumio`, its motion in the `.ormon-*` classes of `globals.css`.
+**Scenes and places (ADR-0132).** The unit page draws every lesson through `tema.UnitJoyi` (Toza: the node-badge card, `tema/toza/toza-unit-joyi.tsx`; O'rmon: a hut, bridge, cave or castle by the lesson's kind, `placeForKind`). A theme's `Sahna` is drawn by the PAGE inside `SahnaRamka` (`tema/sahna-ramka.tsx`: `fixed`, `-z-10` under an `isolate` page root, `CONTENT_INSET` so it clears the rail, `aria-hidden`), before the loading state, so it stands while the data loads; it is told `unitTartibi`, the visible unit's order in its level (the path reports the unit through `LernenYol`'s `onUnitKorindi`; `joriyUnitTartibi` finds the order). Scene rules: only `transform` and `opacity` animate (`globals-css.test.ts` checks the `ormon-*` keyframes); one `requestAnimationFrame` per scene for the parallax (`harakat/use-sahna.ts`: `useParallaks` moves every `[data-omil]` layer by `layerOffset`), held while the tab is hidden or the scene is off screen (`useSahnaPauza`, `data-tinch`); layers are SVG tiles that wrap, so the DOM never grows with the path; blur is baked into the SVG, never a CSS `filter` on a moving layer, and nothing above a scene takes a `backdrop-filter`; a biome change is an opacity cross-fade of stacks that stay in the DOM (`visibility: hidden` when not shown); a weak device (`useYengilRejim`, assumed until the browser answers) draws half; «Kam harakat» is a still picture; at most 1500 elements (`ormon-sahna.test.ts`). Text the page draws straight on a scene sits on an opaque `bg-surface` plate (`SAHNA_PARDASI`, `SAHNA_PARDASI_KICHIK`, `SAHNA_KARTASI`) only when the theme has a scene, so «Toza»'s markup is unchanged; a theme's own text over its scene is measured at 4.5:1 or more from the real tokens (`ormon-kontrast.test.ts`, helpers in `test-support/hex-contrast.ts`). O'rmon (`tema/ormon/`): three biomes (`biomeForUnit`: tong, ko'l, kuz by the unit's order), its reward tokens `--ormon-*` in `.lumio` and `.dark .lumio`, its motion in the `.ormon-*` classes of `globals.css`.
 ```
 
 - [ ] **Step 9: Commit**
 
 ```bash
-git add client/src/components/student-portal/lernen/tema/ormon/ormon-miniatyura.tsx client/src/components/student-portal/lernen/tema/ormon/ormon-tema.ts client/src/components/student-portal/lernen/tema/ormon/ormon-tema.test.ts client/src/lib/lernen-temalar.ts client/src/lib/lernen-temalar.test.ts client/src/components/student-portal/lernen-korinish-tanlash.tsx client/src/components/student-portal/lernen-korinish-tanlash.test.ts docs/adr/0131-lernen-ormon-tema-sahna-va-joy-orinlari.md docs/adr/README.md client/CLAUDE.md
+git add client/src/components/student-portal/lernen/tema/ormon/ormon-miniatyura.tsx client/src/components/student-portal/lernen/tema/ormon/ormon-tema.ts client/src/components/student-portal/lernen/tema/ormon/ormon-tema.test.ts client/src/lib/lernen-temalar.ts client/src/lib/lernen-temalar.test.ts client/src/components/student-portal/lernen-korinish-tanlash.tsx client/src/components/student-portal/lernen-korinish-tanlash.test.ts docs/adr/0132-lernen-ormon-tema-sahna-va-joy-orinlari.md docs/adr/README.md client/CLAUDE.md
 git commit -m "feat(lernen): offer the O'rmon look in Settings, with its card miniature
 
-ADR-0131: the theme contract's scene and place slots and the scene performance
+ADR-0132: the theme contract's scene and place slots and the scene performance
 rules; client/CLAUDE.md follows.
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
@@ -4270,6 +4270,6 @@ Hech narsa commit qilinmaydi (bu task fayl o'zgartirmaydi). Nazoratchiga: 1–6-
 | §9 kam harakat — parallaks/ambient o'chadi; yengil rejim yarmi | Task 2, 4, 5 |
 | §10 `.lumio` tokenlari, rail'dan chiqish, yuklanayotganda ham fon, prettier yo'q, o'zbekcha matn | Task 4, 8, 9, Global Constraints |
 | §11 testlar (sof, statik markup), ≤ 1500 element, qo'lda tekshiruv | har task, Task 5, Task 11 |
-| §12 3-bosqich alohida PR, ADR | Task 10 (ADR-0131) |
+| §12 3-bosqich alohida PR, ADR | Task 10 (ADR-0132) |
 | §14 zaif telefon, emoji o'rniga SVG/phosphor | Task 5, 7 |
 

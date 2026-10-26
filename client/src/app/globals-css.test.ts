@@ -52,7 +52,7 @@ describe("the device's «Kam harakat» switch", () => {
   });
 });
 
-describe("the «O'rmon» scene's motion (ADR-0131)", () => {
+describe("the «O'rmon» scene's motion (ADR-0132)", () => {
   const css = readFileSync(path.join(__dirname, "globals.css"), "utf8");
   const flat = css.replace(/\s+/g, " ");
   const list = ":is(.ormon-spark, .ormon-leaf, .ormon-rays, .ormon-mist, .ormon-ring, .ormon-burst, .ormon-bob)";
@@ -118,7 +118,7 @@ describe("the «O'rmon» scene's motion (ADR-0131)", () => {
 // ambient layers animate all the time, so the blur would be recomputed every
 // frame. The bottom-nav pill and the radio dock are `.glass`; the rule below
 // takes the blur off while a scene's root (`data-sahna`) is on the page.
-describe("the glass chrome over a theme's scene (ADR-0131)", () => {
+describe("the glass chrome over a theme's scene (ADR-0132)", () => {
   const css = readFileSync(path.join(__dirname, "globals.css"), "utf8");
   const flat = css.replace(/\s+/g, " ");
   const portal = path.join(__dirname, "../components/student-portal");
@@ -141,7 +141,7 @@ describe("the glass chrome over a theme's scene (ADR-0131)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// The «O'rmon» rules as a whole (ADR-0131). The pins above hold one rule each;
+// The «O'rmon» rules as a whole (ADR-0132). The pins above hold one rule each;
 // this scan holds the rules nobody has written yet. Every slip it looks for
 // fails SILENTLY in the browser: an unscoped rule styles every other portal,
 // a comment inside a block makes Next's Lightning CSS drop the whole `@layer`,
@@ -227,7 +227,7 @@ function ormonViolations(rules: CssRule[]): string[] {
   return out;
 }
 
-describe("every «O'rmon» rule in globals.css (ADR-0131)", () => {
+describe("every «O'rmon» rule in globals.css (ADR-0132)", () => {
   it("is scoped to .lumio, has no comment inside its block, no filter, and a will-change only where the layers move", () => {
     const rules = ormonRules(readFileSync(path.join(__dirname, "globals.css"), "utf8"));
     // A scan that sees nothing would pass on any stylesheet.
@@ -258,7 +258,7 @@ describe("every «O'rmon» rule in globals.css (ADR-0131)", () => {
 // `.lumio`, so the `.glass` rule cannot reach it. On the path an overlay opens on
 // every lesson-node tap and on the goal card while the scene keeps animating
 // behind it, so its `backdrop-blur-xs` would be recomputed every frame.
-describe("the backdrop blur over a scene reaches the portaled overlays too (ADR-0131)", () => {
+describe("the backdrop blur over a scene reaches the portaled overlays too (ADR-0132)", () => {
   const css = readFileSync(path.join(__dirname, "globals.css"), "utf8");
   const slots = ["sheet-overlay", "dialog-overlay", "alert-dialog-overlay"];
   const overlays = `body:has(.lumio [data-sahna]) :is(${slots.map((s) => `[data-slot="${s}"]`).join(", ")})`;

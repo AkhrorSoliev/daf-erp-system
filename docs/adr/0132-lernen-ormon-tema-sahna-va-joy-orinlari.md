@@ -1,4 +1,4 @@
-# ADR-0131 — Ta'lim «O'rmon» temasi: shartnomaga sahna va joy o'rinlari, sahna unumdorligi qoidalari
+# ADR-0132 — Ta'lim «O'rmon» temasi: shartnomaga sahna va joy o'rinlari, sahna unumdorligi qoidalari
 
 **Holati:** Qabul qilindi
 **Sana:** 2026-10-26

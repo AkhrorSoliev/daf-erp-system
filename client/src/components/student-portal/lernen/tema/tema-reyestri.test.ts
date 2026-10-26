@@ -6,7 +6,7 @@ describe("tema reyestri", () => {
   it("has a theme for every look marked as finished", () => {
     for (const t of TAYYOR_TEMALAR) expect(TEMALAR[t.id]).toBeDefined();
   });
-  it("every finished theme draws the result background, the unit header and the lesson places (ADR-0128, ADR-0131)", () => {
+  it("every finished theme draws the result background, the unit header and the lesson places (ADR-0128, ADR-0132)", () => {
     for (const tema of Object.values(TEMALAR)) {
       expect(tema?.MukofotFoni, `${tema?.id}: MukofotFoni`).toBeTruthy();
       expect(tema?.UnitLavha, `${tema?.id}: UnitLavha`).toBeTruthy();

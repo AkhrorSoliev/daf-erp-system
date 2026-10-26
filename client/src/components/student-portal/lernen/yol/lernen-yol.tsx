@@ -55,7 +55,7 @@ const TEKISLASH = [
 
 export interface LernenYolProps {
   levels: LernenLevel[];
-  /** Told the id of the unit the student is scrolling through; the page's scene follows it (ADR-0131). */
+  /** Told the id of the unit the student is scrolling through; the page's scene follows it (ADR-0132). */
   onUnitKorindi?: (unitId: number) => void;
 }
 
@@ -67,7 +67,7 @@ function DarajaYorligi({ matn, sahnali }: { matn: string; sahnali: boolean }) {
       <span
         className={cn(
           "font-display text-sm font-extrabold uppercase tracking-wide",
-          // On a theme's scene the caption sits on the plain surface, in the ink that reads there (ADR-0131).
+          // On a theme's scene the caption sits on the plain surface, in the ink that reads there (ADR-0132).
           sahnali ? ["text-ink-600", SAHNA_PARDASI_KICHIK] : "text-ink-500",
         )}
       >
@@ -135,7 +135,7 @@ function SeansTuguni({
   tugun: YolTugun;
   align: (typeof TEKISLASH)[number];
   ostyozuvKorinsinmi: boolean;
-  /** The theme draws a scene: the section name above the node sits on the plain surface (ADR-0131). */
+  /** The theme draws a scene: the section name above the node sits on the plain surface (ADR-0132). */
   sahnali: boolean;
   /** The active theme's node badge, chosen once by `LernenYol`. */
   Belgi: LernenTema["TugunBelgisi"];
@@ -211,7 +211,7 @@ export function LernenYol({ levels, onUnitKorindi }: LernenYolProps) {
   const joriyUnit = useJoriyUnit(konteyner);
   const unitlar = React.useMemo(() => tugunlar.filter((x) => x.tur === "unit"), [tugunlar]);
   const korinayotganUnit = unitlar[Math.min(joriyUnit, unitlar.length - 1)];
-  // The page's scene follows the unit on screen (its biome, ADR-0131).
+  // The page's scene follows the unit on screen (its biome, ADR-0132).
   const korinayotganUnitId = korinayotganUnit?.id ?? null;
   React.useEffect(() => {
     if (korinayotganUnitId != null) onUnitKorindi?.(korinayotganUnitId);
