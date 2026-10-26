@@ -268,16 +268,20 @@ describe("the unit page in the «Dengiz» look (ADR-0133)", () => {
     expect(h).toMatch(/data-zona="marjon" data-faol=""/);
     expect(h).toContain("pointer-events-none fixed inset-0 -z-10");
     expect(h).toMatch(/^<div[^>]*class="[^"]*\bisolate\b/);
+    // The reef is 5 m deep, and its header says so.
+    expect(h).toMatch(/<span aria-hidden="true"[^>]*>5 m<\/span>/);
   });
 
   it.each([
-    [2, "kelp"],
-    [3, "chuqur"],
-  ] as const)("follows the unit's order: unit %i stands the %s zone in the scene and on the header", async (order, zona) => {
+    [2, "kelp", "25 m"],
+    [3, "chuqur", "70 m"],
+  ] as const)("follows the unit's order: unit %i stands the %s zone in the scene and on the header, %s deep", async (order, zona, depth) => {
     const h = await dengizHtml(order);
     expect(h).toContain(`data-zona="${zona}" data-faol=""`);
     expect(h).not.toContain('data-zona="marjon" data-faol=""');
     expect(h).toContain(`data-lavha-zona="${zona}"`);
+    expect(h).not.toMatch(/>5 m</);
+    expect(h).toMatch(new RegExp(`<span aria-hidden="true"[^>]*>${depth}<\/span>`));
   });
 
   it("draws each lesson as its place under the sea", async () => {

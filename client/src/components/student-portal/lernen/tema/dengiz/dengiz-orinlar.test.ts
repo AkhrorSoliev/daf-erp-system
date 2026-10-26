@@ -69,10 +69,13 @@ describe("placeForKind (spec §8)", () => {
   // The client and the server are deployed by hand, so the server can send a kind
   // this build does not know. The page must still draw a place, not throw.
   it("draws an unknown kind as the shell house, a place that has an emblem", () => {
-    const unknown = "FUTURE_KIND" as unknown as Parameters<typeof placeForKind>[0];
-    expect(placeForKind(unknown)).toBe("chiganoq");
-    expect(JOY_BELGISI[placeForKind(unknown)]).toBeTypeOf("function");
-    expect(joy({ kind: unknown })).toContain('data-joy="chiganoq"');
+    // Names that live on every object ("constructor", "toString", "__proto__") must not be found as a place either.
+    for (const kind of ["FUTURE_KIND", "constructor", "toString", "__proto__", null, undefined]) {
+      const unknown = kind as unknown as Parameters<typeof placeForKind>[0];
+      expect(placeForKind(unknown), String(kind)).toBe("chiganoq");
+      expect(JOY_BELGISI[placeForKind(unknown)], String(kind)).toBeTypeOf("function");
+      expect(joy({ kind: unknown }), String(kind)).toContain('data-joy="chiganoq"');
+    }
   });
 
   it("gives every place a small, still emblem", () => {
@@ -80,6 +83,21 @@ describe("placeForKind (spec §8)", () => {
       const html = renderToStaticMarkup(createElement(Belgi, {}));
       expect(html).toMatch(/^<svg[^>]*aria-hidden="true"/);
       expect((html.match(/<[a-zA-Z]/g) ?? []).length).toBeLessThanOrEqual(10);
+    }
+  });
+
+  // The locked place's `grayscale` class is the shared card's (`SahnaJoy`) and rides on the
+  // emblem's className; the emblem's own markup, and the banner's, draw no filter, blend or motion.
+  it("draws no filter, blend, animation or style element in an emblem or in the unit banner", () => {
+    const stillnessSlip = /filter|blend|<animate|<style/i;
+    for (const [id, Belgi] of Object.entries(JOY_BELGISI)) {
+      expect(renderToStaticMarkup(createElement(Belgi, {})), id).not.toMatch(stillnessSlip);
+    }
+    for (const unitTartibi of [1, 2, 3]) {
+      expect(
+        renderToStaticMarkup(createElement(DengizUnitLavha, { daraja: "A1", matn: "A1 · Zahlen", unitTartibi })),
+        `banner ${unitTartibi}`,
+      ).not.toMatch(stillnessSlip);
     }
   });
 });

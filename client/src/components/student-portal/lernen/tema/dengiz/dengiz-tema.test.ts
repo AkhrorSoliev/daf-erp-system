@@ -60,7 +60,7 @@ describe("<DengizMiniatyura />", () => {
     expect(html).not.toContain("data-omil");
     expect(html).not.toContain("<use");
     expect(html).not.toMatch(/dengiz-(?:strip|zone|sway|bubble|school|rays)/);
-    expect((html.match(/<[a-zA-Z]/g) ?? []).length).toBeLessThanOrEqual(15);
+    expect((html.match(/<[a-zA-Z]/g) ?? []).length).toBeLessThanOrEqual(12);
   });
 });
 

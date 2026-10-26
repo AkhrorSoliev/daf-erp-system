@@ -53,6 +53,17 @@ describe("the place card's text over the sea (spec §11: 4.5:1)", () => {
   }
 });
 
+// The node's name sits on `bg-surface text-ink-900` (dengiz-orinlar.test.ts pins the classes), not on the
+// scene, so the only pair is the darkest ink on the surface token, in both modes.
+describe("the path node's name (a plain surface pill, whatever is behind it)", () => {
+  for (const mode of MODES) {
+    it(`${mode.name}: the darkest ink holds on the surface`, () => {
+      const ink = cssHexToken(css, mode.selector, "ink-900");
+      expect(hexContrast(ink, cssHexToken(css, mode.selector, "surface-card"))).toBeGreaterThanOrEqual(TEXT);
+    });
+  }
+});
+
 describe("the sea's own coloured labels", () => {
   it("the unit banner's white text holds on every zone's banner, and on the darker depth chip", () => {
     for (const id of ZONE_IDS) {
