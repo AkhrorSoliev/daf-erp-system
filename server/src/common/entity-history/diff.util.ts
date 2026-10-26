@@ -27,6 +27,16 @@ export const ENTITY_EXCLUDED_KEYS: Readonly<Record<string, readonly string[]>> =
     User: ['balance'],
   };
 
+/**
+ * Fields that ARE stored in history but read only by a `salary.view` holder:
+ * `User.officialSalary` (the official part of an employee's pay). Every
+ * reader of User history passes whether its caller may see pay; the default
+ * is no.
+ */
+const SALARY_ONLY_KEYS: Readonly<Record<string, readonly string[]>> = {
+  User: ['officialSalary'],
+};
+
 function excludedFor(entityType: string | undefined): readonly string[] {
   // `hasOwnProperty`: the read side passes a type from the URL, and
   // `ENTITY_EXCLUDED_KEYS['toString']` is a function, not a list.
@@ -116,8 +126,15 @@ export function stripSensitiveFields(
 export function redactHistoryValues(
   entityType: string,
   values: unknown,
+  canViewSalary = false,
 ): unknown {
-  const typeExcluded = excludedFor(entityType);
+  const typeExcluded = [
+    ...excludedFor(entityType),
+    ...(!canViewSalary &&
+    Object.prototype.hasOwnProperty.call(SALARY_ONLY_KEYS, entityType)
+      ? SALARY_ONLY_KEYS[entityType]
+      : []),
+  ];
   if (
     typeExcluded.length === 0 ||
     values === null ||

@@ -52,7 +52,7 @@ describe("filter lists", () => {
     expect(PART_FILTER.qarz).toEqual({ kind: "LATE", label: "Eski qarz" });
     expect(PART_FILTER.joriy.kind).toBe("CURRENT");
     expect(PART_FILTER.oldindan.kind).toBe("ADVANCE");
-    expect(METHOD_FILTER.map((m) => m.label)).toEqual(["Naqd", "Click", "Payme", "O'tkazma", "Uzum"]);
-    expect(METHOD_FILTER.map((m) => m.value)).toEqual(["CASH", "CLICK", "PAYME", "TRANSFER", "UZUM"]);
+    expect(METHOD_FILTER.map((m) => m.label)).toEqual(["Naqd", "Click", "Payme", "O'tkazma", "QR-kod", "Uzum"]);
+    expect(METHOD_FILTER.map((m) => m.value)).toEqual(["CASH", "CLICK", "PAYME", "TRANSFER", "QR", "UZUM"]);
   });
 });

@@ -157,4 +157,33 @@ describe('TeacherTimelineService.getTimeline', () => {
     expect(profile?.payload.newValues).toEqual({ firstName: 'Ali' });
     expect(profile?.payload.oldValues).toBeNull();
   });
+
+  it('shows the official salary in an old profile row only to a salary.view holder', async () => {
+    prisma.entityHistory.findMany.mockResolvedValue([
+      {
+        id: 'e3',
+        action: 'UPDATE',
+        oldValues: { officialSalary: null },
+        newValues: { officialSalary: 2_000_000 },
+        createdAt: new Date('2026-08-01'),
+        changedBy: null,
+      },
+    ]);
+    const profileOf = async (roleIds: number[], roles: string[]) => {
+      const service = await build(roleIds);
+      people({ roles, branches: [1] }, [1]);
+      const events = await service.getTimeline(TEACHER, 1, CALLER);
+      return events.find((e) => e.kind === 'ProfileUpdated');
+    };
+
+    expect(
+      (await profileOf([ROLE_ID.ADMINISTRATOR], ['Administrator']))?.payload
+        .newValues,
+    ).toEqual({});
+    expect(
+      (await profileOf([ROLE_ID.CEO], ['CEO']))?.payload.newValues,
+    ).toEqual({
+      officialSalary: 2_000_000,
+    });
+  });
 });

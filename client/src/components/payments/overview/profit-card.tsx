@@ -20,7 +20,7 @@ export function ProfitCard({ month, isCurrent }: { month: string; isCurrent: boo
   if (composition.isError) return <BlockError title={t("Foyda")} onRetry={() => composition.refetch()} />;
   const c = composition.data;
   const withdrawn = c.withdrawals?.total ?? 0;
-  const spent = c.teachers.total + c.staff.total + c.expenses.total + c.refunds;
+  const spent = c.teachers.total + c.staff.total + c.expenses.total + c.refunds + (c.taxes?.total ?? 0);
   return (
     <div className="space-y-1 rounded-xl border bg-card p-4">
       <p className="text-sm text-muted-foreground">{t("Foyda")}</p>

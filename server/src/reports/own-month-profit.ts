@@ -13,6 +13,10 @@ import { NetProfit } from './reports-excel.helpers';
  * recovery or earlier prepayments). Production June 2026 reads −26 750 444
  * against a positive +4 714 564 net profit; that gap is the whole point.
  *
+ * Tax and fee costs (gateway commission, social tax, turnover tax, bank fee)
+ * are costs of the month, so they are subtracted here exactly as in
+ * `NetProfit.netProfit`; both figures stay on one cost basis.
+ *
  * The center top-up is NOT subtracted separately — `np.teacherSalary` is
  * already `covered + centerFunded`, so a second subtraction double-counts it.
  */
@@ -22,6 +26,7 @@ export function computeOwnMonthProfit(ownMoney: number, np: NetProfit): number {
     np.teacherSalary -
     np.adminSalary -
     np.operatingExpenses -
-    np.refunds
+    np.refunds -
+    np.taxes.total
   );
 }

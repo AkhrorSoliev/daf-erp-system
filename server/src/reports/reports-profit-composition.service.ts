@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReportsService } from './reports.service';
+import { TaxSettingsService } from '../tax/tax-settings.service';
+import { rateForMonth } from '../tax/tax-rates';
 import {
   branchIdWhere,
   isEmptyScope,
@@ -13,6 +15,7 @@ import {
 import { isTopUpMonth } from '../salary/shared/topup';
 import {
   missingRecurringExpenses,
+  recurringKeyOf,
   monthStatus,
   topWithRest,
   unpaidLeftLessons,
@@ -58,6 +61,21 @@ export interface ProfitComposition {
       items: { description: string; amount: number }[];
     }[];
   };
+  /** Soliq va komissiyalar — Foyda kartasi allaqachon ayirgan qism (spec 2026-10-25). */
+  taxes: {
+    providerFees: number;
+    employerSocialTax: number;
+    turnoverTax: number;
+    bankFees: number;
+    total: number;
+    missingRates: string[];
+    /**
+     * This month's hand-entered «Soliqlar» expenses (already inside
+     * `expenses`). Shown beside an automatic turnover tax so one tax is not
+     * booked twice.
+     */
+    manualTaxExpenses: number;
+  };
   refunds: number;
   /** A running month only: what the month is on course to close at. */
   forecast: {
@@ -90,6 +108,7 @@ export class ReportsProfitCompositionService {
   constructor(
     private prisma: PrismaService,
     private reports: ReportsService,
+    private taxSettings: TaxSettingsService,
   ) {}
 
   async getProfitComposition(
@@ -224,7 +243,14 @@ export class ReportsProfitCompositionService {
       );
       const teacherShare = np.revenue > 0 ? lessonTeacherPay / np.revenue : 0;
       const remainingTeacherPay = Math.round(remaining.value * teacherShare);
-      const missingExpenses = missingRecurringExpenses(prevExpenses, expenses);
+      // Aylanma solig'i avtomatik bo'lsa, o'tgan oy solig'i prognozga qo'shilmaydi.
+      const book = await this.taxSettings.loadRates(companyId);
+      const skipTaxes =
+        rateForMonth(book.rates['tax.turnoverPercent'], month) !== null;
+      // ponytail: kelgusi kunlar soliq'i prognoz qilinmaydi, kerak bo'lsa aylanma ulushidan
+      const missingExpenses = missingRecurringExpenses(prevExpenses, expenses, {
+        skipTaxes,
+      });
       forecast = {
         expectedNetProfit:
           np.netProfit +
@@ -311,6 +337,17 @@ export class ReportsProfitCompositionService {
       },
       expenses: { total: np.operatingExpenses, categories },
       refunds: np.refunds,
+      taxes: {
+        providerFees: np.taxes.providerFees,
+        employerSocialTax: np.taxes.employerSocialTax,
+        turnoverTax: np.taxes.turnoverTax,
+        bankFees: np.taxes.bankFees,
+        total: np.taxes.total,
+        missingRates: np.taxes.missingRates,
+        manualTaxExpenses: expenses
+          .filter((e) => recurringKeyOf(e) === 'TAXES')
+          .reduce((sum, e) => sum + e.amount, 0),
+      },
       forecast,
       unpaidLeft: unpaid.students > 0 ? unpaid : null,
       branchesWithoutExpenses,
@@ -414,6 +451,15 @@ function emptyComposition(
     staff: { total: 0, count: 0, ...none },
     expenses: { total: 0, categories: [] },
     refunds: 0,
+    taxes: {
+      providerFees: 0,
+      employerSocialTax: 0,
+      turnoverTax: 0,
+      bankFees: 0,
+      total: 0,
+      missingRates: [],
+      manualTaxExpenses: 0,
+    },
     forecast: null,
     unpaidLeft: null,
     branchesWithoutExpenses: [],

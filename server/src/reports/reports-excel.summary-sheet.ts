@@ -215,6 +215,18 @@ function buildBlock1(
     '',
     { inverse: true },
   );
+  // Shown only when a tax or fee was booked, so a month without any keeps the
+  // block exactly as it was; with one, the rows above still foot to the total.
+  if (cur.np.taxes.total || prev.np.taxes.total) {
+    compareRow(
+      ws,
+      '−  Soliq va komissiyalar',
+      cur.np.taxes.total,
+      prev.np.taxes.total,
+      "To'lov komissiyasi, ijtimoiy soliq, aylanma solig'i va bank xarajati. Tafsiloti «Sof foyda» bo'limida.",
+      { inverse: true },
+    );
+  }
   headlineRow(
     ws,
     '=  SOF FOYDA',

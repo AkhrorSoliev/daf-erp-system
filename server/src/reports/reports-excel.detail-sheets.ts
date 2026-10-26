@@ -974,7 +974,8 @@ export function reconciliationSheet(
       np.teacherSalary -
       np.adminSalary -
       np.operatingExpenses -
-      np.refunds;
+      np.refunds -
+      np.taxes.total;
     sectionHeader(ws, 'Sof foyda (aniq) — yig‘indi tekshiruvi', 6);
     kvRow(ws, 'Tushum', np.revenue);
     if (np.balanceWithdrawals !== 0) {
@@ -984,6 +985,7 @@ export function reconciliationSheet(
     kvRow(ws, '− Admin oyligi', np.adminSalary);
     kvRow(ws, '− Operatsion xarajat (avanssiz)', np.operatingExpenses);
     kvRow(ws, '− Qaytarishlar', np.refunds);
+    kvRow(ws, '− Soliq va komissiyalar', np.taxes.total);
     checkRow(
       ws,
       '= Sof foyda (yig‘indi)',

@@ -1,5 +1,11 @@
 import { BadRequestException } from '@nestjs/common';
 import { KpiRuleMode, PaymentModel } from '@prisma/client';
+import {
+  parseDatedRates,
+  parseDatedTiers,
+  type DatedRate,
+  type DatedTiers,
+} from '../tax/tax-rates';
 
 /**
  * Sozlamalar registri — `/settings` panelining yagona manbasi.
@@ -51,7 +57,16 @@ export type SettingKey =
   | 'participation.maxLatePercent'
   | 'chat.enabled'
   | 'chat.weekMinutesActive'
-  | 'chat.weekMinutesRadio';
+  | 'chat.weekMinutesRadio'
+  | 'fees.app.payme'
+  | 'fees.app.click'
+  | 'fees.app.uzum'
+  | 'fees.integration'
+  | 'fees.qr'
+  | 'payroll.employeeWithholdingPercent'
+  | 'payroll.employerSocialPercent'
+  | 'tax.turnoverPercent'
+  | 'bank.turnoverTiers';
 
 export interface SettingValueMap {
   'payment.defaultModel': PaymentModel;
@@ -84,6 +99,15 @@ export interface SettingValueMap {
   'chat.enabled': boolean;
   'chat.weekMinutesActive': number;
   'chat.weekMinutesRadio': number;
+  'fees.app.payme': DatedRate[];
+  'fees.app.click': DatedRate[];
+  'fees.app.uzum': DatedRate[];
+  'fees.integration': DatedRate[];
+  'fees.qr': DatedRate[];
+  'payroll.employeeWithholdingPercent': DatedRate[];
+  'payroll.employerSocialPercent': DatedRate[];
+  'tax.turnoverPercent': DatedRate[];
+  'bank.turnoverTiers': DatedTiers[];
 }
 
 interface SettingDefinition<K extends SettingKey> {
@@ -477,6 +501,63 @@ export const SETTING_DEFINITIONS: {
     key: 'chat.weekMinutesRadio',
     defaultValue: 30,
     parse: (raw) => parseIntInRange('chat.weekMinutesRadio', raw, 0, 1000),
+    companyLevelOnly: true,
+  },
+
+  // Soliq va komissiyalar (spec 2026-10-25): oydan kuchga kiradigan stavkalar,
+  // `TaxCostsService` kompaniya darajasida o'qiydi. Bo'sh = kiritilmagan.
+  'fees.app.payme': {
+    key: 'fees.app.payme',
+    defaultValue: [],
+    parse: (raw) => parseDatedRates('fees.app.payme', raw),
+    companyLevelOnly: true,
+  },
+  'fees.app.click': {
+    key: 'fees.app.click',
+    defaultValue: [],
+    parse: (raw) => parseDatedRates('fees.app.click', raw),
+    companyLevelOnly: true,
+  },
+  'fees.app.uzum': {
+    key: 'fees.app.uzum',
+    defaultValue: [],
+    parse: (raw) => parseDatedRates('fees.app.uzum', raw),
+    companyLevelOnly: true,
+  },
+  'fees.integration': {
+    key: 'fees.integration',
+    defaultValue: [],
+    parse: (raw) => parseDatedRates('fees.integration', raw),
+    companyLevelOnly: true,
+  },
+  'fees.qr': {
+    key: 'fees.qr',
+    defaultValue: [],
+    parse: (raw) => parseDatedRates('fees.qr', raw),
+    companyLevelOnly: true,
+  },
+  'payroll.employeeWithholdingPercent': {
+    key: 'payroll.employeeWithholdingPercent',
+    defaultValue: [],
+    parse: (raw) => parseDatedRates('payroll.employeeWithholdingPercent', raw),
+    companyLevelOnly: true,
+  },
+  'payroll.employerSocialPercent': {
+    key: 'payroll.employerSocialPercent',
+    defaultValue: [],
+    parse: (raw) => parseDatedRates('payroll.employerSocialPercent', raw),
+    companyLevelOnly: true,
+  },
+  'tax.turnoverPercent': {
+    key: 'tax.turnoverPercent',
+    defaultValue: [],
+    parse: (raw) => parseDatedRates('tax.turnoverPercent', raw),
+    companyLevelOnly: true,
+  },
+  'bank.turnoverTiers': {
+    key: 'bank.turnoverTiers',
+    defaultValue: [],
+    parse: (raw) => parseDatedTiers('bank.turnoverTiers', raw),
     companyLevelOnly: true,
   },
 };

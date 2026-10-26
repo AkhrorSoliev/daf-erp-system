@@ -7,6 +7,10 @@ import {
 import { tashkentMonthRangeUtc } from '../common/date/tashkent';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalaryMonthlyService } from './salary-monthly.service';
+import { isTopUpMonth } from './shared/topup';
+import { TaxSettingsService } from '../tax/tax-settings.service';
+import { rateForMonth } from '../tax/tax-rates';
+import { officialSplit } from '../tax/tax-costs';
 import type { StaffRow } from './salary-monthly-staff.service';
 import type { SalaryMonthlyQuery } from './shared/resolve-monthly-scope';
 
@@ -37,6 +41,7 @@ export class SalaryMonthlyDetailService {
   constructor(
     private prisma: PrismaService,
     private monthly: SalaryMonthlyService,
+    private taxSettings: TaxSettingsService,
   ) {}
 
   async getDetail(
@@ -53,12 +58,23 @@ export class SalaryMonthlyDetailService {
     );
     const isTeacher = 'fullDeserved' in row;
     const worked = isTeacher ? row.fullDeserved : row.monthly;
-    const [payout, branch] = await Promise.all([
+    const [payout, payee] = await Promise.all([
       row.payment?.status === SalaryPaymentStatus.PAID
         ? this.payoutOf(userId, companyId, month)
         : null,
-      this.cashAccountsOf(userId, companyId),
+      this.payeeOf(userId, companyId),
     ]);
+    const branch = await this.cashAccountsOf(companyId, payee.mainBranch);
+    const earned = isTeacher
+      ? ((isTopUpMonth(month) ? row.fullDeserved : row.covered) ?? 0)
+      : row.monthly;
+    const official = await this.officialOf(
+      earned,
+      payee.officialSalary,
+      row.netToPay,
+      companyId,
+      month,
+    );
 
     return {
       month,
@@ -76,6 +92,7 @@ export class SalaryMonthlyDetailService {
           ? row.payment.amount - (worked - row.advances)
           : null,
       payout,
+      official,
       ...branch,
     };
   }
@@ -171,13 +188,45 @@ export class SalaryMonthlyDetailService {
     };
   }
 
-  /** The payee's own branch's open accounts — where «Berildi» draws from. */
-  private async cashAccountsOf(userId: number, companyId: number) {
+  /** The payee's branch and official (bank) salary, in one read. */
+  private async payeeOf(userId: number, companyId: number) {
     const payee = await this.prisma.user.findFirst({
       where: { id: userId, companyId },
-      select: { mainBranch: true },
+      select: { mainBranch: true, officialSalary: true },
     });
-    const branchId = payee?.mainBranch ?? null;
+    return {
+      mainBranch: payee?.mainBranch ?? null,
+      officialSalary: payee?.officialSalary ?? 0,
+    };
+  }
+
+  /**
+   * The «Rasmiy / Budjetga / Qo'lga» split of the month's pay (spec
+   * 2026-10-25): `officialSplit` is the one rule. The employee's withholding
+   * is inside the earned pay, not a company cost; the employer's social tax is
+   * paid on top, apart. null when the person has no official salary.
+   */
+  private async officialOf(
+    earned: number,
+    officialSalary: number,
+    netToPay: number,
+    companyId: number,
+    month: string,
+  ) {
+    if (officialSalary <= 0) return null;
+    const { rates } = await this.taxSettings.loadRates(companyId);
+    const split = officialSplit(
+      earned,
+      officialSalary,
+      rateForMonth(rates['payroll.employeeWithholdingPercent'], month),
+      rateForMonth(rates['payroll.employerSocialPercent'], month),
+    );
+    return { ...split, toHand: Math.max(0, netToPay - split.withholding) };
+  }
+
+  /** The payee's own branch's open accounts — where «Berildi» draws from. */
+  private async cashAccountsOf(companyId: number, mainBranch: number | null) {
+    const branchId = mainBranch;
     if (branchId == null) return { cashAccounts: [], payeeBranchMissing: true };
 
     const cashAccounts = await this.prisma.cashAccount.findMany({

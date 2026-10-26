@@ -121,6 +121,7 @@ const methodOptions = [
   { value: "CLICK", label: msg("Click") },
   { value: "UZUM", label: msg("Uzum") },
   { value: "TRANSFER", label: msg("Bank o'tkazmasi") },
+  { value: "QR", label: msg("QR-kod") },
 ];
 
 export function RecordPaymentDialog({

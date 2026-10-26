@@ -160,4 +160,11 @@ export interface SalaryDetail {
   } | null;
   cashAccounts: { id: string; name: string; type: "CASH" | "BANK" | "CARD" }[];
   payeeBranchMissing: boolean;
+  /** The official-salary split (spec 2026-10-25); null without an official salary. */
+  official?: {
+    official: number;
+    withholding: number;
+    employerSocial: number;
+    toHand: number;
+  } | null;
 }

@@ -13,6 +13,8 @@ export interface EmployeeUser {
   mainBranch: number | null;
   /** Only for a caller with salary.view (ADR-0087); no screen reads it. */
   balance?: number;
+  /** Only for a caller with salary.view (spec 2026-10-25). */
+  officialSalary?: number | null;
   status: string;
   roles: { id: number; name: string }[];
   branches: { id: number; name: string }[];

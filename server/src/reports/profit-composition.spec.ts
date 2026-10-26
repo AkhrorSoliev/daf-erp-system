@@ -129,6 +129,12 @@ describe('missingRecurringExpenses', () => {
     ]);
   });
 
+  it('skips taxes when the turnover tax is automatic', () => {
+    const out = missingRecurringExpenses(august, [], { skipTaxes: true });
+    expect(out.find((m) => m.key === 'TAXES')).toBeUndefined();
+    expect(out.map((m) => m.key)).toEqual(['RENT', 'UTILITIES']);
+  });
+
   it('expects nothing once a cost is recorded in full', () => {
     const paid = august.filter((e) => e.category !== 'MARKETING');
     expect(missingRecurringExpenses(august, paid)).toEqual([]);

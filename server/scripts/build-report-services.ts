@@ -33,6 +33,9 @@ import { SalaryMissedLessonsService } from '../src/salary/salary-missed-lessons.
 import { ReportsDebtHistoryService } from '../src/reports/reports-debt-history.service';
 import { SalaryStaffMonthlyService } from '../src/salary/salary-monthly-staff.service';
 import { PaymentsDebtorsService } from '../src/payments/payments-debtors.service';
+import { SettingsService } from '../src/settings/settings.service';
+import { TaxSettingsService } from '../src/tax/tax-settings.service';
+import { TaxCostsService } from '../src/tax/tax-costs.service';
 
 /**
  * Builds the REAL ReportsService the HTTP path uses, hand-wired against a
@@ -55,7 +58,12 @@ export function buildExcelService(prisma: PrismaService): ReportsExcelService {
   const studentFlow = new ReportsStudentFlowService(prisma as any);
   const holidays = new HolidaysService(prisma as any, null as any, null as any, null as any);
   const expectation = new ReportsExpectationService(prisma as any, holidays, redis);
-  const expenses = new ExpensesService(prisma as any, null as any, null as any);
+  const expenses = new ExpensesService(
+    prisma as any,
+    null as any, // transactions
+    null as any, // entityHistory
+    null as any, // permissions: writes only
+  );
   const salaryMonthly = new SalaryMonthlyService(
     prisma as any,
     new SalaryStaffMonthlyService(prisma as any),
@@ -76,6 +84,16 @@ export function buildExcelService(prisma: PrismaService): ReportsExcelService {
     null as any, // debtAge: getDebtors only, not the workbook
   );
 
+  // Rates are READ from Setting rows (the stub cache never stores); nothing here
+  // writes, so the history service and the net-profit cache stay out of reach.
+  const taxCosts = new TaxCostsService(
+    prisma,
+    new TaxSettingsService(
+      new SettingsService(prisma, redis, null as any),
+      redis,
+    ),
+  );
+
   const reports = new ReportsService(
     overview,
     attendance,
@@ -83,11 +101,8 @@ export function buildExcelService(prisma: PrismaService): ReportsExcelService {
     new ReportsDebtHistoryService(prisma as any),
     payments,
     null as any, // studentPayments
-    null as any, // departedStudents
-    null as any, // departedLists
     null as any, // departedReasons
     teacherChanges,
-    null as any, // centerActivity
     profitLoss,
     null as any, // cashFlow
     balanceSheet,
@@ -99,7 +114,8 @@ export function buildExcelService(prisma: PrismaService): ReportsExcelService {
     expectation,
     null as any, // expectationHistory
     studentFlow,
+    taxCosts,
   );
 
-  return new ReportsExcelService(reports);
+  return new ReportsExcelService(reports, taxCosts);
 }

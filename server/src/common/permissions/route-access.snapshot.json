@@ -1217,6 +1217,9 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /settings/tax": [
+    "CEO"
+  ],
   "GET /student-exit-reasons": [
     "Administrator",
     "Branch Director",
@@ -1765,6 +1768,9 @@
   ],
   "PATCH /settings/payment": [
     "Branch Director",
+    "CEO"
+  ],
+  "PATCH /settings/tax": [
     "CEO"
   ],
   "PATCH /student-exit-reasons/:id": [

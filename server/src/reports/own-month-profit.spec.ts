@@ -1,3 +1,4 @@
+import { emptyTaxCosts } from '../tax/tax-costs';
 import { computeOwnMonthProfit } from './own-month-profit';
 import { NetProfit } from './reports-excel.helpers';
 
@@ -14,7 +15,8 @@ const np = (over: Partial<NetProfit>): NetProfit =>
     refunds: 0,
     netProfit: 0,
     netMarginPercent: 0,
-    memo: { writeOffs: 0, providerFees: 0, advances: 0 },
+    taxes: emptyTaxCosts(),
+    memo: { writeOffs: 0, advances: 0 },
     ...over,
   }) as NetProfit;
 
@@ -63,5 +65,24 @@ describe('computeOwnMonthProfit', () => {
       np({ teacherSalary: 600_000 }),
     );
     expect(result).toBe(400_000);
+  });
+
+  it("subtracts the month's tax and fee costs, like the net profit does", () => {
+    const result = computeOwnMonthProfit(
+      1_000_000,
+      np({
+        teacherSalary: 400_000,
+        taxes: { ...emptyTaxCosts(), providerFees: 20_000, total: 50_000 },
+      }),
+    );
+    expect(result).toBe(550_000);
+  });
+
+  it('with no tax costs the figure is unchanged', () => {
+    const result = computeOwnMonthProfit(
+      1_000_000,
+      np({ teacherSalary: 400_000, taxes: emptyTaxCosts() }),
+    );
+    expect(result).toBe(600_000);
   });
 });

@@ -1,3 +1,4 @@
+import { emptyTaxCosts } from '../tax/tax-costs';
 import { ReportsProfitCompositionService } from './reports-profit-composition.service';
 
 /** A held lesson as `valueHeldLessons` returns it. */
@@ -19,6 +20,7 @@ const lesson = (
 describe('ReportsProfitCompositionService', () => {
   let prisma: any;
   let reports: any;
+  let taxSettings: any;
   let service: ReportsProfitCompositionService;
 
   // 26.09.2026 20:00 Tashkent.
@@ -37,7 +39,8 @@ describe('ReportsProfitCompositionService', () => {
     refunds: 0,
     netProfit: 80_000,
     netMarginPercent: 40,
-    memo: { writeOffs: 0, providerFees: 0, advances: 0 },
+    taxes: emptyTaxCosts(),
+    memo: { writeOffs: 0, advances: 0 },
   };
 
   beforeEach(() => {
@@ -125,7 +128,13 @@ describe('ReportsProfitCompositionService', () => {
         },
       }),
     };
-    service = new ReportsProfitCompositionService(prisma, reports);
+    taxSettings = {
+      loadRates: jest.fn().mockResolvedValue({
+        rates: { 'tax.turnoverPercent': [] },
+        bankTiers: [],
+      }),
+    };
+    service = new ReportsProfitCompositionService(prisma, reports, taxSettings);
   });
 
   const run = (branchIds: number[] | null = null) =>
@@ -238,6 +247,93 @@ describe('ReportsProfitCompositionService', () => {
       select: { id: true, balance: true },
     });
     expect(r.unpaidLeft).toEqual({ students: 1, lessons: 1, amount: 50_000 });
+  });
+
+  it('surfaces the tax and fee costs the card already subtracted', async () => {
+    const base = await reports.assembleMonthlyNetProfit();
+    reports.assembleMonthlyNetProfit.mockResolvedValueOnce({
+      ...base,
+      netProfit: {
+        ...netProfit,
+        taxes: {
+          ...emptyTaxCosts(),
+          providerFees: 10,
+          total: 10,
+          missingRates: ['fees.qr'],
+        },
+      },
+    });
+    const result = await run();
+    expect(result.taxes).toEqual({
+      providerFees: 10,
+      employerSocialTax: 0,
+      turnoverTax: 0,
+      bankFees: 0,
+      total: 10,
+      missingRates: ['fees.qr'],
+      manualTaxExpenses: 0,
+    });
+  });
+
+  describe('manualTaxExpenses (hand-entered tax beside the automatic one)', () => {
+    it("sums the month's TAXES-category and «soliq» OTHER expenses, nothing else", async () => {
+      prisma.expense.findMany.mockReset();
+      const row = (category: string, description: string, amount: number) => ({
+        category,
+        description,
+        amount,
+        date: new Date('2026-09-21T00:00:00Z'),
+        branchId: 1,
+      });
+      prisma.expense.findMany
+        .mockResolvedValueOnce([
+          row('TAXES', 'Aylanma solig‘i', 4_000),
+          row('OTHER', 'Soliqlar', 1_000),
+          row('MARKETING', 'SMM', 9_000),
+        ])
+        .mockResolvedValueOnce([]);
+      const r = await run();
+      expect(r.taxes.manualTaxExpenses).toBe(5_000);
+    });
+
+    it('is 0 when the month has no hand-entered tax', async () => {
+      const r = await run();
+      expect(r.taxes.manualTaxExpenses).toBe(0);
+    });
+  });
+
+  it('forecasts no last-month tax once the turnover tax is automatic', async () => {
+    taxSettings.loadRates.mockResolvedValue({
+      rates: { 'tax.turnoverPercent': [{ fromMonth: '2026-01', value: 4 }] },
+      bankTiers: [],
+    });
+    prisma.expense.findMany.mockReset();
+    prisma.expense.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        category: 'OTHER',
+        description: 'Soliqlar',
+        amount: 5_000,
+        date: new Date('2026-08-31T00:00:00Z'),
+        branchId: 1,
+      },
+    ]);
+    const r = await run();
+    expect(r.forecast?.missingExpenses).toEqual([]);
+  });
+
+  it('still forecasts last-month tax while no turnover rate is entered', async () => {
+    prisma.expense.findMany.mockReset();
+    prisma.expense.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        category: 'OTHER',
+        description: 'Soliqlar',
+        amount: 5_000,
+        date: new Date('2026-08-31T00:00:00Z'),
+        branchId: 1,
+      },
+    ]);
+    const r = await run();
+    expect(r.forecast?.missingExpenses.map((m) => m.key)).toEqual(['TAXES']);
   });
 
   it('flags a branch that held lessons but recorded no expense', async () => {

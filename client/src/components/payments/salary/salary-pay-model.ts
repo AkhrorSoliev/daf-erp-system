@@ -50,6 +50,26 @@ export function buildPayBody(i: {
   return { paidAt: i.paidAt, cashSlices, ...(note ? { note } : {}) };
 }
 
+/**
+ * The «Rasmiy qism» lines of the pay dialog (spec 2026-10-25). The numbers are
+ * the server's; the payout itself stays one cash + card sum.
+ */
+export function officialLines(
+  o: NonNullable<SalaryDetail["official"]>,
+  t: Translate = interpolate,
+): { split: string; social: string } {
+  return {
+    split: t("Rasmiy qism: {official} so'm · Budjetga: {withholding} so'm · Xodim qo'liga: {toHand} so'm", {
+      official: formatPrice(o.official),
+      withholding: formatPrice(o.withholding),
+      toHand: formatPrice(o.toHand),
+    }),
+    social: t("Korxona ijtimoiy solig'i: {employerSocial} so'm (alohida to'lanadi)", {
+      employerSocial: formatPrice(o.employerSocial),
+    }),
+  };
+}
+
 /** «Naqd» takes the CASH accounts; «Karta» takes BANK and CARD. */
 export function accountsByKind(accounts: SalaryDetail["cashAccounts"]): {
   cash: SalaryDetail["cashAccounts"];

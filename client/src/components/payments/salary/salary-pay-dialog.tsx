@@ -25,7 +25,7 @@ import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { tashkentDayAsLocalDate } from "@/lib/tashkent-time";
 import { keepsMonthCapital } from "../salary-utils";
-import { accountsByKind, buildPayBody, payTitle, payToast, sliceCheck } from "./salary-pay-model";
+import { accountsByKind, buildPayBody, officialLines, payTitle, payToast, sliceCheck } from "./salary-pay-model";
 import { SALARY_KEYS, useInvalidateSalary } from "./salary-queries";
 import type { SalaryDetail } from "./salary-types";
 
@@ -99,6 +99,7 @@ function PayForm({
   const accountsReady = (cash === 0 || cashId !== "") && (card === 0 || cardId !== "");
   const canSubmit = check.ok && accountsReady && !detail.payeeBranchMissing && !submitting;
   const name = detail.row.user.firstName;
+  const official = detail.official ? officialLines(detail.official, t) : null;
 
   const submit = async () => {
     setSubmitting(true);
@@ -158,6 +159,13 @@ function PayForm({
               disabled={submitting}
             />
           </div>
+
+          {official && (
+            <div className="space-y-1 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+              <p className="font-medium">{official.split}</p>
+              <p className="text-muted-foreground">{official.social}</p>
+            </div>
+          )}
 
           {total > 0 && (
             <>

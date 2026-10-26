@@ -16,7 +16,7 @@ export interface ChartTrendPoint {
 
 /**
  * B — pul qayerga ketdi. `NetProfit` obyektining o'zi:
- * `revenue + balanceWithdrawals − teacherSalary − adminSalary − operatingExpenses − refunds = netProfit`.
+ * `revenue + balanceWithdrawals − teacherSalary − adminSalary − operatingExpenses − refunds − taxes = netProfit`.
  * «Sof foyda» kartasi ham AYNAN shu obyektdan chiqadi.
  */
 export interface ChartProfitBreakdown {
@@ -27,6 +27,10 @@ export interface ChartProfitBreakdown {
   adminSalary: number;
   operatingExpenses: number;
   refunds: number;
+  /** Soliq va komissiyalar (spec 2026-10-25) — qatorlar shu bilan ham aynan yig'iladi. */
+  taxes: number;
+  /** Kiritilmagan stavkalar kalitlari; bo'sh bo'lmasa hisob to'liq emas. */
+  missingRates: string[];
   netProfit: number;
 }
 

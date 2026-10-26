@@ -78,6 +78,7 @@ export type MockStatsMethod =
   | "PAYME"
   | "UZUM"
   | "TRANSFER"
+  | "QR"
   | "BALANCE"
   | "UNKNOWN";
 

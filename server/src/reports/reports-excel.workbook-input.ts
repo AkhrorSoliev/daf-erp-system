@@ -11,6 +11,8 @@
  * contracts of the sheet builders — see reports-excel.{summary,trend}-sheet.ts.
  */
 import { ReportsService } from './reports.service';
+import type { TaxCostsService } from '../tax/tax-costs.service';
+import { sumTaxCosts } from '../tax/tax-costs';
 import type { MonthCharges } from './month-charges';
 import {
   NetProfit,
@@ -58,6 +60,7 @@ export function monthEndDate(month: string): string {
  */
 export async function periodNetProfit(
   reports: ReportsService,
+  taxCosts: TaxCostsService,
   companyId: number,
   args: {
     pl: any;
@@ -98,15 +101,23 @@ export async function periodNetProfit(
 
   if (months.length <= 1) {
     // Single-month export keeps the original single-call path exactly.
+    const month = months[0] ?? args.monthStr;
+    const taxes = await taxCosts.forMonth(
+      companyId,
+      month,
+      args.branchIds,
+      args.salaries,
+    );
     return {
       recognizedRevenue,
       np: buildNetProfit(
         args.pl,
         args.salaries,
         args.outflows,
-        months[0] ?? args.monthStr,
+        month,
         recognizedRevenue,
         withdrawals.total,
+        taxes,
       ),
     };
   }
@@ -125,6 +136,15 @@ export async function periodNetProfit(
       ),
     })),
   );
+  // Tax and fee costs over the SAME months as every other leg, each month on
+  // its own salaries (the payroll-tax leg is a share of that month's official pay).
+  const taxes = sumTaxCosts(
+    await Promise.all(
+      perMonth.map((p) =>
+        taxCosts.forMonth(companyId, p.month, args.branchIds, p.salaries),
+      ),
+    ),
+  );
   // No `month` argument: top-up gating is already applied per month inside
   // `sumMonthlySalaries`, so `fullDeserved` is the correct basis.
   return {
@@ -136,6 +156,7 @@ export async function periodNetProfit(
       undefined,
       recognizedRevenue,
       withdrawals.total,
+      taxes,
     ),
   };
 }
@@ -391,6 +412,7 @@ function toBranchRow(
     teacherSalary: own.netProfit.teacherSalary + own.netProfit.adminSalary,
     operatingExpenses: own.netProfit.operatingExpenses,
     refunds: own.netProfit.refunds,
+    taxes: own.netProfit.taxes.total,
     netProfit: own.netProfit.netProfit,
     debt: studyingDebt,
     inGroup: flow?.inGroup ?? 0,

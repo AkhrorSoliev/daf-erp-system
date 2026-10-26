@@ -134,6 +134,15 @@ describe('SettingsService', () => {
         'chat.enabled': false,
         'chat.weekMinutesActive': 60,
         'chat.weekMinutesRadio': 30,
+        'fees.app.payme': [],
+        'fees.app.click': [],
+        'fees.app.uzum': [],
+        'fees.integration': [],
+        'fees.qr': [],
+        'payroll.employeeWithholdingPercent': [],
+        'payroll.employerSocialPercent': [],
+        'tax.turnoverPercent': [],
+        'bank.turnoverTiers': [],
       });
     });
   });
@@ -242,6 +251,15 @@ describe('SettingsService', () => {
         'chat.enabled': [],
         'chat.weekMinutesActive': [],
         'chat.weekMinutesRadio': [],
+        'fees.app.payme': [],
+        'fees.app.click': [],
+        'fees.app.uzum': [],
+        'fees.integration': [],
+        'fees.qr': [],
+        'payroll.employeeWithholdingPercent': [],
+        'payroll.employerSocialPercent': [],
+        'tax.turnoverPercent': [],
+        'bank.turnoverTiers': [],
       });
     });
 

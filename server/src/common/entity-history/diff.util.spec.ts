@@ -71,3 +71,30 @@ describe('an employee balance in history (ADR-0087)', () => {
     });
   });
 });
+
+describe('an employee official salary in history (spec 2026-10-25)', () => {
+  it('records a User.officialSalary change', () => {
+    expect(
+      computeChangedFields(
+        { officialSalary: null },
+        { officialSalary: 2_000_000 },
+        'User',
+      ),
+    ).toEqual({
+      oldValues: { officialSalary: null },
+      newValues: { officialSalary: 2_000_000 },
+    });
+  });
+
+  it('hides it from a reader without salary.view, shows it to one with', () => {
+    const row = { phone: '1', officialSalary: 1, balance: 2 };
+    expect(redactHistoryValues('User', row)).toEqual({ phone: '1' });
+    expect(redactHistoryValues('User', row, true)).toEqual({
+      phone: '1',
+      officialSalary: 1,
+    });
+    expect(redactHistoryValues('Student', { officialSalary: 1 })).toEqual({
+      officialSalary: 1,
+    });
+  });
+});

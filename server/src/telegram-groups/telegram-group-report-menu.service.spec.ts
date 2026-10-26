@@ -2,6 +2,8 @@ import { Logger } from '@nestjs/common';
 import { TelegramGroupReportMenuService } from './telegram-group-report-menu.service';
 import type { ReportsService } from '../reports/reports.service';
 import { formatNumber, formatSum } from './utils/format.util';
+import { emptyTaxCosts } from '../tax/tax-costs';
+import { MISSING_RATES_WARNING } from './daily-report-group-message';
 
 function makeCtx(chatId = 111) {
   return {
@@ -412,7 +414,7 @@ describe('TelegramGroupReportMenuService', () => {
     const reportsWith = (overrides: Record<string, jest.Mock> = {}) => ({
       getMonthlyNetProfit: jest
         .fn()
-        .mockResolvedValue({ netProfit: 12_345_678 }),
+        .mockResolvedValue({ netProfit: 12_345_678, taxes: emptyTaxCosts() }),
       getMonthCharges: jest.fn().mockResolvedValue(monthCharges),
       getMonthlyExpectation: jest
         .fn()
@@ -503,7 +505,9 @@ describe('TelegramGroupReportMenuService', () => {
     };
     // The card's other reads are not what is under test: they answer plainly.
     const reportsWith = (overrides: Record<string, jest.Mock> = {}) => ({
-      getMonthlyNetProfit: jest.fn().mockResolvedValue({ netProfit: 1 }),
+      getMonthlyNetProfit: jest
+        .fn()
+        .mockResolvedValue({ netProfit: 1, taxes: emptyTaxCosts() }),
       getMonthlyExpectation: jest
         .fn()
         .mockResolvedValue({ expectedValue: 150_000_000 }),
@@ -529,6 +533,29 @@ describe('TelegramGroupReportMenuService', () => {
       );
       // The card used to print a wording of its own: «eski» alone.
       expect(text).not.toMatch(/eski (?!qarz)/);
+    });
+
+    it('prints the same warning under «Sof foyda» only when a rate is missing', async () => {
+      const missing = reportsWith({
+        getMonthlyNetProfit: jest.fn().mockResolvedValue({
+          netProfit: 5,
+          taxes: { ...emptyTaxCosts(), missingRates: ['fees.qr'] },
+        }),
+      });
+      const ctx = makeCtx();
+      await makeDeps({ reports: missing }).service.sendFinancialCard(ctx);
+      const text = ctx.reply.mock.calls[0][0] as string;
+      const lines = text.split('\n');
+      const i = lines.findIndex((l) => l.startsWith('• Sof foyda:'));
+      expect(lines[i + 1]).toBe(MISSING_RATES_WARNING);
+
+      const okCtx = makeCtx();
+      await makeDeps({ reports: reportsWith() }).service.sendFinancialCard(
+        okCtx,
+      );
+      expect(okCtx.reply.mock.calls[0][0] as string).not.toContain(
+        MISSING_RATES_WARNING,
+      );
     });
 
     it('never adds the two, and the old single «Qarzdorlar» line is gone', async () => {

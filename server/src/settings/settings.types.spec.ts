@@ -40,6 +40,15 @@ describe('SETTING_DEFINITIONS registry', () => {
         'chat.enabled',
         'chat.weekMinutesActive',
         'chat.weekMinutesRadio',
+        'fees.app.payme',
+        'fees.app.click',
+        'fees.app.uzum',
+        'fees.integration',
+        'fees.qr',
+        'payroll.employeeWithholdingPercent',
+        'payroll.employerSocialPercent',
+        'tax.turnoverPercent',
+        'bank.turnoverTiers',
       ].sort(),
     );
   });

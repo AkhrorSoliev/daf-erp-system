@@ -198,6 +198,7 @@ export class TelegramGroupStatsService {
       CLICK: 'Click',
       UZUM: 'Uzum',
       TRANSFER: "O'tkazma",
+      QR: 'QR-kod',
     };
 
     const byMethodLines = byMethod

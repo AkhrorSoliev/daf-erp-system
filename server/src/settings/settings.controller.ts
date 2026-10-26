@@ -15,6 +15,17 @@ import { CurrentUser } from '../common/decorators';
 import { Can } from '../common/permissions/access.decorators';
 import { resolveCallerBranchScope } from '../common/auth/branch-scope';
 import { SettingKey } from './settings.types';
+import { TAX_SETTING_KEYS } from '../tax/tax-rates';
+
+/**
+ * Soliq va komissiya stavkalari (spec 2026-10-25) o'z sahifasida boshqariladi:
+ * «To'lov» sahifasi ularni olmaydi ham, yozolmaydi ham (PATCH DTO oq ro'yxat).
+ */
+function withoutTaxKeys<T>(map: T): T {
+  const copy = { ...map } as Record<string, unknown>;
+  for (const key of TAX_SETTING_KEYS) delete copy[key];
+  return copy as T;
+}
 
 /**
  * `/settings` panelining "To'lov" bo'limi — `settings.payment` imkoniyati
@@ -40,7 +51,9 @@ export class SettingsController {
     @CurrentUser('companyId') companyId: number,
   ) {
     const branchId = await this.resolveReadBranchId(userId, query.branchId);
-    const settings = await this.settingsService.getMany(companyId, branchId);
+    const settings = withoutTaxKeys(
+      await this.settingsService.getMany(companyId, branchId),
+    );
     // Faqat kompaniya darajasidagi ko'rinishda (CEO, `branchId` so'ralmagan)
     // ma'noli — shu yerda qaysi filiallar o'z override'iga ega ekanini ham
     // qaytaramiz, aks holda BDning saqlagan filial qiymati CEO ekranida
@@ -48,7 +61,9 @@ export class SettingsController {
     // boshqacha ishlayotganini yashirardi).
     const branchOverrides =
       branchId == null
-        ? await this.settingsService.getBranchOverrides(companyId)
+        ? withoutTaxKeys(
+            await this.settingsService.getBranchOverrides(companyId),
+          )
         : undefined;
     return { branchId: branchId ?? null, settings, branchOverrides };
   }
@@ -123,7 +138,9 @@ export class SettingsController {
       await this.settingsService.set(companyId, key, value, userId, branchId);
     }
 
-    const settings = await this.settingsService.getMany(companyId, branchId);
+    const settings = withoutTaxKeys(
+      await this.settingsService.getMany(companyId, branchId),
+    );
     return { branchId: branchId ?? null, settings };
   }
 

@@ -179,7 +179,7 @@ export class EntityHistoryService {
     entityType: string,
     entityId: string,
     companyId: number,
-    options?: { page?: number; pageSize?: number },
+    options?: { page?: number; pageSize?: number; canViewSalary?: boolean },
     caller?: { userId: number; roles: string[] },
   ) {
     if (caller) {
@@ -231,10 +231,12 @@ export class EntityHistoryService {
         oldValues: redactHistoryValues(
           entityType,
           row.oldValues,
+          options?.canViewSalary,
         ) as typeof row.oldValues,
         newValues: redactHistoryValues(
           entityType,
           row.newValues,
+          options?.canViewSalary,
         ) as typeof row.newValues,
       })),
       total,

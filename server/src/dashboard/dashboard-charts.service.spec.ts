@@ -1,6 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import { DashboardChartsService } from './dashboard-charts.service';
 import { ROLE_ID } from '../common/auth/role-ids';
+import { emptyTaxCosts } from '../tax/tax-costs';
 import { fakePermissions } from '../common/permissions/testing';
 import type { RoleOverride } from '../common/permissions/effective-permissions';
 
@@ -18,6 +19,7 @@ const netProfit = {
   refunds: 5,
   netProfit: 50,
   netMarginPercent: 17,
+  taxes: { ...emptyTaxCosts(), total: 12, missingRates: ['fees.qr'] },
 };
 
 const flow = {
@@ -100,6 +102,8 @@ describe('DashboardChartsService.getCharts', () => {
       adminSalary: 30,
       operatingExpenses: 40,
       refunds: 5,
+      taxes: 12,
+      missingRates: ['fees.qr'],
       netProfit: 50,
     });
   });

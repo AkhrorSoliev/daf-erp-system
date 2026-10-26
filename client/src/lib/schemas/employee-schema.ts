@@ -16,6 +16,7 @@ const BRANCH_TEACHER = msg("O'qituvchi uchun kamida bitta filial tanlang");
 const BRANCH_REQUIRED = msg("Kamida bitta filial tanlang");
 const PASSWORD_NEW = msg("Yangi xodim uchun parol majburiy (kamida 4 ta belgi)");
 const PASSWORD_MIN = msg("Parol kamida 4 ta belgidan iborat bo'lishi kerak");
+const ONLY_DIGITS = msg("Faqat raqam");
 const MAIN_BRANCH_REQUIRED = msg("Bir nechta filial tanlanganda asosiy filial tanlanishi shart");
 
 const EMPLOYEE_FORM_TEXTS = new Set<string>([
@@ -30,6 +31,7 @@ const EMPLOYEE_FORM_TEXTS = new Set<string>([
   PASSWORD_NEW,
   PASSWORD_MIN,
   MAIN_BRANCH_REQUIRED,
+  ONLY_DIGITS,
 ]);
 
 /** Translates the schema's own messages; any other text (server, Zod default) is shown as it came. */
@@ -57,6 +59,8 @@ export const employeeSchema = z
     position: z.string().trim().min(2, POSITION_MIN).max(60, POSITION_MAX),
     roleIds: z.array(z.number()),
     branchIds: z.array(z.number()),
+    // The official (bank) part of the pay, so'm. Shown only to a salary.view holder.
+    officialSalary: z.string().regex(/^\d*$/, ONLY_DIGITS).optional(),
     isEdit: z.boolean(),
   })
   .superRefine((data, ctx) => {
@@ -100,5 +104,14 @@ export const employeeSchema = z
       });
     }
   });
+
+/**
+ * The number to send. An empty field leaves a new employee as it is (undefined)
+ * but clears the value of one who HAD it: 0 means «hammasi naqd».
+ */
+export function officialSalaryOf(text: string | undefined, hadValue = false): number | undefined {
+  if (text) return Number(text);
+  return hadValue ? 0 : undefined;
+}
 
 export type EmployeeFormValues = z.infer<typeof employeeSchema>;

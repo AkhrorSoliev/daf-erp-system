@@ -183,6 +183,14 @@ describe("canOpenSettingsPath — SettingsLayoutShell shu qoida bilan qaytaradi"
     expect(canOpenSettingsPath("/settings/archive", canForRoles([BRANCH_DIRECTOR]))).toBe(false);
   });
 
+  it("«Soliq va komissiyalar» (/settings/tax) — standart bo'yicha faqat CEO uchun, boshqalar URL bilan ham kirmaydi", () => {
+    expect(canOpenSettingsPath("/settings/tax", canForRoles([CEO]), true)).toBe(true);
+    for (const role of [BRANCH_DIRECTOR, ADMINISTRATOR, CASHIER, TEACHER]) {
+      expect(canOpenSettingsPath("/settings/tax", canForRoles([role]))).toBe(false);
+    }
+    expect(findSettingsItem("/settings/tax")?.permission).toBe("settings.tax");
+  });
+
   it("ko'rinadigan sahifa va uning ichki sahifalari ochiladi", () => {
     expect(canOpenSettingsPath("/settings/holidays", canForRoles([ADMINISTRATOR]))).toBe(true);
     expect(canOpenSettingsPath("/settings/courses/42", canForRoles([CASHIER, ADMINISTRATOR]))).toBe(true);

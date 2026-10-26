@@ -8,6 +8,14 @@ import { UploadService } from '../upload/upload.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { RedisService } from '../redis/redis.service';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import { fakePermissions } from '../common/permissions/testing';
+import { invalidateNetProfitCache } from '../reports/net-profit-cache';
+
+jest.mock('../reports/net-profit-cache', () => ({
+  ...jest.requireActual('../reports/net-profit-cache'),
+  invalidateNetProfitCache: jest.fn().mockResolvedValue(undefined),
+}));
 
 describe('UsersService — updateUser status/isActive sync', () => {
   let service: UsersService;
@@ -66,6 +74,7 @@ describe('UsersService — updateUser status/isActive sync', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
+        { provide: PermissionsService, useValue: fakePermissions([1]) },
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
@@ -207,6 +216,7 @@ describe('UsersService — role escalation and branch validation', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
+        { provide: PermissionsService, useValue: fakePermissions([1]) },
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
@@ -441,6 +451,7 @@ describe('UsersService — cross-company guards', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
+        { provide: PermissionsService, useValue: fakePermissions([1]) },
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
@@ -513,6 +524,7 @@ describe('UsersService — findAll companyId scoping', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
+        { provide: PermissionsService, useValue: fakePermissions([1]) },
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
@@ -697,6 +709,7 @@ describe('UsersService — updateUser branch confinement', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
+        { provide: PermissionsService, useValue: fakePermissions([1]) },
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
@@ -806,6 +819,7 @@ describe('UsersService — rolsiz xodim (lavozim bilan)', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
+        { provide: PermissionsService, useValue: fakePermissions([1]) },
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: {} },
         {
@@ -1033,6 +1047,7 @@ describe("UsersService — updateUser: rolsiz ⇒ login/parol yo'q invariantini 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
+        { provide: PermissionsService, useValue: fakePermissions([1]) },
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
@@ -1396,6 +1411,7 @@ describe('UsersService — role grant ceiling', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
+        { provide: PermissionsService, useValue: fakePermissions([1]) },
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
@@ -1702,6 +1718,7 @@ describe('UsersService — updateUiSkin', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
+        { provide: PermissionsService, useValue: fakePermissions([1]) },
         { provide: PrismaService, useValue: { user: { update } } },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
@@ -1747,6 +1764,7 @@ describe('UsersService — updateUiLocale', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
+        { provide: PermissionsService, useValue: fakePermissions([1]) },
         { provide: PrismaService, useValue: { user: { update } } },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
@@ -1777,5 +1795,212 @@ describe('UsersService — updateUiLocale', () => {
       select: { uiLocale: true },
     });
     expect(res).toEqual({ uiLocale: 'de' });
+  });
+});
+
+describe('UsersService — officialSalary (spec 2026-10-25)', () => {
+  const CEO = 1;
+  const ADMINISTRATOR = 3;
+
+  const target = {
+    id: 5,
+    firstName: 'Test',
+    lastName: 'Admin',
+    status: 'ACTIVE',
+    isActive: true,
+    companyId: 1001,
+    mainBranch: null,
+    officialSalary: null,
+    roles: [{ role: { id: 3, name: 'Administrator' } }],
+    branches: [{ branch: { id: 500, name: 'Main' } }],
+    company: { id: 1001, name: 'Test' },
+    groupTeachers: [],
+  };
+
+  let prisma: any;
+  let history: { recordUpdate: jest.Mock; recordCreate: jest.Mock };
+
+  async function build(callerRoleId: number) {
+    prisma = {
+      user: {
+        findFirst: jest.fn().mockImplementation(({ select }: any) =>
+          Promise.resolve(
+            select?.roles && !select?.status
+              ? {
+                  mainBranch: null,
+                  branches: [],
+                  roles: [{ role: { name: 'CEO' } }],
+                }
+              : target,
+          ),
+        ),
+        findUnique: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+        create: jest
+          .fn()
+          .mockImplementation(({ data }: any) =>
+            Promise.resolve({ ...target, ...data, roles: [], branches: [] }),
+          ),
+        update: jest
+          .fn()
+          .mockImplementation(({ data }: any) =>
+            Promise.resolve({ ...target, ...data }),
+          ),
+      },
+      userRole: { deleteMany: jest.fn(), createMany: jest.fn() },
+      userBranch: { deleteMany: jest.fn(), createMany: jest.fn() },
+      role: { findMany: jest.fn().mockResolvedValue([{ id: 3 }]) },
+      branch: { count: jest.fn().mockResolvedValue(1) },
+      $transaction: jest.fn((cb: any) => cb(prisma)),
+    };
+    history = { recordUpdate: jest.fn(), recordCreate: jest.fn() };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UsersService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: UploadService, useValue: { deleteFile: jest.fn() } },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide: RedisService,
+          useValue: { set: jest.fn(), get: jest.fn(), del: jest.fn() },
+        },
+        {
+          provide: PermissionsService,
+          useValue: fakePermissions([callerRoleId]),
+        },
+        {
+          provide: EntityHistoryService,
+          useValue: { ...history, recordDelete: jest.fn() },
+        },
+      ],
+    }).compile();
+    return module.get(UsersService);
+  }
+
+  it('writes officialSalary for a caller with salary.view', async () => {
+    const service = await build(CEO);
+
+    const res = await service.updateUser(
+      5,
+      { officialSalary: 2_000_000 } as any,
+      2,
+    );
+
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ officialSalary: 2_000_000 }),
+      }),
+    );
+    expect(res.officialSalary).toBe(2_000_000);
+  });
+
+  it('refuses an officialSalary write from a caller without salary.view', async () => {
+    const service = await build(ADMINISTRATOR);
+
+    await expect(
+      service.updateUser(5, { officialSalary: 2_000_000 } as any, 2),
+    ).rejects.toThrow(
+      new ForbiddenException(
+        "Rasmiy oylikni faqat oylikni ko'ra oladigan xodim o'zgartiradi",
+      ),
+    );
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('lets a caller without salary.view edit other fields but never returns officialSalary to them', async () => {
+    const service = await build(ADMINISTRATOR);
+    target.officialSalary = 1_500_000 as any;
+    try {
+      const res = await service.updateUser(
+        5,
+        { firstName: 'Renamed' } as any,
+        2,
+      );
+      expect(res).not.toHaveProperty('officialSalary');
+    } finally {
+      target.officialSalary = null;
+    }
+  });
+
+  it('records the change in the history, null before', async () => {
+    const service = await build(CEO);
+
+    await service.updateUser(5, { officialSalary: 2_000_000 } as any, 2);
+
+    const arg = history.recordUpdate.mock.calls[0][0];
+    expect(arg.oldValues.officialSalary).toBeNull();
+    expect(arg.newValues.officialSalary).toBe(2_000_000);
+  });
+
+  it('create: writes officialSalary for salary.view, refuses otherwise', async () => {
+    const dto = {
+      firstName: 'Ali',
+      lastName: 'Valiyev',
+      companyId: 1001,
+      position: 'Kassir',
+      branchIds: [500],
+      roleIds: [3],
+      password: 'abcd',
+      officialSalary: 2_000_000,
+    };
+    const ceoSvc = await build(CEO);
+    await ceoSvc.create(dto, { kind: 'user', id: 2 });
+    expect(prisma.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ officialSalary: 2_000_000 }),
+      }),
+    );
+
+    const adminSvc = await build(ADMINISTRATOR);
+    await expect(adminSvc.create(dto, { kind: 'user', id: 2 })).rejects.toThrow(
+      ForbiddenException,
+    );
+    expect(prisma.user.create).not.toHaveBeenCalled();
+  });
+
+  it('reads select officialSalary together with the balance and not otherwise', async () => {
+    const service = await build(CEO);
+    prisma.user.findMany.mockResolvedValue([]);
+    await service.findAll({} as any, 1001, null, true);
+    expect(prisma.user.findMany.mock.calls[0][0].select).toEqual(
+      expect.objectContaining({ balance: true, officialSalary: true }),
+    );
+    await service.findAll({} as any, 1001, null, false);
+    expect(prisma.user.findMany.mock.calls[1][0].select).not.toHaveProperty(
+      'officialSalary',
+    );
+  });
+
+  describe('net profit cache (officialSalary is undated)', () => {
+    const invalidate = invalidateNetProfitCache as jest.Mock;
+    beforeEach(() => invalidate.mockClear());
+
+    it('clears the company cache once, after the write, when the value changes', async () => {
+      const service = await build(CEO);
+      await service.updateUser(5, { officialSalary: 2_000_000 } as any, 2);
+      expect(invalidate).toHaveBeenCalledTimes(1);
+      expect(invalidate).toHaveBeenCalledWith(expect.anything(), 1001);
+      expect(invalidate.mock.invocationCallOrder[0]).toBeGreaterThan(
+        prisma.user.update.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('does not clear it when the value is the same or the field is omitted', async () => {
+      const service = await build(CEO);
+      target.officialSalary = 2_000_000 as any;
+      try {
+        await service.updateUser(5, { officialSalary: 2_000_000 } as any, 2);
+        await service.updateUser(5, { firstName: 'Renamed' } as any, 2);
+      } finally {
+        target.officialSalary = null;
+      }
+      expect(invalidate).not.toHaveBeenCalled();
+    });
+
+    it('treats null before and 0 after as no change', async () => {
+      const service = await build(CEO);
+      await service.updateUser(5, { officialSalary: 0 } as any, 2);
+      expect(invalidate).not.toHaveBeenCalled();
+    });
   });
 });

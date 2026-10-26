@@ -29,6 +29,7 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { roleFieldFor } from "@/lib/role-grant-ceiling";
 import { isOwnAccount, withoutOwnSignInKeys } from "@/lib/own-sign-in-keys";
 import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-permissions";
 import { useEditEmployee, type EmployeeUser } from "@/hooks/use-edit-employee";
 import { roleLabel } from "@/components/payments/salary-utils";
 import { roleTitle } from "@/components/profile/profile-roles";
@@ -38,6 +39,7 @@ import {
   TEACHER_ROLE_ID,
   employeeFormError,
   employeeSchema,
+  officialSalaryOf,
   type EmployeeFormValues,
 } from "@/lib/schemas/employee-schema";
 import { msg } from "@/i18n/msg";
@@ -94,6 +96,8 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
   // the current password is asked (ADR-0031).
   const ownAccount = isOwnAccount(employee?.id, currentUserId);
   const { submitting, setSubmitting } = useEditEmployee();
+  // The official part of the pay is pay data: the field exists only for a salary.view holder.
+  const canSeePay = useCan("salary.view");
   const [branches, setBranches] = useState<BranchOption[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(true);
 
@@ -121,6 +125,7 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
       login: employee?.login ?? "",
       position: employee?.position ?? roleLabel(employee?.roles ?? []).replace("—", ""),
       password: "",
+      officialSalary: employee?.officialSalary != null ? String(employee.officialSalary) : "",
       gender: (employee?.gender as "MALE" | "FEMALE" | "") ?? "",
       status: employee?.status ?? "ACTIVE",
       mainBranch: employee?.mainBranch ? String(employee.mainBranch) : "",
@@ -200,6 +205,10 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
       if (roleIds.length > 0) {
         if (values.login) payload.login = values.login;
         if (values.password) payload.password = values.password;
+      }
+      if (canSeePay) {
+        const officialSalary = officialSalaryOf(values.officialSalary, !!employee?.officialSalary);
+        if (officialSalary !== undefined) payload.officialSalary = officialSalary;
       }
       if (values.gender) payload.gender = values.gender;
       if (values.mainBranch) payload.mainBranch = Number(values.mainBranch);
@@ -363,6 +372,26 @@ export function EditEmployeeForm({ employee, onClose, onSaved, formId }: EditEmp
             </p>
           )}
         </div>
+
+        {canSeePay && (
+          <div className="space-y-1.5">
+            <Label htmlFor="officialSalary">{t("Rasmiy oylik (so'm)")}</Label>
+            <Input
+              id="officialSalary"
+              inputMode="numeric"
+              placeholder="0"
+              {...form.register("officialSalary")}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t("Bank orqali beriladigan qism. Qolgani naqd.")}
+            </p>
+            {form.formState.errors.officialSalary && (
+              <p className="text-xs text-destructive">
+                {employeeFormError(t, form.formState.errors.officialSalary.message)}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Roles — toggles, a read-only list, or nothing (roleFieldFor) */}
         {roleField.mode === "read-only" ? (

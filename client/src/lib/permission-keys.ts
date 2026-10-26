@@ -69,6 +69,7 @@ export const PERMISSION_KEYS = [
   "courses.create",
   "settings.branches",
   "settings.payment",
+  "settings.tax",
   "settings.telegram-groups",
   "settings.absence-pause",
   "telegram.announce",

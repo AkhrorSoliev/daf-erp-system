@@ -92,6 +92,7 @@ const COMPOSITION: ProfitComposition = {
   staff: { total: 13_410_000 },
   expenses: { total: 11_340_000 },
   refunds: 450_000,
+  taxes: { providerFees: 0, employerSocialTax: 0, turnoverTax: 0, bankFees: 0, total: 0, missingRates: [] },
   forecast: { expectedNetProfit: 52_200_000 },
 };
 
@@ -236,6 +237,22 @@ describe("«Qanday hisoblandi»", () => {
 
     expect(lines.reduce((s, a) => s + a, 0)).toBe(amountAfter(text, "Foyda"));
     expect(text).not.toContain("Balansdan yechib olingan");
+  });
+
+  it("warns about a hand-entered tax only beside an automatic turnover tax", () => {
+    const warning = "Bu oyda qo'lda yozilgan soliq xarajati bor";
+    const withTaxes = (turnoverTax: number, manualTaxExpenses?: number): ProfitComposition => ({
+      ...COMPOSITION,
+      taxes: { ...COMPOSITION.taxes!, turnoverTax, manualTaxExpenses },
+    });
+    const breakdown = (composition: ProfitComposition) =>
+      render(createElement(ProfitBreakdown, { month: "2026-10", composition }));
+
+    expect(breakdown(withTaxes(4_000_000, 1_500_000))).toContain(`${warning}: ${money(1_500_000)}.`);
+    expect(breakdown(withTaxes(4_000_000, 0))).not.toContain(warning);
+    expect(breakdown(withTaxes(0, 1_500_000))).not.toContain(warning);
+    // An older server sends no field at all.
+    expect(breakdown(withTaxes(4_000_000, undefined))).not.toContain(warning);
   });
 
   it("says the teacher pay matches the Ish haqi page from 2026-07 only, and only when it was computed", () => {

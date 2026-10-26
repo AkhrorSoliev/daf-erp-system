@@ -43,6 +43,7 @@ export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   CLICK: msg("Click"),
   UZUM: msg("Uzum"),
   TRANSFER: msg("O'tkazma"),
+  QR: msg("QR-kod"),
 };
 
 export interface StudentTransaction {

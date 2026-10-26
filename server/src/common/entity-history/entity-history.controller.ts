@@ -3,10 +3,14 @@ import { EntityHistoryService } from './entity-history.service';
 import { HistoryQueryDto } from './dto/history-query.dto';
 import { CurrentUser } from '../decorators';
 import { Can } from '../permissions/access.decorators';
+import { PermissionsService } from '../permissions/permissions.service';
 
 @Controller('entity-history')
 export class EntityHistoryController {
-  constructor(private entityHistoryService: EntityHistoryService) {}
+  constructor(
+    private entityHistoryService: EntityHistoryService,
+    private permissions: PermissionsService,
+  ) {}
 
   // Every page with a history tab lists its own capability, so turning one
   // page off never breaks another's history.
@@ -20,7 +24,7 @@ export class EntityHistoryController {
     'settings.branches',
     'leads.view',
   )
-  getHistory(
+  async getHistory(
     @Param('entityType') entityType: string,
     @Param('entityId') entityId: string,
     @Query() query: HistoryQueryDto,
@@ -35,6 +39,8 @@ export class EntityHistoryController {
       {
         page: query.page,
         pageSize: query.pageSize,
+        // An employee's official salary is pay data (`User` history only).
+        canViewSalary: await this.permissions.has(userId, 'salary.view'),
       },
       { userId, roles },
     );

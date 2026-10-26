@@ -22,6 +22,7 @@ const METHOD_ORDER: MockStatsMethod[] = [
   PaymentMethod.PAYME,
   PaymentMethod.UZUM,
   PaymentMethod.TRANSFER,
+  PaymentMethod.QR,
   'BALANCE',
   'UNKNOWN',
 ];

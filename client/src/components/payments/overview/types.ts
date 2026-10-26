@@ -94,6 +94,17 @@ export interface ProfitComposition {
   staff: { total: number };
   expenses: { total: number };
   refunds: number;
+  /** Soliq va komissiyalar — netProfit ularni allaqachon ayirgan. Eski serverda/keshda yo'q. */
+  taxes?: {
+    providerFees: number;
+    employerSocialTax: number;
+    turnoverTax: number;
+    bankFees: number;
+    total: number;
+    missingRates: string[];
+    /** Shu oyda qo'lda yozilgan «Soliqlar» xarajati (avtomatik soliq bilan ikki marta sanalmasin). Eski serverda yo'q. */
+    manualTaxExpenses?: number;
+  };
   /** A running month only. */
   forecast: { expectedNetProfit: number } | null;
 }

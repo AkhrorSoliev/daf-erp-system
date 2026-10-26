@@ -19,8 +19,8 @@ import { PriceInput } from "@/components/ui/price-input";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { msg } from "@/i18n/msg";
 import { useT } from "@/i18n/context";
+import { paymentMethodLabel } from "./overview/overview-math";
 import { requestDueLine, requestOpenedText } from "./refunds/refunds-format";
 import { invalidateRefunds } from "./refunds/refunds-queries";
 import type { RefundRowView } from "./refunds/refunds-types";
@@ -59,19 +59,6 @@ interface Props {
   studentName: string;
   onSuccess?: () => void;
 }
-
-const refundMethods = [
-  { value: "CASH", label: msg("Naqd") },
-  { value: "TRANSFER", label: msg("Bank o'tkazmasi") },
-  { value: "PAYME", label: msg("Payme") },
-  { value: "CLICK", label: msg("Click") },
-  { value: "UZUM", label: msg("Uzum") },
-];
-
-const methodLabel = (value: string, t: (source: string) => string) => {
-  const known = refundMethods.find((m) => m.value === value);
-  return known ? t(known.label) : value;
-};
 
 export function RefundDialog({
   open,
@@ -212,7 +199,7 @@ export function RefundDialog({
                           new Date(preview.lastPayment.paidAt),
                           "dd.MM.yyyy",
                         )}{" "}
-                        &middot; {methodLabel(preview.lastPayment.method, t)}
+                        &middot; {paymentMethodLabel(preview.lastPayment.method, t)}
                       </span>
                     </span>
                   </div>

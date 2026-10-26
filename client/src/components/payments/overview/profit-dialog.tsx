@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useCan } from "@/hooks/use-permissions";
 import { useT } from "@/i18n/context";
 import { monthShort } from "@/components/payments/salary-utils";
 import { FULL_TEACHER_PAY_MONTH, profitLines, som } from "./overview-math";
@@ -49,6 +51,10 @@ export function ProfitDialog({
  */
 export function ProfitBreakdown({ month, composition }: { month: string; composition: ProfitComposition }) {
   const t = useT();
+  const canEditRates = useCan("settings.tax");
+  const missing = composition.taxes?.missingRates.length ?? 0;
+  const manualTax = composition.taxes?.manualTaxExpenses ?? 0;
+  const doubleTax = manualTax > 0 && (composition.taxes?.turnoverTax ?? 0) > 0;
   return (
     <div className="space-y-2 text-sm">
       {profitLines(composition, t).map((line) => (
@@ -61,6 +67,26 @@ export function ProfitBreakdown({ month, composition }: { month: string; composi
         <span>{t("Foyda")}</span>
         <span className="tabular-nums">{som(composition.netProfit, t)}</span>
       </div>
+      {missing > 0 && (
+        <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+          {t("Hisob to'liq emas: {n} ta stavka kiritilmagan", { n: missing })}
+          {canEditRates && (
+            <>
+              {" "}
+              <Link href="/settings/tax" className="font-medium underline">
+                {t("Stavkalarni kiritish →")}
+              </Link>
+            </>
+          )}
+        </p>
+      )}
+      {doubleTax && (
+        <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+          {t("Bu oyda qo'lda yozilgan soliq xarajati bor: {amount}. Aylanma solig'i avtomatik ayrilgan — bir xil soliq ikki marta hisoblanmasin.", {
+            amount: som(manualTax, t),
+          })}
+        </p>
+      )}
       {month >= FULL_TEACHER_PAY_MONTH && composition.teacherSalaryBasis === "hisoblangan" && (
         <p className="text-xs text-muted-foreground">{t("Ustozlar oyligi — Ish haqi sahifasidagi jami bilan bir xil")}</p>
       )}

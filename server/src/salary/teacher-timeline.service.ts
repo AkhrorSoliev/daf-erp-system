@@ -191,8 +191,8 @@ export class TeacherTimelineService {
           action: e.action,
           // An old row may still carry the employee's salary balance
           // (ADR-0087); `teachers.view` is not a salary key.
-          oldValues: redactHistoryValues('User', e.oldValues),
-          newValues: redactHistoryValues('User', e.newValues),
+          oldValues: redactHistoryValues('User', e.oldValues, showSalary),
+          newValues: redactHistoryValues('User', e.newValues, showSalary),
         },
       });
     }

@@ -63,6 +63,7 @@ function data(over: Partial<DailyReportData> = {}): DailyReportData {
     mtdCashNet: 120_000_000,
     attribution: null,
     canonicalNet: 32_000_000,
+    canonicalMissingRates: [],
     expectedValue: null,
     monthCharges: null,
     salary: null,

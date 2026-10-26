@@ -4,6 +4,7 @@ import {
   dayMonth,
   isMonthlyBillingMonth,
   monthRange,
+  paymentMethodLabel,
   profitLines,
   som,
 } from "./overview-math";
@@ -60,6 +61,7 @@ describe("profitLines", () => {
     staff: { total: 13_410_000 },
     expenses: { total: 12_420_000 },
     refunds: 450_000,
+    taxes: { providerFees: 0, employerSocialTax: 0, turnoverTax: 0, bankFees: 0, total: 0, missingRates: [] },
   };
 
   it("adds up to the net profit, in the dialog's order", () => {
@@ -85,6 +87,34 @@ describe("profitLines", () => {
     );
   });
 
+  it("adds the four tax lines after refunds, each only when it is not 0", () => {
+    const taxes = { providerFees: 100, employerSocialTax: 200, turnoverTax: 300, bankFees: 40, total: 640, missingRates: [] };
+    const lines = profitLines({ ...composition, taxes });
+    expect(lines.slice(-4)).toEqual([
+      { label: "To'lov komissiyasi", amount: -100 },
+      { label: "Ijtimoiy soliq", amount: -200 },
+      { label: "Aylanma solig'i", amount: -300 },
+      { label: "Bank xarajati", amount: -40 },
+    ]);
+    const some = profitLines({ ...composition, taxes: { ...taxes, providerFees: 0, bankFees: 0, total: 500 } });
+    expect(some.map((l) => l.label)).not.toContain("To'lov komissiyasi");
+    expect(some.map((l) => l.label)).toContain("Aylanma solig'i");
+  });
+
+  it("reads a composition without taxes (older server or cache) as the old lines, without throwing", () => {
+    const { taxes: _taxes, ...old } = composition;
+    void _taxes;
+    const lines = profitLines(old);
+    expect(lines.map((l) => l.label)).toEqual([
+      "O'tilgan darslar puli",
+      "Balansdan yechib olingan",
+      "Ustozlar oyligi",
+      "Xodimlar oyligi",
+      "Boshqa xarajatlar",
+      "Qaytarilgan pul",
+    ]);
+  });
+
   it("never prints «-0», for som(-0) or a zero leg of the equation", () => {
     expect(som(-0)).toBe("0 so'm");
     // A zero cost leg is negated into -0 by profitLines.
@@ -94,5 +124,12 @@ describe("profitLines", () => {
     expect(printed).toContain("Xodimlar oyligi 0 so'm");
     expect(printed).toContain("Boshqa xarajatlar 0 so'm");
     expect(printed.join(" | ")).not.toContain("-0 so'm");
+  });
+});
+
+describe("paymentMethodLabel", () => {
+  it("names a QR payment, and prints an unknown code as it is", () => {
+    expect(paymentMethodLabel("QR")).toBe("QR-kod");
+    expect(paymentMethodLabel("QRX")).toBe("QRX");
   });
 });

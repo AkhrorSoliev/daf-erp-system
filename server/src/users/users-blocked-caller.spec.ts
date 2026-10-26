@@ -6,6 +6,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { UploadService } from '../upload/upload.service';
 import { UsersService } from './users.service';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import { fakePermissions } from '../common/permissions/testing';
 
 /**
  * The role ceiling reads the caller from the database (ADR-0026). A blocked
@@ -113,6 +115,7 @@ describe('UsersService — a blocked caller grants no role', () => {
     const module = await Test.createTestingModule({
       providers: [
         UsersService,
+        { provide: PermissionsService, useValue: fakePermissions([1]) },
         { provide: PrismaService, useValue: prisma },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },

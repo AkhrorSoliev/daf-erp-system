@@ -7,6 +7,20 @@ import type { Yangilik } from "./turlar";
 export const yangiliklar: Yangilik[] = [
   {
     sana: "2026-10-25",
+    sarlavha: "Sozlamalar → Soliq va komissiyalar: sof foydadan ayriladi",
+    matn: "Sozlamalar → «Soliq va komissiyalar» sahifasida to'lov komissiyasi (Payme, Click, Uzum ilovasi orqali, integratsiya orqali, QR-kod), oylikdan ushlanma va korxona ijtimoiy solig'i, hisob raqamga tushgan puldan aylanma solig'i va bank xarajati stavkalarini kiritasiz. Har stavka qaysi oydan kuchga kirishi bilan yoziladi, shuning uchun stavka o'zgarsa o'tgan oylar o'zgarmaydi. Kiritilgan stavkalar sof foydadan o'zi ayriladi. «Foyda tarkibi»da va Excel «Sof foyda» varag'ida to'rtta alohida qator chiqadi (to'lov komissiyasi, ijtimoiy soliq, aylanma solig'i, bank xarajati); bosh panelda bitta jamlangan «Soliq va komissiyalar» qatori turadi; Telegram hisobotlarida sof foyda ko'rsatiladi. Qaysi stavka kiritilmagan bo'lsa, hisob 0 bilan davom etadi: «Foyda tarkibi»da, Excelda va Telegramda «Hisob to'liq emas» ogohlantirishi chiqadi. Avtomatik hisoblanadigan soliqlarni xarajatga qo'lda yozmang — ikki marta sanaladi. Xodim profilida yangi «Rasmiy oylik (so'm)» maydoni bor; oylik berishda oynada rasmiy qism, budjetga ketadigan qism va xodim qo'liga beriladigan summa ko'rinadi. Sahifani sukut bo'yicha faqat CEO ko'radi; CEO uni «Ruxsatlar» orqali boshqalarga bera oladi.",
+    rollar: [1, 2],
+    sahifa: { bolim: "xarajatlar", sahifa: "xarajatlar-sahifasi" },
+  },
+  {
+    sana: "2026-10-25",
+    sarlavha: "To'lov qabul qilishda yangi usul: QR-kod",
+    matn: "«To'lov qayd qilish» oynasida yangi usul bor: «QR-kod». O'quvchi bank QR-kodi orqali to'lab, chekni ko'rsatsa, to'lovni shu usul bilan yozing. U naqd emas, bank hisobiga tushgan pul sanaladi; to'lovlar ro'yxati, o'quvchi kartasi va hisobotlarda «QR-kod» deb ko'rinadi. Komissiya stavkasi Sozlamalar → «Soliq va komissiyalar» da alohida turadi.",
+    rollar: [1, 2, 3, 5],
+    sahifa: { bolim: "tolovlar", sahifa: "tolov-qayd-qilish" },
+  },
+  {
+    sana: "2026-10-25",
     sarlavha: "«Auditoriya» sahifasi soddalashtirildi",
     matn: "Hisobotlar → «Auditoriya» endi to'rt blokdan iborat va faqat sonlar hamda jadvallarni ko'rsatadi. Birinchi blok: tizimda jami o'quvchi, ulardan faol (dars qilayotgan), faollardan jinsi aniq, so'ng erkak, ayol va jinsi noma'lumlar soni. Keyingi ikki blok — yo'nalish (guruh darajasi: A1, A2, B1…) va kurs bo'yicha jadval: faol, erkak, ayol, noma'lum va jinsi ma'lum bo'lganlar ulushi. Oxirgi blok — oxirgi 12 oyda ketganlar yosh guruhlari bo'yicha: hozir o'qiyotganlar, ketganlar va ketish ulushi. Avvalgi sahifadagi yosh guruhlari, o'rtacha yosh va filial jadvali olib tashlandi.",
     rollar: [1, 2],

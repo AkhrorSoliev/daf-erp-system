@@ -22,7 +22,6 @@ import {
 import api from "@/lib/api";
 import { useT } from "@/i18n/context";
 import { useAuth } from "@/hooks/use-auth";
-import { PossibleDeductionsInfo } from "@/components/payments/possible-deductions-info";
 import {
   breakdownRateLabel,
   type RateBasis,
@@ -187,8 +186,6 @@ export function TeacherSalaryClient() {
           )}
         </CardContent>
       </Card>
-
-      <PossibleDeductionsInfo variant="teacher" />
     </div>
   );
 }

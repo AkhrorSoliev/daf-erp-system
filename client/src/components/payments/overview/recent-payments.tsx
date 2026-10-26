@@ -28,6 +28,7 @@ const methodColors: Record<string, string> = {
   CLICK: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
   UZUM: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
   TRANSFER: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
+  QR: "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-300",
 };
 
 /** The ten latest payments in the branch scope. */

@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ReportsService } from './reports.service';
+import { TaxCostsService } from '../tax/tax-costs.service';
+import { emptyTaxCosts } from '../tax/tax-costs';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { ReportsOverviewService } from './reports-overview.service';
@@ -112,6 +114,7 @@ function mockTeacherChangeDepartures(prisma: any) {
 
 describe('ReportsService', () => {
   let service: ReportsService;
+  let taxCosts: { forMonth: jest.Mock };
   let prisma: any;
   let redis: any;
 
@@ -192,9 +195,11 @@ describe('ReportsService', () => {
       getActiveHolidaysInRange: jest.fn().mockResolvedValue([]),
     };
 
+    taxCosts = { forMonth: jest.fn().mockResolvedValue(emptyTaxCosts()) };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ReportsService,
+        { provide: TaxCostsService, useValue: taxCosts },
         ReportsOverviewService,
         ReportsAttendanceAnalyticsService,
         ReportsFinancialService,
@@ -872,6 +877,49 @@ describe('ReportsService', () => {
       expect(out.netProfit.netProfit).toBe(60_000);
     });
 
+    it('subtracts the tax and fee costs of the month (spec 2026-10-25)', async () => {
+      const svc: any = service;
+      const salaries = { totals: { covered: 70_000, fullDeserved: 70_000 } };
+      jest
+        .spyOn(svc.financial, 'valueHeldLessons')
+        .mockResolvedValue([{ value: 100_000 }]);
+      jest
+        .spyOn(svc.financial, 'getPeriodOutflows')
+        .mockResolvedValue({ refunds: 0, writeOffs: 0, providerFees: 0 });
+      jest.spyOn(svc, 'getSalaryMonthly').mockResolvedValue(salaries);
+      jest.spyOn(svc, 'getProfitLoss').mockResolvedValue({
+        costOfServices: {},
+        operatingExpenses: { adminSalaries: 0, byCategory: [] },
+      });
+      jest
+        .spyOn(svc, 'getBalanceWithdrawals')
+        .mockResolvedValue({ total: 0, teacherCredited: 0, students: [] });
+      const taxes = {
+        ...emptyTaxCosts(),
+        providerFees: 2_000,
+        turnoverTax: 3_000,
+        total: 5_000,
+      };
+      taxCosts.forMonth.mockResolvedValue(taxes);
+
+      const out = await svc.assembleMonthlyNetProfit(1001, {
+        month: '2026-10',
+        branchIds: [1],
+        performedById: 10001,
+      });
+
+      expect(taxCosts.forMonth).toHaveBeenCalledWith(
+        1001,
+        '2026-10',
+        [1],
+        salaries,
+      );
+      expect(out.taxes).toBe(taxes);
+      expect(out.netProfit.taxes).toBe(taxes);
+      // 100 000 − 70 000 payroll − 5 000 tax and fees.
+      expect(out.netProfit.netProfit).toBe(25_000);
+    });
+
     /**
      * A2.8. The payroll leg ran the director's branch scope as `mainBranch`
      * alone, so a director attached to branches 1 and 2 who picked branch 2 got
@@ -963,6 +1011,7 @@ describe('ReportsService', () => {
       });
       jest.spyOn(svc, 'getMonthlyNetProfit').mockResolvedValue({
         teacherSalary: 95_834_547,
+        taxes: emptyTaxCosts(),
         adminSalary: 0,
         operatingExpenses: 41_773_000,
         refunds: 200_000,
@@ -994,6 +1043,7 @@ describe('ReportsService', () => {
         });
       jest.spyOn(svc, 'getMonthlyNetProfit').mockResolvedValue({
         teacherSalary: 0,
+        taxes: emptyTaxCosts(),
         adminSalary: 0,
         operatingExpenses: 0,
         refunds: 0,
@@ -1080,10 +1130,10 @@ describe('ReportsService', () => {
       );
 
       expect(redis.get).toHaveBeenCalledWith(
-        'rpt:np:v5:1001:3,7:u10001:2026-08',
+        'rpt:np:v6:1001:3,7:u10001:2026-08',
       );
       expect(redis.setex).toHaveBeenCalledWith(
-        'rpt:np:v5:1001:3,7:u10001:2026-08',
+        'rpt:np:v6:1001:3,7:u10001:2026-08',
         expect.any(Number),
         '4200000',
       );
@@ -1111,7 +1161,7 @@ describe('ReportsService', () => {
       // Earlier month: served from the cache, nothing computed for it.
       expect(rows[0]).toMatchObject({ profit: 1111, profitBasis: 'kanonik' });
       expect(redis.get).toHaveBeenCalledWith(
-        'rpt:np:v5:1001:all:u10001:2026-08',
+        'rpt:np:v6:1001:all:u10001:2026-08',
       );
       // Anchor month: the live figure, the cache untouched for its key.
       expect(rows[1]).toMatchObject({
@@ -1125,7 +1175,7 @@ describe('ReportsService', () => {
         performedById: 10001,
       });
       expect(redis.get).not.toHaveBeenCalledWith(
-        'rpt:np:v5:1001:all:u10001:2026-09',
+        'rpt:np:v6:1001:all:u10001:2026-09',
       );
       expect(redis.setex).not.toHaveBeenCalled();
     });

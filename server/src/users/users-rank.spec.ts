@@ -6,6 +6,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { UploadService } from '../upload/upload.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import { fakePermissions } from '../common/permissions/testing';
 
 /**
  * `PATCH /users/:id` and `DELETE /users/:id` answer to the rank rule
@@ -105,6 +107,7 @@ describe('UsersService — rank rule on account writes', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
+        { provide: PermissionsService, useValue: fakePermissions([1]) },
         { provide: PrismaService, useValue: prisma },
         // Written when a status change blocks or unblocks the account (ADR-0028).
         { provide: RedisService, useValue: { set: jest.fn(), del: jest.fn() } },

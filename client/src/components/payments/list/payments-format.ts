@@ -63,5 +63,6 @@ export const METHOD_FILTER: { value: string; label: string }[] = [
   { value: "CLICK", label: msg("Click") },
   { value: "PAYME", label: msg("Payme") },
   { value: "TRANSFER", label: msg("O'tkazma") },
+  { value: "QR", label: msg("QR-kod") },
   { value: "UZUM", label: msg("Uzum") },
 ];

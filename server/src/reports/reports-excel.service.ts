@@ -48,6 +48,7 @@ import {
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
 import { tashkentMonthKey } from '../common/date/tashkent';
+import { TaxCostsService } from '../tax/tax-costs.service';
 
 export interface FinancialExcelQuery {
   /**
@@ -112,7 +113,10 @@ export interface FinancialExcelQuery {
  */
 @Injectable()
 export class ReportsExcelService {
-  constructor(private reports: ReportsService) {}
+  constructor(
+    private reports: ReportsService,
+    private taxCosts: TaxCostsService,
+  ) {}
 
   async generate(
     companyId: number,
@@ -254,6 +258,7 @@ export class ReportsExcelService {
     const rangeEnd = query.endDate ?? `${monthStr}-31`;
     const { np, recognizedRevenue } = await periodNetProfit(
       this.reports,
+      this.taxCosts,
       companyId,
       {
         pl,

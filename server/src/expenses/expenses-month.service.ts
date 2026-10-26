@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { TaxSettingsService } from '../tax/tax-settings.service';
+import { rateForMonth } from '../tax/tax-rates';
 import { PrismaService } from '../prisma/prisma.service';
 import { addMonthsToMonthKey, tashkentMonthKey } from '../common/date/tashkent';
 import {
@@ -25,7 +27,12 @@ import {
  */
 @Injectable()
 export class ExpensesMonthService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(ExpensesMonthService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private taxSettings: TaxSettingsService,
+  ) {}
 
   async monthSummary(
     companyId: number,
@@ -35,6 +42,18 @@ export class ExpensesMonthService {
   ): Promise<MonthSummary> {
     const month = parseExpenseMonth(oy, now);
     const isCurrentMonth = month === tashkentMonthKey(now);
+    // Aylanma solig'i stavkasi kuchda bo'lsa soliq avtomatik hisoblanadi — «yozilmagan» demaymiz.
+    let skipTaxes = false;
+    if (isCurrentMonth) {
+      try {
+        const book = await this.taxSettings.loadRates(companyId);
+        skipTaxes =
+          rateForMonth(book.rates['tax.turnoverPercent'], month) !== null;
+      } catch (e) {
+        // Sozlama o'qilmasa xarajatlar sahifasi yiqilmasin: ogohlantirish avvalgidek.
+        this.logger.warn(`Tax rates not read, tax gap kept: ${e}`);
+      }
+    }
     const [thisMonth, lastMonth, branches] = await Promise.all([
       this.loadRows(companyId, branchIds, month),
       this.loadRows(companyId, branchIds, addMonthsToMonthKey(month, -1)),
@@ -71,7 +90,7 @@ export class ExpensesMonthService {
       lastMonthTotal: summarize(lastMonth).total,
       byCategory: buildCategoryRows(thisMonth, lastMonth, isCurrentMonth),
       missing: isCurrentMonth
-        ? missingByBranch(lastMonth, thisMonth, names).filter(
+        ? missingByBranch(lastMonth, thisMonth, names, { skipTaxes }).filter(
             (m) => !closed.has(m.branchId),
           )
         : [],

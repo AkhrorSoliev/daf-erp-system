@@ -45,6 +45,7 @@ import { ExpensesService } from '../expenses/expenses.service';
 import { SalaryPaymentService } from '../salary/salary-payment.service';
 import { SalaryService } from '../salary/salary.service';
 import { PaymentsDebtorsService } from '../payments/payments-debtors.service';
+import { TaxCostsService } from '../tax/tax-costs.service';
 
 // Shared shape for the Excel report's period + branch scope.
 export interface ReportScopeQuery {
@@ -84,6 +85,7 @@ export class ReportsService {
     private expectation: ReportsExpectationService,
     private expectationHistory: ReportsExpectationHistoryService,
     private studentFlow: ReportsStudentFlowService,
+    private taxCosts: TaxCostsService,
   ) {}
 
   // Excel financial report — line-item + reconciliation data sources. Kept on
@@ -144,6 +146,7 @@ export class ReportsService {
    *   dars tushumi (recognized — lessons held this month)
    *   − ustoz oyligi (covered + center top-up gap, gated from TOPUP_EFFECTIVE_MONTH)
    *   − admin oyligi − operatsion xarajatlar (avanssiz) − qaytarishlar
+   *   − soliq va komissiyalar
    *   = SOF FOYDA
    *
    * Each month is isolated to its own lessons; late payments recognize in the
@@ -225,6 +228,14 @@ export class ReportsService {
         this.getBalanceWithdrawals(companyId, { months: [month], branchIds }),
       ]);
     const recognizedRevenue = lessons.reduce((sum, l) => sum + l.value, 0);
+    // Sequential after `salaries`: the payroll-tax leg is a share of the
+    // official salary, so `forMonth` needs it.
+    const taxes = await this.taxCosts.forMonth(
+      companyId,
+      month,
+      branchIds,
+      salaries,
+    );
     return {
       month,
       lessons,
@@ -232,6 +243,7 @@ export class ReportsService {
       profitLoss,
       outflows,
       withdrawals,
+      taxes,
       netProfit: buildNetProfit(
         profitLoss,
         salaries,
@@ -239,6 +251,7 @@ export class ReportsService {
         month,
         recognizedRevenue,
         withdrawals.total,
+        taxes,
       ),
     };
   }

@@ -33,7 +33,7 @@ Moliyaviy yozuvlar **hech qachon o'chirilmaydi yoki tahrir qilinmaydi**. Xatolik
 
 | Enum | Qiymatlari | Ishlatilishi |
 |------|-----------|--------------|
-| `PaymentMethod` | CASH, PAYME, CLICK, UZUM, TRANSFER | To'lov usuli |
+| `PaymentMethod` | CASH, PAYME, CLICK, UZUM, TRANSFER, **QR** | To'lov usuli |
 | `PaymentStatus` | PENDING, COMPLETED, FAILED, REFUNDED, CANCELLED, **REVERSED** | To'lov holati |
 | `PaymentSource` | ADMIN_MANUAL, STUDENT_PORTAL, GATEWAY_WEBHOOK, MANUAL_ATTACH | To'lov manbai |
 | `TransactionType` | PAYMENT, LESSON_DEDUCTION, LESSON_CONSUMPTION, INITIAL_BALANCE, REFUND, SALARY_ACCRUAL, SALARY_PAYMENT, EXPENSE, ADJUSTMENT, TAX, BALANCE_WITHDRAWAL, DISCOUNT_ADJUSTMENT, MOCK_EXAM_FEE, DEBT_WRITE_OFF | Tranzaksiya turi |
@@ -200,9 +200,9 @@ Faqat PERCENTAGE va FIXED_PER_STUDENT turidagi o'qituvchilar uchun.
 
 **TEACHER_ADVANCE xususiyati:** Bu kategoriya avans sifatida beriladi va oylik hisoblashda xodimning oylik summasidan avtomatik ushlab qolinadi — faqat sanasi davr oxiridan oldingi avans o'sha oy oyligidan ushlanadi, oylikka sig'maganlari keyingi oyga o'tadi (`salary-calculation.service.ts → applyPendingAdvances()`, `planAdvanceNetting`, ADR-0082).
 
-#### Soliq — hisoblanmaydi
+#### Soliq va komissiyalar
 
-`CompanyTaxConfig` modeli, `/salary/tax-config` endpointlari va «Soliq stavkasi» oynasi olib tashlangan. Tizim soliqni hisoblamaydi va hech qaysi to'lovdan ushlamaydi. Ehtimoliy ushlanmalar (ustoz oyligidan 12%, markaz tomonidan ustoz oyligiga 12%, markaz oylik tushumidan 4%, Click/Payme/Uzum har to'lovdan 2%) oylik sahifasida faqat ma'lumot uchun statik izoh (`possible-deductions-info.tsx`) — saqlanmaydi, yig'ilmaydi, hech narsadan ayirilmaydi. Markazning o'zi to'lagan soliq — oddiy xarajat (`Expense`), soliq hisobi emas.
+`CompanyTaxConfig` modeli, `/salary/tax-config` endpointlari va «Soliq stavkasi» oynasi olib tashlangan. Soliq va to'lov komissiyasi stavkalari endi Sozlamalar → «Soliq va komissiyalar» sahifasida kiritiladi va sof foydadan avtomatik ayriladi (ADR-0130). Eski statik «ehtimoliy ushlanmalar» izohi (`possible-deductions-info.tsx`) olib tashlangan. Markazning o'zi to'lagan soliq — oddiy xarajat (`Expense`).
 
 ---
 
@@ -703,7 +703,7 @@ Skeleton implementatsiya mavjud (`uzum.service.ts`).
 - [x] Payme integratsiya (Merchant API)
 - [x] Click integratsiya (SHOP-API)
 - [ ] Uzum integratsiya
-- [ ] `providerFee` ni P&L hisobotiga kiritish
+- [x] `providerFee` ni P&L hisobotiga kiritish (ADR-0130: komissiya sof foydadan ayriladi)
 - [ ] Check/kvitansiya chiqarish tizimi
 - [ ] Shartnoma PDF generatsiya
 - [ ] Filial bo'yicha alohida balans hisobi

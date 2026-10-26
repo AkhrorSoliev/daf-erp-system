@@ -10,6 +10,10 @@ import { buildDebtSplitLines } from './utils/debt-split-lines.util';
 import { buildIncomeSplitLines } from './utils/income-split.util';
 import { buildMonthChargesLines } from './utils/month-charges-lines.util';
 
+/** «Sof foyda» ostidagi ogohlantirish — 21:00 hisobot va rm:cfin kartasi bitta matn ishlatadi. */
+export const MISSING_RATES_WARNING =
+  "⚠️ Hisob to'liq emas: soliq stavkasi kiritilmagan";
+
 const WEEKDAYS_UZ = [
   'Yakshanba',
   'Dushanba',
@@ -39,8 +43,9 @@ const METHOD_LABELS: Record<string, string> = {
   CLICK: 'Click',
   UZUM: 'Uzum',
   TRANSFER: "O'tkazma",
+  QR: 'QR-kod',
 };
-const METHOD_ORDER = ['CASH', 'PAYME', 'CLICK', 'UZUM', 'TRANSFER'];
+const METHOD_ORDER = ['CASH', 'PAYME', 'CLICK', 'UZUM', 'TRANSFER', 'QR'];
 
 export function buildMethodLine(
   byMethod: Array<{ method: string; _sum: { amount: number | null } }>,
@@ -166,6 +171,9 @@ export function renderGroupMessage(d: DailyReportData): string {
   }
   if (d.canonicalNet !== null) {
     lines.push(`• Sof foyda: <b>${formatSignedSum(d.canonicalNet)}</b>`);
+    if (d.canonicalMissingRates.length > 0) {
+      lines.push(MISSING_RATES_WARNING);
+    }
     lines.push(
       `• Kassa harakati (oyliksiz): <b>${formatSignedSum(d.mtdCashNet)}</b>`,
     );

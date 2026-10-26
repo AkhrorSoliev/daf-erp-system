@@ -5,6 +5,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { UploadService } from '../upload/upload.service';
 import { UsersService } from './users.service';
+import { PermissionsService } from '../common/permissions/permissions.service';
+import { fakePermissions } from '../common/permissions/testing';
 
 /**
  * An access token lives an hour and `JwtStrategy` never re-reads the account,
@@ -103,6 +105,7 @@ describe('UsersService — blocking an employee cuts off their access token', ()
     const module = await Test.createTestingModule({
       providers: [
         UsersService,
+        { provide: PermissionsService, useValue: fakePermissions([1]) },
         { provide: PrismaService, useValue: prisma },
         { provide: RedisService, useValue: redis },
         { provide: UploadService, useValue: { deleteFile: jest.fn() } },

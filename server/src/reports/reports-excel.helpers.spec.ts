@@ -1,5 +1,6 @@
 import { Workbook } from 'exceljs';
 import { buildNetProfit } from './reports-excel.helpers';
+import { emptyTaxCosts } from '../tax/tax-costs';
 import { kpiSheet } from './reports-excel.operational-sheets';
 
 describe('buildNetProfit — top-up gating', () => {
@@ -197,5 +198,44 @@ describe("kpiSheet — «O'rtacha davomat»", () => {
 
   it('writes a real rate as a number', () => {
     expect(rateCell(88.9).value).toBe(88.9);
+  });
+});
+
+describe('buildNetProfit with taxes', () => {
+  const pl = {
+    operatingExpenses: { byCategory: [{ amount: 100 }], adminSalaries: 0 },
+    costOfServices: { teacherSalaries: 0 },
+  };
+  it('subtracts taxes.total and carries the breakdown', () => {
+    const taxes = {
+      ...emptyTaxCosts(),
+      providerFees: 30,
+      turnoverTax: 40,
+      total: 70,
+      missingRates: ['bank.turnoverTiers' as const],
+    };
+    const np = buildNetProfit(
+      pl,
+      { totals: {}, staffTotals: {} },
+      { refunds: 0 },
+      '2026-10',
+      1000,
+      0,
+      taxes,
+    );
+    expect(np.netProfit).toBe(1000 - 100 - 70);
+    expect(np.taxes).toBe(taxes);
+    expect(np.memo).toEqual({ writeOffs: 0, advances: 0 });
+  });
+  it('treats null taxes as zero', () => {
+    const np = buildNetProfit(
+      pl,
+      { totals: {}, staffTotals: {} },
+      null,
+      '2026-10',
+      1000,
+    );
+    expect(np.netProfit).toBe(900);
+    expect(np.taxes).toEqual(emptyTaxCosts());
   });
 });

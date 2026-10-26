@@ -6,7 +6,6 @@ import { useT } from "@/i18n/context";
 import { formatBalance, formatPrice } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { dayMonth } from "../overview/overview-math";
-import { PossibleDeductionsInfo } from "../possible-deductions-info";
 import { adjustLockReason, adjustmentFacts, adjustmentMeta } from "./salary-adjustment-model";
 import {
   advanceAheadNote,
@@ -200,8 +199,6 @@ export function SalaryDrawerBody({
       <AdvancesBlock items={row.advanceItems ?? []} />
       <CalcBlock detail={detail} />
       {detail.payout && <PayoutBlock payout={detail.payout} />}
-      {/* The company-wide deductions note the old breakdown drawer carried. */}
-      <PossibleDeductionsInfo />
     </div>
   );
 }

@@ -305,5 +305,24 @@ describe('EntityHistoryService', () => {
 
       expect(page.data[0].newValues).toEqual({ balance: 1 });
     });
+
+    it('hides officialSalary from User history unless the reader may see pay', async () => {
+      prisma.entityHistory.findMany.mockResolvedValue([
+        {
+          id: 'h3',
+          action: 'UPDATE',
+          oldValues: { officialSalary: null },
+          newValues: { officialSalary: 2_000_000 },
+        },
+      ]);
+
+      const hidden = await service.getHistory('User', '10050', 1);
+      expect(hidden.data[0].newValues).toEqual({});
+
+      const shown = await service.getHistory('User', '10050', 1, {
+        canViewSalary: true,
+      });
+      expect(shown.data[0].newValues).toEqual({ officialSalary: 2_000_000 });
+    });
   });
 });

@@ -56,4 +56,5 @@ export const METHOD_LABEL: Record<string, string> = {
   CLICK: 'Click',
   UZUM: 'Uzum',
   TRANSFER: "O'tkazma",
+  QR: 'QR-kod',
 };
