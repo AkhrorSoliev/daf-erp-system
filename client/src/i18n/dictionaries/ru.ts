@@ -5347,6 +5347,7 @@ const ru: Dictionary = {
   "Mashq: {have}/{need} daqiqa": "Практика: {have}/{need} мин",
   "Radio: {have}/{need} daqiqa": "Радио: {have}/{need} мин",
   "Xabar yozing…": "Напишите сообщение…",
+  "yozmoqda…": "печатает…",
   "Chat hali ochilmagan": "Чат ещё не открыт",
   "Chat ochilganda bu yerda suhbatlaringiz paydo bo'ladi.": "Когда чат откроется, здесь появятся ваши переписки.",
   "Yangi chat": "Новый чат",

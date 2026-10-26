@@ -8,6 +8,7 @@ import {
   isExerciseSessionRoute,
 } from "@/lib/student-nav-items";
 import { MiniAppScript } from "@/components/telegram-mini-app/mini-app-script";
+import { ChatStreamHost } from "./chat/use-chat-stream";
 import { ActivityHost } from "./activity/activity-host";
 import { StudentOnboardingGate } from "./onboarding/student-onboarding-gate";
 import { LumioBottomNav } from "./lumio/bottom-nav";
@@ -122,6 +123,7 @@ export function StudentPortalLayout({
       */}
         <RadioHost />
         <ActivityHost />
+        <ChatStreamHost />
         <MiniAppScript />
         {!inSession && <RadioMiniPlayer />}
         <RadioNowPlaying />

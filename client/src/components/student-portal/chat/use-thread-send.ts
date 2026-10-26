@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useSendMessage } from "./chat-queries";
 import {
   addPending,
+  confirmPending,
   removePending,
   setPendingStatus,
   type PendingMessage,
@@ -11,7 +12,7 @@ import {
 
 /**
  * Optimistic sending: the text shows at once as a pending bubble. On success
- * the bubble goes once the thread has re-read (useSendMessage waits for it);
+ * the server's message is put in the thread cache and the bubble yields to it;
  * on failure it stays, red, with its text, and `retry` sends it again.
  */
 export function useThreadSend(conversationId: string) {
@@ -21,8 +22,11 @@ export function useThreadSend(conversationId: string) {
 
   const run = async (key: string, text: string) => {
     try {
-      await send.mutateAsync(text);
-      setPending((p) => removePending(p, key));
+      const sent = await send.mutateAsync(text);
+      // The message is already in the cache (useSendMessage), and the bubble
+      // hides itself once it sees that id: no frame with both or with none.
+      setPending((p) => confirmPending(p, key, sent.id));
+      setTimeout(() => setPending((p) => removePending(p, key)), 1500);
     } catch {
       // The toast with the server's reason comes from useSendMessage.
       setPending((p) => setPendingStatus(p, key, "failed"));
@@ -47,6 +51,6 @@ export function useThreadSend(conversationId: string) {
     pending,
     submit,
     retry,
-    busy: pending.some((p) => p.status === "sending"),
+    busy: pending.some((p) => p.status === "sending" && !p.serverId),
   };
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  skipToken,
   useInfiniteQuery,
   useMutation,
   useQuery,
@@ -12,6 +13,8 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { useT } from "@/i18n/context";
 import { msg } from "@/i18n/msg";
 import { unreadTotal } from "./chat-format";
+import { insertMessage, listAfterSend, type MessagesCache } from "./chat-stream-model";
+import { useChatStreamConnected } from "./chat-stream-store";
 import type {
   ChatAccess,
   ChatMe,
@@ -19,6 +22,7 @@ import type {
   MessageView,
   MessagesPage,
   OpenConversationBody,
+  PeerSummary,
 } from "./chat-types";
 
 export const CHAT_KEYS = {
@@ -28,10 +32,15 @@ export const CHAT_KEYS = {
   me: ["student-portal", "chat", "me"] as const,
   messages: (id: string) =>
     ["student-portal", "chat", "messages", id] as const,
+  /** The peer card returned by `open`, for a thread the list does not hold yet. */
+  peer: (id: string) => ["student-portal", "chat", "peer", id] as const,
 };
 
 export const THREAD_POLL_MS = 5000;
 export const LIST_POLL_MS = 20000;
+// While the live stream is open, polling is only a safety net.
+export const THREAD_POLL_LIVE_MS = 30000;
+export const LIST_POLL_LIVE_MS = 60000;
 
 export function useChatAccess() {
   return useQuery<ChatAccess>({
@@ -46,11 +55,12 @@ export function useChatEnabled(): boolean {
 }
 
 export function useConversations(enabled = true) {
+  const live = useChatStreamConnected();
   return useQuery<ConversationView[]>({
     queryKey: CHAT_KEYS.list,
     queryFn: () => api.get("/chat/conversations").then((r) => r.data),
     enabled,
-    refetchInterval: LIST_POLL_MS,
+    refetchInterval: live ? LIST_POLL_LIVE_MS : LIST_POLL_MS,
     refetchIntervalInBackground: false,
   });
 }
@@ -68,6 +78,7 @@ export function useUnreadChatTotal(): number {
 
 /** Pages come newest first; `nextCursor` is the id to continue from. */
 export function useMessages(id: string) {
+  const live = useChatStreamConnected();
   return useInfiniteQuery<MessagesPage, Error, { pages: MessagesPage[] }, readonly string[], string | undefined>({
     queryKey: CHAT_KEYS.messages(id),
     initialPageParam: undefined,
@@ -78,9 +89,19 @@ export function useMessages(id: string) {
         })
         .then((r) => r.data),
     getNextPageParam: (last) => last.nextCursor ?? undefined,
-    refetchInterval: THREAD_POLL_MS,
+    refetchInterval: live ? THREAD_POLL_LIVE_MS : THREAD_POLL_MS,
     refetchIntervalInBackground: false,
   });
+}
+
+/** The peer of a thread: the list first, then the card `open` returned, else undefined. */
+export function usePeer(id: string): PeerSummary | undefined {
+  const fromList = useConversations().data?.find((c) => c.id === id)?.peer;
+  const fromOpen = useQuery<PeerSummary>({
+    queryKey: CHAT_KEYS.peer(id),
+    queryFn: skipToken,
+  }).data;
+  return fromList ?? fromOpen;
 }
 
 export function useSendMessage(id: string) {
@@ -91,13 +112,18 @@ export function useSendMessage(id: string) {
       api
         .post(`/chat/conversations/${id}/messages`, { text })
         .then((r) => r.data),
-    // Returned, so mutateAsync resolves only after the thread has the new
-    // message: the page can then drop its pending bubble without a flicker.
-    onSuccess: () =>
-      Promise.all([
-        qc.invalidateQueries({ queryKey: CHAT_KEYS.messages(id) }),
-        qc.invalidateQueries({ queryKey: CHAT_KEYS.list }),
-      ]),
+    // The server's committed message goes straight into the cache (deduped by
+    // id against the stream), so the pending bubble can be swapped for it
+    // with no refetch in between.
+    onSuccess: (message) => {
+      const key = CHAT_KEYS.messages(id);
+      const next = insertMessage(qc.getQueryData<MessagesCache>(key), message);
+      if (next) qc.setQueryData(key, next);
+      qc.setQueryData<ConversationView[] | undefined>(CHAT_KEYS.list, (old) =>
+        listAfterSend(old, id, qc.getQueryData<PeerSummary>(CHAT_KEYS.peer(id)), message),
+      );
+      void qc.invalidateQueries({ queryKey: CHAT_KEYS.list });
+    },
     onError: (err) =>
       toast.error(getErrorMessage(err, t("Xabar yuborilmadi"))),
   });
@@ -131,10 +157,17 @@ export function useRemoveMessage(id: string) {
 export function useOpenConversation() {
   const qc = useQueryClient();
   const t = useT();
-  return useMutation<{ id: string }, unknown, OpenConversationBody>({
+  return useMutation<
+    { id: string; peer: PeerSummary },
+    unknown,
+    OpenConversationBody
+  >({
     mutationFn: (body) =>
       api.post("/chat/conversations", body).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: CHAT_KEYS.list }),
+    onSuccess: (c) => {
+      qc.setQueryData(CHAT_KEYS.peer(c.id), c.peer);
+      return qc.invalidateQueries({ queryKey: CHAT_KEYS.list });
+    },
     onError: (err) =>
       toast.error(getErrorMessage(err, t("Suhbatni ochib bo'lmadi"))),
   });
