@@ -6,6 +6,13 @@ import {
 import { ChatConversationsService } from './chat-conversations.service';
 
 const conv = { id: 'c1', companyId: 1, studentLowId: 1, studentHighId: 2 };
+const PEER = {
+  id: 2,
+  firstName: 'Ali',
+  lastName: 'Vali',
+  username: 'ali_01',
+  photo: null,
+};
 
 function make(
   o: {
@@ -63,7 +70,12 @@ function make(
       ...o.privacy,
     }),
     sharesGroup: jest.fn().mockResolvedValue(o.shares ?? false),
-    peerSummaries: jest.fn(),
+    peerSummaries: jest.fn().mockResolvedValue(
+      new Map([
+        [2, PEER],
+        [1, PEER],
+      ]),
+    ),
     findByUsername: jest.fn(),
   };
   const gateway = { sendToUser: jest.fn() };
@@ -291,6 +303,7 @@ describe('ChatConversationsService.open', () => {
     });
     await expect(service.open(1, 1, { studentId: 2 })).resolves.toEqual({
       id: 'c1',
+      peer: PEER,
     });
     expect(access.assertCanWrite).not.toHaveBeenCalled();
     expect(prisma.chatConversation.upsert).not.toHaveBeenCalled();
@@ -348,7 +361,7 @@ describe('ChatConversationsService.open', () => {
       });
       people.findByUsername.mockResolvedValue({ id: 2 });
       await expect(service.open(1, 1, { username: 'ali_01' })).resolves.toEqual(
-        { id: 'c1' },
+        { id: 'c1', peer: PEER },
       );
       expect(prisma.chatConversation.upsert).toHaveBeenCalled();
     });
@@ -360,6 +373,7 @@ describe('ChatConversationsService.open', () => {
       });
       await expect(service.open(1, 1, { studentId: 2 })).resolves.toEqual({
         id: 'c1',
+        peer: PEER,
       });
     });
 
@@ -412,6 +426,7 @@ describe('ChatConversationsService.open', () => {
       const { service } = fresh({ rate: 10 });
       await expect(service.open(1, 1, { studentId: 2 })).resolves.toEqual({
         id: 'c1',
+        peer: PEER,
       });
     });
   });
@@ -420,6 +435,7 @@ describe('ChatConversationsService.open', () => {
     const { service, limiter } = make({ rate: 99 });
     await expect(service.open(1, 1, { studentId: 2 })).resolves.toEqual({
       id: 'c1',
+      peer: PEER,
     });
     expect(limiter.hit).not.toHaveBeenCalled();
   });
@@ -710,5 +726,37 @@ describe('prepareSend / commitMessage', () => {
     const { service, notify } = make();
     await service.markRead(1, 'c1');
     expect(notify.onRead).toHaveBeenCalledWith(1, 'c1');
+  });
+});
+
+describe('ChatConversationsService.typing', () => {
+  it('pushes chat.typing to the peer account', async () => {
+    const { service, gateway } = make();
+    await service.typing(1, 'c1');
+    expect(gateway.sendToUser).toHaveBeenCalledWith(22, {
+      type: 'chat.typing',
+      conversationId: 'c1',
+    });
+  });
+
+  it('404s and emits nothing for a conversation that is not yours', async () => {
+    const { service, gateway } = make();
+    await expect(service.typing(9, 'c1')).rejects.toThrow(NotFoundException);
+    expect(gateway.sendToUser).not.toHaveBeenCalled();
+  });
+
+  it('emits nothing when the pair cannot talk', async () => {
+    const { service, gateway, limiter } = make({
+      blocked: { iBlocked: false, blockedMe: true },
+    });
+    await expect(service.typing(1, 'c1')).resolves.toBeUndefined();
+    expect(gateway.sendToUser).not.toHaveBeenCalled();
+    expect(limiter.hit).not.toHaveBeenCalled();
+  });
+
+  it('drops the second ping inside the window without an error', async () => {
+    const { service, gateway } = make({ rate: 2 });
+    await expect(service.typing(1, 'c1')).resolves.toBeUndefined();
+    expect(gateway.sendToUser).not.toHaveBeenCalled();
   });
 });

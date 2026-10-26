@@ -146,7 +146,7 @@ export class ChatConversationsService {
     me: number,
     companyId: number,
     dto: OpenConversationDto,
-  ): Promise<{ id: string }> {
+  ): Promise<{ id: string; peer: PeerSummary }> {
     let peerId = dto.studentId ?? null;
     if (peerId === null && dto.username) {
       peerId =
@@ -166,7 +166,8 @@ export class ChatConversationsService {
     const existing = await this.prisma.chatConversation.findFirst({
       where: { studentLowId: low, studentHighId: high },
     });
-    if (existing) return { id: existing.id };
+    if (existing)
+      return { id: existing.id, peer: await this.peerCard(me, peerId) };
 
     // A new conversation needs the same rights as a message.
     await this.access.assertCanWrite(me, companyId);
@@ -204,7 +205,37 @@ export class ChatConversationsService {
       create: { companyId, studentLowId: low, studentHighId: high },
       update: {},
     });
-    return { id: created.id };
+    return { id: created.id, peer: await this.peerCard(me, peerId) };
+  }
+
+  private async peerCard(me: number, peerId: number): Promise<PeerSummary> {
+    const card = (await this.people.peerSummaries(me, [peerId])).get(peerId);
+    if (!card) throw new NotFoundException("O'quvchi topilmadi");
+    return card;
+  }
+
+  /**
+   * "Typing" ping to the peer: no DB write, one per 2 s per pair, and silent
+   * (204) whenever the pair cannot talk, so it never reveals a block.
+   */
+  async typing(me: number, conversationId: string): Promise<void> {
+    const { peerId } = await this.mine(me, conversationId);
+    try {
+      await this.assertMayReach(me, peerId);
+    } catch {
+      return;
+    }
+    let n: number;
+    try {
+      n = await this.limiter.hit(
+        `chat:typing:${me}:${conversationId}:${Math.floor(Date.now() / 2000)}`,
+        5,
+      );
+    } catch {
+      return; // cosmetic: a limiter outage just drops the ping
+    }
+    if (n > 1) return;
+    await this.pushToPeer(peerId, { type: 'chat.typing', conversationId });
   }
 
   /** One counter per student and minute; past `limit` the answer is 429. */

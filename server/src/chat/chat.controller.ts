@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -123,6 +124,15 @@ export class ChatController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.media.signedUrl(studentId, id);
+  }
+
+  @Post('conversations/:id/typing')
+  @HttpCode(204)
+  async typing(
+    @CurrentUser('studentId') studentId: number,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    await this.conversations.typing(studentId, id);
   }
 
   @Patch('conversations/:id/read')
