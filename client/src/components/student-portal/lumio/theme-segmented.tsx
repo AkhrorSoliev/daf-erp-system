@@ -57,7 +57,7 @@ export function ThemeSegmented({
         aria-hidden
         className={cn(
           "rounded-pill bg-sunk",
-          vertical ? "h-[108px]" : compact ? "h-[44px]" : asSelect ? "h-12" : "h-[52px]",
+          vertical ? "h-[108px]" : compact ? "h-[44px]" : asSelect ? "h-[79px] rounded-card" : "h-[52px]",
           className,
         )}
       />
@@ -74,6 +74,7 @@ export function ThemeSegmented({
         value={mode}
         onChange={setTheme}
         icon={current?.icon}
+        tone="amber"
         options={THEME_OPTIONS.map((o) => ({ value: o.value, label: t(o.label) }))}
         className={className}
       />

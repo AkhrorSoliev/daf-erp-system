@@ -9,6 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { IconTile } from "./icon-tile";
+import type { LumioTone } from "./tones";
 
 export interface SelectFieldOption<T extends string> {
   value: T;
@@ -23,18 +25,23 @@ export interface SelectFieldProps<T extends string> {
   onChange: (value: T) => void;
   label: string;
   icon?: React.ReactNode;
+  /** Colour of the icon tile, as on `ListRow`. */
+  tone?: LumioTone;
   className?: string;
 }
 
-// The project's own `Select` (Radix) in the Lumio look. The list is portalled to
-// <body>, outside the page's `.lumio` scope, so the `lumio` class goes on the
-// content itself, as with the portal's dialogs.
+// The project's own `Select` (Radix) drawn as a settings row: the trigger IS the
+// card, the same size and look as `ListRow` (icon tile, bold value, chevron), so
+// a dropdown does not read as a smaller, lesser control next to its neighbours.
+// The list is portalled to <body>, outside the page's `.lumio` scope, so the
+// `lumio` class goes on the content itself, as with the portal's dialogs.
 export function SelectField<T extends string>({
   options,
   value,
   onChange,
   label,
   icon,
+  tone = "grape",
   className,
 }: SelectFieldProps<T>) {
   return (
@@ -42,17 +49,18 @@ export function SelectField<T extends string>({
       <SelectTrigger
         aria-label={label}
         className={cn(
-          "h-12 w-full gap-3 rounded-pill border-line bg-surface px-4 font-display text-base font-bold text-ink-900 shadow-lumio-sm focus-visible:border-line focus-visible:ring-4 focus-visible:ring-coral-500/30 dark:bg-surface dark:hover:bg-surface [&_svg]:text-ink-500",
+          // `data-[size=default]:h-auto` beats the base trigger's fixed 36px height.
+          "w-full gap-3.5 rounded-card border-line bg-surface px-4 py-3.5 shadow-lumio-sm transition-colors hover:bg-tint focus-visible:border-line focus-visible:ring-4 focus-visible:ring-coral-500/30 data-[size=default]:h-auto data-[size=default]:min-h-[79px] dark:bg-surface dark:hover:bg-tint [&>svg]:size-5 [&>svg]:text-ink-400",
           className,
         )}
       >
-        <span className="flex min-w-0 items-center gap-3">
+        <span className="flex min-w-0 flex-1 items-center gap-3.5">
           {icon ? (
-            <span aria-hidden className="flex shrink-0 text-xl text-ink-500">
-              {icon}
-            </span>
+            <IconTile icon={icon} tone={tone} className="[&_svg]:size-5" />
           ) : null}
-          <SelectValue />
+          <span className="min-w-0 truncate font-display text-lg font-bold text-ink-900">
+            <SelectValue />
+          </span>
         </span>
       </SelectTrigger>
       <SelectContent

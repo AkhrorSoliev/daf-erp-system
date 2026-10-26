@@ -24,6 +24,7 @@ import { StudentProfilePage } from "./student-profile-page";
 import { LernenLevelsPage } from "./lernen/lernen-levels-page";
 import { StudentScheduleView } from "./student-schedule-view";
 import { StudentPaymentSummary } from "./student-payment-summary";
+import { RadioCard } from "./radio/radio-card";
 
 function render(
   component: ComponentType,
@@ -57,11 +58,23 @@ describe("portal navigation on a phone", () => {
     // Only items whose feature is on: no chat access answer means off.
     for (const item of studentNavItems.filter((i) => !i.feature)) {
       if (item.url === "/portal/more") continue; // the hub's own tab
+      if (item.slot === "rail") continue; // reached from a card, see below
       expect(
         reachable.filter((href) => href === item.url),
         `${item.title} (${item.url})`,
       ).toHaveLength(1);
     }
+  });
+
+  // Radio is a desktop-rail item: a phone reaches it from a card on the two
+  // screens where students study, and it is no longer a row in the hub.
+  it("reaches Radio from a card on Ta'lim and nowhere in the Ko'proq hub", () => {
+    const hrefs = (c: ComponentType, path: string) =>
+      links(render(c, path)).map((l) => l.href);
+    expect(hrefs(LernenLevelsPage, "/portal/lernen")).toContain("/portal/radio");
+    expect(hrefs(RadioCard, "/portal")).toContain("/portal/radio");
+    expect(hrefs(StudentMoreHub, "/portal/more")).not.toContain("/portal/radio");
+    expect(hrefs(LumioSideRail, "/portal")).toContain("/portal/radio");
   });
 
   const chatClient = (enabled: boolean) => {
@@ -132,7 +145,6 @@ describe("portal navigation on a phone", () => {
     ["/portal/more", "/portal/more"],
     ["/portal/profile", "/portal/more"],
     ["/portal/attendance", "/portal/more"],
-    ["/portal/radio", "/portal/more"],
     ["/portal/settings", "/portal/more"],
     ["/portal/faq", "/portal/more"],
     ["/portal/about", "/portal/more"],
@@ -141,6 +153,13 @@ describe("portal navigation on a phone", () => {
       (l) => l.current,
     );
     expect(current.map((l) => l.href)).toEqual([tab]);
+  });
+
+  it("lights no tab on Radio, which a card opens and no tab owns", () => {
+    const current = links(render(LumioBottomNav, "/portal/radio")).filter(
+      (l) => l.current,
+    );
+    expect(current).toEqual([]);
   });
 
   // The tab a student taps and the title they land on must name the same

@@ -65,6 +65,7 @@ export function LanguagePicker({ variant = "list", className }: LanguagePickerPr
         value={locale}
         onChange={pick}
         icon={<Translate size={20} weight="bold" />}
+        tone="teal"
         options={LOCALES.map(({ id, label }) => ({ value: id, label, lang: id }))}
         className={className}
       />

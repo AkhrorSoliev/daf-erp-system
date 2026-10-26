@@ -28,8 +28,11 @@ export interface StudentNavItem {
    * - `help` — "Ko'proq" hub on mobile, but under Settings on desktop rather
    *   than as its own rail row (reference material, not a destination the
    *   student navigates to often)
+   * - `rail` — the desktop rail only. A phone reaches it from a card on the
+   *   Bosh sahifa and Ta'lim screens (Radio: `RadioCard`), not from a row in the
+   *   "Ko'proq" hub
    */
-  slot: "tab" | "more" | "both" | "help";
+  slot: "tab" | "more" | "both" | "help" | "rail";
   /** Accent tone for the More-hub icon tile. */
   tone?: LumioTone;
   /**
@@ -52,7 +55,7 @@ export function featureEnabled(
 
 // Single source of truth for portal navigation. The floating bottom nav
 // (mobile) renders `slot: tab | both` in array order; the desktop side rail
-// renders `slot: both | more`; the "Ko'proq" hub renders `slot: more | help`.
+// renders `slot: both | more | rail`; the "Ko'proq" hub renders `slot: more | help`.
 // Nothing else keeps a list of its own: a hub that did (until 2026-09) never
 // got Ta'lim, and a phone had no way into it at all.
 //
@@ -100,7 +103,7 @@ export const studentNavItems: StudentNavItem[] = [
     title: msg("Radio"),
     url: "/portal/radio",
     icon: Radio,
-    slot: "more",
+    slot: "rail",
     tone: "coral",
   },
   {
@@ -140,11 +143,11 @@ export const bottomNavItems = studentNavItems.filter(
 );
 
 /**
- * Desktop side rail: both + more.
+ * Desktop side rail: both + more + rail.
  * `help` items are deliberately absent — on desktop they hang off Settings.
  */
 export const railNavItems = studentNavItems.filter(
-  (i) => i.slot === "both" || i.slot === "more",
+  (i) => i.slot === "both" || i.slot === "more" || i.slot === "rail",
 );
 
 /** "Ko'proq" hub rows on mobile: every destination that is not a tab. */
