@@ -10,6 +10,7 @@ import { Badge, Button } from "./lumio";
 import { Dafi } from "./lernen/dafi/dafi";
 import { temaTop } from "./lernen/tema/tema-reyestri";
 import { useLernenTema } from "./lernen/tema/use-lernen-tema";
+import { TemaRasmi } from "./lernen-tema-rasmi";
 
 /** The theme's own pieces, drawn on two screens of the lesson path so the pick is not a guess. */
 function Misollar({ id }: { id: (typeof LERNEN_TEMALAR)[number]["id"] }) {
@@ -81,7 +82,7 @@ export function TemaDialogi({ open, onOpenChange }: TemaDialogiProps) {
                     yopiq && "cursor-not-allowed opacity-60",
                   )}
                 >
-                  <span aria-hidden className="size-8 shrink-0 rounded-full" style={{ background: tema.swatch }} />
+                  <TemaRasmi id={tema.id} swatch={tema.swatch} />
                   <span className="min-w-0 flex-1">
                     <span className="block font-display font-extrabold text-ink-900">{t(tema.label)}</span>
                     <span className={cn("block text-xs font-semibold", tanlangan ? "text-ink-600" : "text-ink-500")}>{t(tema.hint)}</span>

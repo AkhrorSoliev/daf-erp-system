@@ -561,6 +561,15 @@
      name, so the global @theme gains nothing. */
   --amber-ink: #9a5400;
 
+  /* «O'rmon» theme's reward background (ADR-0132): a pale mint in light
+     mode, so the result's ink-900 and ink-600 text keep 4.5:1 on it, deep
+     green in dark mode; ormon-kontrast.test.ts measures them. Plain custom
+     properties, not Tailwind colour names. */
+  --ormon-mukofot-ust: #f4fbf3;
+  --ormon-mukofot-ost: #d9efe2;
+  --ormon-tepalik: #c6e6d3;
+  --ormon-mukofot-nur: rgba(255, 255, 255, 0.35);
+
   /* --- Radii --- */
   --r-xs: 8px;
   --r-sm: 12px;
@@ -666,6 +675,11 @@
 
   /* The pale amber (= --amber-400) reads on the dark amber-tinted bar. */
   --amber-ink: #ffc24d;
+
+  --ormon-mukofot-ust: #143c42;
+  --ormon-mukofot-ost: #0f2a33;
+  --ormon-tepalik: #12382f;
+  --ormon-mukofot-nur: rgba(255, 241, 196, 0.03);
 
   /* Neutral clay lips must read DARKER than the surface in dark mode. */
   --clay-neutral: 0 5px 0 #071820, 0 12px 22px rgba(0, 0, 0, 0.35);
@@ -775,6 +789,25 @@
   .lumio .glass {
     backdrop-filter: var(--blur-glass);
     -webkit-backdrop-filter: var(--blur-glass);
+  }
+
+  /* While a theme's scene stands behind the page (its root carries
+     data-sahna, ADR-0132) the glass chrome floating over it — the bottom-nav
+     pill, the radio dock and the side rail — draws no blur: the scene's
+     ambient layers animate all the time, so a backdrop blur would be
+     recomputed every frame on a weak WebView. All three are mostly opaque
+     surface (bg-surface at 95%, 90% and 85%), so they lose little. With no
+     scene (Toza, every other page) this never matches and the blur stays.
+
+     The prefixed declaration comes FIRST on purpose: Lightning CSS (Next's
+     minifier) drops an unprefixed declaration that precedes an identical
+     prefixed one, so the built rule would carry only -webkit-backdrop-filter
+     and Chrome and Firefox would keep the blur. Written the other way round
+     both survive. A shadcn overlay is portaled out of .lumio; see the rule
+     beside the .ormon-* block below. */
+  .lumio:has([data-sahna]) .glass {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 
   /* Staggered entrance. Parent adds `lumio-stagger`, or child sets --i. */
@@ -1284,4 +1317,227 @@ button {
 .lumio :focus-within > textarea:autofill,
 .lumio :focus-within > select:autofill {
   box-shadow: inset 0 0 0 1000px var(--surface-card);
+}
+
+/* A sheet, dialog or alert dialog opened over a scene (a lesson node, the goal
+   card) must not blur it either: the overlay is portaled into <body>, outside
+   .lumio, so the .glass rule above cannot reach it, and its Tailwind utility
+   (supports-backdrop-filter:backdrop-blur-xs) would be recomputed every frame
+   while the scene's rays, mist and sparks keep moving behind it. Scroll is
+   locked, the animation is not. This rule is OUTSIDE every @layer on purpose:
+   an unlayered declaration beats the utility, which is layered. The prefixed
+   declaration comes first for the same reason as in the .glass rule (Lightning
+   CSS drops an unprefixed one that precedes an identical prefixed one).
+   globals-css.test.ts pins the slots, which the three ui files carry. */
+body:has(.lumio [data-sahna]) :is([data-slot="sheet-overlay"], [data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"]) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* ============================================================
+   Ta'lim · «O'rmon» theme (ADR-0132): the scene behind the path and
+   the unit page, the node ring, the places and the reward. Only
+   transform and opacity animate. Everything stops under the device's
+   «Kam harakat» switch and the system setting; the drifting decor
+   holds still while the scene is paused (data-tinch: the tab is
+   hidden or the scene is off screen).
+   ============================================================ */
+
+/* One biome stack shows at a time; the hidden ones are not painted at
+   all. A biome change is an opacity cross-fade. */
+.lumio .ormon-biome {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 700ms var(--ease-in-out),
+    visibility 0s linear 700ms;
+}
+
+.lumio .ormon-biome[data-faol] {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 700ms var(--ease-in-out),
+    visibility 0s;
+}
+
+/* Only the visible biome's layers get a compositor layer of their own. */
+.lumio .ormon-biome[data-faol] .ormon-layer {
+  will-change: transform;
+}
+
+.lumio .ormon-spark {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ormon-glow);
+  box-shadow: 0 0 14px 5px color-mix(in srgb, var(--ormon-glow) 60%, transparent);
+  animation:
+    ormon-drift var(--ormon-t) ease-in-out infinite alternate,
+    ormon-blink var(--ormon-b) ease-in-out infinite;
+}
+
+@keyframes ormon-drift {
+  to {
+    transform: translate(var(--ormon-dx), var(--ormon-dy));
+  }
+}
+
+@keyframes ormon-blink {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+.lumio .ormon-leaf {
+  position: absolute;
+  top: 0;
+  width: 14px;
+  height: 14px;
+  opacity: 0.8;
+  animation: ormon-fall var(--ormon-t) linear infinite;
+}
+
+@keyframes ormon-fall {
+  0% {
+    transform: translate(0, -40px) rotate(0deg);
+  }
+  50% {
+    transform: translate(-26px, 50vh) rotate(160deg);
+  }
+  100% {
+    transform: translate(10px, 105vh) rotate(320deg);
+  }
+}
+
+/* Light shafts: soft stripes, with no blur filter and no blend mode on a
+   moving layer. */
+.lumio .ormon-rays {
+  position: absolute;
+  top: 0;
+  left: -60px;
+  right: -60px;
+  height: 70%;
+  background: repeating-linear-gradient(
+    106deg,
+    transparent 0 60px,
+    color-mix(in srgb, var(--ormon-glow) 14%, transparent) 90px,
+    transparent 120px 210px
+  );
+  -webkit-mask-image: linear-gradient(#000, transparent 85%);
+  mask-image: linear-gradient(#000, transparent 85%);
+  animation: ormon-rays 30s ease-in-out infinite alternate;
+}
+
+@keyframes ormon-rays {
+  from {
+    transform: translateX(-30px);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateX(30px);
+    opacity: 1;
+  }
+}
+
+.lumio .ormon-mist {
+  position: absolute;
+  left: -80px;
+  width: calc(100% + 160px);
+  height: 160px;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0));
+  animation: ormon-mist 28s ease-in-out infinite alternate;
+}
+
+@keyframes ormon-mist {
+  to {
+    transform: translateX(24px);
+  }
+}
+
+.lumio .ormon-vignette {
+  background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.19) 100%);
+}
+
+/* The current node's ring rests invisible: with no animation it is simply
+   not there. */
+.lumio .ormon-ring {
+  opacity: 0;
+  animation: ormon-ring 2.6s ease-out infinite;
+}
+
+@keyframes ormon-ring {
+  from {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  to {
+    transform: scale(1.45);
+    opacity: 0;
+  }
+}
+
+/* The current place's emblem breathes. */
+.lumio .ormon-bob {
+  animation: ormon-bob 2.6s ease-in-out infinite;
+}
+
+@keyframes ormon-bob {
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* The reward's slow sunburst. */
+.lumio .ormon-burst {
+  animation: ormon-spin 40s linear infinite;
+}
+
+@keyframes ormon-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.lumio [data-tinch] :is(.ormon-spark, .ormon-leaf, .ormon-rays, .ormon-mist) {
+  animation-play-state: paused;
+}
+
+/* A hidden biome stack is not painted, but its timelines would still run:
+   whatever animates inside it holds still until the biome shows. */
+.lumio .ormon-biome:not([data-faol]) :is(.ormon-spark, .ormon-leaf, .ormon-rays, .ormon-mist, .ormon-ring, .ormon-burst, .ormon-bob) {
+  animation-play-state: paused;
+}
+
+/* Later and as specific as the visible biome's rule, so it wins over it. */
+.lumio [data-kam-harakat] :is(.ormon-spark, .ormon-leaf, .ormon-rays, .ormon-mist, .ormon-ring, .ormon-burst, .ormon-bob),
+.lumio [data-kam-harakat] .ormon-biome {
+  animation: none;
+  transition: none;
+}
+
+/* No parallax here, so the layers need no compositor layer of their own.
+   One class more than the visible biome's rule, so it wins over it. */
+.lumio [data-kam-harakat] .ormon-biome[data-faol] .ormon-layer {
+  will-change: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lumio :is(.ormon-spark, .ormon-leaf, .ormon-rays, .ormon-mist, .ormon-ring, .ormon-burst, .ormon-bob),
+  .lumio .ormon-biome,
+  .lumio .ormon-biome[data-faol] {
+    animation: none;
+    transition: none;
+  }
+
+  /* The system setting has no parallax either. After the visible biome's
+     rule and as specific as it, so it wins over it. */
+  .lumio .ormon-biome[data-faol] .ormon-layer {
+    will-change: auto;
+  }
 }
