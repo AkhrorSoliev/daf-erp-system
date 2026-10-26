@@ -6,6 +6,8 @@ export interface PendingMessage {
   text: string;
   createdAt: string;
   status: "sending" | "failed";
+  /** Set once the server answered: the bubble hides as soon as that message is in the thread. */
+  serverId?: string;
 }
 
 /** What the thread draws: a server message, or a pending one of mine. */
@@ -65,6 +67,14 @@ export function setPendingStatus(
   return list.map((p) => (p.key === key ? { ...p, status } : p));
 }
 
+export function confirmPending(
+  list: PendingMessage[],
+  key: string,
+  serverId: string,
+): PendingMessage[] {
+  return list.map((p) => (p.key === key ? { ...p, serverId } : p));
+}
+
 export function removePending(
   list: PendingMessage[],
   key: string,
@@ -76,9 +86,12 @@ export function mergePending(
   messages: MessageView[],
   pending: PendingMessage[],
 ): ThreadItem[] {
+  const have = new Set(messages.map((m) => m.id));
   return [
     ...messages,
-    ...pending.map<ThreadItem>((p) => ({
+    ...pending
+      .filter((p) => !(p.serverId && have.has(p.serverId)))
+      .map<ThreadItem>((p) => ({
       id: `pending:${p.key}`,
       senderId: 0,
       mine: true,

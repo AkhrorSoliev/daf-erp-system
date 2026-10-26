@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { PaperPlaneRight } from "@phosphor-icons/react";
 import { useT } from "@/i18n/context";
+import { sendTyping, shouldPing } from "./chat-typing";
 import { ImagePicker, ImagePreviewChip } from "./image-picker";
 import { useUploadChatFile } from "./use-chat-upload";
 import { VoiceRecorder } from "./voice-recorder";
@@ -26,6 +27,7 @@ export function ChatComposer({
   const t = useT();
   const [text, setText] = useState("");
   const field = useRef<HTMLTextAreaElement>(null);
+  const lastPing = useRef<number | undefined>(undefined);
   const { upload, uploading, progress } = useUploadChatFile(conversationId);
   const [image, setImage] = useState<File | null>(null);
   const [recording, setRecording] = useState(false);
@@ -75,7 +77,15 @@ export function ChatComposer({
           maxLength={MESSAGE_MAX}
           placeholder={t("Xabar yozing…")}
           aria-label={t("Xabar yozing…")}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value;
+            setText(value);
+            const now = Date.now();
+            if (value.trim() && !inFlight && shouldPing(lastPing.current, now)) {
+              lastPing.current = now;
+              sendTyping(conversationId);
+            }
+          }}
           onKeyDown={(e) => {
             // Enter that confirms an IME candidate must not send.
             if (e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing)
