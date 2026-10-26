@@ -5,6 +5,7 @@ const NOW = new Date('2026-10-25T07:00:00Z'); // 12:00 Tashkent, same calendar d
 
 function make(opts: {
   enabled?: boolean;
+  testers?: string;
   student?: object | null;
   usage?: {
     day: Date;
@@ -38,7 +39,11 @@ function make(opts: {
     }),
   };
   return {
-    service: new ChatAccessService(prisma as never, settings as never),
+    service: new ChatAccessService(
+      prisma as never,
+      settings as never,
+      { get: () => opts.testers } as never,
+    ),
     prisma,
   };
 }
@@ -95,5 +100,52 @@ describe('ChatAccessService', () => {
     await expect(service.forStudent(1, 1, NOW)).rejects.toThrow(
       NotFoundException,
     );
+  });
+
+  describe('tester (CHAT_TESTER_IDS)', () => {
+    const bad = {
+      balance: -500000,
+      gender: null,
+      dateOfBirth: null,
+      phone: '901234567',
+      verifiedPhone: null,
+      chatBannedAt: null,
+    };
+
+    it('writes with the switch off despite debt, missing profile, unproven phone and empty quota', async () => {
+      const { service } = make({ enabled: false, testers: '7', student: bad });
+      const a = await service.forStudent(7, 1, NOW);
+      expect(a).toMatchObject({
+        enabled: true,
+        canWrite: true,
+        reasons: [],
+        messages: [],
+        warning: null,
+      });
+      expect(a.quota).toBeDefined();
+      await expect(service.assertCanWrite(7, 1)).resolves.toBeUndefined();
+    });
+
+    it('is still stopped by a ban', async () => {
+      const { service } = make({
+        enabled: false,
+        testers: '7',
+        student: { ...bad, chatBannedAt: new Date() },
+      });
+      const a = await service.forStudent(7, 1, NOW);
+      expect(a.reasons).toEqual(['BANNED']);
+      expect(a.canWrite).toBe(false);
+      await expect(service.assertCanWrite(7, 1)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('leaves a non-tester unchanged', async () => {
+      const { service } = make({ enabled: false, testers: '8', student: bad });
+      const a = await service.forStudent(7, 1, NOW);
+      expect(a.enabled).toBe(false);
+      expect(a.canWrite).toBe(false);
+      expect(a.reasons.length).toBeGreaterThan(0);
+    });
   });
 });

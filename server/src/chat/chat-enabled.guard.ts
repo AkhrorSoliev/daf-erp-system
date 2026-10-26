@@ -5,9 +5,11 @@ import {
   Injectable,
   SetMetadata,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { SettingsService } from '../settings/settings.service';
 import { CHAT_OFF_MESSAGE } from './chat.constants';
+import { isChatTester } from './chat-testers';
 
 const CHAT_GATE_OPEN = 'chat:gateOpen';
 
@@ -20,6 +22,7 @@ export class ChatEnabledGuard implements CanActivate {
   constructor(
     private readonly settings: SettingsService,
     private readonly reflector: Reflector,
+    private readonly config: ConfigService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -30,7 +33,8 @@ export class ChatEnabledGuard implements CanActivate {
     if (open) return true;
     const { user } = context
       .switchToHttp()
-      .getRequest<{ user?: { companyId?: number } }>();
+      .getRequest<{ user?: { companyId?: number; studentId?: number } }>();
+    if (isChatTester(this.config, user?.studentId)) return true;
     const companyId = user?.companyId;
     if (
       typeof companyId !== 'number' ||
