@@ -1,5 +1,6 @@
 import { DEFAULT_LERNEN_TEMA, type LernenTemaId } from "@/lib/lernen-temalar";
 import type { LernenTema } from "./tema-turlari";
+import { dengizTema } from "./dengiz/dengiz-tema";
 import { ormonTema } from "./ormon/ormon-tema";
 import { tozaTema } from "./toza/toza-tema";
 
@@ -7,6 +8,7 @@ import { tozaTema } from "./toza/toza-tema";
 export const TEMALAR: Partial<Record<LernenTemaId, LernenTema>> = {
   toza: tozaTema,
   ormon: ormonTema,
+  dengiz: dengizTema,
 };
 
 export function temaTop(id: LernenTemaId): LernenTema {

@@ -570,6 +570,15 @@
   --ormon-tepalik: #c6e6d3;
   --ormon-mukofot-nur: rgba(255, 255, 255, 0.35);
 
+  /* «Dengiz» theme's reward background (ADR-0133): clear shallow water
+     over the sand in light mode, the deep sea in dark mode; the shared
+     reward calls its ground «tepalik». dengiz-kontrast.test.ts measures
+     them. Plain custom properties, not Tailwind colour names. */
+  --dengiz-mukofot-ust: #f2fbff;
+  --dengiz-mukofot-ost: #d6eefa;
+  --dengiz-tepalik: #f1e2c4;
+  --dengiz-mukofot-nur: rgba(255, 255, 255, 0.35);
+
   /* --- Radii --- */
   --r-xs: 8px;
   --r-sm: 12px;
@@ -680,6 +689,11 @@
   --ormon-mukofot-ost: #0f2a33;
   --ormon-tepalik: #12382f;
   --ormon-mukofot-nur: rgba(255, 241, 196, 0.03);
+
+  --dengiz-mukofot-ust: #123a52;
+  --dengiz-mukofot-ost: #0b2438;
+  --dengiz-tepalik: #2a3328;
+  --dengiz-mukofot-nur: rgba(255, 241, 196, 0.03);
 
   /* Neutral clay lips must read DARKER than the surface in dark mode. */
   --clay-neutral: 0 5px 0 #071820, 0 12px 22px rgba(0, 0, 0, 0.35);

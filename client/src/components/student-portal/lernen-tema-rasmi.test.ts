@@ -13,18 +13,24 @@ describe("TemaRasmi (a look's picture on its card)", () => {
     expect(html).not.toContain("background:#ff6b4a");
   });
 
+  it("draws «Dengiz»'s own miniature too (ADR-0133)", () => {
+    const html = render("dengiz", "#2b78a8");
+    expect(html).toContain('data-miniatyura="dengiz"');
+    expect(html).not.toContain("background:#2b78a8");
+  });
+
   it("falls back to the colour dot for a look without a miniature", () => {
     const toza = render("toza");
     expect(toza).toContain("background:#ff6b4a");
     expect(toza).not.toContain("data-miniatyura");
-    // A look that is not built yet resolves to Toza in the registry and shows its own dot.
-    const dengiz = render("dengiz", "#0ea5e9");
-    expect(dengiz).toContain("background:#0ea5e9");
-    expect(dengiz).not.toContain("data-miniatyura");
+    // A look that is not built yet («Nemis sayohati») resolves to Toza in the registry and shows its own dot.
+    const alp = render("alp", "#8b5cf6");
+    expect(alp).toContain("background:#8b5cf6");
+    expect(alp).not.toContain("data-miniatyura");
   });
 
   it("is decorative and every card's picture takes the same cell", () => {
-    for (const id of ["toza", "ormon", "dengiz"] as const) {
+    for (const id of ["toza", "ormon", "dengiz", "alp"] as const) {
       const html = render(id);
       expect(html).toMatch(/^<span aria-hidden="true" class="flex h-10 w-14 shrink-0 items-center justify-center">/);
     }

@@ -27,4 +27,10 @@ describe("tema reyestri", () => {
   it("«Toza» draws no scene: the plain app background stays", () => {
     expect(temaTop("toza").Sahna).toBeUndefined();
   });
+
+  it("resolves «dengiz» to its own theme with a scene; «alp» is still drawn as «Toza» (ADR-0133)", () => {
+    expect(temaTop("dengiz").id).toBe("dengiz");
+    expect(temaTop("dengiz").Sahna).toBeDefined();
+    expect(temaTop("alp").id).toBe("toza");
+  });
 });
