@@ -5457,6 +5457,7 @@ const de: Dictionary = {
   "Hali shikoyat kelmagan — o'quvchi shikoyat qilsa, shu yerda ko'rinadi": "Noch keine Meldungen – sobald ein Lernender etwas meldet, erscheint es hier",
   "Ochiq shikoyat yo'q — yangi shikoyat kelganda qo'ng'iroqchada ko'rinadi": "Keine offenen Meldungen – eine neue Meldung erscheint in der Glocke",
   "Shikoyatlarni yuklab bo'lmadi.": "Die Meldungen konnten nicht geladen werden.",
+  "{n} m": "{n} m",
 };
 
 export default de;
