@@ -125,7 +125,8 @@ describe("the glass chrome over a theme's scene (ADR-0131)", () => {
 
   it("drops the backdrop blur only while a scene stands, after the rule that sets it", () => {
     const base = ".lumio .glass { backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); }";
-    const off = ".lumio:has([data-sahna]) .glass { backdrop-filter: none; -webkit-backdrop-filter: none; }";
+    // The prefixed declaration first: Lightning CSS drops an unprefixed one that comes before an identical prefixed one.
+    const off = ".lumio:has([data-sahna]) .glass { -webkit-backdrop-filter: none; backdrop-filter: none; }";
     expect(flat).toContain(base);
     expect(flat).toContain(off);
     expect(flat.indexOf(base)).toBeLessThan(flat.indexOf(off));
@@ -250,5 +251,47 @@ describe("every «O'rmon» rule in globals.css (ADR-0131)", () => {
     `;
     const kinds = ormonViolations(ormonRules(bad)).map((v) => v.split(":")[0]);
     expect(kinds.sort()).toEqual(["comment", "filter", "filter", "filter", "scope", "scope", "will-change", "will-change"]);
+  });
+});
+
+// A shadcn overlay (sheet, dialog, alert dialog) is portaled into <body>, outside
+// `.lumio`, so the `.glass` rule cannot reach it. On the path an overlay opens on
+// every lesson-node tap and on the goal card while the scene keeps animating
+// behind it, so its `backdrop-blur-xs` would be recomputed every frame.
+describe("the backdrop blur over a scene reaches the portaled overlays too (ADR-0131)", () => {
+  const css = readFileSync(path.join(__dirname, "globals.css"), "utf8");
+  const slots = ["sheet-overlay", "dialog-overlay", "alert-dialog-overlay"];
+  const overlays = `body:has(.lumio [data-sahna]) :is(${slots.map((s) => `[data-slot="${s}"]`).join(", ")})`;
+  const noBlur = "-webkit-backdrop-filter: none; backdrop-filter: none;";
+  const flat = (s: string) => s.replace(/\s+/g, " ").trim();
+
+  it("takes the blur off the three overlays while a scene stands, in a rule outside every @layer", () => {
+    const rule = leafRules(css).find((r) => r.selector === overlays);
+    expect(rule, "the overlay rule is missing").toBeDefined();
+    // Unlayered declarations beat the Tailwind utility, which is in a layer.
+    expect(rule?.context).toEqual([]);
+    expect(flat(withoutComments(rule?.body ?? ""))).toBe(noBlur);
+  });
+
+  it("is written for the slots and the blur utility the overlays really carry", () => {
+    for (const [file, slot] of [
+      ["sheet.tsx", "sheet-overlay"],
+      ["dialog.tsx", "dialog-overlay"],
+      ["alert-dialog.tsx", "alert-dialog-overlay"],
+    ]) {
+      const source = readFileSync(path.join(__dirname, "../components/ui", file), "utf8");
+      expect(source, file).toContain(`data-slot="${slot}"`);
+      expect(source, file).toContain("supports-backdrop-filter:backdrop-blur");
+    }
+  });
+
+  // The two rules below are the only ones that take a blur off under a scene.
+  // Both write the prefixed declaration FIRST: Lightning CSS drops an unprefixed
+  // declaration that precedes an identical prefixed one, and the built chunk
+  // would carry the prefixed one alone.
+  it("has exactly these two scene-conditioned rules, each with the prefixed declaration first", () => {
+    const rules = leafRules(css).filter((r) => r.selector.includes("data-sahna"));
+    expect(rules.map((r) => r.selector)).toEqual([".lumio:has([data-sahna]) .glass", overlays]);
+    for (const r of rules) expect(flat(withoutComments(r.body)), r.selector).toBe(noBlur);
   });
 });

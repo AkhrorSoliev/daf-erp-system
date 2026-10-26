@@ -797,10 +797,17 @@
      ambient layers animate all the time, so a backdrop blur would be
      recomputed every frame on a weak WebView. All three are mostly opaque
      surface (bg-surface at 95%, 90% and 85%), so they lose little. With no
-     scene (Toza, every other page) this never matches and the blur stays. */
+     scene (Toza, every other page) this never matches and the blur stays.
+
+     The prefixed declaration comes FIRST on purpose: Lightning CSS (Next's
+     minifier) drops an unprefixed declaration that precedes an identical
+     prefixed one, so the built rule would carry only -webkit-backdrop-filter
+     and Chrome and Firefox would keep the blur. Written the other way round
+     both survive. A shadcn overlay is portaled out of .lumio; see the rule
+     beside the .ormon-* block below. */
   .lumio:has([data-sahna]) .glass {
-    backdrop-filter: none;
     -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 
   /* Staggered entrance. Parent adds `lumio-stagger`, or child sets --i. */
@@ -1285,6 +1292,21 @@ button {
 .lumio :focus-within > textarea:autofill,
 .lumio :focus-within > select:autofill {
   box-shadow: inset 0 0 0 1000px var(--surface-card);
+}
+
+/* A sheet, dialog or alert dialog opened over a scene (a lesson node, the goal
+   card) must not blur it either: the overlay is portaled into <body>, outside
+   .lumio, so the .glass rule above cannot reach it, and its Tailwind utility
+   (supports-backdrop-filter:backdrop-blur-xs) would be recomputed every frame
+   while the scene's rays, mist and sparks keep moving behind it. Scroll is
+   locked, the animation is not. This rule is OUTSIDE every @layer on purpose:
+   an unlayered declaration beats the utility, which is layered. The prefixed
+   declaration comes first for the same reason as in the .glass rule (Lightning
+   CSS drops an unprefixed one that precedes an identical prefixed one).
+   globals-css.test.ts pins the slots, which the three ui files carry. */
+body:has(.lumio [data-sahna]) :is([data-slot="sheet-overlay"], [data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"]) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 /* ============================================================
