@@ -31,5 +31,5 @@ export function SettingsLayoutShell({ children }: { children: React.ReactNode })
 
   if (redirectTo || (user && !ready)) return null;
 
-  return <div className="space-y-4">{children}</div>;
+  return <div className="mx-auto w-full max-w-5xl space-y-4">{children}</div>;
 }
