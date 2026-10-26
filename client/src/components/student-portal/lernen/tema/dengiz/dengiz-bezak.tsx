@@ -79,8 +79,8 @@ export function Baliq({ color, x, y, s, chap }: { color: string; x: number; y: n
  * One wall strip of one zone: a 96 px column of rock and decor at one edge,
  * one 640 px tile drawn `TILE_COPIES` times with `<use>`, the screen plus a
  * tile tall, so the parallax (`useParallaks` reads `data-omil`) wraps it
- * forever. It is the scene's only moving layer, and narrow on purpose: no
- * filter, no blur, nothing full-screen (ADR-0133). The right strip is the
+ * forever. It is the only layer that follows the scroll, and narrow on
+ * purpose: no filter, no blur (ADR-0133). The right strip is the
  * left one's mirror image with its own seed.
  */
 export const DengizDevor = React.memo(function DengizDevor({

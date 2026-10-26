@@ -28,7 +28,7 @@ Ta'lim dizaynining 4-bosqichi — «Dengiz» temasi (CEO tasdiqlagan maket `docs
 
 ## Oqibatlar
 
-- 5-bosqich («Nemis sayohati») `sahna-qismlari.tsx` va `sahna-umumiy.ts` ni oladi va faqat palitra, reja, bezak va CSS beradi; uning `.alp-*` qoidalari `globals-css.test.ts` dagi `SCENE_THEMES` ga bitta qator bilan skanerga qo'shiladi.
+- 5-bosqich («Nemis sayohati») `sahna-qismlari.tsx` va `sahna-umumiy.ts` ni oladi va faqat palitra, reja, bezak va CSS beradi; uning `.alp-*` qoidalari skanerga ikki joyda qo'shiladi: `globals-css.test.ts` dagi `SCENE_THEMES` ga bitta yozuv va Dengizning skaner `describe` blokining o'z nomli nusxasi (`SCENE_THEMES` faqat tekshiruv funksiyasini oziqlantiradi, temalarni skanerga `describe` bloklari qo'lda nomlaydi).
 - Dengiz fayllari `tema/dengiz/`, o'zgaruvchilar `--dengiz-*` `.lumio` va `.dark .lumio` ichida, harakat `.dengiz-*` sinflarida.
 - Qabul qilingan cheklovlar: keng ekranda o'rta qism faqat suv, tizma, nur, pufakcha va baliqdan iborat (qoyalar chetlarda); 1920 px dan baland oynada tasmalar tugaydi (ADR-0132 dagi kabi, kerak bo'lsa `TILE_COPIES` oshiriladi).
 - Qabul qilingan cheklovlar (yo'l): ko'rinayotgan unit ma'lum bo'lib `BIOME_SETTLE_MS` (250 ms) o'zgarmay turguncha sahna birinchi zonada turadi (sahifa ochilganda yo'l oldingi unitlar yonidan o'tib boradi, sahna esa har xabarga ergashsa zonalar bo'ylab ketma-ket xiralashib o'tardi); yo'ldagi eski unit qatorlari va daraja ajratgichlari tema ko'rinishini olmaydi (shartnomada o'rni yo'q).
