@@ -81,6 +81,10 @@ describe("the «O'rmon» scene's motion (ADR-0131)", () => {
     );
   });
 
+  it("holds everything animated inside a hidden biome stack still, so it runs no timeline unseen", () => {
+    expect(flat).toContain(`.lumio .ormon-biome:not([data-faol]) ${list} { animation-play-state: paused; }`);
+  });
+
   it("stops every animation and the biome fade under the device's «Kam harakat» switch", () => {
     expect(flat).toContain(
       `.lumio [data-kam-harakat] ${list}, .lumio [data-kam-harakat] .ormon-biome { animation: none; transition: none; }`,
@@ -89,7 +93,23 @@ describe("the «O'rmon» scene's motion (ADR-0131)", () => {
 
   it("does the same under the system setting, also for the visible biome", () => {
     expect(flat).toContain(
-      `@media (prefers-reduced-motion: reduce) { .lumio ${list}, .lumio .ormon-biome, .lumio .ormon-biome[data-faol] { animation: none; transition: none; } }`,
+      `@media (prefers-reduced-motion: reduce) { .lumio ${list}, .lumio .ormon-biome, .lumio .ormon-biome[data-faol] { animation: none; transition: none; }`,
     );
+  });
+
+  // The layers do not move without the parallax, so a compositor layer each is
+  // memory spent on nothing. The reset must be at least as specific as, and
+  // after, the visible biome's `will-change: transform`.
+  it("takes the layers' compositor hint back where there is no parallax: «Kam harakat» and the system setting", () => {
+    const base = ".lumio .ormon-biome[data-faol] .ormon-layer { will-change: transform; }";
+    const kamReset = ".lumio [data-kam-harakat] .ormon-biome[data-faol] .ormon-layer { will-change: auto; }";
+    const mediaReset = ".lumio .ormon-biome[data-faol] .ormon-layer { will-change: auto; } }";
+    const mediaAt = flat.indexOf(`@media (prefers-reduced-motion: reduce) { .lumio ${list}`);
+    expect(flat).toContain(base);
+    expect(flat).toContain(kamReset);
+    expect(mediaAt).toBeGreaterThan(-1);
+    expect(flat.slice(mediaAt)).toContain(mediaReset);
+    expect(flat.indexOf(base)).toBeLessThan(flat.indexOf(kamReset));
+    expect(flat.indexOf(base)).toBeLessThan(mediaAt);
   });
 });

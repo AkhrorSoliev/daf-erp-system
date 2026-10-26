@@ -1435,11 +1435,23 @@ button {
   animation-play-state: paused;
 }
 
+/* A hidden biome stack is not painted, but its timelines would still run:
+   whatever animates inside it holds still until the biome shows. */
+.lumio .ormon-biome:not([data-faol]) :is(.ormon-spark, .ormon-leaf, .ormon-rays, .ormon-mist, .ormon-ring, .ormon-burst, .ormon-bob) {
+  animation-play-state: paused;
+}
+
 /* Later and as specific as the visible biome's rule, so it wins over it. */
 .lumio [data-kam-harakat] :is(.ormon-spark, .ormon-leaf, .ormon-rays, .ormon-mist, .ormon-ring, .ormon-burst, .ormon-bob),
 .lumio [data-kam-harakat] .ormon-biome {
   animation: none;
   transition: none;
+}
+
+/* No parallax here, so the layers need no compositor layer of their own.
+   One class more than the visible biome's rule, so it wins over it. */
+.lumio [data-kam-harakat] .ormon-biome[data-faol] .ormon-layer {
+  will-change: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1448,5 +1460,11 @@ button {
   .lumio .ormon-biome[data-faol] {
     animation: none;
     transition: none;
+  }
+
+  /* The system setting has no parallax either. After the visible biome's
+     rule and as specific as it, so it wins over it. */
+  .lumio .ormon-biome[data-faol] .ormon-layer {
+    will-change: auto;
   }
 }
