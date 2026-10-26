@@ -25,6 +25,7 @@ import { useLernenLevels } from "./queries";
 import { loadState } from "../lib/load-state";
 import { LoadFailed } from "../load-failed";
 import { LernenYol } from "./yol/lernen-yol";
+import { RadioCard } from "../radio/radio-card";
 import { YolTepasi } from "./yol/yol-tepasi";
 
 /**
@@ -88,6 +89,9 @@ export function LernenLevelsPage() {
         bo'lganda ham tepada joyida turadi.
       */}
       <YolTepasi />
+
+      {/* Radio is for listening while studying, so it sits at the top, within reach of a long path. */}
+      <RadioCard />
 
       {loadState(query) === "loading" ? (
         <LoadingCards count={3} />

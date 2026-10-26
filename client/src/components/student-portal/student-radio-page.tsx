@@ -54,11 +54,11 @@ export function StudentRadioPage() {
 
   return (
     <Screen>
-      {/* On a phone Radio is a "Ko'proq" row, not a tab, so it needs the way
-          back its sibling screens have. */}
+      {/* On a phone Radio is reached from a card on Bosh sahifa or Ta'lim, not a
+          tab, so it needs a way back. */}
       <StackHeader
         title={t("Radio")}
-        backHref="/portal/more"
+        backHref="/portal"
         right={
           <span className="hidden items-center gap-1.5 rounded-pill bg-coral-500/12 px-3 py-1.5 text-xs font-extrabold text-coral-600 sm:inline-flex">
             <Broadcast size={14} weight="fill" />

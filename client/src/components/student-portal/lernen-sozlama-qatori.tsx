@@ -18,7 +18,7 @@ export interface SozlamaQatoriProps {
  */
 export function SozlamaQatori({ icon, label, holat, yoqilgan, onToggle }: SozlamaQatoriProps) {
   return (
-    <Card pad="sm">
+    <Card pad="sm" className="flex min-h-[79px] items-center">
       <button
         type="button"
         role="switch"

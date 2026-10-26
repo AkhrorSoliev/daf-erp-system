@@ -26,6 +26,7 @@ import {
 import { useStudentProfile } from "./lib/queries";
 import { loadState } from "./lib/load-state";
 import { LoadFailed } from "./load-failed";
+import { RadioCard } from "./radio/radio-card";
 import type { AttendanceStats, ProfileGroup } from "./lib/types";
 
 const DAY_BY_INDEX = [
@@ -268,6 +269,10 @@ export function StudentHomePage() {
               </div>
             )}
           </div>
+        </FadeIn>
+        {/* German radio: one tap from the screen students open most. */}
+        <FadeIn index={5} className="lg:col-span-2">
+          <RadioCard />
         </FadeIn>
       </div>
     </Screen>

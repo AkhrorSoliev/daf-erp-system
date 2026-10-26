@@ -6,7 +6,6 @@ import {
   Screen,
   StackHeader,
   Section,
-  Card,
   ListRow,
   ThemeSegmented,
   LanguagePicker,
@@ -17,10 +16,11 @@ import { LernenKorinishTanlash } from "./lernen-korinish-tanlash";
 import { useStudentProfile } from "./lib/queries";
 import { settingsHelpItems } from "@/lib/student-nav-items";
 
-// Settings answers "how does the app behave" — theme and security. Everything
-// that describes *who the student is* (photo, name, contact details) lives on
-// the Profile screen, which this page links to. One field, one place to edit
-// it: the photo uploader and the name row that used to sit here are gone.
+// Settings, top to bottom: the account first (who I am, how I sign in, where I am
+// signed in), then how the app looks (theme, language), then how learning
+// behaves, then help. Everything that describes *who the student is* (photo,
+// name, contact details) is edited on the Profile screen this page links to:
+// one field, one place to edit it.
 export function StudentSettingsPage() {
   const t = useT();
   const { data: profile } = useStudentProfile();
@@ -30,22 +30,14 @@ export function StudentSettingsPage() {
     <Screen narrow>
       <StackHeader title={t("Sozlamalar")} backHref="/portal/more" />
 
-      <Section title={t("Mavzu")}>
-        <Card pad="sm">
-          <ThemeSegmented variant="select" />
-        </Card>
-      </Section>
-
-      {/* Kept on this device only (cookie): a student has no account language. */}
-      <Section title={t("Til")}>
-        <Card pad="sm">
-          <LanguagePicker variant="field" />
-        </Card>
-      </Section>
-
-      <LernenKorinishTanlash />
-
-      <Section title={t("Xavfsizlik")}>
+      <Section title={t("Hisobingiz")}>
+        <ListRow
+          icon={<User weight="bold" />}
+          iconTone="sky"
+          label={t("Profil")}
+          subtitle={t("Ism, rasm va aloqa ma'lumotlari")}
+          href="/portal/profile"
+        />
         <ListRow
           icon={<Key weight="bold" />}
           iconTone="amber"
@@ -67,15 +59,16 @@ export function StudentSettingsPage() {
         />
       </Section>
 
-      <Section title={t("Hisobingiz")}>
-        <ListRow
-          icon={<User weight="bold" />}
-          iconTone="sky"
-          label={t("Profil")}
-          subtitle={t("Ism, rasm va aloqa ma'lumotlari")}
-          href="/portal/profile"
-        />
+      <Section title={t("Mavzu")}>
+        <ThemeSegmented variant="select" />
       </Section>
+
+      {/* Kept on this device only (cookie): a student has no account language. */}
+      <Section title={t("Til")}>
+        <LanguagePicker variant="field" />
+      </Section>
+
+      <LernenKorinishTanlash />
 
       {/*
         Every width. On tablet + desktop the rail has no row for FAQ / Biz
