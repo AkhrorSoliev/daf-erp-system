@@ -11,6 +11,7 @@ import { useKamHarakat } from "../harakat/use-kam-harakat";
 import { ovozChal, ovozniUygot } from "../ovoz/ovoz";
 import { useFortschritt } from "../queries";
 import { useLernenTema } from "../tema/use-lernen-tema";
+import { SAHNA_PARDASI_KICHIK } from "../tema/sahna-ramka";
 import type { LernenTema } from "../tema/tema-turlari";
 import type { LernenLevel } from "../types";
 import { useJoriyUnit } from "./joriy-unit";
@@ -54,14 +55,22 @@ const TEKISLASH = [
 
 export interface LernenYolProps {
   levels: LernenLevel[];
+  /** Told the id of the unit the student is scrolling through; the page's scene follows it (ADR-0131). */
+  onUnitKorindi?: (unitId: number) => void;
 }
 
 /** Daraja o'zgargan joydagi ajratuvchi yorliq — masalan "A1". */
-function DarajaYorligi({ matn }: { matn: string }) {
+function DarajaYorligi({ matn, sahnali }: { matn: string; sahnali: boolean }) {
   return (
     <div className="flex items-center gap-3 py-1">
       <span aria-hidden className="h-px flex-1 bg-line" />
-      <span className="font-display text-sm font-extrabold uppercase tracking-wide text-ink-500">
+      <span
+        className={cn(
+          "font-display text-sm font-extrabold uppercase tracking-wide text-ink-500",
+          // On a theme's scene the caption sits on the plain surface (ADR-0131).
+          sahnali && SAHNA_PARDASI_KICHIK,
+        )}
+      >
         {matn}
       </span>
       <span aria-hidden className="h-px flex-1 bg-line" />
@@ -117,6 +126,7 @@ function SeansTuguni({
   tugun,
   align,
   ostyozuvKorinsinmi,
+  sahnali,
   Belgi,
   onClick,
   onQulf,
@@ -125,6 +135,8 @@ function SeansTuguni({
   tugun: YolTugun;
   align: (typeof TEKISLASH)[number];
   ostyozuvKorinsinmi: boolean;
+  /** The theme draws a scene: the section name above the node sits on the plain surface (ADR-0131). */
+  sahnali: boolean;
   /** The active theme's node badge, chosen once by `LernenYol`. */
   Belgi: LernenTema["TugunBelgisi"];
   onClick?: () => void;
@@ -136,7 +148,12 @@ function SeansTuguni({
     <div ref={ref} className={cn("flex", align)}>
       <div className="relative flex flex-col items-center gap-1.5">
         {ostyozuvKorinsinmi && tugun.ostyozuv ? (
-          <p className="max-w-[132px] truncate text-center text-[11px] font-bold uppercase tracking-wide text-ink-400">
+          <p
+            className={cn(
+              "max-w-[132px] truncate text-center text-[11px] font-bold uppercase tracking-wide text-ink-400",
+              sahnali && SAHNA_PARDASI_KICHIK,
+            )}
+          >
             {tugun.ostyozuv}
           </p>
         ) : null}
@@ -165,10 +182,11 @@ function SeansTuguni({
  * o'sha yassi ro'yxatni o'qiydi va turi bo'yicha chizadi, qayta
  * hisoblamaydi.
  */
-export function LernenYol({ levels }: LernenYolProps) {
+export function LernenYol({ levels, onUnitKorindi }: LernenYolProps) {
   const router = useRouter();
   const t = useT();
   const { tema } = useLernenTema();
+  const sahnali = tema.Sahna != null;
   const kam = useKamHarakat();
   const tugunlar = React.useMemo(() => yolTugunlari(levels, t), [levels, t]);
   // Zigzag bosqichi va "bo'lim o'zgardimi" bayrog'i `yol-tuzilishi.ts`da
@@ -193,6 +211,11 @@ export function LernenYol({ levels }: LernenYolProps) {
   const joriyUnit = useJoriyUnit(konteyner);
   const unitlar = React.useMemo(() => tugunlar.filter((x) => x.tur === "unit"), [tugunlar]);
   const korinayotganUnit = unitlar[Math.min(joriyUnit, unitlar.length - 1)];
+  // The page's scene follows the unit on screen (its biome, ADR-0131).
+  const korinayotganUnitId = korinayotganUnit?.id ?? null;
+  React.useEffect(() => {
+    if (korinayotganUnitId != null) onUnitKorindi?.(korinayotganUnitId);
+  }, [korinayotganUnitId, onUnitKorindi]);
   const [varaq, setVaraq] = React.useState<YolTugun | null>(null);
 
   const fortschritt = useFortschritt();
@@ -251,7 +274,7 @@ export function LernenYol({ levels }: LernenYolProps) {
       <div className="flex flex-col gap-5">
         {tugunlar.map((tugun, i) => {
           if (tugun.tur === "daraja") {
-            return <DarajaYorligi key={`daraja-${i}-${tugun.daraja}`} matn={tugun.matn} />;
+            return <DarajaYorligi key={`daraja-${i}-${tugun.daraja}`} matn={tugun.matn} sahnali={sahnali} />;
           }
 
           if (tugun.tur === "unit") {
@@ -277,6 +300,7 @@ export function LernenYol({ levels }: LernenYolProps) {
               tugun={tugun}
               align={align}
               ostyozuvKorinsinmi={meta.ostyozuvKorinsinmi}
+              sahnali={sahnali}
               Belgi={tema.TugunBelgisi}
               onClick={
                 tugun.tur === "seans" && tugun.holat !== "locked"

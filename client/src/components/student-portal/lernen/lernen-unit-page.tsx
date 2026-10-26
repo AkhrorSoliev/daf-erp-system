@@ -16,11 +16,13 @@ import {
 import { useT } from "@/i18n/use-t";
 import { useLernenUnit } from "./queries";
 import { loadState } from "../lib/load-state";
+import { useSidebar } from "../lib/sidebar-store";
 import { LoadFailed } from "../load-failed";
 import { seansHolatlari, type SeansHolatBelgisi } from "./fortschritt";
 import { useKamHarakat } from "./harakat/use-kam-harakat";
 import { ovozChal, ovozniUygot } from "./ovoz/ovoz";
 import { sozHisoblagichi, type SozHisoblagichi } from "./soz-hisoblagichi";
+import { SAHNA_KARTASI, SAHNA_PARDASI, SAHNA_PARDASI_KICHIK, SahnaRamka } from "./tema/sahna-ramka";
 import { useLernenTema } from "./tema/use-lernen-tema";
 import type { TugunHolat, TugunTone } from "./tema/tema-turlari";
 import { DARAJA_TONI } from "./tema/toza/toza-tugun-model";
@@ -54,9 +56,9 @@ const TUGUN_HOLATI: Record<SeansHolatBelgisi, TugunHolat> = {
 };
 
 /** The section's word counter: «So'zlar: 14 / 28» and a thin bar (ADR-0071). */
-function SozlarQatori({ hisob }: { hisob: SozHisoblagichi }) {
+function SozlarQatori({ hisob, className }: { hisob: SozHisoblagichi; className?: string }) {
   return (
-    <div className="space-y-1 px-1">
+    <div className={cn("space-y-1 px-1", className)}>
       <p
         className={cn(
           "flex items-center gap-1 text-xs font-bold tabular-nums",
@@ -89,6 +91,8 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
   const t = useT();
   const router = useRouter();
   const { tema } = useLernenTema();
+  const Sahna = tema.Sahna;
+  const sidebarMode = useSidebar((s) => s.mode);
   // Marks the less-motion state for CSS: the entrance stagger resolves at once (globals.css).
   const kam = useKamHarakat();
   const query = useLernenUnit(unitId);
@@ -173,15 +177,27 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
 
   return (
     // The marker sits on this outer root; the stagger below is strictly inside it (descendant selector).
-    <Screen narrow data-kam-harakat={kam ? "" : undefined}>
-      <StackHeader title={data?.titleUz ?? t("Bo'lim")} backHref="/portal/lernen" />
+    // `isolate` (only with a scene): the frame (-z-10) stays behind the page and above the shell's background.
+    <Screen narrow data-kam-harakat={kam ? "" : undefined} className={cn(Sahna && "isolate")}>
+      {/* Independent of the unit's request (spec §10): the scene stands while it loads or fails too. */}
+      {Sahna ? (
+        <SahnaRamka sidebarMode={sidebarMode}>
+          <Sahna unitTartibi={data?.order ?? 1} />
+        </SahnaRamka>
+      ) : null}
+      <StackHeader
+        title={data?.titleUz ?? t("Bo'lim")}
+        backHref="/portal/lernen"
+        className={cn(Sahna && SAHNA_PARDASI)}
+      />
 
       {loadState(query) === "loading" ? (
         <LoadingCards count={3} />
       ) : !data ? (
-        <LoadFailed query={query} />
+        <LoadFailed query={query} className={cn(Sahna && SAHNA_KARTASI)} />
       ) : boshMi ? (
         <EmptyState
+          className={cn(Sahna && SAHNA_KARTASI)}
           icon={<BookOpen size={28} weight="bold" />}
           title={t("Bu unitning mashqlari hali tayyor emas")}
           description={t("Material tez orada qo'shiladi.")}
@@ -202,7 +218,7 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
             const hisob = sozHisoblagichi(section.woerter, t);
             return (
               <section key={section.id} className="space-y-2">
-                <div className="px-1">
+                <div className={cn("px-1", Sahna && SAHNA_PARDASI)}>
                   <h2 className="font-display text-base font-extrabold text-ink-900">
                     {section.order}. {section.titleUz}
                   </h2>
@@ -210,7 +226,7 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
                     {section.titleDe}
                   </p>
                 </div>
-                {hisob ? <SozlarQatori hisob={hisob} /> : null}
+                {hisob ? <SozlarQatori hisob={hisob} className={cn(Sahna && SAHNA_PARDASI)} /> : null}
                 <div className="space-y-2">
                   {section.lessons.map((l) => joy(l, holatMap.get(l.id) ?? "QULF", hisob?.yanaMashq))}
                 </div>
@@ -220,7 +236,12 @@ export function LernenUnitPage({ unitId }: { unitId: number }) {
 
           {data.finalTest ? (
             <section className="space-y-2 border-t border-line pt-4">
-              <h2 className="px-1 font-display text-base font-extrabold text-ink-900">
+              <h2
+                className={cn(
+                  "px-1 font-display text-base font-extrabold text-ink-900",
+                  Sahna && SAHNA_PARDASI_KICHIK,
+                )}
+              >
                 {t("Yakuniy sinov")}
               </h2>
               {joy(data.finalTest, holatMap.get(data.finalTest.id) ?? "QULF")}
