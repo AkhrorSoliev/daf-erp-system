@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   addDaysToDateStr,
   tashkentDateStr,
@@ -11,6 +12,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { SettingsService } from '../../settings/settings.service';
 import { CHAT_OFF_MESSAGE } from '../chat.constants';
+import { isChatTester } from '../chat-testers';
 import {
   WINDOW_DAYS,
   evaluateQuota,
@@ -39,6 +41,7 @@ export class ChatAccessService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
+    private readonly config: ConfigService,
   ) {}
 
   async forStudent(
@@ -85,14 +88,18 @@ export class ChatAccessService {
       radioSeconds: u._sum.radioSeconds ?? 0,
     }));
     const quota = evaluateQuota(days, today, { activeMin, radioMin });
-    const reasons = lockReasons(student, quota);
+    const tester = isChatTester(this.config, studentId);
+    // A tester skips every write rule except a ban (so ban/unban stays testable).
+    const reasons = lockReasons(student, quota).filter(
+      (r) => !tester || r === 'BANNED',
+    );
 
     return {
-      enabled,
-      canWrite: enabled && reasons.length === 0,
+      enabled: enabled || tester,
+      canWrite: (enabled || tester) && reasons.length === 0,
       reasons,
       messages: reasons.map((r) => reasonText(r, quota)),
-      warning: reasons.length === 0 ? tomorrowWarning(quota) : null,
+      warning: reasons.length === 0 && !tester ? tomorrowWarning(quota) : null,
       quota,
     };
   }

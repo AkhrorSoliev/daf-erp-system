@@ -6,6 +6,7 @@ import { Markup } from 'telegraf';
 import { NotificationsGateway } from '../../notifications/notifications.gateway';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { PushService } from '../../notifications/push.service';
+import { isChatTester } from '../chat-testers';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SettingsService } from '../../settings/settings.service';
 import { SmsService } from '../../sms/sms.service';
@@ -244,7 +245,7 @@ export class ChatNotifyService {
             this.settings.get(conversation.companyId, 'chat.enabled'),
           ]);
           const reachable =
-            enabled &&
+            (enabled || isChatTester(this.config, p.studentId)) &&
             recipient?.telegramChatId &&
             !recipient.telegramDisconnectedAt;
           if (
