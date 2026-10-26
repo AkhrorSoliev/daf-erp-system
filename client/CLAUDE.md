@@ -1178,6 +1178,18 @@ work. `student-radio-page.tsx` is only a chooser — playback lives in the shell
 - **Mini App:** the Telegram notice opens `/portal/chat/<id>` through `studentPortalPath` (anchored allow-list, see «Telegram Mini App»); do not widen it.
 - **Chat texts and names are DATA:** a message, a name or a username never goes through `t()` (in `uz-Cyrl` it would be transliterated). Only the UI strings are translated (`STRICT_FILES`, ru/de/en).
 
+### Chat settings and reports (`/settings/chat`, spec 2026-10-25, Plan C3)
+
+The CEO's pages for the student chat. Code: `components/settings/chat/`, page `app/(dashboard)/settings/chat/`.
+
+- **CEO identity, not a capability (ADR-0087):** the settings item is `ceoOnly: true` and the API (`/chat/admin/*`) is `@CeoOnly()`. The pages are NOT gated by the chat switch: the CEO reviews reports and bans while `chat.enabled` is off, and must be able to turn it on.
+- **Three tabs, URL state:** `?tab=` (`sozlamalar` default and omitted, `shikoyatlar`, `chiqarilganlar`). The reports tab keeps `?holat=` (status filter) and `?shikoyat=<id>` (the open drawer). The bell notice opens `/settings/chat?tab=shikoyatlar&shikoyat=<id>`. A non-UUID or unknown `shikoyat` (the server answers 400 or 404) shows «Shikoyat topilmadi», not a load failure.
+- **Files:** `chat-settings-page.tsx` (tabs and URL), `chat-settings-tab.tsx` + `chat-settings-draft.ts` (the form), `chat-reports-tab.tsx` + `chat-report-rules.ts` (table, filters), `chat-report-drawer.tsx`, `chat-report-parts.tsx` (person lines, message copy), `chat-report-resolve.tsx` (footer, ban choice, confirm), `chat-banned-tab.tsx`, `chat-admin-queries.ts` (`CHAT_ADMIN_KEYS` and every hook), `chat-admin-types.ts`.
+- **Settings draft:** keeps only the fields the CEO EDITED and merges them over the saved values, so a refetch never overwrites a typed value; the PATCH sends only those fields. The form stays mounted on a failed background refetch. Switching the chat on or off and the weekly minutes go through a confirm `AlertDialog`.
+- **Reports table:** `#` column, page size 10–50, pagination is client-side over cursor pages (`useChatReports`, 50 per request) with «Yana ko'rsatish». The text copy (last 50 messages) shows names and messages as plain text and never a file or a signed link.
+- **Ban and unban:** `useBanStudent` / `useUnbanStudent` are shared by the drawer (ban choice on resolve, with a destructive confirm) and the banned tab (unban, confirm). Resolve, ban and unban all end in `useAfterReportChange`, which invalidates `["chat-admin","reports"]` and the banned list; resolve also refreshes the bell (`["notifications"]` and `fetchBadge()`).
+- **`CHAT_REPORT` notice:** a bell row for every active CEO when a report is filed (names only, never the reason or a message). It closes when the report is resolved (server: `ChatReportsService.resolve` through `NotificationResolverService`). Names, reasons, notes and messages are DATA and never go through `t()`.
+
 ### Position vs role in the employee form
 
 `edit-employee-form.tsx` asks for **Lavozim** (`position`, required, free text)
