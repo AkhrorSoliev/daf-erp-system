@@ -31,6 +31,15 @@ describe("placeForKind (spec §8)", () => {
     expect(placeForKind(null)).toBe("kulba");
   });
 
+  // The client and the server are deployed by hand, so the server can send a kind
+  // this build does not know. The page must still draw a place, not throw.
+  it("draws an unknown kind as a hut, a place that has an emblem", () => {
+    const unknown = "FUTURE_KIND" as unknown as Parameters<typeof placeForKind>[0];
+    expect(placeForKind(unknown)).toBe("kulba");
+    expect(JOY_BELGISI[placeForKind(unknown)]).toBeTypeOf("function");
+    expect(joy({ kind: unknown })).toContain('data-joy="kulba"');
+  });
+
   it("gives every place a small, still emblem", () => {
     for (const Belgi of Object.values(JOY_BELGISI)) {
       const html = renderToStaticMarkup(createElement(Belgi, {}));

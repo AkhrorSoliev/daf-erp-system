@@ -84,7 +84,8 @@ export function OrmonSahna({ unitTartibi }: SahnaProps) {
   const tinch = useSahnaPauza(ildiz);
   const plan = React.useMemo(() => scenePlan({ reduced: kam, light: yengil }), [kam, yengil]);
   useParallaks(ildiz, {
-    faol: plan.parallax && !tinch,
+    faol: plan.parallax,
+    tinch,
     tile: TILE,
     kalit: plan.layers.map((l) => `${l.id}${l.count}`).join(),
   });

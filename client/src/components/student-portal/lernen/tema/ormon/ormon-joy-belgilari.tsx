@@ -22,7 +22,10 @@ export function placeForKind(kind: DafLessonKind | null): JoyId {
     default: {
       // A new lesson kind must get its own place: this line stops compiling until it does.
       const unplaced: never = kind;
-      return unplaced;
+      void unplaced;
+      // At run time a kind this build does not know (the server and the client are
+      // deployed by hand, so they can differ) is a hut: the page still draws.
+      return "kulba";
     }
   }
 }

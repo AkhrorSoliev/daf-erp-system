@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { yengilRejimmi } from "./kam-harakat";
-import { layerOffset, scenePaused } from "./parallaks";
+import { layerOffset, parallaxMode, scenePaused } from "./parallaks";
 
 const obunaYoq = () => () => {};
 
@@ -50,22 +50,27 @@ export function useSahnaPauza(ildiz: React.RefObject<HTMLElement | null>): boole
 /**
  * The scene's ONE `requestAnimationFrame` for the scroll parallax (spec §5):
  * every element under `ildiz` with `data-omil` (its factor) moves by
- * `layerOffset` from a passive scroll listener, at most once a frame. Off
- * (`faol` false: «Kam harakat» or paused) the layers rest where they are drawn.
- * `kalit` changes when the drawn layers change, so the list is read again.
+ * `layerOffset` from a passive scroll listener, at most once a frame. Without
+ * a parallax (`faol` false: «Kam harakat») the layers rest where they are
+ * drawn. While the scene is paused (`tinch`: hidden or off screen) the listener
+ * is off but the layers keep their last offset, and on resume they are placed
+ * at once, so nothing snaps (`parallaxMode`). `kalit` changes when the drawn
+ * layers change, so the list is read again.
  */
 export function useParallaks(
   ildiz: React.RefObject<HTMLElement | null>,
-  { faol, tile, kalit }: { faol: boolean; tile: number; kalit: string },
+  { faol, tinch, tile, kalit }: { faol: boolean; tinch: boolean; tile: number; kalit: string },
 ): void {
   React.useEffect(() => {
     const el = ildiz.current;
     if (!el) return;
+    const rejim = parallaxMode({ parallax: faol, paused: tinch });
     const qatlamlar = [...el.querySelectorAll<HTMLElement | SVGElement>("[data-omil]")];
-    if (!faol) {
+    if (rejim === "off") {
       for (const q of qatlamlar) q.style.transform = "";
       return;
     }
+    if (rejim === "paused") return;
     let kadr = 0;
     const chiz = () => {
       kadr = 0;
@@ -83,5 +88,5 @@ export function useParallaks(
       window.removeEventListener("scroll", turtki);
       if (kadr) cancelAnimationFrame(kadr);
     };
-  }, [ildiz, faol, tile, kalit]);
+  }, [ildiz, faol, tinch, tile, kalit]);
 }

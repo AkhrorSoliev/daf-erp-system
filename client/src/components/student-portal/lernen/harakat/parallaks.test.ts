@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { layerOffset, scenePaused } from "./parallaks";
+import { layerOffset, parallaxMode, scenePaused } from "./parallaks";
 
 describe("layerOffset", () => {
   it("moves a layer by its factor of the scroll, up the screen", () => {
@@ -28,5 +28,23 @@ describe("scenePaused", () => {
     expect(scenePaused({ hidden: false, offscreen: false })).toBe(false);
     expect(scenePaused({ hidden: true, offscreen: false })).toBe(true);
     expect(scenePaused({ hidden: false, offscreen: true })).toBe(true);
+  });
+});
+
+describe("parallaxMode", () => {
+  // A hidden tab used to clear every layer's transform, so on the way back the
+  // first frames drew offset 0 and then snapped. Only a scene with no parallax at
+  // all rests at 0; a paused one keeps where it was.
+  it("rests the layers at 0 only where there is no parallax: «Kam harakat» and the system setting", () => {
+    expect(parallaxMode({ parallax: false, paused: false })).toBe("off");
+    expect(parallaxMode({ parallax: false, paused: true })).toBe("off");
+  });
+
+  it("keeps the layers where they are while a scene with a parallax is paused", () => {
+    expect(parallaxMode({ parallax: true, paused: true })).toBe("paused");
+  });
+
+  it("follows the scroll when there is a parallax and the scene is shown", () => {
+    expect(parallaxMode({ parallax: true, paused: false })).toBe("follows");
   });
 });
