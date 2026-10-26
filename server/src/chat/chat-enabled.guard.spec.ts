@@ -15,9 +15,11 @@ function ctx(method: 'closed' | 'open', user: object = { companyId: 7 }) {
   } as never;
 }
 
-function make(enabled: boolean) {
+function make(enabled: boolean, testers?: string) {
   const settings = { get: jest.fn().mockResolvedValue(enabled) };
-  const guard = new ChatEnabledGuard(settings as never, new Reflector());
+  const guard = new ChatEnabledGuard(settings as never, new Reflector(), {
+    get: () => testers,
+  } as never);
   return { guard, settings };
 }
 
@@ -46,6 +48,24 @@ describe('ChatEnabledGuard', () => {
   it('refuses a request with no company on the user', async () => {
     const { guard } = make(true);
     await expect(guard.canActivate(ctx('closed', {}))).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('lets a tester through while the switch is off, without asking', async () => {
+    const { guard, settings } = make(false, '10003, 10028');
+    await expect(
+      guard.canActivate(ctx('closed', { companyId: 7, studentId: 10028 })),
+    ).resolves.toBe(true);
+    expect(settings.get).not.toHaveBeenCalled();
+  });
+
+  it('still refuses a non-tester and a user with no studentId', async () => {
+    const { guard } = make(false, '10003');
+    await expect(
+      guard.canActivate(ctx('closed', { companyId: 7, studentId: 5 })),
+    ).rejects.toThrow(ForbiddenException);
+    await expect(guard.canActivate(ctx('closed'))).rejects.toThrow(
       ForbiddenException,
     );
   });

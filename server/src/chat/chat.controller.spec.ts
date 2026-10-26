@@ -24,6 +24,13 @@ describe('ChatController', () => {
     ]);
   });
 
+  it('typing is a student route answering 204', () => {
+    expect(routeAccess(ChatController, 'typing')).toEqual({ kind: 'student' });
+    expect(
+      Reflect.getMetadata('__httpCode__', ChatController.prototype.typing),
+    ).toBe(204);
+  });
+
   it('keeps only GET /chat/access open while chat is switched off', () => {
     const open = methods.filter(
       (m) =>

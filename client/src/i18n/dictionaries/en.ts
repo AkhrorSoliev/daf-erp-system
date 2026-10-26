@@ -5347,6 +5347,7 @@ const en: Dictionary = {
   "Mashq: {have}/{need} daqiqa": "Practice: {have}/{need} min",
   "Radio: {have}/{need} daqiqa": "Radio: {have}/{need} min",
   "Xabar yozing…": "Write a message…",
+  "yozmoqda…": "typing…",
   "Chat hali ochilmagan": "Chat isn't open yet",
   "Chat ochilganda bu yerda suhbatlaringiz paydo bo'ladi.": "Once chat opens, your conversations will appear here.",
   "Yangi chat": "New chat",

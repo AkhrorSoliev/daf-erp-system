@@ -18,6 +18,7 @@ function make(
     disconnected?: boolean;
     switchOff?: boolean;
     smsFails?: boolean;
+    testers?: string;
   } = {},
 ) {
   const prisma = {
@@ -61,7 +62,11 @@ function make(
       ? jest.fn().mockRejectedValue(new Error('telegram down'))
       : jest.fn().mockResolvedValue({}),
   };
-  const config = { get: jest.fn(() => 'https://student.dafzentrum.uz/tg') };
+  const config = {
+    get: jest.fn((k: string) =>
+      k === 'CHAT_TESTER_IDS' ? o.testers : 'https://student.dafzentrum.uz/tg',
+    ),
+  };
   const settings = {
     get: jest.fn().mockResolvedValue(o.switchOff ? false : true),
   };
@@ -259,6 +264,13 @@ describe('ChatNotifyService.sendMorning', () => {
     await service.sendMorning(new Date('2026-10-26T03:05:00Z'));
     expect(sms.sendToStudent).not.toHaveBeenCalled();
     expect(prisma.chatNotifyState.update).toHaveBeenCalledWith(cleared);
+  });
+
+  it('still sends to a tester recipient while the chat switch is off', async () => {
+    const { service, prisma, sms } = make({ switchOff: true, testers: '2' });
+    prisma.chatNotifyState.findMany.mockResolvedValue(pendingRow);
+    await service.sendMorning(new Date('2026-10-26T03:05:00Z'));
+    expect(sms.sendToStudent).toHaveBeenCalled();
   });
 
   it('clears the wait and sends nothing while the chat switch is off', async () => {

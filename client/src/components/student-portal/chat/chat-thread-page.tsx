@@ -14,9 +14,9 @@ import { BlockedNotice, PeerMenu } from "./peer-menu";
 import {
   useBlockedIds,
   useChatAccess,
-  useConversations,
   useMarkRead,
   useMessages,
+  usePeer,
   useRemoveMessage,
 } from "./chat-queries";
 import {
@@ -26,6 +26,7 @@ import {
   threadMessages,
   type ThreadItem,
 } from "./chat-thread-model";
+import { useChatPeerTyping } from "./chat-stream-store";
 import { ChatAccessBanner } from "./chat-access-banner";
 import { ChatComposer } from "./chat-composer";
 import { MediaBubble } from "./media-bubble";
@@ -51,7 +52,6 @@ function BubbleSkeleton() {
 export function ChatThreadPage({ id }: { id: string }) {
   const t = useT();
   const sidebarMode = useSidebar((s) => s.mode);
-  const conversations = useConversations();
   const access = useChatAccess().data;
   const blockedIds = useBlockedIds();
   const query = useMessages(id);
@@ -67,7 +67,8 @@ export function ChatThreadPage({ id }: { id: string }) {
   const visible = useSyncExternalStore(subscribeVisibility, isVisible, () => true);
 
   // A direct link may name a thread the list has not loaded: the title falls back.
-  const peer = conversations.data?.find((c) => c.id === id)?.peer;
+  const peer = usePeer(id);
+  const peerTyping = useChatPeerTyping(id);
   const messages = threadMessages(query.data?.pages);
   const items = mergePending(messages, pending);
   const lastPeer = lastPeerMessageId(messages);
@@ -149,9 +150,16 @@ export function ChatThreadPage({ id }: { id: string }) {
             name={peer ? peerName(peer) : null}
             size={40}
           />
-          <h1 className="min-w-0 truncate font-display text-lg font-extrabold text-ink-900">
-            {peer ? peerName(peer) : t("Suhbat")}
-          </h1>
+          <div className="min-w-0">
+            <h1 className="truncate font-display text-lg font-extrabold text-ink-900">
+              {peer ? peerName(peer) : t("Suhbat")}
+            </h1>
+            {peerTyping && (
+              <p className="truncate text-xs font-semibold text-ink-500">
+                {t("yozmoqda…")}
+              </p>
+            )}
+          </div>
         </div>
         <PeerMenu conversationId={id} peer={peer} />
 

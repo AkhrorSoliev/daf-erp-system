@@ -1153,6 +1153,9 @@
   "POST /chat/conversations/:id/messages": [
     "Student"
   ],
+  "POST /chat/conversations/:id/typing": [
+    "Student"
+  ],
   "POST /chat/report": [
     "Student"
   ],
