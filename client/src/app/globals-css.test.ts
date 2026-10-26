@@ -113,3 +113,28 @@ describe("the «O'rmon» scene's motion (ADR-0131)", () => {
     expect(flat.indexOf(base)).toBeLessThan(mediaAt);
   });
 });
+
+// Nothing that floats over a scene may blur what is behind it: the scene's
+// ambient layers animate all the time, so the blur would be recomputed every
+// frame. The bottom-nav pill and the radio dock are `.glass`; the rule below
+// takes the blur off while a scene's root (`data-sahna`) is on the page.
+describe("the glass chrome over a theme's scene (ADR-0131)", () => {
+  const css = readFileSync(path.join(__dirname, "globals.css"), "utf8");
+  const flat = css.replace(/\s+/g, " ");
+  const portal = path.join(__dirname, "../components/student-portal");
+
+  it("drops the backdrop blur only while a scene stands, after the rule that sets it", () => {
+    const base = ".lumio .glass { backdrop-filter: var(--blur-glass); -webkit-backdrop-filter: var(--blur-glass); }";
+    const off = ".lumio:has([data-sahna]) .glass { backdrop-filter: none; -webkit-backdrop-filter: none; }";
+    expect(flat).toContain(base);
+    expect(flat).toContain(off);
+    expect(flat.indexOf(base)).toBeLessThan(flat.indexOf(off));
+  });
+
+  it("matches the attribute the scene's root carries and the chrome that floats over it", () => {
+    expect(readFileSync(path.join(portal, "lernen/tema/ormon/ormon-sahna.tsx"), "utf8")).toContain('data-sahna="ormon"');
+    for (const file of ["lumio/bottom-nav.tsx", "radio/radio-mini-player.tsx"]) {
+      expect(readFileSync(path.join(portal, file), "utf8"), file).toMatch(/className="glass /);
+    }
+  });
+});

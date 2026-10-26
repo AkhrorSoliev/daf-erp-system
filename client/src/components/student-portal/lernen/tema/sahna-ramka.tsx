@@ -24,10 +24,19 @@ export const SAHNA_KARTASI = "rounded-[28px] bg-surface shadow-lumio-card";
  * clear of the side rail — it is `fixed`, so the content column's inset does
  * not reach it — and never in the way of a tap or a screen reader. The rail
  * mode is a prop (as `PastkiPanel`'s), so a test can render every width.
+ * The inset slides at the content column's pace (the rail and the column take
+ * 200 ms to change width), so the scene never sits under the rail or leaves a
+ * gap beside it for a moment; under reduced motion it follows at once.
  */
 export function SahnaRamka({ sidebarMode, children }: { sidebarMode: SidebarMode; children: React.ReactNode }) {
   return (
-    <div aria-hidden="true" className={cn("pointer-events-none fixed inset-0 -z-10", CONTENT_INSET[sidebarMode])}>
+    <div
+      aria-hidden="true"
+      className={cn(
+        "pointer-events-none fixed inset-0 -z-10 transition-[padding] duration-200 ease-out motion-reduce:transition-none",
+        CONTENT_INSET[sidebarMode],
+      )}
+    >
       <div className="relative h-full w-full overflow-hidden">{children}</div>
     </div>
   );

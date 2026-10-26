@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { type ComponentProps, createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -33,6 +35,18 @@ describe("SahnaRamka", () => {
     for (const c of ["fixed", "inset-0", "-z-10", "pointer-events-none"]) expect(classes).toContain(c);
     expect(html).toMatch(/^<div aria-hidden="true"/);
     expect(html).toContain("sahna");
+  });
+
+  // The rail and the content column slide over 200 ms when the rail is toggled;
+  // the frame's inset must follow at the same pace, or the scene sits under the
+  // rail (or leaves a gap beside it) for a moment.
+  it("follows the rail's width change at the pace of the content column, and at once under reduced motion", () => {
+    const classes = rootClasses(ramka("expanded")).split(/\s+/);
+    for (const c of ["transition-[padding]", "duration-200", "ease-out", "motion-reduce:transition-none"]) {
+      expect(classes).toContain(c);
+    }
+    const shell = readFileSync(join(__dirname, "../../student-portal-layout.tsx"), "utf8");
+    expect(shell).toContain('"transition-[padding] duration-200 ease-out"');
   });
 });
 
