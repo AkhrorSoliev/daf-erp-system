@@ -272,10 +272,16 @@
   "GET /chat/access": [
     "Student"
   ],
+  "GET /chat/admin/banned": [
+    "CEO"
+  ],
   "GET /chat/admin/reports": [
     "CEO"
   ],
   "GET /chat/admin/reports/:id": [
+    "CEO"
+  ],
+  "GET /chat/admin/settings": [
     "CEO"
   ],
   "GET /chat/conversations": [
@@ -1118,6 +1124,9 @@
     "CEO"
   ],
   "PATCH /chat/admin/reports/:id": [
+    "CEO"
+  ],
+  "PATCH /chat/admin/settings": [
     "CEO"
   ],
   "PATCH /chat/conversations/:id/read": [

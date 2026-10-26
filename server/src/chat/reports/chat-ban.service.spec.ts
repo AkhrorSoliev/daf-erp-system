@@ -73,4 +73,45 @@ describe('ChatBanService', () => {
       NotFoundException,
     );
   });
+
+  it('listBanned is company-scoped, skips deleted, newest ban first, max 200', async () => {
+    const { service, prisma } = make();
+    const at = new Date('2026-10-20T10:00:00Z');
+    const findMany = jest.fn().mockResolvedValue([
+      {
+        id: 1,
+        firstName: 'Ali',
+        lastName: '',
+        username: 'ali',
+        chatBannedAt: at,
+      },
+      {
+        id: 2,
+        firstName: 'Vali',
+        lastName: 'Aliyev',
+        username: null,
+        chatBannedAt: at,
+      },
+    ]);
+    (prisma.student as Record<string, jest.Mock>).findMany = findMany;
+    const out = await service.listBanned(7);
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { companyId: 7, deletedAt: null, chatBannedAt: { not: null } },
+        orderBy: { chatBannedAt: 'desc' },
+        take: 200,
+      }),
+    );
+    expect(out).toEqual({
+      data: [
+        { id: 1, name: 'Ali', username: 'ali', chatBannedAt: at.toISOString() },
+        {
+          id: 2,
+          name: 'Vali Aliyev',
+          username: null,
+          chatBannedAt: at.toISOString(),
+        },
+      ],
+    });
+  });
 });

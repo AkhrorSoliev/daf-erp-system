@@ -178,9 +178,12 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       '`Student.chatBannedAt` are company data: the CEO acts across all branches. ' +
       'CEO-only through `@CeoOnly()`.',
     routes: [
+      'GET /chat/admin/banned',
       'GET /chat/admin/reports',
       'GET /chat/admin/reports/:id',
+      'GET /chat/admin/settings',
       'PATCH /chat/admin/reports/:id',
+      'PATCH /chat/admin/settings',
       'POST /chat/admin/students/:studentId/ban',
       'POST /chat/admin/students/:studentId/unban',
     ],

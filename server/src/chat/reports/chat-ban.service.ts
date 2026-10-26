@@ -19,6 +19,30 @@ export class ChatBanService {
     return this.set(studentId, companyId, actorId, false);
   }
 
+  /** Students of this company currently banned from the chat, newest ban first. */
+  async listBanned(companyId: number) {
+    const rows = await this.prisma.student.findMany({
+      where: { companyId, deletedAt: null, chatBannedAt: { not: null } },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        username: true,
+        chatBannedAt: true,
+      },
+      orderBy: { chatBannedAt: 'desc' },
+      take: 200,
+    });
+    return {
+      data: rows.map((s) => ({
+        id: s.id,
+        name: `${s.firstName} ${s.lastName}`.trim(),
+        username: s.username ?? null,
+        chatBannedAt: s.chatBannedAt!.toISOString(),
+      })),
+    };
+  }
+
   private async set(
     studentId: number,
     companyId: number,
