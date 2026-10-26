@@ -33,3 +33,11 @@ Ta'lim dizaynining 2-bosqichi: mashq ekrani, javob ovozi va Dafi, natija ekrani 
 - Ma'lum cheklovlar (ataylab shu ishda tuzatilmagan):
   - Ikkala lavhada (yo'ldagi yopishqoq va unit sahifasidagi) daraja ranglaridagi oq matn 2.5–4.2:1, ba'zi belgilardagi ikonalar 3:1 dan past (uzum rangidagi belgida 4.23:1). Palitrani CEO tasdiqlagan; to'qroq qilish — ko'rinish qarori, ochiq qoldi.
   - iOS/Telegram'da ovozni uyg'otish haqiqiy qurilmada tekshirilmagan (mexanizm: bosishning o'zida dinamik import orqali `ovozniUygot()`).
+
+## Qo'shimcha (25.10.2026): lavha ranglari to'q tonga o'tkazildi
+
+CEO ikkala lavhani (yo'ldagi yopishqoq va unit sahifasidagi) palitradagi to'q tonga o'tkazishni tanladi. `DARAJA_FONI` endi A1 — `bg-coral-700`, A2 — `bg-teal-700`, B1 — `bg-grape-600`; oq matn kontrasti 5.07 / 5.20 / 5.70:1 (avval 2.82 / 2.48 / 4.23:1), ya'ni 4.5:1 chegarasidan o'tadi. Ikkala lavha bitta xaritadan oladi, shuning uchun ranglar ajralib ketmaydi.
+
+- Yo'ldagi tugunlar o'z yorqin (500) ranglarida qoladi: lavha va tugun bir xil tusda, lekin lavha to'qroq.
+- Yuqoridagi «Ma'lum cheklovlar» dagi birinchi band faqat lavha matni bo'yicha yopildi. Belgi ikonalari (<3:1) hali ochiq.
+- `yopishqoq-unit-lavha.test.ts` xaritani qotiradi va to'q tonlarning oq matnga kontrastini `globals.css` dagi haqiqiy ranglardan hisoblaydi: token o'zgarib kontrast tushsa, test yiqiladi.
