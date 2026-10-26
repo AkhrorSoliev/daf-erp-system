@@ -15,7 +15,7 @@ const fontDisplay = Baloo_2({
 });
 
 const fontBody = Nunito({
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext", "cyrillic", "cyrillic-ext"],
   variable: "--font-body",
   display: "swap",
 });

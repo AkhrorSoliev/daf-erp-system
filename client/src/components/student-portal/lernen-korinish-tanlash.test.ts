@@ -2,7 +2,6 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_LERNEN_TEMA, TAYYOR_TEMALAR } from "@/lib/lernen-temalar";
 import { LernenKorinishTanlash } from "./lernen-korinish-tanlash";
 
 /** The first paint: no profile answer yet, no effects run, so the defaults show. */
@@ -11,37 +10,26 @@ function render(): string {
   return renderToStaticMarkup(createElement(QueryClientProvider, { client }, createElement(LernenKorinishTanlash)));
 }
 
-const radios = (html: string) => [...html.matchAll(/<button\b[^>]*role="radio"[^>]*>([\s\S]*?)<\/button>/g)];
-
 describe("LernenKorinishTanlash (server markup)", () => {
-  it("is one radiogroup with a radio for each finished look and nothing else", () => {
+  it("has a row for the look, one for sound and one for less motion", () => {
     const html = render();
-    expect(html).toContain('role="radiogroup"');
-    expect(radios(html)).toHaveLength(TAYYOR_TEMALAR.length);
-    // Unfinished looks are not offered.
-    expect(html).not.toContain("O&#x27;rmon");
-  });
-
-  it("marks the default look as the chosen one", () => {
-    const [first] = radios(render());
-    expect(DEFAULT_LERNEN_TEMA).toBe("toza");
-    expect(first[0]).toContain('aria-checked="true"');
-    expect(first[1]).toContain("Toza");
-  });
-
-  it("paints the chosen card with a tint that remaps in dark mode, not a fixed light pink", () => {
-    const [first] = radios(render());
-    expect(first[0]).toContain("border-coral-500");
-    expect(first[0]).toContain("bg-coral-500/15");
-    expect(first[0]).not.toContain("bg-coral-100");
-    // The hint is one step darker (ink-600) on the tint: ink-500 is only 3.4:1 there in light mode.
-    expect(first[1]).toContain("text-ink-600");
-  });
-
-  it("has the sound and the less-motion rows, each saying whether it is on", () => {
-    const html = render();
+    expect(html).toContain("Ta&#x27;lim ko&#x27;rinishi");
     expect(html).toContain("Ovozlar");
     expect(html).toContain("Kam harakat");
+    // The look row names the chosen look; the dialogs stay closed until a row is pressed.
+    expect(html).toContain("Toza");
+    expect(html).not.toContain('role="radiogroup"');
+  });
+
+  it("has the sound switch and nothing to play next to it", () => {
+    const html = render();
+    expect(html).toContain('role="switch"');
+    expect(html).not.toContain("Tinglab");
+    expect(html).not.toContain("quvnoq");
+  });
+
+  it("says whether sound and less motion are on", () => {
+    const html = render();
     // Sound is on until switched off, reduced motion is off until switched on.
     expect(html).toContain("Yoqilgan");
     expect(html).toContain("O&#x27;chiq");
