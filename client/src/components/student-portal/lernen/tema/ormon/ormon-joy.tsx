@@ -61,7 +61,15 @@ export function OrmonJoy({ label, kind, holat, izoh, tartib, onClick, onBosilmag
         {qulf ? <span data-tuman="" className="absolute inset-0 rounded-full" style={{ background: TUMAN }} /> : null}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate font-display text-lg font-extrabold text-ink-900">{label}</span>
+        {/* The corner badge (12px in, 28px wide) ends 40px from the card's edge, 20px into this column (the card pads 20px): 24px keeps a long name clear of it. */}
+        <span
+          className={cn(
+            "block truncate font-display text-lg font-extrabold text-ink-900",
+            ongda ? "pl-6" : "pr-6",
+          )}
+        >
+          {label}
+        </span>
         {izoh ? (
           <span className="block truncate text-xs font-semibold text-[var(--amber-ink)]">{izoh}</span>
         ) : null}

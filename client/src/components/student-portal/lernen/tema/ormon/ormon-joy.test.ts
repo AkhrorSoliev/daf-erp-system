@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { UnitJoyiProps } from "../tema-turlari";
-import { ACCENT, BIOMES } from "./ormon-biom";
+import { ACCENT, BIOMES, CARD_SURFACE_ALPHA } from "./ormon-biom";
 import { JOY_BELGISI, placeForKind } from "./ormon-joy-belgilari";
 import { OrmonJoy } from "./ormon-joy";
 import { OrmonUnitLavha } from "./ormon-unit-lavha";
@@ -67,9 +67,14 @@ describe("<OrmonJoy />", () => {
     expect(joy({ tartib: 2 })).not.toContain("flex-row-reverse");
   });
 
-  it("sits on the 90% surface with no backdrop blur and writes only readable inks", () => {
+  it("keeps the name clear of the corner badge on whichever side the badge is", () => {
+    expect(joy({ tartib: 0 })).toMatch(/class="[^"]*\bpr-6\b[^"]*">Tanishuv</);
+    expect(joy({ tartib: 1 })).toMatch(/class="[^"]*\bpl-6\b[^"]*">Tanishuv</);
+  });
+
+  it("sits on the surface at the share the contrast test measures, with no backdrop blur, and writes only readable inks", () => {
     const html = joy({ holat: "done", izoh: "Yana mashq qilish · 14 yangi so'z" });
-    expect(html).toContain("bg-surface/90");
+    expect(html).toContain(`bg-surface/${Math.round(CARD_SURFACE_ALPHA * 100)}`);
     expect(html).not.toContain("backdrop-");
     expect(html).not.toMatch(/\btext-(?:ink-500|ink-400|success|coral-600)\b/);
     expect(html).toMatch(/text-\[var\(--amber-ink\)\][^>]*>Yana mashq qilish/);

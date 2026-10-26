@@ -10,14 +10,20 @@ export type JoyId = "kulba" | "koprik" | "gor" | "qala";
  */
 export function placeForKind(kind: DafLessonKind | null): JoyId {
   switch (kind) {
+    case "SECTION_A":
+    case null:
+      return "kulba";
     case "SECTION_B":
       return "koprik";
     case "BRIDGE":
       return "gor";
     case "UNIT_TEST":
       return "qala";
-    default:
-      return "kulba";
+    default: {
+      // A new lesson kind must get its own place: this line stops compiling until it does.
+      const unplaced: never = kind;
+      return unplaced;
+    }
   }
 }
 

@@ -11,7 +11,7 @@ import type { TugunBelgisiProps, TugunHolat } from "../tema-turlari";
  * the scene moves under it on every scroll frame). The level colour is not
  * used: the forest has its own light; the sticky banner still shows the level.
  */
-const SHAR: Record<TugunHolat, { fon: string; soya: string; belgi: string }> = {
+export const SHAR: Record<TugunHolat, { fon: string; soya: string; belgi: string }> = {
   done: {
     fon: "radial-gradient(circle at 36% 30%, #fff6d4, #f2cd7a 60%, #e2ae52)",
     soya: "0 8px 20px rgba(0, 0, 0, 0.2), 0 0 26px rgba(255, 227, 160, 0.4)",

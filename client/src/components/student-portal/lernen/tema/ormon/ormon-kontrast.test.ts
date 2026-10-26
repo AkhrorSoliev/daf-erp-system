@@ -4,15 +4,23 @@ import { describe, expect, it } from "vitest";
 import { cssHexToken, hexContrast, mixHex } from "@/test-support/hex-contrast";
 import { ACCENT, BIOME_IDS, BIOMES, CARD_SURFACE_ALPHA, DARK_VEIL } from "./ormon-biom";
 import { NISHON } from "./ormon-joy";
+import { SHAR } from "./ormon-tugun";
 
-// Read from the stylesheet and the palette, so a token or a colour change that
-// breaks the contrast fails here instead of on a student's phone.
+// Read from the stylesheet, the palette and the components' own colour tables
+// (`NISHON`, `SHAR`), so a token or a colour change that breaks the contrast
+// fails here instead of on a student's phone.
 const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
 const MODES = [
   { name: "light", selector: ".lumio", scene: (c: string) => c },
   { name: "dark", selector: ".dark .lumio", scene: (c: string) => mixHex(DARK_VEIL.color, c, DARK_VEIL.alpha) },
 ] as const;
 const sceneColours = BIOME_IDS.flatMap((id) => Object.values(BIOMES[id]));
+
+/** A `var(--token)` colour as the mode's hex; a hex stays as it is. */
+const hexOf = (value: string, selector: string) => {
+  const token = /^var\(--([a-z0-9-]+)\)$/.exec(value)?.[1];
+  return token ? cssHexToken(css, selector, token) : value;
+};
 
 // Text is held to 4.5:1 (spec §11); an icon is not text, its standard is 3:1.
 const TEXT = 4.5;
@@ -55,12 +63,6 @@ describe("the forest's own coloured labels", () => {
 });
 
 describe("the state glyphs (icons, not text: 3:1)", () => {
-  /** A `var(--token)` colour as the mode's hex; a hex stays as it is. */
-  const hexOf = (value: string, selector: string) => {
-    const token = /^var\(--([a-z0-9-]+)\)$/.exec(value)?.[1];
-    return token ? cssHexToken(css, selector, token) : value;
-  };
-
   for (const mode of MODES) {
     it(`${mode.name}: the place card's corner badges hold`, () => {
       for (const [holat, { fon, rang }] of Object.entries(NISHON)) {
@@ -69,23 +71,24 @@ describe("the state glyphs (icons, not text: 3:1)", () => {
     });
 
     it(`${mode.name}: the lock on the frosted-stone node holds over every scene colour`, () => {
-      // ormon-tugun.tsx `SHAR.locked.fon`: the surface at 72% over the scene, the lock in `--ink-600`.
-      const surface = cssHexToken(css, mode.selector, "surface-card");
-      const lock = cssHexToken(css, mode.selector, "ink-600");
+      // `SHAR.locked.fon` is `color-mix(in srgb, var(--surface) NN%, transparent)`: the surface token and its share over the scene.
+      const stone = /var\(--([a-z0-9-]+)\)\s+(\d+)%/.exec(SHAR.locked.fon);
+      if (!stone) throw new Error(`SHAR.locked.fon is no longer a surface token at some %: ${SHAR.locked.fon}`);
+      const surface = cssHexToken(css, mode.selector, stone[1]);
+      const share = Number(stone[2]) / 100;
+      const lock = hexOf(SHAR.locked.belgi, mode.selector);
       for (const c of sceneColours) {
-        expect(hexContrast(lock, mixHex(surface, mode.scene(c), 0.72)), `${mode.name}: the stone over ${c}`).toBeGreaterThanOrEqual(ICON);
+        expect(hexContrast(lock, mixHex(surface, mode.scene(c), share)), `${mode.name}: the stone over ${c}`).toBeGreaterThanOrEqual(ICON);
       }
     });
   }
 
   it("the gold and the mint node orbs keep their glyph readable at every stop of the gradient", () => {
-    // ormon-tugun.tsx `SHAR.done / .active`: the glyph ink against the orb's gradient stops.
-    const orbs = [
-      { glyph: "#6b4a10", stops: ["#fff6d4", "#f2cd7a", "#e2ae52"] },
-      { glyph: "#0d4a3d", stops: ["#f0fffb", "#86ead2", "#4fcdb3"] },
-    ];
-    for (const { glyph, stops } of orbs) {
-      for (const stop of stops) expect(hexContrast(glyph, stop), `${glyph} on ${stop}`).toBeGreaterThanOrEqual(ICON);
+    for (const holat of ["done", "active"] as const) {
+      const { fon, belgi } = SHAR[holat];
+      const stops = fon.match(/#[0-9a-f]{6}/gi) ?? [];
+      expect(stops.length, `${holat}: no gradient stops found in ${fon}`).toBeGreaterThanOrEqual(2);
+      for (const stop of stops) expect(hexContrast(belgi, stop), `${holat}: ${belgi} on ${stop}`).toBeGreaterThanOrEqual(ICON);
     }
   });
 });
