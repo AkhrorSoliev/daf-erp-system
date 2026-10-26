@@ -81,8 +81,8 @@ describe("settingsSearchPages — umumiy qidiruv uchun", () => {
   const urls = (roles: number[]) =>
     settingsSearchPages(canForRoles(roles), roles.includes(CEO)).map((p) => p.url);
 
-  it("CEO hamma 13 sahifani oladi, administrator faqat o'z 5 tasini", () => {
-    expect(urls([CEO])).toHaveLength(13);
+  it("CEO hamma 14 sahifani oladi, administrator faqat o'z 5 tasini", () => {
+    expect(urls([CEO])).toHaveLength(14);
     expect(urls([ADMINISTRATOR])).toEqual([
       "/settings/general",
       "/settings/rooms",

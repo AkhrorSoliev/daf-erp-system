@@ -5359,6 +5359,21 @@ const ru: Dictionary = {
   "Faylni yuborib bo'lmadi": "Не удалось отправить файл",
   "Foydalanuvchi nomi saqlandi": "Имя пользователя сохранено",
   "Boshqalar sizni shu nom bilan topadi": "Другие найдут вас по этому имени",
+  // Settings — chat («Chat»)
+  "Chatni yoqish, shikoyatlar va chatdan chiqarilganlar": "Включение чата, жалобы и исключённые из чата",
+  "Shikoyatlar": "Жалобы",
+  "Chatdan chiqarilganlar": "Исключённые из чата",
+  "Shundan kam bo'lsa o'quvchi chatga yoza olmaydi, o'qiy oladi": "Если меньше, ученик не может писать в чат, но может читать",
+  "Chat yoqilgan": "Чат включён",
+  "O'quvchilar o'zaro yozisha oladi": "Ученики могут переписываться друг с другом",
+  "Oxirgi 7 kunda mashq": "Упражнения за последние 7 дней",
+  "Oxirgi 7 kunda radio": "Радио за последние 7 дней",
+  "Chat hamma o'quvchilar uchun ochiladimi?": "Открыть чат для всех учеников?",
+  "Chat o'chirilsinmi?": "Выключить чат?",
+  "Yoqilgandan keyin barcha o'quvchilar menyuda «Chat» bandini ko'radi va yozisha oladi. Shikoyatlar «Shikoyatlar» bo'limiga tushadi.": "После включения все ученики увидят в меню пункт «Чат» и смогут переписываться. Жалобы попадут в раздел «Жалобы».",
+  "Yozishmalar yopiladi, o'quvchilar chatni ko'rmaydi. Yozishmalar o'chmaydi.": "Переписка закрывается, ученики не видят чат. Сообщения не удаляются.",
+  "Mashq daqiqalari 0 dan 1000 gacha butun son bo'lishi kerak": "Минуты упражнений должны быть целым числом от 0 до 1000",
+  "Radio daqiqalari 0 dan 1000 gacha butun son bo'lishi kerak": "Минуты радио должны быть целым числом от 0 до 1000",
 };
 
 export default ru;

@@ -57,6 +57,8 @@ export const routeLabels: Record<string, string> = {
   "leads-kpi": msg("Lidlar va KPI"),
   // /settings/telegram — guruhlar va kunlik hisobot (hisobot: CEO only, ADR-0095).
   telegram: msg("Telegram"),
+  // /settings/chat — CEO only: chatni yoqish, shikoyatlar, chatdan chiqarilganlar.
+  chat: msg("Chat"),
   tasks: msg("Topshiriqlar"),
   notifications: msg("Bildirishnomalar"),
   archive: msg("Arxiv"),

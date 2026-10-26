@@ -5359,6 +5359,21 @@ const de: Dictionary = {
   "Faylni yuborib bo'lmadi": "Die Datei konnte nicht gesendet werden",
   "Foydalanuvchi nomi saqlandi": "Der Benutzername wurde gespeichert",
   "Boshqalar sizni shu nom bilan topadi": "Andere finden Sie unter diesem Namen",
+  // Settings — chat («Chat»)
+  "Chatni yoqish, shikoyatlar va chatdan chiqarilganlar": "Chat aktivieren, Meldungen und aus dem Chat Ausgeschlossene",
+  "Shikoyatlar": "Meldungen",
+  "Chatdan chiqarilganlar": "Aus dem Chat Ausgeschlossene",
+  "Shundan kam bo'lsa o'quvchi chatga yoza olmaydi, o'qiy oladi": "Bei weniger kann der Lernende im Chat nicht schreiben, aber lesen",
+  "Chat yoqilgan": "Chat aktiviert",
+  "O'quvchilar o'zaro yozisha oladi": "Lernende können einander schreiben",
+  "Oxirgi 7 kunda mashq": "Übungen in den letzten 7 Tagen",
+  "Oxirgi 7 kunda radio": "Radio in den letzten 7 Tagen",
+  "Chat hamma o'quvchilar uchun ochiladimi?": "Chat für alle Lernenden öffnen?",
+  "Chat o'chirilsinmi?": "Chat ausschalten?",
+  "Yoqilgandan keyin barcha o'quvchilar menyuda «Chat» bandini ko'radi va yozisha oladi. Shikoyatlar «Shikoyatlar» bo'limiga tushadi.": "Nach dem Einschalten sehen alle Lernenden den Menüpunkt «Chat» und können schreiben. Meldungen erscheinen im Bereich «Meldungen».",
+  "Yozishmalar yopiladi, o'quvchilar chatni ko'rmaydi. Yozishmalar o'chmaydi.": "Die Unterhaltungen werden geschlossen, die Lernenden sehen den Chat nicht. Die Nachrichten werden nicht gelöscht.",
+  "Mashq daqiqalari 0 dan 1000 gacha butun son bo'lishi kerak": "Die Übungsminuten müssen eine ganze Zahl von 0 bis 1000 sein",
+  "Radio daqiqalari 0 dan 1000 gacha butun son bo'lishi kerak": "Die Radiominuten müssen eine ganze Zahl von 0 bis 1000 sein",
 };
 
 export default de;
