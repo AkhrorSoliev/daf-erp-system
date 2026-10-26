@@ -102,6 +102,8 @@ export interface Decor {
  * `count` decorations on a wall's ledges (its inner points), spread down the
  * tile, in the zone's kinds and colours. Each stands on a ledge strictly inside
  * the tile and grows upward, so nothing reaches below y = TILE (the seam).
+ * Growth above y = 0 is harmless: it lands in the previous copy's bottom, and
+ * the first copy's overflow is above the SVG. Only overflow below the tile breaks the wrap.
  */
 export function decorSpecs(zona: ZoneId, wall: readonly WallPoint[], count: number, seed: number): Decor[] {
   const rnd = seededRandom(seed + 1);

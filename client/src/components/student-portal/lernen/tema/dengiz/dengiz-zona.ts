@@ -21,7 +21,7 @@ export interface ZonePalette {
   banner: string;
 }
 
-/** The CEO-approved mockup's colours (dengiz.html `UBG`, `PAL`, `wall`, `ridges`). */
+/** The CEO-approved mockup's colours (dengiz.html `UBG`, `PAL`, `wall`, `ridges`); the `banner` colours are new, chosen so white text holds on them. */
 export const ZONES: Record<ZoneId, ZonePalette> = {
   marjon: {
     top: "#8fe4f6",
