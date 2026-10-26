@@ -226,6 +226,8 @@ function themeViolations(rules: CssRule[], theme: SceneTheme): string[] {
     }
     if (r.body.includes("/*")) out.push(`comment: ${where}`);
     if (/(?:^|[\s;])(?:-webkit-)?(?:backdrop-)?filter\s*:/.test(body)) out.push(`filter: ${where}`);
+    // Its own kind, so O'rmon's negative self-test keeps its list as it is.
+    if (/(?:^|[\s;])mix-blend-mode\s*:/.test(body)) out.push(`blend: ${where}`);
     for (const [, raw] of body.matchAll(/will-change\s*:\s*([^;]+)/g)) {
       const value = raw.trim();
       const allowed =
@@ -311,6 +313,17 @@ describe("the backdrop blur over a scene reaches the portaled overlays too (ADR-
 // «Dengiz» (ADR-0133): O'rmon's rules, its own pins and the same scan.
 // ---------------------------------------------------------------------------
 
+/** A theme's `@keyframes <theme>-*` blocks (each closes with a `}` at the start of a line), in file order. */
+const keyframeBlocks = (css: string, theme: SceneTheme) =>
+  [...css.matchAll(new RegExp(`@keyframes (${theme}-[\\w-]+) \\{([\\s\\S]*?)\\n\\}`, "g"))].map((m) => ({
+    name: m[1],
+    body: m[2],
+  }));
+
+/** What a `@keyframes` body animates besides the two properties the compositor can move on its own. */
+const slowProps = (body: string) =>
+  [...new Set([...body.matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1]))].filter((p) => p !== "transform" && p !== "opacity");
+
 describe("the «Dengiz» scene's motion (ADR-0133)", () => {
   const css = readFileSync(path.join(__dirname, "globals.css"), "utf8");
   const flat = css.replace(/\s+/g, " ");
@@ -318,8 +331,8 @@ describe("the «Dengiz» scene's motion (ADR-0133)", () => {
     ":is(.dengiz-bubble, .dengiz-school, .dengiz-rays, .dengiz-sway, .dengiz-ring, .dengiz-bob, .dengiz-burst)";
 
   it("animates only transform and opacity", () => {
-    const frames = [...css.matchAll(/@keyframes (dengiz-[\w-]+) \{([\s\S]*?)\n\}/g)];
-    expect(frames.map((m) => m[1])).toEqual([
+    const frames = keyframeBlocks(css, "dengiz");
+    expect(frames.map((f) => f.name)).toEqual([
       "dengiz-sway",
       "dengiz-rise",
       "dengiz-swim",
@@ -328,10 +341,7 @@ describe("the «Dengiz» scene's motion (ADR-0133)", () => {
       "dengiz-bob",
       "dengiz-spin",
     ]);
-    for (const [, name, body] of frames) {
-      const props = new Set([...body.matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1]));
-      expect([...props].filter((p) => p !== "transform" && p !== "opacity"), name).toEqual([]);
-    }
+    for (const { name, body } of frames) expect(slowProps(body), name).toEqual([]);
   });
 
   it("holds the drifting life still while the scene is paused", () => {
@@ -369,6 +379,18 @@ describe("the «Dengiz» scene's motion (ADR-0133)", () => {
     expect(flat.indexOf(base)).toBeLessThan(mediaAt);
   });
 
+  // The shown zone's rule, the «Kam harakat» rule and the system-setting group tie on specificity: the later one wins.
+  it("writes the shown zone's rule before the rules that must beat it", () => {
+    const shown = flat.indexOf(".lumio .dengiz-zone[data-faol] { opacity: 1;");
+    const kam = flat.indexOf(`.lumio [data-kam-harakat] ${list}`);
+    const media = flat.indexOf(`@media (prefers-reduced-motion: reduce) { .lumio ${list}`);
+    expect(shown, "the shown zone's rule is missing").toBeGreaterThan(-1);
+    expect(kam, "the «Kam harakat» rule is missing").toBeGreaterThan(-1);
+    expect(media, "the system-setting group is missing").toBeGreaterThan(-1);
+    expect(shown).toBeLessThan(kam);
+    expect(shown).toBeLessThan(media);
+  });
+
   // The glass and overlay rules key on `[data-sahna]`: Dengiz needs no rule of its own, only the attribute.
   it("is covered by the glass and overlay rules through the attribute its root carries", () => {
     const portal = path.join(__dirname, "../components/student-portal");
@@ -383,5 +405,45 @@ describe("every «Dengiz» rule in globals.css (ADR-0133)", () => {
     expect(rules.length, "no .dengiz-* rule found: the scan is blind").toBeGreaterThan(0);
     expect(rules.some((r) => inThemeKeyframes(r, "dengiz")), "no @keyframes dengiz-* found: the scan is blind").toBe(true);
     expect(themeViolations(rules, "dengiz")).toEqual([]);
+  });
+
+  // The same slips as O'rmon's self-test, one stylesheet each, fed to the Dengiz path of the scan
+  // (its own layer to put `will-change` on) so a rule the scan would let through shows up here.
+  const clean = `
+    /* above a rule is fine */
+    .lumio .dengiz-zone[data-faol] .dengiz-strip { will-change: transform; }
+    .lumio [data-kam-harakat] .dengiz-zone[data-faol] .dengiz-strip { will-change: auto; }
+    .lumio :is(.dengiz-a, .dengiz-b) { animation: none; background: radial-gradient(#fff, #000); }
+    @keyframes dengiz-x { from { transform: none; } to { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      .lumio .dengiz-zone[data-faol] .dengiz-strip { will-change: auto; }
+    }
+  `;
+  const slips: [string, string, string[]][] = [
+    ["nothing in a clean stylesheet", clean, []],
+    ["a rule without the .lumio scope", ".dengiz-x { opacity: 1; }", ["scope"]],
+    ["a filter", ".lumio .dengiz-x { filter: blur(2px); }", ["filter"]],
+    ["a backdrop-filter", ".lumio .dengiz-x { -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }", ["filter"]],
+    ["a filter in a keyframe step", "@keyframes dengiz-x { to { filter: blur(1px); } }", ["filter"]],
+    ["a mix-blend-mode", ".lumio .dengiz-x { mix-blend-mode: screen; }", ["blend"]],
+    ["a comment inside a block", ".lumio .dengiz-x { color: red; /* inside is not fine */ }", ["comment"]],
+    ["a will-change on any other rule", ".lumio .dengiz-x { will-change: transform; }", ["will-change"]],
+    ["a will-change on the strips of every zone", ".lumio .dengiz-zone .dengiz-strip { will-change: transform; }", ["will-change"]],
+    [
+      "a will-change: transform kept under the system setting",
+      "@media (prefers-reduced-motion: reduce) { .lumio .dengiz-zone[data-faol] .dengiz-strip { will-change: transform; } }",
+      ["will-change"],
+    ],
+  ];
+  it.each(slips)("reports %s", (_what, sheet, kinds) => {
+    const found = themeViolations(themeRules(sheet, "dengiz"), "dengiz").map((v) => v.split(":")[0]);
+    expect(found).toEqual(kinds);
+  });
+
+  it("sees, through the helper the motion pin uses, a keyframe that animates more than transform and opacity", () => {
+    const sheet = "@keyframes dengiz-x {\n  from {\n    transform: none;\n  }\n  to {\n    opacity: 0;\n    background-color: red;\n  }\n}\n";
+    const quiet = "@keyframes dengiz-y {\n  to {\n    transform: none;\n  }\n}\n";
+    expect(keyframeBlocks(sheet, "dengiz").map((f) => [f.name, slowProps(f.body)])).toEqual([["dengiz-x", ["background-color"]]]);
+    expect(keyframeBlocks(quiet, "dengiz").map((f) => [f.name, slowProps(f.body)])).toEqual([["dengiz-y", []]]);
   });
 });

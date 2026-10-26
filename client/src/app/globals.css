@@ -1718,7 +1718,10 @@ body:has(.lumio [data-sahna]) :is([data-slot="sheet-overlay"], [data-slot="dialo
   animation-play-state: paused;
 }
 
-/* Later than every rule above, so it wins over them. */
+/* After the base rules and after the shown zone's rule, which it ties with
+   on specificity, so it wins over them. The hidden-zone pause above is more
+   specific and stays, but it only sets animation-play-state, and with
+   animation: none there is nothing left to play or pause. */
 .lumio [data-kam-harakat] :is(.dengiz-bubble, .dengiz-school, .dengiz-rays, .dengiz-sway, .dengiz-ring, .dengiz-bob, .dengiz-burst),
 .lumio [data-kam-harakat] .dengiz-zone {
   animation: none;
