@@ -92,3 +92,31 @@ describe("the state glyphs (icons, not text: 3:1)", () => {
     }
   });
 });
+
+describe("the reward background (the result's ink-900 heading and ink-600 line, 4.5:1)", () => {
+  for (const mode of MODES) {
+    it(`${mode.name}: both hold on the light, the edge, the hill and under the sunburst`, () => {
+      const esc = mode.selector.replace(/\./g, "\\.");
+      const block = css.match(new RegExp(`^${esc} \\{([\\s\\S]*?)^\\}`, "m"))?.[1] ?? "";
+      const nur = block.match(/--ormon-mukofot-nur:\s*rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
+      if (!nur) throw new Error(`--ormon-mukofot-nur not found in ${mode.selector}`);
+      const [r, g, b, a] = nur.slice(1).map(Number);
+      const nurHex = `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+      const ust = cssHexToken(css, mode.selector, "ormon-mukofot-ust");
+      const grounds = [
+        ust,
+        cssHexToken(css, mode.selector, "ormon-mukofot-ost"),
+        cssHexToken(css, mode.selector, "ormon-tepalik"),
+        mixHex(nurHex, ust, a),
+      ];
+      for (const ground of grounds) {
+        for (const token of ["ink-900", "ink-600"]) {
+          expect(
+            hexContrast(cssHexToken(css, mode.selector, token), ground),
+            `${mode.name}: ${token} on ${ground}`,
+          ).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    });
+  }
+});

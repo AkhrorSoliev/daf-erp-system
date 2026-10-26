@@ -561,6 +561,15 @@
      name, so the global @theme gains nothing. */
   --amber-ink: #9a5400;
 
+  /* «O'rmon» theme's reward background (ADR-0131): a pale mint in light
+     mode, so the result's ink-900 and ink-600 text keep 4.5:1 on it, deep
+     green in dark mode; ormon-kontrast.test.ts measures them. Plain custom
+     properties, not Tailwind colour names. */
+  --ormon-mukofot-ust: #f4fbf3;
+  --ormon-mukofot-ost: #d9efe2;
+  --ormon-tepalik: #c6e6d3;
+  --ormon-mukofot-nur: rgba(255, 255, 255, 0.35);
+
   /* --- Radii --- */
   --r-xs: 8px;
   --r-sm: 12px;
@@ -666,6 +675,11 @@
 
   /* The pale amber (= --amber-400) reads on the dark amber-tinted bar. */
   --amber-ink: #ffc24d;
+
+  --ormon-mukofot-ust: #143c42;
+  --ormon-mukofot-ost: #0f2a33;
+  --ormon-tepalik: #12382f;
+  --ormon-mukofot-nur: rgba(255, 241, 196, 0.03);
 
   /* Neutral clay lips must read DARKER than the surface in dark mode. */
   --clay-neutral: 0 5px 0 #071820, 0 12px 22px rgba(0, 0, 0, 0.35);
