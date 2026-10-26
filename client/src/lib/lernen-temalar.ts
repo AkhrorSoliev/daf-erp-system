@@ -3,8 +3,9 @@ import { msg } from "@/i18n/msg";
 /**
  * The Ta'lim looks a student can pick (ADR-0125). The ids mirror
  * `server/src/common/lernen-temalar.ts` (lernen-temalar.test.ts compares
- * them). `tayyor` says the look is built: only those are offered in
- * Sozlamalar. `swatch` is only the dot drawn on the card.
+ * them). `tayyor` says the look is built: only those can be picked in
+ * Sozlamalar, the others are listed greyed out with «Tez orada» (ADR-0131).
+ * `swatch` is only the dot drawn on the card.
  */
 export const LERNEN_TEMALAR = [
   { id: "toza", label: msg("Toza"), hint: msg("Oq fon, qalin yumshoq tugmalar"), swatch: "#ff6b4a", tayyor: true },
