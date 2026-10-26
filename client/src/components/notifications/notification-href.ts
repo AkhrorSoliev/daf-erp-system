@@ -16,6 +16,8 @@ const ENTITY_ROUTES: Record<string, (id: string) => string> = {
   Task: (id) => `/tasks?task=${id}`,
   // The 09:00 list of one branch's broken payment promises (id = branch).
   BrokenPromises: () => "/payments/debt?promise=broken",
+  // A student's chat report (sent to the CEO only): the CEO's chat settings page.
+  ChatReport: (id) => `/settings/chat?tab=shikoyatlar&shikoyat=${id}`,
 };
 
 // A viewer who cannot open the page gets no link: the server refuses that page

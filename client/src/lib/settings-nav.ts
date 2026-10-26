@@ -17,6 +17,7 @@ import {
   GraduationCap,
   Banknote,
   MessagesSquare,
+  MessageCircle,
   type LucideIcon,
 } from "lucide-react";
 import { msg } from "@/i18n/msg";
@@ -248,6 +249,15 @@ export const settingsNavSections: SettingsNavSection[] = [
           { id: "guruhlar", permission: "settings.telegram-groups" },
           { id: "hisobot", ceoOnly: true },
         ],
+      },
+      {
+        // Every /chat/admin route is `@CeoOnly()`: identity, not a capability.
+        title: msg("Chat"),
+        url: "/settings/chat",
+        icon: MessageCircle,
+        description: msg("Chatni yoqish, shikoyatlar va chatdan chiqarilganlar"),
+        keywords: ["chat", "shikoyat", "yozishma", "o'quvchilar", "bloklash", "chatdan chiqarish"],
+        ceoOnly: true,
       },
       {
         title: msg("Arxiv"),

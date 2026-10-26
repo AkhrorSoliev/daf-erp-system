@@ -37,6 +37,7 @@ export const NOTIFICATION_GROUP: Record<NotificationType, NotificationGroup> = {
   PAYMENT_PROMISE_OVERDUE: 'payment',
   SYSTEM: 'system',
   CHAT_MESSAGE: 'system',
+  CHAT_REPORT: 'system',
 };
 
 export const TYPES_BY_GROUP = Object.fromEntries(
@@ -60,6 +61,7 @@ export const ACTION_TYPES: ReadonlySet<NotificationType> =
     'TASK_REMINDER',
     'TASK_REVIEW',
     'PAYMENT_PROMISE_OVERDUE',
+    'CHAT_REPORT',
   ]);
 
 /** Alerts about one group's lesson, sent on the lesson's own day. */
@@ -94,6 +96,9 @@ export function notificationKind(
   } else if (type === 'CHAT_MESSAGE' && relatedEntityId) {
     // One line per conversation, whatever the day.
     groupKey = `CHAT_MESSAGE:${relatedEntityId}`;
+  } else if (type === 'CHAT_REPORT') {
+    // Several open reports fold into one line in the CEO's bell.
+    groupKey = 'CHAT_REPORT';
   }
   return { actionRequired: actionRequired ?? ACTION_TYPES.has(type), groupKey };
 }

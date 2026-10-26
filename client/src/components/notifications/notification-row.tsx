@@ -16,6 +16,7 @@ import {
   Info,
   ListPlus,
   MessageSquare,
+  ShieldAlert,
   SquareCheck,
   UserX,
   Wallet,
@@ -61,6 +62,7 @@ const ICON: Record<NotificationType, LucideIcon> = {
   ABSENCE_WARNING: UserX,
   ENROLLMENT_AUTO_PAUSED: CirclePause,
   CHAT_MESSAGE: MessageSquare,
+  CHAT_REPORT: ShieldAlert,
 };
 
 /** One colour per kind (spec §8 «har turning rangi»); a closed alert turns green. */

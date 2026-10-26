@@ -11,7 +11,12 @@ import {
 } from '@nestjs/common';
 import { CurrentUser } from '../common/decorators';
 import { CeoOnly } from '../common/permissions/access.decorators';
-import { ListReportsQueryDto, ResolveReportDto } from './dto/chat.dto';
+import { ChatAdminSettingsService } from './chat-admin-settings.service';
+import {
+  ListReportsQueryDto,
+  ResolveReportDto,
+  UpdateChatSettingsDto,
+} from './dto/chat.dto';
 import { ChatBanService } from './reports/chat-ban.service';
 import { ChatReportsService } from './reports/chat-reports.service';
 
@@ -26,7 +31,27 @@ export class ChatAdminController {
   constructor(
     private readonly reports: ChatReportsService,
     private readonly ban: ChatBanService,
+    private readonly chatSettings: ChatAdminSettingsService,
   ) {}
+
+  @Get('settings')
+  getSettings(@CurrentUser('companyId') companyId: number) {
+    return this.chatSettings.read(companyId);
+  }
+
+  @Patch('settings')
+  updateSettings(
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+    @Body() dto: UpdateChatSettingsDto,
+  ) {
+    return this.chatSettings.update(companyId, dto, userId);
+  }
+
+  @Get('banned')
+  banned(@CurrentUser('companyId') companyId: number) {
+    return this.ban.listBanned(companyId);
+  }
 
   @Get('reports')
   list(

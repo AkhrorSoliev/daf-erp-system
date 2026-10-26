@@ -6,6 +6,7 @@ import { SettingsModule } from '../settings/settings.module';
 import { ChatAccessService } from './access/chat-access.service';
 import { ChatEnabledGuard } from './chat-enabled.guard';
 import { ChatAdminController } from './chat-admin.controller';
+import { ChatAdminSettingsService } from './chat-admin-settings.service';
 import { ChatController } from './chat.controller';
 import {
   CHAT_RATE_LIMITER,
@@ -38,6 +39,7 @@ import { ChatUsernameService } from './username/chat-username.service';
     ChatNotifyService,
     ChatReportsService,
     ChatBanService,
+    ChatAdminSettingsService,
     {
       provide: CHAT_RATE_LIMITER,
       useFactory: redisRateLimiter,

@@ -126,6 +126,24 @@ export class ListReportsQueryDto {
   limit?: number;
 }
 
+export class UpdateChatSettingsDto {
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1000)
+  weekMinutesActive?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1000)
+  weekMinutesRadio?: number;
+}
+
 export class ResolveReportDto {
   @IsIn(['RESOLVED', 'DISMISSED'])
   outcome!: 'RESOLVED' | 'DISMISSED';

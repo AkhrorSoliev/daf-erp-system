@@ -38,7 +38,10 @@ function make(
         },
       ]),
     },
-    student: { findMany: jest.fn().mockResolvedValue([]) },
+    student: {
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    user: { findMany: jest.fn().mockResolvedValue([{ id: 10 }, { id: 11 }]) },
   };
   const conversations = {
     mine:
@@ -47,16 +50,112 @@ function make(
         : jest.fn().mockResolvedValue({ c: { id: 'c1' }, peerId: 2 }),
   };
   const ban = { ban: jest.fn().mockResolvedValue({ chatBannedAt: 'x' }) };
+  const notifications = {
+    create: jest
+      .fn()
+      .mockImplementation((p: { userId: number }) =>
+        Promise.resolve({ id: `n${p.userId}`, ...p }),
+      ),
+  };
+  const gateway = { sendToUser: jest.fn() };
+  const push = { sendToUser: jest.fn().mockResolvedValue(undefined) };
+  const resolver = { resolve: jest.fn().mockResolvedValue(2) };
   return {
     service: new ChatReportsService(
       prisma as never,
       conversations as never,
       ban as never,
+      notifications as never,
+      gateway as never,
+      push as never,
+      resolver as never,
     ),
     prisma,
     ban,
+    notifications,
+    gateway,
+    push,
+    resolver,
   };
 }
+
+describe('ChatReportsService CEO notice', () => {
+  it('tells every active CEO, names only, with a folded action row', async () => {
+    const { service, prisma, notifications, gateway } = make();
+    prisma.student.findMany.mockResolvedValue([
+      {
+        id: 1,
+        firstName: 'Ali',
+        lastName: 'Karimov',
+        username: null,
+        chatBannedAt: null,
+      },
+      {
+        id: 2,
+        firstName: 'Vali',
+        lastName: 'Karimov',
+        username: null,
+        chatBannedAt: null,
+      },
+    ]);
+    const res = await service.create(1, 7, {
+      conversationId: 'c1',
+      reason: 'Haqorat sababi',
+    });
+    expect(res).toEqual({ id: 'r1', status: 'OPEN' });
+    const where = prisma.user.findMany.mock.calls[0][0].where;
+    expect(where).toMatchObject({
+      companyId: 7,
+      deletedAt: null,
+      isActive: true,
+      status: 'ACTIVE',
+      roles: { some: { role: { name: 'CEO' } } },
+    });
+    expect(notifications.create).toHaveBeenCalledTimes(2);
+    expect(notifications.create).toHaveBeenCalledWith({
+      userId: 10,
+      type: 'CHAT_REPORT',
+      title: 'Yangi chat shikoyati',
+      message: 'Ali Karimov Vali Karimov haqida shikoyat qildi',
+      relatedEntityType: 'ChatReport',
+      relatedEntityId: 'r1',
+      companyId: 7,
+    });
+    expect(JSON.stringify(notifications.create.mock.calls)).not.toContain(
+      'Haqorat',
+    );
+    expect(gateway.sendToUser).toHaveBeenCalledTimes(2);
+  });
+
+  it('never fails the report when the notice fails', async () => {
+    const { service, notifications } = make();
+    notifications.create.mockRejectedValue(new Error('down'));
+    await expect(
+      service.create(1, 7, { conversationId: 'c1', reason: 'x' }),
+    ).resolves.toEqual({ id: 'r1', status: 'OPEN' });
+  });
+
+  it('closes the notices when the report is resolved', async () => {
+    const { service, prisma, resolver } = make();
+    prisma.chatReport.findUnique.mockResolvedValue({
+      id: 'r1',
+      companyId: 7,
+      reportedId: 2,
+      reporterId: 1,
+      status: 'OPEN',
+      createdAt: new Date(),
+      resolvedAt: null,
+      snapshot: [],
+    });
+    await service.resolve(7, 99, 'r1', { outcome: 'DISMISSED' });
+    expect(resolver.resolve).toHaveBeenCalledWith({
+      companyId: 7,
+      type: 'CHAT_REPORT',
+      relatedEntityType: 'ChatReport',
+      relatedEntityId: 'r1',
+    });
+  });
+});
 
 describe('ChatReportsService.create', () => {
   it('keeps a text copy of the last 50 messages, oldest first, with deleted flags and no file keys', async () => {

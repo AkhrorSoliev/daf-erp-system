@@ -1,9 +1,14 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, UserStatus } from '@prisma/client';
+import { NotificationResolverService } from '../../notifications/notification-resolver.service';
+import { NotificationsGateway } from '../../notifications/notifications.gateway';
+import { NotificationsService } from '../../notifications/notifications.service';
+import { PushService } from '../../notifications/push.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   REPORT_DUPLICATE_MESSAGE,
@@ -16,10 +21,16 @@ const LIST_DEFAULT = 20;
 
 @Injectable()
 export class ChatReportsService {
+  private readonly logger = new Logger(ChatReportsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly conversations: ChatConversationsService,
     private readonly ban: ChatBanService,
+    private readonly notifications: NotificationsService,
+    private readonly gateway: NotificationsGateway,
+    private readonly push: PushService,
+    private readonly resolver: NotificationResolverService,
   ) {}
 
   /**
@@ -63,7 +74,71 @@ export class ChatReportsService {
         snapshot: snapshot as unknown as Prisma.InputJsonValue,
       },
     });
+    await this.notifyCeos(companyId, row.id, me, peerId);
     return { id: row.id, status: 'OPEN' };
+  }
+
+  /**
+   * One bell row (+ SSE + push) per active CEO. Names only: never the reason or
+   * a message. Best effort — a failing notice must never fail the saved report.
+   */
+  private async notifyCeos(
+    companyId: number,
+    reportId: string,
+    reporterId: number,
+    reportedId: number,
+  ): Promise<void> {
+    try {
+      const [ceos, names] = await Promise.all([
+        this.prisma.user.findMany({
+          where: {
+            companyId,
+            deletedAt: null,
+            isActive: true,
+            status: UserStatus.ACTIVE,
+            roles: { some: { role: { name: 'CEO' } } },
+          },
+          select: { id: true },
+        }),
+        this.names([reporterId, reportedId]),
+      ]);
+      const title = 'Yangi chat shikoyati';
+      const message = `${this.person(names, reporterId).name} ${this.person(names, reportedId).name} haqida shikoyat qildi`;
+      for (const ceo of ceos) {
+        try {
+          const notification = await this.notifications.create({
+            userId: ceo.id,
+            type: 'CHAT_REPORT',
+            title,
+            message,
+            relatedEntityType: 'ChatReport',
+            relatedEntityId: reportId,
+            companyId,
+          });
+          this.gateway.sendToUser(ceo.id, {
+            type: 'notification',
+            notification,
+          });
+          await this.push.sendToUser(ceo.id, {
+            title,
+            body: message,
+            url: `/settings/chat?tab=shikoyatlar&shikoyat=${reportId}`,
+          });
+        } catch (err) {
+          this.warn(ceo.id, err);
+        }
+      }
+    } catch (err) {
+      this.logger.warn(
+        `report notice: loading the CEOs failed: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  private warn(userId: number, err: unknown) {
+    this.logger.warn(
+      `report notice for user ${userId} failed: ${(err as Error).message}`,
+    );
   }
 
   private async names(ids: number[]) {
@@ -195,6 +270,13 @@ export class ChatReportsService {
     if (count === 0) {
       throw new ConflictException("Shikoyat allaqachon ko'rib chiqilgan");
     }
+    // Close the CEOs' bell rows (never throws; tells their open bells).
+    await this.resolver.resolve({
+      companyId,
+      type: 'CHAT_REPORT',
+      relatedEntityType: 'ChatReport',
+      relatedEntityId: id,
+    });
     return this.get(companyId, id);
   }
 }

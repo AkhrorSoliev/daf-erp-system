@@ -41,6 +41,7 @@ export const NOTIFICATION_TYPES = [
   "ABSENCE_WARNING",
   "ENROLLMENT_AUTO_PAUSED",
   "CHAT_MESSAGE",
+  "CHAT_REPORT",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

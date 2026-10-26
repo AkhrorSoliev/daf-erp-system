@@ -147,6 +147,7 @@ enum NotificationType {
   ABSENCE_WARNING
   ENROLLMENT_AUTO_PAUSED
   CHAT_MESSAGE
+  CHAT_REPORT
 }
 
 enum TaskPriority {

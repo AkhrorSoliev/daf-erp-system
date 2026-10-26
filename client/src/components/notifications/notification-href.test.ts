@@ -97,4 +97,13 @@ describe("notificationHref", () => {
     expect(notificationHref({ type: "TASK_ASSIGNED", relatedEntityType: "Task", relatedEntityId: "t1" }, canForRoles([4]))).toBe("/tasks?task=t1");
     expect(notificationHref({ type: "TASK_REVIEW", relatedEntityType: "Task", relatedEntityId: "t1" }, canForRoles([3]))).toBe("/tasks?task=t1");
   });
+
+  it("a chat report opens that report on the CEO's chat settings page", () => {
+    expect(
+      notificationHref(
+        { type: "CHAT_REPORT", relatedEntityType: "ChatReport", relatedEntityId: "r1" },
+        CEO,
+      ),
+    ).toBe("/settings/chat?tab=shikoyatlar&shikoyat=r1");
+  });
 });

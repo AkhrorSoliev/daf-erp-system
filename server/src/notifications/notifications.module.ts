@@ -20,6 +20,11 @@ import { LeadOwnerNotifyListener } from './lead-owner-notify.listener';
     NotificationResolverService,
     PushService,
   ],
-  exports: [NotificationsService, NotificationsGateway, PushService],
+  exports: [
+    NotificationsService,
+    NotificationsGateway,
+    PushService,
+    NotificationResolverService,
+  ],
 })
 export class NotificationsModule {}
