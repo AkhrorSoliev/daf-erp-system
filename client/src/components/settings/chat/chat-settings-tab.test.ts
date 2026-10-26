@@ -28,6 +28,23 @@ describe("ChatSettingsTab", () => {
     expect(out).not.toContain("Chat yoqilgan");
   });
 
+  it("keeps the form when a background refetch failed but data exists", () => {
+    const out = render((qc) => {
+      qc.setQueryData(CHAT_ADMIN_KEYS.settings, { enabled: false, weekMinutesActive: 30, weekMinutesRadio: 10 });
+      qc.getQueryCache()
+        .build(qc, { queryKey: CHAT_ADMIN_KEYS.settings })
+        .setState({
+          status: "error",
+          error: new Error("x"),
+          fetchStatus: "idle",
+          data: { enabled: false, weekMinutesActive: 30, weekMinutesRadio: 10 },
+        });
+    });
+    expect(out).toContain("Chat yoqilgan");
+    expect(out).toContain('value="30"');
+    expect(out).not.toContain("Qayta urinish");
+  });
+
   it("shows the switch off and the two saved values", () => {
     const out = render((qc) =>
       qc.setQueryData(CHAT_ADMIN_KEYS.settings, { enabled: false, weekMinutesActive: 30, weekMinutesRadio: 10 }),

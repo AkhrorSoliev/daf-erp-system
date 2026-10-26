@@ -20,7 +20,7 @@ import { useT } from "@/i18n/context";
 import { msg } from "@/i18n/msg";
 import { useChatAdminSettings, useSaveChatAdminSettings } from "./chat-admin-queries";
 import type { ChatAdminSettings } from "./chat-admin-types";
-import { draftError, draftPatch, isDirty, toDraft, type ChatSettingsDraft } from "./chat-settings-draft";
+import { applyEdits, draftError, draftPatch, isDirty, type ChatSettingsDraft } from "./chat-settings-draft";
 import { FormError, SettingsCard, SettingsSaveBar, UnitNumberField } from "../settings-form-parts";
 
 // JS strings, not JSX text: a JSX chunk with an entity AND a line break loses the space before the break (SWC bug, Next 16.2).
@@ -31,29 +31,29 @@ export function ChatSettingsTab() {
   const t = useT();
   const { data, isError, isFetching, refetch } = useChatAdminSettings();
 
-  if (isError) {
-    return (
-      <div className="space-y-3">
-        <p className="text-sm text-muted-foreground">{t(LOAD_FAILED)}</p>
-        <Button variant="outline" disabled={isFetching} onClick={() => void refetch()}>
-          {isFetching && <Loader2 className="size-4 animate-spin" />}
-          {t("Qayta urinish")}
-        </Button>
-      </div>
-    );
-  }
-  if (!data) return <Skeleton className="h-56 w-full max-w-xl" />;
-  return <ChatSettingsForm saved={data} />;
+  // A failed background refetch keeps `data`: the form (and the CEO's unsaved edits) must stay mounted.
+  if (data) return <ChatSettingsForm saved={data} />;
+  if (!isError) return <Skeleton className="h-56 w-full max-w-xl" />;
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">{t(LOAD_FAILED)}</p>
+      <Button variant="outline" disabled={isFetching} onClick={() => void refetch()}>
+        {isFetching && <Loader2 className="size-4 animate-spin" />}
+        {t("Qayta urinish")}
+      </Button>
+    </div>
+  );
 }
 
 function ChatSettingsForm({ saved }: { saved: ChatAdminSettings }) {
   const t = useT();
-  // A draft exists only after an edit; until then the server's values show.
-  const [draft, setDraft] = useState<ChatSettingsDraft | null>(null);
+  // Only the edited fields are kept; the rest follow the server's values.
+  const [edits, setEdits] = useState<Partial<ChatSettingsDraft> | null>(null);
   const [confirming, setConfirming] = useState(false);
-  const save = useSaveChatAdminSettings(() => setDraft(null));
+  const save = useSaveChatAdminSettings(() => setEdits(null));
 
-  const form = draft ?? toDraft(saved);
+  const form = applyEdits(saved, edits);
+  const edit = (part: Partial<ChatSettingsDraft>) => setEdits({ ...edits, ...part });
   const dirty = isDirty(saved, form);
   const error = dirty ? draftError(form, t) : null;
   const patch = dirty && !error ? draftPatch(saved, form) : null;
@@ -75,7 +75,7 @@ function ChatSettingsForm({ saved }: { saved: ChatAdminSettings }) {
           id="chat-enabled"
           checked={form.enabled}
           disabled={save.isPending}
-          onCheckedChange={(enabled) => setDraft({ ...form, enabled })}
+          onCheckedChange={(enabled) => edit({ enabled })}
         />
       </div>
 
@@ -86,7 +86,7 @@ function ChatSettingsForm({ saved }: { saved: ChatAdminSettings }) {
           unit={t("daqiqa")}
           hint={t(MINUTES_HINT)}
           value={form.active}
-          onChange={(active) => setDraft({ ...form, active })}
+          onChange={(active) => edit({ active })}
         />
         <UnitNumberField
           id="chat-week-radio"
@@ -94,7 +94,7 @@ function ChatSettingsForm({ saved }: { saved: ChatAdminSettings }) {
           unit={t("daqiqa")}
           hint={t(MINUTES_HINT)}
           value={form.radio}
-          onChange={(radio) => setDraft({ ...form, radio })}
+          onChange={(radio) => edit({ radio })}
         />
       </div>
 
@@ -104,7 +104,7 @@ function ChatSettingsForm({ saved }: { saved: ChatAdminSettings }) {
         dirty={dirty}
         canSave={patch !== null}
         saving={save.isPending}
-        onCancel={() => setDraft(null)}
+        onCancel={() => setEdits(null)}
         onSave={() => (switching ? setConfirming(true) : send())}
       />
 

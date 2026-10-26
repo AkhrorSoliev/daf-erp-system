@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { draftError, draftPatch, isDirty, toDraft } from "./chat-settings-draft";
+import { applyEdits, draftError, draftPatch, isDirty, toDraft } from "./chat-settings-draft";
 import type { ChatAdminSettings } from "./chat-admin-types";
 
 const saved: ChatAdminSettings = { enabled: false, weekMinutesActive: 30, weekMinutesRadio: 10 };
@@ -30,6 +30,21 @@ describe("chat settings draft", () => {
 
   it("sends the switch alone when only it changed", () => {
     expect(draftPatch(saved, { ...toDraft(saved), enabled: true })).toEqual({ enabled: true });
+  });
+
+  it("applyEdits: an unedited field follows a changed saved, an edited one keeps its edit", () => {
+    const changed: ChatAdminSettings = { enabled: true, weekMinutesActive: 40, weekMinutesRadio: 20 };
+    expect(applyEdits(changed, { radio: "15" })).toEqual({ enabled: true, active: "40", radio: "15" });
+    expect(applyEdits(changed, null)).toEqual(toDraft(changed));
+  });
+
+  it("applyEdits keeps falsy edits (enabled false, 0, empty text)", () => {
+    const on: ChatAdminSettings = { enabled: true, weekMinutesActive: 30, weekMinutesRadio: 10 };
+    expect(applyEdits(on, { enabled: false, active: "0", radio: "" })).toEqual({
+      enabled: false,
+      active: "0",
+      radio: "",
+    });
   });
 
   it("sends nothing when nothing changed or a value is invalid", () => {

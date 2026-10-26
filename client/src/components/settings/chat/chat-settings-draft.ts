@@ -20,6 +20,11 @@ function minutes(text: string): number | null {
   return n <= 1000 ? n : null;
 }
 
+/** The form: the server's values with only the fields the CEO edited laid over them (so an unedited field follows a changed `saved`). */
+export function applyEdits(saved: ChatAdminSettings, edits: Partial<ChatSettingsDraft> | null): ChatSettingsDraft {
+  return { ...toDraft(saved), ...edits };
+}
+
 export function isDirty(saved: ChatAdminSettings, d: ChatSettingsDraft): boolean {
   const base = toDraft(saved);
   return d.enabled !== base.enabled || d.active !== base.active || d.radio !== base.radio;
