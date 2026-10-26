@@ -11,6 +11,21 @@ export function joriyUnitIndeksi(tepalar: number[], chegara: number): number {
   return idx;
 }
 
+/**
+ * The order (1-based, in its level) of the unit with this id, for the page's
+ * scene; 1 while the path or the unit is not known yet.
+ */
+export function joriyUnitTartibi(
+  levels: readonly { units: readonly { id: number; order: number }[] }[] | undefined,
+  unitId: number | null,
+): number {
+  if (!levels || unitId == null) return 1;
+  for (const level of levels) {
+    for (const unit of level.units) if (unit.id === unitId) return unit.order;
+  }
+  return 1;
+}
+
 /** Sticky banner follows the scroll. One passive listener, work done inside a frame. */
 export function useJoriyUnit(konteyner: React.RefObject<HTMLElement | null>, chegara = 120): number {
   const [idx, setIdx] = React.useState(0);

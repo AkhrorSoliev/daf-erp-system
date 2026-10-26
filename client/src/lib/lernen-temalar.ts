@@ -8,7 +8,7 @@ import { msg } from "@/i18n/msg";
  */
 export const LERNEN_TEMALAR = [
   { id: "toza", label: msg("Toza"), hint: msg("Oq fon, qalin yumshoq tugmalar"), swatch: "#ff6b4a", tayyor: true },
-  { id: "ormon", label: msg("O'rmon"), hint: msg("Yumshoq qatlamli o'rmon"), swatch: "#2f6b4f", tayyor: false },
+  { id: "ormon", label: msg("O'rmon"), hint: msg("Yumshoq qatlamli o'rmon"), swatch: "#2f6b4f", tayyor: true },
   { id: "dengiz", label: msg("Dengiz"), hint: msg("Suv osti dunyosi"), swatch: "#2b78a8", tayyor: false },
   { id: "alp", label: msg("Nemis sayohati"), hint: msg("Tongdan tungacha"), swatch: "#8b5cf6", tayyor: false },
 ] as const;
