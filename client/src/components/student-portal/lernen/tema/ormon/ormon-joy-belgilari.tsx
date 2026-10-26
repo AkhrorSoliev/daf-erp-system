@@ -1,33 +1,20 @@
 import type * as React from "react";
 import type { DafLessonKind } from "../../types";
+import { joyTanla } from "../sahna-umumiy";
 
 export type JoyId = "kulba" | "koprik" | "gor" | "qala";
+
+/** Every lesson step's place in the forest: a new kind stops compiling here until it has one. */
+const JOYLAR: Record<DafLessonKind, JoyId> = { SECTION_A: "kulba", SECTION_B: "koprik", BRIDGE: "gor", UNIT_TEST: "qala" };
 
 /**
  * Which place a lesson is in the forest (spec §8): the first meeting in a hut,
  * the practice on a bridge, the passage test in a cave, the final test in a
- * castle. An old DiB lesson has no step: it is a hut.
+ * castle. An old DiB lesson has no step, and a kind this build does not know
+ * (the server and the client are deployed by hand) is drawn too: a hut.
  */
 export function placeForKind(kind: DafLessonKind | null): JoyId {
-  switch (kind) {
-    case "SECTION_A":
-    case null:
-      return "kulba";
-    case "SECTION_B":
-      return "koprik";
-    case "BRIDGE":
-      return "gor";
-    case "UNIT_TEST":
-      return "qala";
-    default: {
-      // A new lesson kind must get its own place: this line stops compiling until it does.
-      const unplaced: never = kind;
-      void unplaced;
-      // At run time a kind this build does not know (the server and the client are
-      // deployed by hand, so they can differ) is a hut: the page still draws.
-      return "kulba";
-    }
-  }
+  return joyTanla(kind, JOYLAR);
 }
 
 interface BelgiProps {

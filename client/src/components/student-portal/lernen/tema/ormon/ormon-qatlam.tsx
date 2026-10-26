@@ -1,4 +1,5 @@
 import * as React from "react";
+import { TILE_COPIES } from "../sahna-umumiy";
 import { BIOMES, type BiomeId } from "./ormon-biom";
 import { LAYER_BLUR, LAYER_FACTOR, TILE, type LayerId } from "./ormon-sahna-rejasi";
 import { layerShapes, type Bush, type Hill, type Shape, type Tree } from "./ormon-shakllar";
@@ -10,14 +11,6 @@ const BIOME_SEED: Record<BiomeId, number> = { tong: 0, kol: 100, kuz: 200 };
 export function tileShapes(biome: BiomeId, layer: LayerId, count: number): Shape[] {
   return layerShapes(layer, count, LAYER_SEED[layer] + BIOME_SEED[biome]);
 }
-
-/**
- * How many times the tile is drawn down the layer (the tile itself plus
- * `TILE_COPIES - 1` `<use>` copies). The layer is the screen plus one tile tall
- * and its scroll offset wraps in (-TILE, 0], so the copies must reach
- * viewport + TILE: they cover viewports up to (TILE_COPIES - 1) * TILE = 1920 px.
- */
-const TILE_COPIES = 4;
 
 /** A soft tree drawn at its own origin (ormon2.html `soft`): a trunk and four round crowns. */
 function SoftTree({ crown, trunk }: { crown: string; trunk: string }) {

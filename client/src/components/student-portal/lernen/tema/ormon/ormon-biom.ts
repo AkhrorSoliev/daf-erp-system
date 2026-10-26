@@ -1,3 +1,5 @@
+import { unitCycleIndex } from "../sahna-umumiy";
+
 /** The «O'rmon» theme's three biomes (spec §8): dawn, lake, autumn. */
 export const BIOME_IDS = ["tong", "kol", "kuz"] as const;
 export type BiomeId = (typeof BIOME_IDS)[number];
@@ -24,8 +26,8 @@ export const BIOMES: Record<BiomeId, BiomePalette> = {
 /** Dark mode: one still veil over the whole scene instead of a second set of colours. */
 export const DARK_VEIL = { color: "#04120e", alpha: 0.45 } as const;
 
-/** The place cards' surface over the scene is `bg-surface/90` (the contrast test reads this). */
-export const CARD_SURFACE_ALPHA = 0.9;
+// The place cards' surface over the scene is `bg-surface/90` (the contrast test reads this): the shared card's.
+export { CARD_SURFACE_ALPHA } from "../sahna-umumiy";
 
 /** The theme's own deep green: the «Boshlash» pill and the current place's ring (white text 6.1:1). */
 export const ACCENT = "#0d6f5b";
@@ -36,6 +38,5 @@ export const ACCENT = "#0d6f5b";
  * know the order, so the two screens agree without another request.
  */
 export function biomeForUnit(unitOrder: number): BiomeId {
-  const n = Number.isFinite(unitOrder) ? Math.trunc(unitOrder) : 1;
-  return BIOME_IDS[(((n - 1) % 3) + 3) % 3];
+  return BIOME_IDS[unitCycleIndex(unitOrder, BIOME_IDS.length)];
 }

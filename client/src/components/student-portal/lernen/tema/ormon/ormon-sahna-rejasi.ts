@@ -1,7 +1,7 @@
 export type LayerId = "far" | "mid" | "near";
 
-/** Height (px) of one tile of a layer: the layer repeats it and wraps, so the DOM never grows with the path. */
-export const TILE = 640;
+// Height (px) of one tile of a layer: shared by every scene (`tema/sahna-umumiy.ts`).
+export { TILE } from "../sahna-umumiy";
 
 /** How far each layer moves per px of scroll: the farther, the slower (ormon2.html `FAC`). */
 export const LAYER_FACTOR: Record<LayerId, number> = { far: 0.2, mid: 0.5, near: 0.8 };
