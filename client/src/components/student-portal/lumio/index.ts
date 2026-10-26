@@ -47,6 +47,7 @@ export {
   pickPortalLocale,
   type LanguagePickerProps,
 } from "./language-picker";
+export { SelectField, type SelectFieldProps, type SelectFieldOption } from "./select-field";
 export { EmptyState, type EmptyStateProps } from "./empty-state";
 export { Screen, ScreenHeader, StackHeader, type ScreenProps } from "./screen";
 export { Section, type SectionProps } from "./section";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Key, SignOut, User } from "@phosphor-icons/react";
+import { DeviceMobile, Key, User } from "@phosphor-icons/react";
 import {
   Screen,
   StackHeader,
@@ -14,7 +14,6 @@ import {
 import { useT } from "@/i18n/context";
 import { StudentPasswordDialog } from "./student-password-dialog";
 import { LernenKorinishTanlash } from "./lernen-korinish-tanlash";
-import { LogoutOthersDialog } from "@/components/shared/logout-others-dialog";
 import { useStudentProfile } from "./lib/queries";
 import { settingsHelpItems } from "@/lib/student-nav-items";
 
@@ -26,7 +25,6 @@ export function StudentSettingsPage() {
   const t = useT();
   const { data: profile } = useStudentProfile();
   const [passwordOpen, setPasswordOpen] = useState(false);
-  const [logoutOthersOpen, setLogoutOthersOpen] = useState(false);
 
   return (
     <Screen narrow>
@@ -34,14 +32,14 @@ export function StudentSettingsPage() {
 
       <Section title={t("Mavzu")}>
         <Card pad="sm">
-          <ThemeSegmented variant="full" />
+          <ThemeSegmented variant="select" />
         </Card>
       </Section>
 
       {/* Kept on this device only (cookie): a student has no account language. */}
       <Section title={t("Til")}>
         <Card pad="sm">
-          <LanguagePicker />
+          <LanguagePicker variant="field" />
         </Card>
       </Section>
 
@@ -59,15 +57,13 @@ export function StudentSettingsPage() {
           }
           onClick={() => setPasswordOpen(true)}
         />
-        {/* No chevron: this row confirms an action, like the portal's own
-            sign-out row, and the full label only fits a phone without it. */}
+        {/* The list of devices and the sign-out of the others live on their own page. */}
         <ListRow
-          icon={<SignOut weight="bold" />}
+          icon={<DeviceMobile weight="bold" />}
           iconTone="coral"
-          label={t("Boshqa qurilmalardan chiqish")}
-          subtitle={t("Bu qurilmada qolasiz")}
-          chevron={false}
-          onClick={() => setLogoutOthersOpen(true)}
+          label={t("Ulangan qurilmalar")}
+          subtitle={t("Boshqa qurilmalardan chiqish")}
+          href="/portal/settings/devices"
         />
       </Section>
 
@@ -82,11 +78,11 @@ export function StudentSettingsPage() {
       </Section>
 
       {/*
-        Tablet + desktop only. The rail has no row for FAQ / Biz haqimizda, so
-        they hang off Settings there. On mobile the "Ko'proq" hub already lists
-        them and a second entry point would just be a duplicate.
+        Every width. On tablet + desktop the rail has no row for FAQ / Biz
+        haqimizda, so they hang off Settings; on a phone the "Ko'proq" hub lists
+        them too, but that is another screen, so the two never share a viewport.
       */}
-      <Section title={t("Yordam")} className="hidden md:flex">
+      <Section title={t("Yordam")}>
         {settingsHelpItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -104,11 +100,6 @@ export function StudentSettingsPage() {
       <StudentPasswordDialog
         open={passwordOpen}
         onOpenChange={setPasswordOpen}
-      />
-      <LogoutOthersDialog
-        open={logoutOthersOpen}
-        onOpenChange={setLogoutOthersOpen}
-        contentClassName="lumio"
       />
     </Screen>
   );

@@ -7,6 +7,7 @@ import { msg } from "@/i18n/msg";
 import { cn } from "@/lib/utils";
 import { Desktop, Sun, Moon } from "./icon";
 import { SegmentedControl, type SegmentOption } from "./segmented-control";
+import { SelectField } from "./select-field";
 
 export type ThemeMode = "system" | "light" | "dark";
 
@@ -26,7 +27,7 @@ const THEME_OPTIONS: SegmentOption<ThemeMode>[] = [
 
 export interface ThemeSegmentedProps {
   /** "full" — labelled (Settings), "compact" — icon-only (rail footer). */
-  variant?: "full" | "compact";
+  variant?: "full" | "compact" | "select";
   /** Stacked instead of side-by-side — for the collapsed 72px rail. */
   orientation?: "horizontal" | "vertical";
   className?: string;
@@ -43,6 +44,7 @@ export function ThemeSegmented({
   React.useEffect(() => setMounted(true), []);
 
   const compact = variant === "compact";
+  const asSelect = variant === "select";
   const vertical = orientation === "vertical";
 
   // `theme` is undefined until next-themes has read localStorage. Rendering the
@@ -55,9 +57,25 @@ export function ThemeSegmented({
         aria-hidden
         className={cn(
           "rounded-pill bg-sunk",
-          vertical ? "h-[108px]" : compact ? "h-[44px]" : "h-[52px]",
+          vertical ? "h-[108px]" : compact ? "h-[44px]" : asSelect ? "h-12" : "h-[52px]",
           className,
         )}
+      />
+    );
+  }
+
+  // Settings: one dropdown; the icon follows the chosen mode.
+  if (asSelect) {
+    const mode = (theme as ThemeMode) ?? "system";
+    const current = THEME_OPTIONS.find((o) => o.value === mode);
+    return (
+      <SelectField<ThemeMode>
+        label={t("Mavzu")}
+        value={mode}
+        onChange={setTheme}
+        icon={current?.icon}
+        options={THEME_OPTIONS.map((o) => ({ value: o.value, label: t(o.label) }))}
+        className={className}
       />
     );
   }
