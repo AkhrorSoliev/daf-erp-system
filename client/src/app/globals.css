@@ -1260,3 +1260,193 @@ button {
 .lumio :focus-within > select:autofill {
   box-shadow: inset 0 0 0 1000px var(--surface-card);
 }
+
+/* ============================================================
+   Ta'lim · «O'rmon» theme (ADR-0131): the scene behind the path and
+   the unit page, the node ring, the places and the reward. Only
+   transform and opacity animate. Everything stops under the device's
+   «Kam harakat» switch and the system setting; the drifting decor
+   holds still while the scene is paused (data-tinch: the tab is
+   hidden or the scene is off screen).
+   ============================================================ */
+
+/* One biome stack shows at a time; the hidden ones are not painted at
+   all. A biome change is an opacity cross-fade. */
+.lumio .ormon-biome {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 700ms var(--ease-in-out),
+    visibility 0s linear 700ms;
+}
+
+.lumio .ormon-biome[data-faol] {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 700ms var(--ease-in-out),
+    visibility 0s;
+}
+
+/* Only the visible biome's layers get a compositor layer of their own. */
+.lumio .ormon-biome[data-faol] .ormon-layer {
+  will-change: transform;
+}
+
+.lumio .ormon-spark {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ormon-glow);
+  box-shadow: 0 0 14px 5px color-mix(in srgb, var(--ormon-glow) 60%, transparent);
+  animation:
+    ormon-drift var(--ormon-t) ease-in-out infinite alternate,
+    ormon-blink var(--ormon-b) ease-in-out infinite;
+}
+
+@keyframes ormon-drift {
+  to {
+    transform: translate(var(--ormon-dx), var(--ormon-dy));
+  }
+}
+
+@keyframes ormon-blink {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+.lumio .ormon-leaf {
+  position: absolute;
+  top: 0;
+  width: 14px;
+  height: 14px;
+  opacity: 0.8;
+  animation: ormon-fall var(--ormon-t) linear infinite;
+}
+
+@keyframes ormon-fall {
+  0% {
+    transform: translate(0, -40px) rotate(0deg);
+  }
+  50% {
+    transform: translate(-26px, 50vh) rotate(160deg);
+  }
+  100% {
+    transform: translate(10px, 105vh) rotate(320deg);
+  }
+}
+
+/* Light shafts: soft stripes, with no blur filter and no blend mode on a
+   moving layer. */
+.lumio .ormon-rays {
+  position: absolute;
+  top: 0;
+  left: -60px;
+  right: -60px;
+  height: 70%;
+  background: repeating-linear-gradient(
+    106deg,
+    transparent 0 60px,
+    color-mix(in srgb, var(--ormon-glow) 14%, transparent) 90px,
+    transparent 120px 210px
+  );
+  -webkit-mask-image: linear-gradient(#000, transparent 85%);
+  mask-image: linear-gradient(#000, transparent 85%);
+  animation: ormon-rays 30s ease-in-out infinite alternate;
+}
+
+@keyframes ormon-rays {
+  from {
+    transform: translateX(-30px);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateX(30px);
+    opacity: 1;
+  }
+}
+
+.lumio .ormon-mist {
+  position: absolute;
+  left: -80px;
+  width: calc(100% + 160px);
+  height: 160px;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0));
+  animation: ormon-mist 28s ease-in-out infinite alternate;
+}
+
+@keyframes ormon-mist {
+  to {
+    transform: translateX(24px);
+  }
+}
+
+.lumio .ormon-vignette {
+  background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.19) 100%);
+}
+
+/* The current node's ring rests invisible: with no animation it is simply
+   not there. */
+.lumio .ormon-ring {
+  opacity: 0;
+  animation: ormon-ring 2.6s ease-out infinite;
+}
+
+@keyframes ormon-ring {
+  from {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  to {
+    transform: scale(1.45);
+    opacity: 0;
+  }
+}
+
+/* The current place's emblem breathes. */
+.lumio .ormon-bob {
+  animation: ormon-bob 2.6s ease-in-out infinite;
+}
+
+@keyframes ormon-bob {
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* The reward's slow sunburst. */
+.lumio .ormon-burst {
+  animation: ormon-spin 40s linear infinite;
+}
+
+@keyframes ormon-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.lumio [data-tinch] :is(.ormon-spark, .ormon-leaf, .ormon-rays, .ormon-mist) {
+  animation-play-state: paused;
+}
+
+/* Later and as specific as the visible biome's rule, so it wins over it. */
+.lumio [data-kam-harakat] :is(.ormon-spark, .ormon-leaf, .ormon-rays, .ormon-mist, .ormon-ring, .ormon-burst, .ormon-bob),
+.lumio [data-kam-harakat] .ormon-biome {
+  animation: none;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lumio :is(.ormon-spark, .ormon-leaf, .ormon-rays, .ormon-mist, .ormon-ring, .ormon-burst, .ormon-bob),
+  .lumio .ormon-biome,
+  .lumio .ormon-biome[data-faol] {
+    animation: none;
+    transition: none;
+  }
+}

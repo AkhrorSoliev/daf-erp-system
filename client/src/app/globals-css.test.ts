@@ -51,3 +51,45 @@ describe("the device's «Kam harakat» switch", () => {
     );
   });
 });
+
+describe("the «O'rmon» scene's motion (ADR-0131)", () => {
+  const css = readFileSync(path.join(__dirname, "globals.css"), "utf8");
+  const flat = css.replace(/\s+/g, " ");
+  const list = ":is(.ormon-spark, .ormon-leaf, .ormon-rays, .ormon-mist, .ormon-ring, .ormon-burst, .ormon-bob)";
+
+  it("animates only transform and opacity", () => {
+    const frames = [...css.matchAll(/@keyframes (ormon-[\w-]+) \{([\s\S]*?)\n\}/g)];
+    expect(frames.map((m) => m[1])).toEqual([
+      "ormon-drift",
+      "ormon-blink",
+      "ormon-fall",
+      "ormon-rays",
+      "ormon-mist",
+      "ormon-ring",
+      "ormon-bob",
+      "ormon-spin",
+    ]);
+    for (const [, name, body] of frames) {
+      const props = new Set([...body.matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1]));
+      expect([...props].filter((p) => p !== "transform" && p !== "opacity"), name).toEqual([]);
+    }
+  });
+
+  it("holds the drifting decor still while the scene is paused", () => {
+    expect(flat).toContain(
+      ".lumio [data-tinch] :is(.ormon-spark, .ormon-leaf, .ormon-rays, .ormon-mist) { animation-play-state: paused; }",
+    );
+  });
+
+  it("stops every animation and the biome fade under the device's «Kam harakat» switch", () => {
+    expect(flat).toContain(
+      `.lumio [data-kam-harakat] ${list}, .lumio [data-kam-harakat] .ormon-biome { animation: none; transition: none; }`,
+    );
+  });
+
+  it("does the same under the system setting, also for the visible biome", () => {
+    expect(flat).toContain(
+      `@media (prefers-reduced-motion: reduce) { .lumio ${list}, .lumio .ormon-biome, .lumio .ormon-biome[data-faol] { animation: none; transition: none; } }`,
+    );
+  });
+});
