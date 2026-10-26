@@ -71,7 +71,7 @@ describe("the state glyphs (icons, not text: 3:1)", () => {
     });
 
     it(`${mode.name}: the lock on the frosted-stone node holds over every scene colour`, () => {
-      // `SHAR.locked.fon` is `color-mix(in srgb, var(--surface) NN%, transparent)`: the surface token and its share over the scene.
+      // `SHAR.locked.fon` is `color-mix(in srgb, var(--surface-card) NN%, transparent)`: the surface token and its share over the scene.
       const stone = /var\(--([a-z0-9-]+)\)\s+(\d+)%/.exec(SHAR.locked.fon);
       if (!stone) throw new Error(`SHAR.locked.fon is no longer a surface token at some %: ${SHAR.locked.fon}`);
       const surface = cssHexToken(css, mode.selector, stone[1]);

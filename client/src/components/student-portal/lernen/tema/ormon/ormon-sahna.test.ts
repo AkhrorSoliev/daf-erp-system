@@ -60,7 +60,9 @@ describe("<OrmonSahnaChizma />", () => {
 });
 
 describe("<OrmonSahna />", () => {
-  it("first paints the light scene (the device has not answered yet) in the unit's biome", () => {
+  // A static render has no device to ask, so it gets the server snapshot: the light scene.
+  // (The app never server-renders a scene, see `useYengilRejim`; this pins the safe default.)
+  it("draws the light scene from the server snapshot, in the unit's biome", () => {
     kam.on = false;
     const html = renderToStaticMarkup(createElement(OrmonSahna, { unitTartibi: 3 }));
     expect(html).toContain('data-sahna="ormon"');

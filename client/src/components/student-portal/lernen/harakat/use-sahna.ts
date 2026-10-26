@@ -12,9 +12,12 @@ function qurilmaZaifmi(): boolean {
 }
 
 /**
- * A weak device draws the lighter scene (spec §9). The server and the first
- * paint assume the light one — a weak phone never pays for the full scene —
- * and the browser's answer replaces it after hydration.
+ * A weak device draws the lighter scene (spec §9). The server snapshot is the
+ * light one: the safe answer where there is no device to ask. A scene is never
+ * server-rendered in this app, though — `useLernenTema` answers «Toza» on the
+ * server and during hydration (the profile query has no server data and the
+ * device cache is read in an effect) — so the scene mounts on the client and is
+ * born with the device's real answer; there is no light-to-full switch.
  */
 export function useYengilRejim(): boolean {
   return React.useSyncExternalStore(obunaYoq, qurilmaZaifmi, () => true);
