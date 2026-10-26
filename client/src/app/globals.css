@@ -1541,3 +1541,207 @@ body:has(.lumio [data-sahna]) :is([data-slot="sheet-overlay"], [data-slot="dialo
     will-change: auto;
   }
 }
+
+/* ============================================================
+   Ta'lim · «Dengiz» theme (ADR-0133): the dive behind the path and
+   the unit page, the node ring, the places and the reward. Built
+   cheaper than O'rmon: per zone one still water gradient and still
+   ridges; the only layer that follows the scroll is two narrow wall
+   strips. Only transform and opacity animate, nothing is filtered or
+   blended. Everything stops under the device's «Kam harakat» switch
+   and the system setting; the drifting life holds still while the
+   scene is paused (data-tinch: the tab is hidden or it is off screen).
+   ============================================================ */
+
+/* One zone shows at a time; the hidden ones are not painted at all.
+   A zone change is an opacity cross-fade. */
+.lumio .dengiz-zone {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 700ms var(--ease-in-out),
+    visibility 0s linear 700ms;
+}
+
+.lumio .dengiz-zone[data-faol] {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 700ms var(--ease-in-out),
+    visibility 0s;
+}
+
+/* Only the shown zone's wall strips get a compositor layer of their own. */
+.lumio .dengiz-zone[data-faol] .dengiz-strip {
+  will-change: transform;
+}
+
+/* A frond at a bottom corner sways from its foot. */
+.lumio .dengiz-sway {
+  transform-origin: 50% 100%;
+  animation: dengiz-sway var(--dengiz-t) ease-in-out infinite alternate;
+}
+
+@keyframes dengiz-sway {
+  from {
+    transform: rotate(-3deg);
+  }
+  to {
+    transform: rotate(3deg);
+  }
+}
+
+/* A bubble rises from below the screen and fades out near the top. */
+.lumio .dengiz-bubble {
+  position: absolute;
+  bottom: -24px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.06) 60%);
+  opacity: 0;
+  animation: dengiz-rise var(--dengiz-t) linear infinite;
+}
+
+@keyframes dengiz-rise {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.9;
+  }
+  90% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(var(--dengiz-dx), -110vh);
+    opacity: 0;
+  }
+}
+
+/* A fish school crosses the screen; every other one swims back. */
+.lumio .dengiz-school {
+  position: absolute;
+  left: 0;
+  animation: dengiz-swim var(--dengiz-t) linear infinite;
+}
+
+.lumio .dengiz-school[data-chap] {
+  animation-direction: reverse;
+}
+
+@keyframes dengiz-swim {
+  from {
+    transform: translateX(-140px);
+  }
+  to {
+    transform: translateX(110vw);
+  }
+}
+
+/* Light from the surface: soft stripes, with no blur filter and no blend
+   mode, fading out down the screen. */
+.lumio .dengiz-rays {
+  position: absolute;
+  top: 0;
+  left: -60px;
+  right: -60px;
+  height: 60%;
+  background: repeating-linear-gradient(
+    100deg,
+    transparent 0 70px,
+    rgba(255, 255, 255, 0.16) 100px,
+    transparent 130px 220px
+  );
+  -webkit-mask-image: linear-gradient(#000, transparent 85%);
+  mask-image: linear-gradient(#000, transparent 85%);
+  animation: dengiz-rays 24s ease-in-out infinite alternate;
+}
+
+@keyframes dengiz-rays {
+  from {
+    transform: translateX(-24px);
+    opacity: 0.55;
+  }
+  to {
+    transform: translateX(24px);
+    opacity: 1;
+  }
+}
+
+/* The current node's ring rests invisible: with no animation it is simply
+   not there. */
+.lumio .dengiz-ring {
+  opacity: 0;
+  animation: dengiz-ring 2.6s ease-out infinite;
+}
+
+@keyframes dengiz-ring {
+  from {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  to {
+    transform: scale(1.45);
+    opacity: 0;
+  }
+}
+
+/* The current place's emblem bobs in the water. */
+.lumio .dengiz-bob {
+  animation: dengiz-bob 2.6s ease-in-out infinite;
+}
+
+@keyframes dengiz-bob {
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* The reward's slow light rays. */
+.lumio .dengiz-burst {
+  animation: dengiz-spin 40s linear infinite;
+}
+
+@keyframes dengiz-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.lumio [data-tinch] :is(.dengiz-bubble, .dengiz-school, .dengiz-rays, .dengiz-sway) {
+  animation-play-state: paused;
+}
+
+/* A hidden zone is not painted, but its fronds' timelines would still run. */
+.lumio .dengiz-zone:not([data-faol]) .dengiz-sway {
+  animation-play-state: paused;
+}
+
+/* Later than every rule above, so it wins over them. */
+.lumio [data-kam-harakat] :is(.dengiz-bubble, .dengiz-school, .dengiz-rays, .dengiz-sway, .dengiz-ring, .dengiz-bob, .dengiz-burst),
+.lumio [data-kam-harakat] .dengiz-zone {
+  animation: none;
+  transition: none;
+}
+
+/* No parallax here, so the strips need no compositor layer of their own.
+   One attribute more than the shown zone's rule, so it wins over it. */
+.lumio [data-kam-harakat] .dengiz-zone[data-faol] .dengiz-strip {
+  will-change: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lumio :is(.dengiz-bubble, .dengiz-school, .dengiz-rays, .dengiz-sway, .dengiz-ring, .dengiz-bob, .dengiz-burst),
+  .lumio .dengiz-zone,
+  .lumio .dengiz-zone[data-faol] {
+    animation: none;
+    transition: none;
+  }
+
+  /* The system setting has no parallax either. After the shown zone's
+     rule and as specific as it, so it wins over it. */
+  .lumio .dengiz-zone[data-faol] .dengiz-strip {
+    will-change: auto;
+  }
+}
