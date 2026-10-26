@@ -19,7 +19,6 @@ import { PriceInput } from "@/components/ui/price-input";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/format-utils";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { msg } from "@/i18n/msg";
 import { useT } from "@/i18n/context";
 import { paymentMethodLabel } from "./overview/overview-math";
 import { requestDueLine, requestOpenedText } from "./refunds/refunds-format";
@@ -60,14 +59,6 @@ interface Props {
   studentName: string;
   onSuccess?: () => void;
 }
-
-const refundMethods = [
-  { value: "CASH", label: msg("Naqd") },
-  { value: "TRANSFER", label: msg("Bank o'tkazmasi") },
-  { value: "PAYME", label: msg("Payme") },
-  { value: "CLICK", label: msg("Click") },
-  { value: "UZUM", label: msg("Uzum") },
-];
 
 export function RefundDialog({
   open,

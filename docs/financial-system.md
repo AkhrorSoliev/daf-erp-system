@@ -200,9 +200,9 @@ Faqat PERCENTAGE va FIXED_PER_STUDENT turidagi o'qituvchilar uchun.
 
 **TEACHER_ADVANCE xususiyati:** Bu kategoriya avans sifatida beriladi va oylik hisoblashda xodimning oylik summasidan avtomatik ushlab qolinadi — faqat sanasi davr oxiridan oldingi avans o'sha oy oyligidan ushlanadi, oylikka sig'maganlari keyingi oyga o'tadi (`salary-calculation.service.ts → applyPendingAdvances()`, `planAdvanceNetting`, ADR-0082).
 
-#### Soliq — hisoblanmaydi
+#### Soliq va komissiyalar
 
-`CompanyTaxConfig` modeli, `/salary/tax-config` endpointlari va «Soliq stavkasi» oynasi olib tashlangan. Tizim soliqni hisoblamaydi va hech qaysi to'lovdan ushlamaydi. Ehtimoliy ushlanmalar (ustoz oyligidan 12%, markaz tomonidan ustoz oyligiga 12%, markaz oylik tushumidan 4%, Click/Payme/Uzum har to'lovdan 2%) oylik sahifasida faqat ma'lumot uchun statik izoh (`possible-deductions-info.tsx`) — saqlanmaydi, yig'ilmaydi, hech narsadan ayirilmaydi. Markazning o'zi to'lagan soliq — oddiy xarajat (`Expense`), soliq hisobi emas.
+`CompanyTaxConfig` modeli, `/salary/tax-config` endpointlari va «Soliq stavkasi» oynasi olib tashlangan. Soliq va to'lov komissiyasi stavkalari endi Sozlamalar → «Soliq va komissiyalar» sahifasida kiritiladi va sof foydadan avtomatik ayriladi (ADR-0130). Eski statik «ehtimoliy ushlanmalar» izohi (`possible-deductions-info.tsx`) olib tashlangan. Markazning o'zi to'lagan soliq — oddiy xarajat (`Expense`).
 
 ---
 
