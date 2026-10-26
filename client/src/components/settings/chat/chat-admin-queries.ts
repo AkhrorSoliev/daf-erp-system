@@ -1,16 +1,109 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useT } from "@/i18n/context";
-import type { ChatAdminSettings, ChatAdminSettingsPatch } from "./chat-admin-types";
+import type {
+  ChatAdminSettings,
+  ChatAdminSettingsPatch,
+  ChatReportDetail,
+  ChatReportsPage,
+  ChatReportStatus,
+  ResolveReportBody,
+} from "./chat-admin-types";
 
 export const CHAT_ADMIN_KEYS = {
   settings: ["chat-admin", "settings"] as const,
-  // Task 5 / Task 6 add `reports` and `banned` here.
+  reports: ["chat-admin", "reports"] as const,
+  reportList: (status: ChatReportStatus | undefined) => ["chat-admin", "reports", "list", status ?? "all"] as const,
+  report: (id: string) => ["chat-admin", "reports", "one", id] as const,
+  // Task 6 adds the banned-list query under this key.
+  banned: ["chat-admin", "banned"] as const,
 };
+
+const REPORTS_PAGE_SIZE = 50;
+
+export function useChatReports(status: ChatReportStatus | undefined) {
+  return useInfiniteQuery({
+    queryKey: CHAT_ADMIN_KEYS.reportList(status),
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam }) =>
+      (
+        await api.get<ChatReportsPage>("/chat/admin/reports", {
+          params: { status, cursor: pageParam ?? undefined, limit: REPORTS_PAGE_SIZE },
+        })
+      ).data,
+    getNextPageParam: (last) => last.nextCursor,
+  });
+}
+
+export function useChatReport(id: string | null) {
+  return useQuery({
+    queryKey: CHAT_ADMIN_KEYS.report(id ?? ""),
+    queryFn: () => api.get<ChatReportDetail>(`/chat/admin/reports/${id}`).then((r) => r.data),
+    enabled: !!id,
+    retry: false,
+  });
+}
+
+function useAfterReportChange() {
+  const queryClient = useQueryClient();
+  return (reportId?: string) => {
+    void queryClient.invalidateQueries({ queryKey: CHAT_ADMIN_KEYS.reports });
+    if (reportId) void queryClient.invalidateQueries({ queryKey: CHAT_ADMIN_KEYS.report(reportId) });
+    void queryClient.invalidateQueries({ queryKey: CHAT_ADMIN_KEYS.banned });
+  };
+}
+
+export function useResolveChatReport(id: string) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const after = useAfterReportChange();
+  return useMutation({
+    mutationFn: async (body: ResolveReportBody) =>
+      (await api.patch<ChatReportDetail>(`/chat/admin/reports/${id}`, body)).data,
+    onSuccess: (report) => {
+      queryClient.setQueryData(CHAT_ADMIN_KEYS.report(id), report);
+      after(id);
+      // The bell notice of this report closes.
+      void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      toast.success(t("Shikoyat ko'rib chiqildi"));
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, t("Shikoyatni saqlashda xatolik")));
+      after(id); // a 409 means somebody closed it first: show the real state
+    },
+  });
+}
+
+/** Also reused by the «Chatdan chiqarilganlar» tab. `reportId` refreshes an open drawer. */
+export function useBanStudent(reportId?: string) {
+  const t = useT();
+  const after = useAfterReportChange();
+  return useMutation({
+    mutationFn: async (studentId: number) => (await api.post(`/chat/admin/students/${studentId}/ban`)).data,
+    onSuccess: () => {
+      after(reportId);
+      toast.success(t("O'quvchi chatdan chiqarildi"));
+    },
+    onError: (err) => toast.error(getErrorMessage(err, t("Amalni bajarib bo'lmadi"))),
+  });
+}
+
+export function useUnbanStudent(reportId?: string) {
+  const t = useT();
+  const after = useAfterReportChange();
+  return useMutation({
+    mutationFn: async (studentId: number) => (await api.post(`/chat/admin/students/${studentId}/unban`)).data,
+    onSuccess: () => {
+      after(reportId);
+      toast.success(t("O'quvchi chatga qaytarildi"));
+    },
+    onError: (err) => toast.error(getErrorMessage(err, t("Amalni bajarib bo'lmadi"))),
+  });
+}
 
 export function useChatAdminSettings() {
   return useQuery({
