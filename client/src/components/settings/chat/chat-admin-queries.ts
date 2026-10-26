@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { useT } from "@/i18n/context";
+import { useNotifications } from "@/hooks/use-notifications";
 import type {
   ChatAdminSettings,
   ChatAdminSettingsPatch,
@@ -76,6 +77,7 @@ export function useResolveChatReport(id: string) {
       after(id);
       // The bell notice of this report closes.
       void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      void useNotifications.getState().fetchBadge();
       toast.success(t("Shikoyat ko'rib chiqildi"));
     },
     onError: (err) => {

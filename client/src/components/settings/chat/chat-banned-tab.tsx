@@ -135,7 +135,7 @@ function BannedTable({
               <TableCell className="whitespace-nowrap">{formatReportDate(r.chatBannedAt)}</TableCell>
               <TableCell className="text-right">
                 {pendingId === r.id ? (
-                  <Loader2 className="ml-auto size-4 animate-spin text-muted-foreground" />
+                  <Loader2 role="status" aria-label={t("Yuklanmoqda...")} className="ml-auto size-4 animate-spin text-muted-foreground" />
                 ) : (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

@@ -40,14 +40,6 @@ function make(
     },
     student: {
       findMany: jest.fn().mockResolvedValue([]),
-      findFirst: jest
-        .fn()
-        .mockImplementation(({ where }: { where: { id: number } }) =>
-          Promise.resolve({
-            firstName: where.id === 1 ? 'Ali' : 'Vali',
-            lastName: 'Karimov',
-          }),
-        ),
     },
     user: { findMany: jest.fn().mockResolvedValue([{ id: 10 }, { id: 11 }]) },
   };

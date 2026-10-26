@@ -17,7 +17,9 @@ export function ChatReportDrawer({ id, onClose }: { id: string | null; onClose: 
   const t = useT();
   const query = useChatReport(id);
   const report = query.data;
-  const notFound = query.isError && axios.isAxiosError(query.error) && query.error.response?.status === 404;
+  // 400: the server rejects a non-UUID id, which is a missing report to the CEO.
+  const status = query.isError && axios.isAxiosError(query.error) ? query.error.response?.status : undefined;
+  const notFound = status === 404 || status === 400;
 
   return (
     <Sheet open={id !== null} onOpenChange={(open) => !open && onClose()}>

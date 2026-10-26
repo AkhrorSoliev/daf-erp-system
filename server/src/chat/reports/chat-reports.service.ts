@@ -129,7 +129,9 @@ export class ChatReportsService {
         }
       }
     } catch (err) {
-      this.warn(0, err);
+      this.logger.warn(
+        `report notice: loading the CEOs failed: ${(err as Error).message}`,
+      );
     }
   }
 

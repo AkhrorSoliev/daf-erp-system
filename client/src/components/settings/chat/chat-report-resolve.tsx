@@ -60,10 +60,11 @@ export function ResolveFooter({ report }: { report: ChatReportDetail }) {
       )}
       <div className="flex gap-2">
         <Button disabled={busy} onClick={() => (canBan && ban ? setConfirming(true) : send("RESOLVED"))}>
-          {busy && <Loader2 className="size-4 animate-spin" />}
+          {busy && resolve.variables?.outcome !== "DISMISSED" && <Loader2 className="size-4 animate-spin" />}
           {t("Hal qilindi")}
         </Button>
         <Button variant="secondary" disabled={busy} onClick={() => send("DISMISSED")}>
+          {busy && resolve.variables?.outcome === "DISMISSED" && <Loader2 className="size-4 animate-spin" />}
           {t("Rad etish")}
         </Button>
       </div>
