@@ -66,9 +66,9 @@ function DarajaYorligi({ matn, sahnali }: { matn: string; sahnali: boolean }) {
       <span aria-hidden className="h-px flex-1 bg-line" />
       <span
         className={cn(
-          "font-display text-sm font-extrabold uppercase tracking-wide text-ink-500",
-          // On a theme's scene the caption sits on the plain surface (ADR-0131).
-          sahnali && SAHNA_PARDASI_KICHIK,
+          "font-display text-sm font-extrabold uppercase tracking-wide",
+          // On a theme's scene the caption sits on the plain surface, in the ink that reads there (ADR-0131).
+          sahnali ? ["text-ink-600", SAHNA_PARDASI_KICHIK] : "text-ink-500",
         )}
       >
         {matn}
@@ -150,8 +150,8 @@ function SeansTuguni({
         {ostyozuvKorinsinmi && tugun.ostyozuv ? (
           <p
             className={cn(
-              "max-w-[132px] truncate text-center text-[11px] font-bold uppercase tracking-wide text-ink-400",
-              sahnali && SAHNA_PARDASI_KICHIK,
+              "max-w-[132px] truncate text-center text-[11px] font-bold uppercase tracking-wide",
+              sahnali ? ["text-ink-600", SAHNA_PARDASI_KICHIK] : "text-ink-400",
             )}
           >
             {tugun.ostyozuv}

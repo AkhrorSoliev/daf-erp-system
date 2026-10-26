@@ -68,7 +68,7 @@ export function OrmonTugun({ label, holat, onClick, onBosilmagan }: TugunBelgisi
           <Icon size={28} weight="fill" />
         </button>
       </div>
-      <span className="max-w-[120px] truncate rounded-full bg-surface px-2.5 py-0.5 text-center text-xs font-bold text-ink-900 shadow-lumio-sm">
+      <span className="relative max-w-[120px] truncate rounded-full bg-surface px-2.5 py-0.5 text-center text-xs font-bold text-ink-900 shadow-lumio-sm">
         {label}
       </span>
     </div>

@@ -44,4 +44,12 @@ describe("<OrmonTugun />", () => {
     expect(html).not.toMatch(/\btext-ink-(?:400|500)\b/);
     expect(html).not.toContain("backdrop-");
   });
+
+  // The ring is an absolutely positioned layer that reaches 10 px past the orb,
+  // further than the gap above the name: a pill that is not positioned would be
+  // painted under it.
+  it("positions its name pill, so it paints above the current node's ring", () => {
+    expect(render({})).toMatch(/<span class="[^"]*\brelative\b[^"]*">Tanishuv</);
+    expect(render({ holat: "locked" })).toMatch(/<span class="[^"]*\brelative\b[^"]*">Tanishuv</);
+  });
 });
