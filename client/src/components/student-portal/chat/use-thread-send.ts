@@ -1,7 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useSendMessage } from "./chat-queries";
+import { useQueryClient } from "@tanstack/react-query";
+import { CHAT_KEYS, useSendMessage } from "./chat-queries";
+import { hasMessage, pendingStep, type MessagesCache } from "./chat-stream-model";
 import {
   addPending,
   confirmPending,
@@ -17,8 +19,33 @@ import {
  */
 export function useThreadSend(conversationId: string) {
   const send = useSendMessage(conversationId);
+  const qc = useQueryClient();
   const [pending, setPending] = useState<PendingMessage[]>([]);
   const seq = useRef(0);
+
+  // The bubble leaves only once the server's message is in the cached thread.
+  // If a stale poll overwrote the cache, the thread is refetched; after the
+  // give-up time the bubble is dropped with one last refetch.
+  const settle = async (key: string, serverId: string) => {
+    const threadKey = CHAT_KEYS.messages(conversationId);
+    const started = Date.now();
+    let refetched = false;
+    for (;;) {
+      const present = hasMessage(qc.getQueryData<MessagesCache>(threadKey), serverId);
+      const step = pendingStep(present, Date.now() - started, refetched);
+      if (step === "remove" || step === "giveUp") {
+        if (step === "giveUp") void qc.invalidateQueries({ queryKey: threadKey });
+        setPending((p) => removePending(p, key));
+        return;
+      }
+      if (step === "refetch") {
+        refetched = true;
+        await qc.invalidateQueries({ queryKey: threadKey });
+        continue;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+  };
 
   const run = async (key: string, text: string) => {
     try {
@@ -26,7 +53,7 @@ export function useThreadSend(conversationId: string) {
       // The message is already in the cache (useSendMessage), and the bubble
       // hides itself once it sees that id: no frame with both or with none.
       setPending((p) => confirmPending(p, key, sent.id));
-      setTimeout(() => setPending((p) => removePending(p, key)), 1500);
+      void settle(key, sent.id);
     } catch {
       // The toast with the server's reason comes from useSendMessage.
       setPending((p) => setPendingStatus(p, key, "failed"));

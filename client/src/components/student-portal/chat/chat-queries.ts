@@ -115,12 +115,17 @@ export function useSendMessage(id: string) {
     // The server's committed message goes straight into the cache (deduped by
     // id against the stream), so the pending bubble can be swapped for it
     // with no refetch in between.
-    onSuccess: (message) => {
+    onSuccess: async (message) => {
       const key = CHAT_KEYS.messages(id);
+      // A poll already in flight may predate this message and would overwrite
+      // the cache with a page that lacks it: stop it before writing.
+      await qc.cancelQueries({ queryKey: key });
       const next = insertMessage(qc.getQueryData<MessagesCache>(key), message);
       if (next) qc.setQueryData(key, next);
-      qc.setQueryData<ConversationView[] | undefined>(CHAT_KEYS.list, (old) =>
-        listAfterSend(old, id, qc.getQueryData<PeerSummary>(CHAT_KEYS.peer(id)), message),
+      const preview =
+        message.text ?? (message.kind === "IMAGE" ? t("Rasm") : t("Ovozli xabar"));
+      qc.setQueryData<ConversationView[]>(CHAT_KEYS.list, (old) =>
+        listAfterSend(old, id, qc.getQueryData<PeerSummary>(CHAT_KEYS.peer(id)), message, preview),
       );
       void qc.invalidateQueries({ queryKey: CHAT_KEYS.list });
     },

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  backoffDelay,
+  hasMessage,
   insertMessage,
+  pendingStep,
+  shouldResetBackoff,
+  streamIdle,
   listAfterSend,
   parseChatEvent,
   splitSse,
@@ -80,15 +85,15 @@ describe("pending swap", () => {
 describe("listAfterSend", () => {
   const row = (id: string): ConversationView => ({ id, peer, lastMessage: null, unread: 3 });
   it("moves the conversation first, updates preview, clears unread", () => {
-    const out = listAfterSend([row("x"), row("y")], "y", undefined, msg("n", true))!;
+    const out = listAfterSend([row("x"), row("y")], "y", undefined, msg("n", true), "n")!;
     expect(out.map((c) => c.id)).toEqual(["y", "x"]);
     expect(out[0]).toMatchObject({ unread: 0, lastMessage: { preview: "n", mine: true } });
   });
   it("adds a brand-new conversation when the peer is known", () => {
-    expect(listAfterSend([], "n", peer, msg("m", true))![0].id).toBe("n");
+    expect(listAfterSend([], "n", peer, msg("m", true), "m")![0].id).toBe("n");
   });
   it("leaves the list alone when the conversation and the peer are unknown", () => {
-    expect(listAfterSend([row("x")], "n", undefined, msg("m", true))!.map((c) => c.id)).toEqual(["x"]);
+    expect(listAfterSend([row("x")], "n", undefined, msg("m", true), "m")!.map((c) => c.id)).toEqual(["x"]);
   });
 });
 
@@ -97,5 +102,57 @@ describe("shouldPing", () => {
     expect(shouldPing(undefined, 1000)).toBe(true);
     expect(shouldPing(1000, 3999)).toBe(false);
     expect(shouldPing(1000, 4000)).toBe(true);
+  });
+});
+
+describe("insertMessage ordering", () => {
+  const at = (id: string, iso: string): MessageView => ({ ...msg(id), createdAt: iso });
+  it("keeps newest-first by createdAt, not blindly first", () => {
+    const c: MessagesCache = {
+      pages: [{ data: [at("c", "2026-10-27T10:03:00Z"), at("a", "2026-10-27T10:01:00Z")], nextCursor: null }],
+    };
+    const out = insertMessage(c, at("b", "2026-10-27T10:02:00Z"))!;
+    expect(out.pages[0].data.map((m) => m.id)).toEqual(["c", "b", "a"]);
+    const newest = insertMessage(c, at("d", "2026-10-27T10:09:00Z"))!;
+    expect(newest.pages[0].data[0].id).toBe("d");
+    const oldest = insertMessage(c, at("z", "2026-10-27T09:00:00Z"))!;
+    expect(oldest.pages[0].data.at(-1)!.id).toBe("z");
+  });
+});
+
+describe("stale poll after insert", () => {
+  it("the bubble is kept while the id is absent and leaves only when present", () => {
+    const sent = msg("n", true);
+    const afterInsert = insertMessage(cache("a"), sent)!;
+    expect(hasMessage(afterInsert, "n")).toBe(true);
+    // a poll that began before the POST committed overwrites the cache
+    const stale = cache("a");
+    expect(hasMessage(stale, "n")).toBe(false);
+    const p = confirmPending(addPending([], "k", "salom", new Date()), "k", "n");
+    expect(mergePending([msg("a")], p).map((m) => m.id)).toContain("pending:k");
+    expect(pendingStep(false, 500, false)).toBe("wait");
+    expect(pendingStep(false, 1600, false)).toBe("refetch");
+    // the refetch shows the id: the bubble goes
+    expect(pendingStep(hasMessage(insertMessage(stale, sent), "n"), 1700, true)).toBe("remove");
+  });
+  it("removes only when present, waits after the refetch, gives up at 10 s", () => {
+    expect(pendingStep(true, 0, false)).toBe("remove");
+    expect(pendingStep(false, 5000, true)).toBe("wait");
+    expect(pendingStep(false, 10000, true)).toBe("giveUp");
+  });
+});
+
+describe("stream timing helpers", () => {
+  it("watchdog fires after 75 s of silence", () => {
+    expect(streamIdle(0, 74999)).toBe(false);
+    expect(streamIdle(0, 75000)).toBe(true);
+  });
+  it("backoff doubles up to 30 s", () => {
+    expect([0, 1, 2, 5, 9].map(backoffDelay)).toEqual([1000, 2000, 4000, 30000, 30000]);
+  });
+  it("resets only after a payload or a stable stream", () => {
+    expect(shouldResetBackoff(200, false)).toBe(false);
+    expect(shouldResetBackoff(200, true)).toBe(true);
+    expect(shouldResetBackoff(10000, false)).toBe(true);
   });
 });

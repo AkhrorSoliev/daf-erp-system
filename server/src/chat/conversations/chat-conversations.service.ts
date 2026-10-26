@@ -220,6 +220,12 @@ export class ChatConversationsService {
    */
   async typing(me: number, conversationId: string): Promise<void> {
     const { peerId } = await this.mine(me, conversationId);
+    // A banned student cannot write, so their typing is not announced either.
+    const self = await this.prisma.student.findFirst({
+      where: { id: me },
+      select: { chatBannedAt: true },
+    });
+    if (self?.chatBannedAt) return;
     try {
       await this.assertMayReach(me, peerId);
     } catch {

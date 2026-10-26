@@ -754,6 +754,15 @@ describe('ChatConversationsService.typing', () => {
     expect(limiter.hit).not.toHaveBeenCalled();
   });
 
+  it('emits nothing for a banned sender', async () => {
+    const { service, gateway, prisma } = make();
+    prisma.student.findFirst.mockResolvedValueOnce({
+      chatBannedAt: new Date(),
+    });
+    await expect(service.typing(1, 'c1')).resolves.toBeUndefined();
+    expect(gateway.sendToUser).not.toHaveBeenCalled();
+  });
+
   it('drops the second ping inside the window without an error', async () => {
     const { service, gateway } = make({ rate: 2 });
     await expect(service.typing(1, 'c1')).resolves.toBeUndefined();

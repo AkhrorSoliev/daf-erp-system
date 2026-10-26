@@ -81,7 +81,14 @@ export function insertMessage(
     return data;
   }
   const [first, ...rest] = data.pages;
-  return { ...data, pages: [{ ...first, data: [message, ...first.data] }, ...rest] };
+  // Newest first: the message goes before the first one that is not newer (ties: the new one is first).
+  const at = Date.parse(message.createdAt);
+  const i = first.data.findIndex((m) => Date.parse(m.createdAt) <= at);
+  const merged =
+    i === -1
+      ? [...first.data, message]
+      : [...first.data.slice(0, i), message, ...first.data.slice(i)];
+  return { ...data, pages: [{ ...first, data: merged }, ...rest] };
 }
 
 /** The list after I sent `message`: that conversation first, preview updated, unread 0. */
@@ -90,9 +97,11 @@ export function listAfterSend(
   conversationId: string,
   peer: PeerSummary | undefined,
   message: MessageView,
+  /** The list row's preview text, already translated by the caller. */
+  preview: string,
 ): ConversationView[] | undefined {
   const last = {
-    preview: message.text ?? (message.kind === "IMAGE" ? "Rasm" : "Ovozli xabar"),
+    preview,
     at: message.createdAt,
     mine: true,
   };
@@ -106,3 +115,42 @@ export function listAfterSend(
   if (!next) return list;
   return [next, ...old.filter((c) => c.id !== conversationId)];
 }
+
+/** True when the cached thread holds this message id. */
+export function hasMessage(data: MessagesCache | undefined, id: string): boolean {
+  return !!data?.pages.some((p) => p.data.some((m) => m.id === id));
+}
+
+export const PENDING_GRACE_MS = 1500;
+export const PENDING_GIVE_UP_MS = 10000;
+
+/**
+ * What to do with a sent message's pending bubble. It leaves only when the
+ * server's message is in the cached thread; a poll that started before the POST
+ * committed can overwrite the cache, so after the grace time the thread is
+ * refetched, and after the give-up time the bubble is dropped with one last refetch.
+ */
+export function pendingStep(
+  present: boolean,
+  ageMs: number,
+  refetched: boolean,
+): "remove" | "wait" | "refetch" | "giveUp" {
+  if (present) return "remove";
+  if (ageMs >= PENDING_GIVE_UP_MS) return "giveUp";
+  if (ageMs >= PENDING_GRACE_MS && !refetched) return "refetch";
+  return "wait";
+}
+
+export const STREAM_IDLE_LIMIT_MS = 75000;
+export const STREAM_STABLE_MS = 10000;
+
+/** Nothing (data or heartbeat) was read for too long: the connection is dead. */
+export const streamIdle = (lastReadAt: number, now: number): boolean =>
+  now - lastReadAt >= STREAM_IDLE_LIMIT_MS;
+
+export const backoffDelay = (retry: number): number =>
+  Math.min(1000 * 2 ** retry, 30_000);
+
+/** The backoff restarts only after a real payload or a stream that stayed open. */
+export const shouldResetBackoff = (openMs: number, gotPayload: boolean): boolean =>
+  gotPayload || openMs >= STREAM_STABLE_MS;
