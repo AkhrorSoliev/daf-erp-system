@@ -117,7 +117,7 @@ function Bubble({ line, name }: { line: SnapshotLine; name: string | null }) {
           {line.kind === "IMAGE" ? t("Rasm") : t("Ovozli xabar")} · {t("fayl ko'rsatilmaydi")}
         </p>
       )}
-      <p className="mt-0.5 text-right text-[11px] text-muted-foreground">{formatReportDate(line.createdAt).slice(-5)}</p>
+      <p className="mt-0.5 text-right text-[11px] text-muted-foreground">{formatReportDate(line.createdAt)}</p>
     </li>
   );
 }

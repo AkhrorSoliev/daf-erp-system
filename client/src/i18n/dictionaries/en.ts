@@ -5370,7 +5370,7 @@ const en: Dictionary = {
   "Oxirgi 7 kunda radio": "Radio in the last 7 days",
   "Chat hamma o'quvchilar uchun ochiladimi?": "Open the chat for all students?",
   "Chat o'chirilsinmi?": "Turn the chat off?",
-  "Yoqilgandan keyin barcha o'quvchilar menyuda «Chat» bandini ko'radi va yozisha oladi. Shikoyatlar «Shikoyatlar» bo'limiga tushadi.": "Once on, all students will see «Chat» in the menu and can write. Reports go to the «Reports» section.",
+  "Yoqilgandan keyin o'quvchilar menyuda «Chat» bandini ko'radi; haftalik shartni bajarganlar yozisha oladi, qolganlari o'qiy oladi. Shikoyatlar «Shikoyatlar» bo'limiga tushadi.": "Once on, students will see «Chat» in the menu; those who meet the weekly requirement can write, the others can only read. Reports go to the «Reports» section.",
   "Yozishmalar yopiladi, o'quvchilar chatni ko'rmaydi. Yozishmalar o'chmaydi.": "Conversations are closed and students do not see the chat. Messages are not deleted.",
   "Mashq daqiqalari 0 dan 1000 gacha butun son bo'lishi kerak": "Practice minutes must be a whole number from 0 to 1000",
   "Radio daqiqalari 0 dan 1000 gacha butun son bo'lishi kerak": "Radio minutes must be a whole number from 0 to 1000",

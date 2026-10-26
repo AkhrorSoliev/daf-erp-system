@@ -134,7 +134,7 @@ function ReportsTable({ rows, offset, onOpen }: { rows: ChatReportRow[]; offset:
             <TableHead>{t("Sana")}</TableHead>
             <TableHead>{t("Shikoyat qilgan")}</TableHead>
             <TableHead>{t("Shikoyat qilingan")}</TableHead>
-            <TableHead>{t("Sabab")}</TableHead>
+            <TableHead className="hidden md:table-cell">{t("Sabab")}</TableHead>
             <TableHead>{t("Holat")}</TableHead>
           </TableRow>
         </TableHeader>
@@ -142,18 +142,22 @@ function ReportsTable({ rows, offset, onOpen }: { rows: ChatReportRow[]; offset:
           {rows.map((r, i) => (
             <TableRow
               key={r.id}
+              role="button"
               tabIndex={0}
               className="cursor-pointer"
               onClick={() => onOpen(r.id)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") onOpen(r.id);
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onOpen(r.id);
+                }
               }}
             >
               <TableCell className="border-r text-muted-foreground">{offset + i + 1}</TableCell>
               <TableCell className="whitespace-nowrap">{formatReportDate(r.createdAt)}</TableCell>
               <TableCell><PersonLine person={{ ...r.reporter, chatBannedAt: null }} /></TableCell>
               <TableCell><PersonLine person={r.reported} /></TableCell>
-              <TableCell className="max-w-xs"><p className="line-clamp-2 whitespace-pre-wrap break-words">{r.reason}</p></TableCell>
+              <TableCell className="hidden max-w-xs md:table-cell"><p className="line-clamp-2 whitespace-pre-wrap break-words">{r.reason}</p></TableCell>
               <TableCell><ReportStatusPill status={r.status} /></TableCell>
             </TableRow>
           ))}

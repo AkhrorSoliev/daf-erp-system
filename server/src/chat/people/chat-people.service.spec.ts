@@ -173,22 +173,6 @@ describe('ChatPeopleService.updatePrivacy', () => {
   });
 });
 
-describe('ChatPeopleService.peerSummary', () => {
-  it('throws when the peer row is missing', async () => {
-    const { service, prisma } = make();
-    prisma.student.findMany.mockResolvedValue([]);
-    const err = await service.peerSummary(1, 2).catch((e: unknown) => e);
-    expect(err).toBeInstanceOf(BadRequestException);
-    expect((err as BadRequestException).message).toBe("O'quvchi topilmadi");
-  });
-
-  it('returns the card of one peer through the batched rule', async () => {
-    const { service, prisma } = make();
-    prisma.student.findMany.mockResolvedValue([row(2)]);
-    expect(await service.peerSummary(1, 2)).toEqual(row(2));
-  });
-});
-
 describe('ChatPeopleService.peerSummaries', () => {
   const privacy = (studentId: number, whoSeesPhoto: string) => ({
     studentId,

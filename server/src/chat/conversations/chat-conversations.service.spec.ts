@@ -63,7 +63,6 @@ function make(
       ...o.privacy,
     }),
     sharesGroup: jest.fn().mockResolvedValue(o.shares ?? false),
-    peerSummary: jest.fn(),
     peerSummaries: jest.fn(),
     findByUsername: jest.fn(),
   };

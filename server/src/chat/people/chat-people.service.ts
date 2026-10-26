@@ -159,23 +159,13 @@ export class ChatPeopleService {
   }
 
   /**
-   * The card another student sees, with the photo hidden when its owner limited it.
-   * The lookup is by id only (no `deletedAt` filter) so a conversation whose
-   * peer was later archived still renders. Precondition: call it only with an
-   * id taken from a `ChatConversation` the viewer belongs to (conversations are
-   * created after a company-scoped lookup), never with an id from a request.
-   */
-  async peerSummary(viewerId: number, peerId: number): Promise<PeerSummary> {
-    const peer = (await this.peerSummaries(viewerId, [peerId])).get(peerId);
-    if (!peer) throw new BadRequestException("O'quvchi topilmadi");
-    return peer;
-  }
-
-  /**
-   * The same cards as `peerSummary`, for many peers in at most 3 queries
-   * (students, privacy rows, one group-mate check for the GROUPMATES peers).
-   * A peer that does not exist is left out of the map. Same precondition as
-   * `peerSummary`: ids come from the viewer's own conversations.
+   * The cards another student sees, with the photo hidden when its owner
+   * limited it, for many peers in at most 3 queries (students, privacy rows,
+   * one group-mate check for the GROUPMATES peers). The lookup is by id only
+   * (no `deletedAt` filter) so a conversation whose peer was later archived
+   * still renders. A peer that does not exist is left out of the map.
+   * Precondition: ids come from `ChatConversation`s the viewer belongs to
+   * (created after a company-scoped lookup), never from a request.
    */
   async peerSummaries(
     viewerId: number,

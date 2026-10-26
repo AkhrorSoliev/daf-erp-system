@@ -117,7 +117,7 @@ function ChatSettingsForm({ saved }: { saved: ChatAdminSettings }) {
             <AlertDialogDescription>
               {form.enabled
                 ? t(
-                    "Yoqilgandan keyin barcha o'quvchilar menyuda «Chat» bandini ko'radi va yozisha oladi. Shikoyatlar «Shikoyatlar» bo'limiga tushadi.",
+                    "Yoqilgandan keyin o'quvchilar menyuda «Chat» bandini ko'radi; haftalik shartni bajarganlar yozisha oladi, qolganlari o'qiy oladi. Shikoyatlar «Shikoyatlar» bo'limiga tushadi.",
                   )
                 : t("Yozishmalar yopiladi, o'quvchilar chatni ko'rmaydi. Yozishmalar o'chmaydi.")}
             </AlertDialogDescription>
