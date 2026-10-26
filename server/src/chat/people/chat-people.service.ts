@@ -166,22 +166,71 @@ export class ChatPeopleService {
    * created after a company-scoped lookup), never with an id from a request.
    */
   async peerSummary(viewerId: number, peerId: number): Promise<PeerSummary> {
-    const [peer, privacy] = await Promise.all([
-      this.prisma.student.findFirst({
-        where: { id: peerId },
+    const peer = (await this.peerSummaries(viewerId, [peerId])).get(peerId);
+    if (!peer) throw new BadRequestException("O'quvchi topilmadi");
+    return peer;
+  }
+
+  /**
+   * The same cards as `peerSummary`, for many peers in at most 3 queries
+   * (students, privacy rows, one group-mate check for the GROUPMATES peers).
+   * A peer that does not exist is left out of the map. Same precondition as
+   * `peerSummary`: ids come from the viewer's own conversations.
+   */
+  async peerSummaries(
+    viewerId: number,
+    peerIds: number[],
+  ): Promise<Map<number, PeerSummary>> {
+    const out = new Map<number, PeerSummary>();
+    const ids = [...new Set(peerIds)];
+    if (ids.length === 0) return out;
+
+    const [peers, privacyRows] = await Promise.all([
+      this.prisma.student.findMany({
+        where: { id: { in: ids } },
         select: PEER_SELECT,
       }),
-      this.privacyOf(peerId),
+      this.prisma.chatPrivacy.findMany({ where: { studentId: { in: ids } } }),
     ]);
-    if (!peer) throw new BadRequestException("O'quvchi topilmadi");
-    const shares =
-      privacy.whoSeesPhoto === 'GROUPMATES'
-        ? await this.sharesGroup(viewerId, peerId)
-        : false;
-    return {
-      ...peer,
-      photo: maySeePhoto(privacy.whoSeesPhoto, shares) ? peer.photo : null,
-    };
+    const whoSees = new Map(
+      privacyRows.map((r) => [r.studentId, r.whoSeesPhoto]),
+    );
+    const groupmateAsked = peers
+      .filter((p) => whoSees.get(p.id) === 'GROUPMATES')
+      .map((p) => p.id);
+    const sharing = await this.sharingGroupWith(viewerId, groupmateAsked);
+
+    for (const peer of peers) {
+      const who = whoSees.get(peer.id) ?? DEFAULT_PRIVACY.whoSeesPhoto;
+      out.set(peer.id, {
+        ...peer,
+        photo: maySeePhoto(who, sharing.has(peer.id)) ? peer.photo : null,
+      });
+    }
+    return out;
+  }
+
+  /** Which of `others` share a live group with the viewer (ACTIVE enrollments both sides). */
+  private async sharingGroupWith(
+    viewerId: number,
+    others: number[],
+  ): Promise<Set<number>> {
+    if (others.length === 0) return new Set();
+    const rows = await this.prisma.enrollment.findMany({
+      where: {
+        studentId: { in: others },
+        status: 'ACTIVE',
+        deletedAt: null,
+        group: {
+          deletedAt: null,
+          enrollments: {
+            some: { studentId: viewerId, status: 'ACTIVE', deletedAt: null },
+          },
+        },
+      },
+      select: { studentId: true },
+    });
+    return new Set(rows.map((r) => r.studentId));
   }
 
   /**

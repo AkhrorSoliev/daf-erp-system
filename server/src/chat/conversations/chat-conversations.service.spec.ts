@@ -46,6 +46,7 @@ function make(
       findMany: jest.fn(),
     },
     chatReadState: { upsert: jest.fn(), findUnique: jest.fn() },
+    $queryRaw: jest.fn().mockResolvedValue([]),
   };
   const access = {
     assertCanWrite: jest.fn(async () => {
@@ -63,6 +64,7 @@ function make(
     }),
     sharesGroup: jest.fn().mockResolvedValue(o.shares ?? false),
     peerSummary: jest.fn(),
+    peerSummaries: jest.fn(),
     findByUsername: jest.fn(),
   };
   const gateway = { sendToUser: jest.fn() };
@@ -434,13 +436,57 @@ describe('ChatConversationsService.open', () => {
 });
 
 describe('ChatConversationsService.list', () => {
+  type Last = {
+    id: string;
+    conversationId: string;
+    senderId: number;
+    kind: string;
+    text: string | null;
+    createdAt: Date;
+  };
+
+  /** Routes the two raw queries by their SQL text. */
+  function setup(
+    convs: object[],
+    o: {
+      peers?: Record<number, object>;
+      last?: Last[];
+      unread?: { conversationId: string; n: number }[];
+    } = {},
+  ) {
+    const m = make();
+    m.prisma.chatConversation.findMany.mockResolvedValue(convs);
+    const peers = o.peers ?? {};
+    m.people.peerSummaries.mockImplementation((_me: number, ids: number[]) =>
+      Promise.resolve(
+        new Map(ids.filter((i) => peers[i]).map((i) => [i, peers[i]] as const)),
+      ),
+    );
+    m.prisma.$queryRaw.mockImplementation((strings: TemplateStringsArray) =>
+      Promise.resolve(
+        strings.join('?').includes('DISTINCT ON')
+          ? (o.last ?? [])
+          : (o.unread ?? []),
+      ),
+    );
+    return m;
+  }
+
+  const convsOf = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      id: `c${i}`,
+      companyId: 1,
+      studentLowId: 1,
+      studentHighId: i + 2,
+    }));
+
   it('lists nothing for a student without conversations', async () => {
-    const { service } = make();
+    const { service } = setup([]);
     expect(await service.list(1)).toEqual([]);
   });
 
   it('only asks for conversations that already have a message', async () => {
-    const { service, prisma } = make();
+    const { service, prisma } = setup([]);
     await service.list(1);
     expect(prisma.chatConversation.findMany.mock.calls[0][0].where).toEqual({
       OR: [{ studentLowId: 1 }, { studentHighId: 1 }],
@@ -448,49 +494,62 @@ describe('ChatConversationsService.list', () => {
     });
   });
 
-  it('skips a conversation whose peer cannot be read and returns the others', async () => {
-    const { service, prisma, people } = make();
-    const other = { id: 'c2', companyId: 1, studentLowId: 1, studentHighId: 3 };
-    prisma.chatConversation.findMany.mockResolvedValue([conv, other]);
-    prisma.chatMessage.findFirst.mockResolvedValue(null);
-    prisma.chatReadState.findUnique.mockResolvedValue(null);
-    prisma.chatMessage.count.mockResolvedValue(0);
-    people.peerSummary.mockImplementation(async (_me: number, peer: number) => {
-      if (peer === 2) throw new Error("O'quvchi topilmadi");
-      return { id: peer };
-    });
-    const out = await service.list(1);
-    expect(out.map((c) => c.id)).toEqual(['c2']);
-    expect(out[0].peer).toEqual({ id: 3 });
+  it('uses the same number of queries for 1 and 50 conversations, at most 6 in all', async () => {
+    const count = async (n: number) => {
+      const convs = convsOf(n);
+      const peers = Object.fromEntries(
+        convs.map((c) => [c.studentHighId, { id: c.studentHighId }]),
+      );
+      const { service, prisma, people } = setup(convs, { peers });
+      await service.list(1);
+      // The people service runs at most 3 queries itself (peers, privacy, group-mates).
+      return (
+        prisma.chatConversation.findMany.mock.calls.length +
+        people.peerSummaries.mock.calls.length * 3 +
+        prisma.$queryRaw.mock.calls.length +
+        prisma.chatMessage.findFirst.mock.calls.length +
+        prisma.chatMessage.count.mock.calls.length +
+        prisma.chatReadState.findUnique.mock.calls.length
+      );
+    };
+    const one = await count(1);
+    const fifty = await count(50);
+    expect(fifty).toBe(one);
+    expect(fifty).toBeLessThanOrEqual(6);
   });
 
-  it('builds peer, last-message preview and unread count from lastReadAt', async () => {
-    const { service, prisma, people } = make();
-    const peer = { id: 2, firstName: 'Ali' };
-    people.peerSummary.mockResolvedValue(peer);
-    const lastReadAt = new Date('2026-10-25T06:00:00Z');
-    prisma.chatConversation.findMany.mockResolvedValue([conv]);
-    prisma.chatMessage.findFirst.mockResolvedValue({
-      id: 'm9',
-      senderId: 2,
-      kind: 'IMAGE',
-      text: null,
-      createdAt: new Date('2026-10-25T07:30:00Z'),
+  it('skips a conversation whose peer is missing and returns the others in order', async () => {
+    const other = { id: 'c2', companyId: 1, studentLowId: 1, studentHighId: 3 };
+    const third = { id: 'c3', companyId: 1, studentLowId: 4, studentHighId: 1 };
+    const { service } = setup([conv, other, third], {
+      peers: { 3: { id: 3 }, 4: { id: 4 } },
     });
-    prisma.chatReadState.findUnique.mockResolvedValue({ lastReadAt });
-    prisma.chatMessage.count.mockResolvedValue(3);
+    const out = await service.list(1);
+    expect(out.map((c) => c.id)).toEqual(['c2', 'c3']);
+    expect(out[0].peer).toEqual({ id: 3 });
+    expect(out[1].peer).toEqual({ id: 4 });
+  });
+
+  it('builds peer, last-message preview and unread count', async () => {
+    const peer = { id: 2, firstName: 'Ali' };
+    const { service, people } = setup([conv], {
+      peers: { 2: peer },
+      last: [
+        {
+          id: 'm9',
+          conversationId: 'c1',
+          senderId: 2,
+          kind: 'IMAGE',
+          text: null,
+          createdAt: new Date('2026-10-25T07:30:00Z'),
+        },
+      ],
+      unread: [{ conversationId: 'c1', n: 3 }],
+    });
 
     const out = await service.list(1);
 
-    expect(people.peerSummary).toHaveBeenCalledWith(1, 2);
-    expect(prisma.chatMessage.count).toHaveBeenCalledWith({
-      where: {
-        conversationId: 'c1',
-        senderId: { not: 1 },
-        deletedAt: null,
-        createdAt: { gt: lastReadAt },
-      },
-    });
+    expect(people.peerSummaries).toHaveBeenCalledWith(1, [2]);
     expect(out).toEqual([
       {
         id: 'c1',
@@ -503,6 +562,51 @@ describe('ChatConversationsService.list', () => {
         unread: 3,
       },
     ]);
+  });
+
+  it('still lists a conversation with no non-deleted message: lastMessage null, unread 0', async () => {
+    const { service } = setup([conv], { peers: { 2: { id: 2 } } });
+    const out = await service.list(1);
+    expect(out).toEqual([
+      { id: 'c1', peer: { id: 2 }, lastMessage: null, unread: 0 },
+    ]);
+  });
+
+  it('marks my own last message as mine and uses the voice preview', async () => {
+    const { service } = setup([conv], {
+      peers: { 2: { id: 2 } },
+      last: [
+        {
+          id: 'm1',
+          conversationId: 'c1',
+          senderId: 1,
+          kind: 'VOICE',
+          text: null,
+          createdAt: new Date('2026-10-25T07:30:00Z'),
+        },
+      ],
+    });
+    const [item] = await service.list(1);
+    expect(item.lastMessage).toMatchObject({
+      preview: 'Ovozli xabar',
+      mine: true,
+    });
+  });
+
+  it('keeps the old rules in SQL: last = newest non-deleted, unread = others since my lastReadAt', async () => {
+    const { service, prisma } = setup([conv], { peers: { 2: { id: 2 } } });
+    await service.list(1);
+    const sqls = prisma.$queryRaw.mock.calls.map((c: [TemplateStringsArray]) =>
+      c[0].join('?'),
+    );
+    const last = sqls.find((s: string) => s.includes('DISTINCT ON'))!;
+    expect(last).toContain('"deletedAt" IS NULL');
+    expect(last).toContain('"createdAt" DESC, m."id" DESC');
+    const unread = sqls.find((s: string) => !s.includes('DISTINCT ON'))!;
+    expect(unread).toContain('"ChatReadState"');
+    expect(unread).toContain('"senderId" <>');
+    expect(unread).toContain('"deletedAt" IS NULL');
+    expect(unread).toContain('"lastReadAt" IS NULL OR');
   });
 });
 

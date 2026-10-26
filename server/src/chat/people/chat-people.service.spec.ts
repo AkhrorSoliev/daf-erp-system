@@ -18,7 +18,10 @@ function make(over: Record<string, unknown> = {}) {
       upsert: jest.fn(),
       deleteMany: jest.fn(),
     },
-    enrollment: { findFirst: jest.fn().mockResolvedValue(null) },
+    enrollment: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
     ...over,
   };
   return { service: new ChatPeopleService(prisma as never), prisma };
@@ -173,10 +176,96 @@ describe('ChatPeopleService.updatePrivacy', () => {
 describe('ChatPeopleService.peerSummary', () => {
   it('throws when the peer row is missing', async () => {
     const { service, prisma } = make();
-    prisma.student.findFirst.mockResolvedValue(null);
+    prisma.student.findMany.mockResolvedValue([]);
     const err = await service.peerSummary(1, 2).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(BadRequestException);
     expect((err as BadRequestException).message).toBe("O'quvchi topilmadi");
+  });
+
+  it('returns the card of one peer through the batched rule', async () => {
+    const { service, prisma } = make();
+    prisma.student.findMany.mockResolvedValue([row(2)]);
+    expect(await service.peerSummary(1, 2)).toEqual(row(2));
+  });
+});
+
+describe('ChatPeopleService.peerSummaries', () => {
+  const privacy = (studentId: number, whoSeesPhoto: string) => ({
+    studentId,
+    whoCanWrite: 'EVERYONE',
+    whoCanFind: 'EVERYONE',
+    whoSeesPhoto,
+  });
+
+  it('uses a constant number of queries and skips peers that do not exist', async () => {
+    const run = async (n: number) => {
+      const { service, prisma } = make();
+      const ids = Array.from({ length: n }, (_, i) => i + 2);
+      prisma.student.findMany.mockResolvedValue(
+        ids.filter((i) => i !== 3).map((i) => row(i)),
+      );
+      prisma.chatPrivacy.findMany.mockResolvedValue(
+        ids.map((i) => privacy(i, 'GROUPMATES')),
+      );
+      const out = await service.peerSummaries(1, ids);
+      expect(out.has(3)).toBe(false);
+      return (
+        prisma.student.findMany.mock.calls.length +
+        prisma.chatPrivacy.findMany.mock.calls.length +
+        prisma.enrollment.findMany.mock.calls.length
+      );
+    };
+    expect(await run(2)).toBe(3);
+    expect(await run(50)).toBe(3);
+  });
+
+  it('hides the photo by NOBODY and by GROUPMATES without a shared group; shows it with one or EVERYONE', async () => {
+    const { service, prisma } = make();
+    prisma.student.findMany.mockResolvedValue([row(2), row(3), row(4), row(5)]);
+    prisma.chatPrivacy.findMany.mockResolvedValue([
+      privacy(2, 'NOBODY'),
+      privacy(3, 'GROUPMATES'),
+      privacy(4, 'GROUPMATES'),
+      // 5 has no privacy row: the default is EVERYONE
+    ]);
+    prisma.enrollment.findMany.mockResolvedValue([{ studentId: 4 }]);
+    const out = await service.peerSummaries(1, [2, 3, 4, 5]);
+    expect(out.get(2)?.photo).toBeNull();
+    expect(out.get(3)?.photo).toBeNull();
+    expect(out.get(4)?.photo).toBe('p4');
+    expect(out.get(5)?.photo).toBe('p5');
+    // The group-mate check is asked only for the GROUPMATES peers, once.
+    expect(prisma.enrollment.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.enrollment.findMany.mock.calls[0][0].where.studentId).toEqual(
+      { in: [3, 4] },
+    );
+  });
+
+  it('skips the group-mate query when nobody asks for GROUPMATES, and never leaks phone or balance', async () => {
+    const { service, prisma } = make();
+    prisma.student.findMany.mockResolvedValue([row(2)]);
+    const out = await service.peerSummaries(1, [2]);
+    expect(prisma.enrollment.findMany).not.toHaveBeenCalled();
+    expect(Object.keys(out.get(2)!).sort()).toEqual([
+      'firstName',
+      'id',
+      'lastName',
+      'photo',
+      'username',
+    ]);
+    expect(prisma.student.findMany.mock.calls[0][0].select).toEqual({
+      id: true,
+      firstName: true,
+      lastName: true,
+      username: true,
+      photo: true,
+    });
+  });
+
+  it('returns an empty map without any query for no ids', async () => {
+    const { service, prisma } = make();
+    expect((await service.peerSummaries(1, [])).size).toBe(0);
+    expect(prisma.student.findMany).not.toHaveBeenCalled();
   });
 });
 

@@ -8,6 +8,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RedisService } from '../../redis/redis.service';
 import { hit } from '../../students/shared/phone-code';
@@ -60,6 +61,14 @@ export const CHAT_RATE_LIMITER = Symbol('CHAT_RATE_LIMITER');
 // rather than letting messages through unmetered.
 export function redisRateLimiter(redis: RedisService): RateLimiter {
   return { hit: (key, ttl) => hit(redis, key, ttl) };
+}
+
+interface LastRow {
+  conversationId: string;
+  senderId: number;
+  kind: string;
+  text: string | null;
+  createdAt: Date;
 }
 
 const PAGE = 30;
@@ -223,8 +232,9 @@ export class ChatConversationsService {
   }
 
   /**
-   * ponytail: one `count` and one `findFirst` per conversation (≤ 50). Replace
-   * with a single grouped query if the list gets slow.
+   * A constant number of queries whatever the page size (≤ 50 conversations):
+   * conversations, then peers/privacy/group-mates (`peerSummaries`, ≤ 3),
+   * then the last non-deleted message and the unread counts (one raw query each).
    */
   async list(me: number): Promise<ConversationView[]> {
     const rows = await this.prisma.chatConversation.findMany({
@@ -239,58 +249,53 @@ export class ChatConversationsService {
       ],
       take: 50,
     });
-    const items = await Promise.all(
-      rows.map(async (c): Promise<ConversationView | null> => {
-        try {
-          const peerId =
-            c.studentLowId === me ? c.studentHighId : c.studentLowId;
-          const [peer, last, read] = await Promise.all([
-            this.people.peerSummary(me, peerId),
-            this.prisma.chatMessage.findFirst({
-              where: { conversationId: c.id, deletedAt: null },
-              orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-            }),
-            this.prisma.chatReadState.findUnique({
-              where: {
-                conversationId_studentId: {
-                  conversationId: c.id,
-                  studentId: me,
-                },
-              },
-            }),
-          ]);
-          const unread = await this.prisma.chatMessage.count({
-            where: {
-              conversationId: c.id,
-              senderId: { not: me },
-              deletedAt: null,
-              ...(read && { createdAt: { gt: read.lastReadAt } }),
-            },
-          });
-          return {
-            id: c.id,
-            peer,
-            lastMessage: last
-              ? {
-                  preview: last.text ?? PREVIEW[last.kind] ?? '',
-                  at: last.createdAt.toISOString(),
-                  mine: last.senderId === me,
-                }
-              : null,
-            unread,
-          };
-        } catch (err) {
-          // One unreadable conversation (e.g. a hard-deleted peer) must not blank the inbox.
-          this.logger.warn(
-            `Chat list skipped conversation ${c.id}: ${
-              err instanceof Error ? err.message : 'unknown error'
-            }`,
-          );
-          return null;
-        }
-      }),
-    );
-    return items.filter((i): i is ConversationView => i !== null);
+    if (rows.length === 0) return [];
+
+    const peerOf = (c: (typeof rows)[number]) =>
+      c.studentLowId === me ? c.studentHighId : c.studentLowId;
+    const peers = await this.people.peerSummaries(me, rows.map(peerOf));
+    // A hard-deleted peer has no card: that conversation is skipped, the inbox is not.
+    const shown = rows.filter((c) => peers.has(peerOf(c)));
+    if (shown.length === 0) return [];
+    const ids = shown.map((c) => c.id);
+
+    const [lastRows, unreadRows] = await Promise.all([
+      this.prisma.$queryRaw<LastRow[]>`
+        SELECT DISTINCT ON (m."conversationId")
+          m."conversationId", m."senderId", m."kind"::text AS "kind", m."text", m."createdAt"
+        FROM "ChatMessage" m
+        WHERE m."conversationId" IN (${Prisma.join(ids)})
+          AND m."deletedAt" IS NULL
+        ORDER BY m."conversationId", m."createdAt" DESC, m."id" DESC`,
+      this.prisma.$queryRaw<{ conversationId: string; n: number }[]>`
+        SELECT m."conversationId", COUNT(*)::int AS "n"
+        FROM "ChatMessage" m
+        LEFT JOIN "ChatReadState" r
+          ON r."conversationId" = m."conversationId" AND r."studentId" = ${me}
+        WHERE m."conversationId" IN (${Prisma.join(ids)})
+          AND m."senderId" <> ${me}
+          AND m."deletedAt" IS NULL
+          AND (r."lastReadAt" IS NULL OR m."createdAt" > r."lastReadAt")
+        GROUP BY m."conversationId"`,
+    ]);
+    const lastBy = new Map(lastRows.map((l) => [l.conversationId, l]));
+    const unreadBy = new Map(unreadRows.map((u) => [u.conversationId, u.n]));
+
+    return shown.map((c) => {
+      const last = lastBy.get(c.id);
+      return {
+        id: c.id,
+        peer: peers.get(peerOf(c))!,
+        lastMessage: last
+          ? {
+              preview: last.text ?? PREVIEW[last.kind] ?? '',
+              at: last.createdAt.toISOString(),
+              mine: last.senderId === me,
+            }
+          : null,
+        unread: unreadBy.get(c.id) ?? 0,
+      };
+    });
   }
 
   async messages(
