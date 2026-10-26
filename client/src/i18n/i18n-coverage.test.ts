@@ -38,6 +38,7 @@ export const STRICT_FILES: string[] = [
   "components/student-portal/lernen/tema/toza/toza-tugun.tsx",
   "components/student-portal/lernen/tema/use-lernen-tema.ts",
   "components/student-portal/lernen/tema/toza/toza-unit-joyi.tsx",
+  "components/student-portal/lernen/tema/ormon/ormon-tugun.tsx",
   "components/global-search/search-dropdown-utils.ts",
   "components/global-search/search-dropdown-empty-state.tsx",
   "components/global-search/search-dropdown-results.tsx",
