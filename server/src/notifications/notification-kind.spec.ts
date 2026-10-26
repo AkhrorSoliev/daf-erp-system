@@ -17,6 +17,7 @@ describe('notificationKind', () => {
       'ATTENDANCE_MISSING_ADMIN',
       'ATTENDANCE_MISSING_TEACHER',
       'ATTENDANCE_TEACHER_WARNING',
+      'CHAT_REPORT',
       'LESSON_STARTED',
       'PAYMENT_PROMISE_OVERDUE',
       'TASK_ASSIGNED',
@@ -41,6 +42,18 @@ describe('notificationKind', () => {
     ).toBe(false);
   });
 
+  it('files a chat report under system and makes it wait for the CEO', () => {
+    expect(NOTIFICATION_GROUP.CHAT_REPORT).toBe('system');
+    expect(
+      notificationKind(
+        NotificationType.CHAT_REPORT,
+        new Date(),
+        undefined,
+        'r1',
+      ),
+    ).toEqual({ actionRequired: true, groupKey: 'CHAT_REPORT' });
+  });
+
   it('keys a lesson alert by its type and the Tashkent day it was sent', () => {
     // 20:30 UTC on the 10th is 01:30 on the 11th in Tashkent.
     expect(
@@ -56,7 +69,7 @@ describe('notificationKind', () => {
 
   it('leaves every other type ungrouped', () => {
     for (const type of Object.values(NotificationType)) {
-      if (LESSON_ALERT_TYPES.includes(type)) continue;
+      if (LESSON_ALERT_TYPES.includes(type) || type === 'CHAT_REPORT') continue;
       expect(notificationKind(type, new Date()).groupKey).toBeNull();
     }
   });
@@ -93,7 +106,7 @@ describe('notification_action_state migration', () => {
   it('backfills actionRequired for exactly ACTION_TYPES', () => {
     expect(
       typesOf(/SET "actionRequired" = true\s+WHERE "type" IN \(([^)]*)\)/),
-    ).toEqual([...ACTION_TYPES].sort());
+    ).toEqual([...ACTION_TYPES].filter((t) => t !== 'CHAT_REPORT').sort()); // CHAT_REPORT is newer than this backfill
   });
 
   it('backfills groupKey for exactly LESSON_ALERT_TYPES', () => {
