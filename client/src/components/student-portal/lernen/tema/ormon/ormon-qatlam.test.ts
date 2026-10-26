@@ -1,9 +1,10 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { BIOMES, type BiomeId } from "./ormon-biom";
-import { OrmonQatlam } from "./ormon-qatlam";
-import type { LayerId } from "./ormon-sahna-rejasi";
+import { BIOME_IDS, BIOMES, type BiomeId } from "./ormon-biom";
+import { OrmonQatlam, tileShapes } from "./ormon-qatlam";
+import { scenePlan, TILE, type LayerId } from "./ormon-sahna-rejasi";
+import type { Shape } from "./ormon-shakllar";
 
 const draw = (layer: LayerId, count: number, biome: BiomeId = "tong") =>
   renderToStaticMarkup(createElement(OrmonQatlam, { biome, layer, count }));
@@ -41,5 +42,31 @@ describe("<OrmonQatlam />", () => {
   it("gives each biome and depth its own ids, so three biomes can stand on one page", () => {
     expect(draw("mid", 8, "kol")).toContain('id="ormon-kol-mid-blur"');
     expect(draw("mid", 8, "tong")).not.toEqual(draw("mid", 8, "kol"));
+  });
+});
+
+// The layer draws the tile again every TILE px, and its first copy has no copy
+// above it. A shape reaching below the tile is therefore in every copy's top
+// but the first one's, and the scene pops where the offset wraps. The shapes
+// are what the component draws (`tileShapes`: the real seeds and counts).
+describe("the tile's seam", () => {
+  /** The lowest y a shape paints: a hill's and a bush's lower edge, a tree's trunk foot (its crowns rise above it). */
+  const bottom = (s: Shape) => (s.kind === "hill" ? s.cy + s.ry : s.kind === "tree" ? s.y : s.cy + s.r);
+
+  it("has nothing reach below y = TILE, in every biome and layer, full and light", () => {
+    const below: string[] = [];
+    let seen = 0;
+    for (const light of [false, true]) {
+      for (const { id, count } of scenePlan({ reduced: false, light }).layers) {
+        for (const biome of BIOME_IDS) {
+          for (const s of tileShapes(biome, id, count)) {
+            seen++;
+            if (bottom(s) > TILE) below.push(`${light ? "light" : "full"} ${biome} ${id}: a ${s.kind} reaches y = ${bottom(s)}`);
+          }
+        }
+      }
+    }
+    expect(seen, "no shape was checked").toBeGreaterThan(0);
+    expect(below).toEqual([]);
   });
 });

@@ -138,3 +138,117 @@ describe("the glass chrome over a theme's scene (ADR-0131)", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// The «O'rmon» rules as a whole (ADR-0131). The pins above hold one rule each;
+// this scan holds the rules nobody has written yet. Every slip it looks for
+// fails SILENTLY in the browser: an unscoped rule styles every other portal,
+// a comment inside a block makes Next's Lightning CSS drop the whole `@layer`,
+// a filter on a scene that moves all the time is recomputed every frame, and a
+// stray `will-change` costs a compositor layer for nothing.
+// ---------------------------------------------------------------------------
+
+interface CssRule {
+  /** The at-rules around it, outermost first: `@media (…)`, `@keyframes ormon-drift`. */
+  context: string[];
+  selector: string;
+  /** The text between its braces, comments kept. */
+  body: string;
+}
+
+const withoutComments = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "");
+
+/**
+ * Every rule that has no block inside it (a keyframe step counts), in file order.
+ * A brace inside a comment or a string is not a brace. Comments stay in `body`,
+ * because that is what the scan looks for.
+ */
+function leafRules(css: string): CssRule[] {
+  const rules: CssRule[] = [];
+  const open: { prelude: string; nested: boolean }[] = [];
+  let text = "";
+  const token = /\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[{}]|[^{}"'/]+|\//g;
+  for (const [tok] of css.matchAll(token)) {
+    if (tok === "{") {
+      // `@import "x";` and the like end in `;` and belong to no block.
+      const prelude = (withoutComments(text).split(";").pop() ?? "").replace(/\s+/g, " ").trim();
+      const parent = open.at(-1);
+      if (parent) parent.nested = true;
+      open.push({ prelude, nested: false });
+      text = "";
+    } else if (tok === "}") {
+      const block = open.pop();
+      if (!block) throw new Error("globals.css: a } with no {");
+      if (!block.nested) rules.push({ context: open.map((o) => o.prelude), selector: block.prelude, body: text });
+      text = "";
+    } else {
+      text += tok;
+    }
+  }
+  if (open.length) throw new Error("globals.css: a { that is never closed");
+  return rules;
+}
+
+const inOrmonKeyframes = (r: CssRule) => r.context.some((c) => c.startsWith("@keyframes ormon-"));
+
+/** The rules that are the «O'rmon» theme's: a selector naming an `.ormon-*` class, and the steps of an `@keyframes ormon-*`. */
+const ormonRules = (css: string) => leafRules(css).filter((r) => /\.ormon-/.test(r.selector) || inOrmonKeyframes(r));
+
+/** The comma-separated parts of a selector list, leaving the commas inside `:is( … )` alone. */
+const selectorParts = (selector: string) => selector.split(/,(?![^(]*\))/).map((s) => s.trim());
+
+const LAYER_SHOWN = ".lumio .ormon-biome[data-faol] .ormon-layer";
+const LAYER_SHOWN_NO_PARALLAX = ".lumio [data-kam-harakat] .ormon-biome[data-faol] .ormon-layer";
+
+/** Each slip as `kind: where`. */
+function ormonViolations(rules: CssRule[]): string[] {
+  const out: string[] = [];
+  for (const r of rules) {
+    const where = [...r.context, r.selector].join(" > ");
+    const reduced = r.context.some((c) => c.startsWith("@media") && c.includes("prefers-reduced-motion"));
+    const body = withoutComments(r.body);
+    if (!inOrmonKeyframes(r)) {
+      for (const part of selectorParts(r.selector)) {
+        if (!/^(?:\.dark )?\.lumio(?![\w-])/.test(part)) out.push(`scope: ${part}`);
+      }
+    }
+    if (r.body.includes("/*")) out.push(`comment: ${where}`);
+    if (/(?:^|[\s;])(?:-webkit-)?(?:backdrop-)?filter\s*:/.test(body)) out.push(`filter: ${where}`);
+    for (const [, raw] of body.matchAll(/will-change\s*:\s*([^;]+)/g)) {
+      const value = raw.trim();
+      const allowed =
+        (value === "transform" && r.selector === LAYER_SHOWN && !reduced) ||
+        (value === "auto" && r.selector === LAYER_SHOWN_NO_PARALLAX && !reduced) ||
+        (value === "auto" && r.selector === LAYER_SHOWN && reduced);
+      if (!allowed) out.push(`will-change: ${where} (${value})`);
+    }
+  }
+  return out;
+}
+
+describe("every «O'rmon» rule in globals.css (ADR-0131)", () => {
+  it("is scoped to .lumio, has no comment inside its block, no filter, and a will-change only where the layers move", () => {
+    const rules = ormonRules(readFileSync(path.join(__dirname, "globals.css"), "utf8"));
+    // A scan that sees nothing would pass on any stylesheet.
+    expect(rules.length, "no .ormon-* rule found: the scan is blind").toBeGreaterThan(0);
+    expect(rules.some(inOrmonKeyframes), "no @keyframes ormon-* found: the scan is blind").toBe(true);
+    expect(ormonViolations(rules)).toEqual([]);
+  });
+
+  it("does catch each kind of slip in a stylesheet that has them", () => {
+    const bad = `
+      /* above a rule is fine */
+      .ormon-a { opacity: 1; }
+      .lumio .ormon-b { color: red; /* inside is not */ }
+      .lumio .ormon-c, .other { filter: blur(2px); }
+      .lumio .ormon-d { -webkit-backdrop-filter: blur(4px); will-change: opacity; }
+      @keyframes ormon-e { to { filter: blur(1px); } }
+      .lumio .ormon-ok { transform: none; }
+      @media (prefers-reduced-motion: reduce) {
+        .lumio .ormon-biome[data-faol] .ormon-layer { will-change: transform; }
+      }
+    `;
+    const kinds = ormonViolations(ormonRules(bad)).map((v) => v.split(":")[0]);
+    expect(kinds.sort()).toEqual(["comment", "filter", "filter", "filter", "scope", "scope", "will-change", "will-change"]);
+  });
+});

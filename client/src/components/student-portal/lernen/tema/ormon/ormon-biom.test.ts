@@ -6,11 +6,16 @@ describe("biomeForUnit (spec §5 palitraUnitga)", () => {
     expect([1, 2, 3, 4, 5, 6, 12].map(biomeForUnit)).toEqual(["tong", "kol", "kuz", "tong", "kol", "kuz", "kuz"]);
   });
 
-  it("gives a biome for an order it does not expect, never undefined", () => {
-    for (const n of [0, -1, -5, 1.7, Number.NaN, Number.POSITIVE_INFINITY]) {
-      expect(BIOME_IDS).toContain(biomeForUnit(n));
-    }
+  // An order the data should never hold still gets one exact biome: the walk
+  // continues backwards below 1, a fraction is cut, and a number that is not a
+  // number is the first unit.
+  it("gives an exact biome for an order it does not expect", () => {
+    expect(biomeForUnit(0)).toBe("kuz");
+    expect(biomeForUnit(-1)).toBe("kol");
+    expect(biomeForUnit(-5)).toBe("tong");
+    expect(biomeForUnit(1.7)).toBe("tong");
     expect(biomeForUnit(Number.NaN)).toBe("tong");
+    expect(biomeForUnit(Number.POSITIVE_INFINITY)).toBe("tong");
   });
 });
 

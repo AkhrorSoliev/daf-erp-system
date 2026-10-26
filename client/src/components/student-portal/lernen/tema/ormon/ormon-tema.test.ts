@@ -46,6 +46,9 @@ describe("<OrmonMukofotFoni />", () => {
       const holder = /<div\b([^>]*)>Dars tugadi!<\/div>/.exec(html);
       expect(holder, "the children sit directly in one wrapper").not.toBeNull();
       expect(holder?.[1]).not.toContain("overflow");
+      // The decoration layer is `absolute`, so it paints over any static sibling
+      // that comes after it: the content paints over it only when it is positioned.
+      expect(holder?.[1]).toMatch(/class="[^"]*\brelative\b[^"]*"/);
       expect(divTags(html)[0]).toContain('data-mukofot="ormon"');
       expect(divTags(html)[0]).not.toContain("overflow");
 

@@ -1,10 +1,15 @@
 import * as React from "react";
 import { BIOMES, type BiomeId } from "./ormon-biom";
 import { LAYER_BLUR, LAYER_FACTOR, TILE, type LayerId } from "./ormon-sahna-rejasi";
-import { layerShapes, type Bush, type Hill, type Tree } from "./ormon-shakllar";
+import { layerShapes, type Bush, type Hill, type Shape, type Tree } from "./ormon-shakllar";
 
 const LAYER_SEED: Record<LayerId, number> = { far: 11, mid: 23, near: 37 };
 const BIOME_SEED: Record<BiomeId, number> = { tong: 0, kol: 100, kuz: 200 };
+
+/** The shapes of one tile of a biome's layer: the layer's seed plus the biome's, so every biome has its own forest. */
+export function tileShapes(biome: BiomeId, layer: LayerId, count: number): Shape[] {
+  return layerShapes(layer, count, LAYER_SEED[layer] + BIOME_SEED[biome]);
+}
 
 /**
  * How many times the tile is drawn down the layer (the tile itself plus
@@ -45,7 +50,7 @@ export const OrmonQatlam = React.memo(function OrmonQatlam({
 }) {
   const p = BIOMES[biome];
   const fill = p[layer];
-  const shapes = layerShapes(layer, count, LAYER_SEED[layer] + BIOME_SEED[biome]);
+  const shapes = tileShapes(biome, layer, count);
   const hills = shapes.filter((s): s is Hill => s.kind === "hill");
   const trees = shapes.filter((s): s is Tree => s.kind === "tree");
   const bushes = shapes.filter((s): s is Bush => s.kind === "bush");
