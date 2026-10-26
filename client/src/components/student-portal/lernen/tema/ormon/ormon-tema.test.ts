@@ -56,16 +56,11 @@ describe("<OrmonMukofotFoni />", () => {
 });
 
 describe("the «O'rmon» theme", () => {
-  it("is in the registry and brings every slot, its own scene included", () => {
+  it("is in the registry and brings every slot, its scene and card picture included", () => {
     expect(temaTop("ormon")).toBe(ormonTema);
     expect(ormonTema.id).toBe("ormon");
-    for (const slot of ["TugunBelgisi", "MukofotFoni", "UnitLavha", "UnitJoyi", "Sahna"] as const) {
+    for (const slot of ["TugunBelgisi", "MukofotFoni", "UnitLavha", "UnitJoyi", "Sahna", "Miniatyura"] as const) {
       expect(ormonTema[slot], slot).toBeTruthy();
     }
-  });
-
-  it("has no card picture yet", () => {
-    // Task 10 adds `Miniatyura` (the still picture on the Settings card) and flips this.
-    expect(ormonTema.Miniatyura).toBeUndefined();
   });
 });

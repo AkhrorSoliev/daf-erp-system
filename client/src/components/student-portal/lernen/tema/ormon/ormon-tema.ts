@@ -1,5 +1,6 @@
 import type { LernenTema } from "../tema-turlari";
 import { OrmonJoy } from "./ormon-joy";
+import { OrmonMiniatyura } from "./ormon-miniatyura";
 import { OrmonMukofotFoni } from "./ormon-mukofot-foni";
 import { OrmonSahna } from "./ormon-sahna";
 import { OrmonTugun } from "./ormon-tugun";
@@ -13,4 +14,5 @@ export const ormonTema: LernenTema = {
   UnitLavha: OrmonUnitLavha,
   UnitJoyi: OrmonJoy,
   Sahna: OrmonSahna,
+  Miniatyura: OrmonMiniatyura,
 };

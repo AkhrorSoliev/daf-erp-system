@@ -19,7 +19,18 @@ describe("LernenKorinishTanlash (server markup)", () => {
     expect(html).toContain('role="radiogroup"');
     expect(radios(html)).toHaveLength(TAYYOR_TEMALAR.length);
     // Unfinished looks are not offered.
-    expect(html).not.toContain("O&#x27;rmon");
+    expect(html).not.toContain("Dengiz");
+    expect(html).not.toContain("Nemis sayohati");
+  });
+
+  it("offers «O'rmon» with its still miniature; «Toza» keeps its colour dot (spec §7)", () => {
+    const [toza, ormon] = radios(render());
+    expect(ormon[1]).toContain("O&#x27;rmon");
+    expect(ormon[1]).toContain("Yumshoq qatlamli o&#x27;rmon");
+    expect(ormon[1]).toContain('data-miniatyura="ormon"');
+    expect(ormon[0]).toContain('aria-checked="false"');
+    expect(toza[1]).toContain("background:#ff6b4a");
+    expect(toza[1]).not.toContain("data-miniatyura");
   });
 
   it("marks the default look as the chosen one", () => {

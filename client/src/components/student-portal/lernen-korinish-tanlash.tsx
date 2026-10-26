@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/i18n/use-t";
 import { TAYYOR_TEMALAR } from "@/lib/lernen-temalar";
 import { Card, ListRow, Section } from "./lumio";
+import { TEMALAR } from "./lernen/tema/tema-reyestri";
 import { useLernenTema } from "./lernen/tema/use-lernen-tema";
 import { ovozChal, ovozniUygot } from "./lernen/ovoz/ovoz";
 import { ovozYoqilganmi, ovozniSaqla } from "./lernen/ovoz/ovoz-sozlama";
@@ -33,6 +34,8 @@ export function LernenKorinishTanlash() {
         <div role="radiogroup" aria-label={t("Ta'lim ko'rinishi")} className="grid gap-2">
           {TAYYOR_TEMALAR.map((tema) => {
             const tanlangan = tema.id === id;
+            // The theme's own still picture (spec §7); a theme without one keeps the colour dot.
+            const Miniatyura = TEMALAR[tema.id]?.Miniatyura;
             return (
               <button
                 key={tema.id}
@@ -46,7 +49,13 @@ export function LernenKorinishTanlash() {
                   tanlangan ? "border-coral-500 bg-coral-500/15" : "border-line bg-surface",
                 )}
               >
-                <span aria-hidden className="size-8 shrink-0 rounded-full" style={{ background: tema.swatch }} />
+                <span aria-hidden className="grid h-10 w-14 shrink-0 place-items-center overflow-hidden rounded-xl">
+                  {Miniatyura ? (
+                    <Miniatyura />
+                  ) : (
+                    <span className="size-8 rounded-full" style={{ background: tema.swatch }} />
+                  )}
+                </span>
                 <span className="min-w-0 flex-1">
                   <span className="block font-display font-extrabold text-ink-900">{t(tema.label)}</span>
                   <span className={cn("block text-xs font-semibold", tanlangan ? "text-ink-600" : "text-ink-500")}>{t(tema.hint)}</span>
