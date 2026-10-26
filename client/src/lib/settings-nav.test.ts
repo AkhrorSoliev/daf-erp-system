@@ -42,7 +42,7 @@ function blocksOf(url: string, roleIds: number[]): string[] {
 }
 
 describe("getVisibleSettingsSections — /settings da kim nimani ko'radi", () => {
-  it("the CEO sees all 14 pages in five topic sections", () => {
+  it("the CEO sees all 15 pages in five topic sections", () => {
     const sections = getVisibleSettingsSections(canForRoles([CEO]), true);
     expect(sections.map((section) => section.title)).toEqual([
       "Markaz",
@@ -51,7 +51,7 @@ describe("getVisibleSettingsSections — /settings da kim nimani ko'radi", () =>
       "To'lov va lidlar",
       "Telegram va arxiv",
     ]);
-    expect(sections.flatMap((section) => section.items)).toHaveLength(14);
+    expect(sections.flatMap((section) => section.items)).toHaveLength(15);
   });
 
   it("no section is named after a role: every viewer meets only topic headings", () => {
