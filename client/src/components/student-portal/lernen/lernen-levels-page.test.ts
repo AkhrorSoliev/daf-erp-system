@@ -120,3 +120,22 @@ describe("the path page in the «Toza» look", () => {
     );
   });
 });
+
+describe("the path page in the «Dengiz» look (ADR-0133)", () => {
+  it("stands the dive while the path is still loading, in the first zone: no gaps (spec §10)", () => {
+    const h = render({ tema: "dengiz" });
+    expect(h).toContain('data-sahna="dengiz"');
+    expect(h).toMatch(/data-zona="marjon" data-faol=""/);
+    expect(h).toMatch(/^<div[^>]*class="[^"]*\bisolate\b/);
+  });
+
+  it("draws the sea nodes and puts the page's own text on plates, in the readable ink", () => {
+    const h = render({ tema: "dengiz", levels: LEVELS });
+    expect(h).toContain('data-tugun="dengiz"');
+    const plates = (h.match(/<[a-z0-9]+ [^>]*>/g) ?? []).filter(
+      (tag) => tag.includes(SAHNA_PARDASI) || tag.includes(SAHNA_PARDASI_KICHIK),
+    );
+    expect(plates.length, "no plate found").toBeGreaterThanOrEqual(4);
+    for (const tag of plates) expect(tag).not.toMatch(/\btext-ink-(?:400|500)\b/);
+  });
+});

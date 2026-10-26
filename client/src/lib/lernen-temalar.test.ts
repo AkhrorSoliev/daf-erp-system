@@ -22,7 +22,7 @@ describe("lernen temalar", () => {
   });
 
   it("offers only the finished looks to pick from", () => {
-    expect(TAYYOR_TEMALAR.map((t) => t.id)).toEqual(["toza", "ormon"]);
+    expect(TAYYOR_TEMALAR.map((t) => t.id)).toEqual(["toza", "ormon", "dengiz"]);
   });
 
   it("knows an id and falls back to the default for anything else", () => {
