@@ -53,3 +53,17 @@ export interface ResolveReportBody {
   note?: string;
   banReported?: boolean;
 }
+
+/** One row of `GET /chat/admin/banned` (newest first, at most BANNED_LIST_CAP). */
+export interface ChatBannedRow {
+  id: number;
+  name: string;
+  username: string | null;
+  chatBannedAt: string;
+}
+
+export interface ChatBannedList {
+  data: ChatBannedRow[];
+}
+
+export const BANNED_LIST_CAP = 200;

@@ -727,6 +727,7 @@ export const STRICT_FILES: string[] = [
   "components/settings/chat/chat-report-resolve.tsx",
   "components/settings/chat/chat-report-parts.tsx",
   "components/settings/chat/chat-report-rules.ts",
+  "components/settings/chat/chat-banned-tab.tsx",
   "app/(dashboard)/settings/leads-kpi/page.tsx",
   "app/(dashboard)/settings/payment/page.tsx",
   "components/settings/telegram-settings-client.tsx",

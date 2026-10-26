@@ -8,6 +8,7 @@ import { useT } from "@/i18n/context";
 import type {
   ChatAdminSettings,
   ChatAdminSettingsPatch,
+  ChatBannedList,
   ChatReportDetail,
   ChatReportsPage,
   ChatReportStatus,
@@ -19,9 +20,15 @@ export const CHAT_ADMIN_KEYS = {
   reports: ["chat-admin", "reports"] as const,
   reportList: (status: ChatReportStatus | undefined) => ["chat-admin", "reports", "list", status ?? "all"] as const,
   report: (id: string) => ["chat-admin", "reports", "one", id] as const,
-  // Task 6 adds the banned-list query under this key.
   banned: ["chat-admin", "banned"] as const,
 };
+
+export function useChatBanned() {
+  return useQuery({
+    queryKey: CHAT_ADMIN_KEYS.banned,
+    queryFn: () => api.get<ChatBannedList>("/chat/admin/banned").then((r) => r.data.data),
+  });
+}
 
 const REPORTS_PAGE_SIZE = 50;
 
