@@ -793,9 +793,10 @@
 
   /* While a theme's scene stands behind the page (its root carries
      data-sahna, ADR-0131) the glass chrome floating over it — the bottom-nav
-     pill and the radio dock on a phone — draws no blur: the scene's ambient
-     layers animate all the time, so a backdrop blur would be recomputed every
-     frame on a weak WebView. Both are already 90–95% opaque surface. With no
+     pill, the radio dock and the side rail — draws no blur: the scene's
+     ambient layers animate all the time, so a backdrop blur would be
+     recomputed every frame on a weak WebView. All three are mostly opaque
+     surface (bg-surface at 95%, 90% and 85%), so they lose little. With no
      scene (Toza, every other page) this never matches and the blur stays. */
   .lumio:has([data-sahna]) .glass {
     backdrop-filter: none;
