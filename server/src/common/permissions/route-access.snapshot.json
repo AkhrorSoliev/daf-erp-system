@@ -1275,6 +1275,9 @@
   "GET /student-portal/lernen/nishonlar": [
     "Student"
   ],
+  "GET /student-portal/lernen/profil/:id": [
+    "Student"
+  ],
   "GET /student-portal/lernen/reyting": [
     "Student"
   ],

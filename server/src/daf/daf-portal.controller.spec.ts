@@ -86,7 +86,7 @@ function fakeUebungPrisma() {
  * tegadi, ya'ni kelajakdagi reytingga.
  */
 describe('DafPortalController — ruxsat', () => {
-  // The 21 routes of the learning section, found the way Nest finds them: a
+  // The 22 routes of the learning section, found the way Nest finds them: a
   // method that carries route metadata.
   const routes = Object.getOwnPropertyNames(DafPortalController.prototype)
     .filter((name) => name !== 'constructor')
@@ -97,8 +97,8 @@ describe('DafPortalController — ruxsat', () => {
       ),
     );
 
-  it('has the 21 learning routes', () => {
-    expect(routes).toHaveLength(21);
+  it('has the 22 learning routes', () => {
+    expect(routes).toHaveLength(22);
   });
 
   it('every route is student-only, set once at class level', () => {
