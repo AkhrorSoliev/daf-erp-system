@@ -5527,6 +5527,8 @@ const en: Dictionary = {
   "Faqat ko'rish uchun. O'zgartirish kerak bo'lsa, savol raqamini (masalan jang-a1-u02-023) yozib yuboring.": "View only. If something needs to change, send the question number (for example jang-a1-u02-023).",
   "Hali jang savollari yo'q — ular kontent fayllaridan yuklanganda shu yerda ko'rinadi.": "No battle questions yet — they will appear here once loaded from the content files.",
   "Jami {jami} ta savol · {tasdiqlangan} ta tasdiqlangan · {qoralama} ta qoralama — qoralamalar o'quvchilarga ko'rinmaydi": "{jami} questions in total · {tasdiqlangan} approved · {qoralama} drafts — drafts are not visible to students",
+  "{n} ta savol topildi": "{n} questions found",
+  "{shown} / {jami} ta savol": "{shown} / {jami} questions",
 };
 
 export default en;

@@ -3,6 +3,7 @@ import {
   filtrla,
   javobChiplari,
   jamiSonlar,
+  topilganSon,
   filtrFaolmi,
   type JangFilter,
 } from "./media-jang-utils";
@@ -104,6 +105,23 @@ describe("filtrla", () => {
     const r = filtrla(units, { ...BARCHASI, kind: "TYPE" });
     expect(r[0].code).toBe("u02");
     expect(r[0].counts.jami).toBe(2);
+  });
+});
+
+describe("topilganSon", () => {
+  it("filtrlangan unitlardagi ko'rinadigan savollarni sanaydi", () => {
+    const a = unit([savol(), savol({ id: 2 })]);
+    const b = unit([savol({ id: 3 })], { unitId: 3 });
+    expect(topilganSon([a, b])).toBe(3);
+    expect(topilganSon([])).toBe(0);
+  });
+
+  it("filtr natijasida unitning jami soni o'zgarmaydi, ko'rinadigani kamayadi", () => {
+    const u = unit([savol(), savol({ id: 2, kind: "TYPE" })]);
+    const [f] = filtrla([u], { ...BARCHASI, kind: "TYPE" });
+    expect(f.questions.length).toBe(1);
+    expect(f.counts.jami).toBe(2);
+    expect(topilganSon([f])).toBe(1);
   });
 });
 

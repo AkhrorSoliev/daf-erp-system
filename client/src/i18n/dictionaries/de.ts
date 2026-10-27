@@ -5527,6 +5527,8 @@ const de: Dictionary = {
   "Faqat ko'rish uchun. O'zgartirish kerak bo'lsa, savol raqamini (masalan jang-a1-u02-023) yozib yuboring.": "Nur zur Ansicht. Wenn etwas geändert werden soll, schicken Sie die Fragennummer (z. B. jang-a1-u02-023).",
   "Hali jang savollari yo'q — ular kontent fayllaridan yuklanganda shu yerda ko'rinadi.": "Noch keine Duell-Fragen — sie erscheinen hier, sobald sie aus den Inhaltsdateien geladen sind.",
   "Jami {jami} ta savol · {tasdiqlangan} ta tasdiqlangan · {qoralama} ta qoralama — qoralamalar o'quvchilarga ko'rinmaydi": "Insgesamt {jami} Fragen · {tasdiqlangan} bestätigt · {qoralama} Entwürfe — Entwürfe sind für Lernende nicht sichtbar",
+  "{n} ta savol topildi": "{n} Fragen gefunden",
+  "{shown} / {jami} ta savol": "{shown} / {jami} Fragen",
 };
 
 export default de;

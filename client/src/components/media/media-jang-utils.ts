@@ -42,6 +42,11 @@ export function filtrla(units: JangUnit[], f: JangFilter): JangUnit[] {
   return natija;
 }
 
+/** Filtrdan keyin ko'rinadigan savollar soni (`filtrla` natijasidan). */
+export function topilganSon(units: JangUnit[]): number {
+  return units.reduce((s, u) => s + u.questions.length, 0);
+}
+
 export function jamiSonlar(units: JangUnit[]) {
   let jami = 0;
   let tasdiqlangan = 0;

@@ -34,6 +34,7 @@ import {
   filtrla,
   jamiSonlar,
   javobChiplari,
+  topilganSon,
   type JangFilter,
 } from "./media-jang-utils";
 import type {
@@ -208,10 +209,13 @@ function UnitBolimi({
   unit,
   ochiq,
   onToggle,
+  filtrFaol,
 }: {
   unit: JangUnit;
   ochiq: boolean;
   onToggle: () => void;
+  /** Filtr yoqilganda sarlavha «3 / 35» ko'rsatadi, aks holda jami son. */
+  filtrFaol: boolean;
 }) {
   const t = useT();
   const { counts } = unit;
@@ -228,7 +232,13 @@ function UnitBolimi({
             {unit.code} · {unit.titleUz}
           </h2>
           <p className="text-xs text-muted-foreground">
-            {t("{n} ta savol", { n: counts.jami })} ·{" "}
+            {filtrFaol
+              ? t("{shown} / {jami} ta savol", {
+                  shown: unit.questions.length,
+                  jami: counts.jami,
+                })
+              : t("{n} ta savol", { n: counts.jami })}{" "}
+            ·{" "}
             {t("{choose} ta tanlash · {type} ta yozish · {listen} ta eshitish", {
               choose: counts.choose,
               type: counts.type,
@@ -413,6 +423,12 @@ export function MediaJangClient() {
 
           <Filtrlar filter={filter} onChange={setFilter} />
 
+          {faol && (
+            <p className="text-sm text-muted-foreground" aria-live="polite">
+              {t("{n} ta savol topildi", { n: topilganSon(korinadi) })}
+            </p>
+          )}
+
           {korinadi.length === 0 ? (
             <Card>
               <CardContent className="p-4 text-sm text-muted-foreground">
@@ -429,6 +445,7 @@ export function MediaJangClient() {
                     key={u.unitId}
                     unit={u}
                     ochiq={ochiq}
+                    filtrFaol={faol}
                     onToggle={() =>
                       setQolda((p) => ({ ...p, [u.unitId]: !ochiq }))
                     }

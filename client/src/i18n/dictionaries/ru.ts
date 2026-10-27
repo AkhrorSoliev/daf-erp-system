@@ -5527,6 +5527,8 @@ const ru: Dictionary = {
   "Faqat ko'rish uchun. O'zgartirish kerak bo'lsa, savol raqamini (masalan jang-a1-u02-023) yozib yuboring.": "Только для просмотра. Если нужно изменить, пришлите номер вопроса (например, jang-a1-u02-023).",
   "Hali jang savollari yo'q — ular kontent fayllaridan yuklanganda shu yerda ko'rinadi.": "Вопросов для битвы пока нет — они появятся здесь после загрузки из файлов контента.",
   "Jami {jami} ta savol · {tasdiqlangan} ta tasdiqlangan · {qoralama} ta qoralama — qoralamalar o'quvchilarga ko'rinmaydi": "Всего вопросов: {jami} · подтверждено: {tasdiqlangan} · черновиков: {qoralama} — черновики ученикам не видны",
+  "{n} ta savol topildi": "Найдено вопросов: {n}",
+  "{shown} / {jami} ta savol": "{shown} / {jami} вопросов",
 };
 
 export default ru;
