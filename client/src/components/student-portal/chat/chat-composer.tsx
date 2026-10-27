@@ -76,6 +76,8 @@ export function ChatComposer({
     if (!el) return;
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, MAX_HEIGHT_PX)}px`;
+    // A fractional line height leaves a sub-pixel overflow that draws a scrollbar.
+    el.style.overflowY = el.scrollHeight > MAX_HEIGHT_PX ? "auto" : "hidden";
   }, [text]);
 
   // Answering or editing starts in the field.
@@ -170,15 +172,16 @@ export function ChatComposer({
           <ImagePicker disabled={inFlight} onPick={setImage} />
         )}
         {recording ? null : (
-          <div className="flex min-h-12 flex-1 flex-col justify-center rounded-[26px] border border-line bg-background px-4">
-            <div className="flex items-end gap-2">
+          // min-w-0: the textarea's intrinsic width must not push the send button off screen.
+          <div className="flex min-h-12 min-w-0 flex-1 flex-col justify-center rounded-[26px] border border-line bg-background pl-1.5 pr-4">
+            <div className="flex items-end gap-1">
             <button
               type="button"
               aria-label={emojiOpen ? t("Klaviatura") : t("Emoji")}
               aria-pressed={emojiOpen}
               onMouseDown={(e) => e.preventDefault()}
               onClick={toggleEmoji}
-              className="mb-2 inline-flex size-8 shrink-0 items-center justify-center rounded-full text-ink-400 hover:text-coral-500"
+              className="mb-[5px] inline-flex size-9 shrink-0 items-center justify-center rounded-full text-ink-400 hover:text-coral-500"
             >
               {emojiOpen ? (
                 <Keyboard size={24} weight="bold" />
