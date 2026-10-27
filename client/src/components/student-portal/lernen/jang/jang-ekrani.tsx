@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import axios from "axios";
 import Link from "next/link";
 import { Avatar, Button, Card, Screen, StackHeader, lumioButton } from "../../lumio";
 import { useT } from "@/i18n/use-t";
@@ -80,9 +81,17 @@ export function JangEkrani() {
     return () => clearTimeout(id);
   }, [h]);
 
+  // `javob.isPending` keyingi renderdagina ko'rinadi: javob bosilishi bilan 10 soniya taymeri
+  // bir-biriga yaqin kelsa, ikkala yo'l ham yuborib yuborardi (server 409 → "Jang to'xtadi").
+  // Shuning uchun har (jang, savol) uchun BIR marta yuborish sinxron ref bilan belgilanadi.
+  const yuborilganRef = React.useRef<string | null>(null);
+
   const yubor = React.useCallback(
     (berilgan: string) => {
       if (h?.tur !== "savol" || javob.isPending || javob.isError) return;
+      const kalit = `${h.jang.jangId}:${h.pozitsiya}`;
+      if (yuborilganRef.current === kalit) return;
+      yuborilganRef.current = kalit;
       javob.mutate(
         { jangId: h.jang.jangId, pozitsiya: h.pozitsiya, javob: berilgan },
         { onSuccess: (natija) => dispatch({ tur: "javob-keldi", natija, berilgan }) },
@@ -111,15 +120,32 @@ export function JangEkrani() {
     return () => clearTimeout(id);
   }, [h]);
 
+  // Har jang aniq bir marta yakunlanadi (jangId bo'yicha). `yakun.isIdle` ga tayanib bo'lmaydi:
+  // "Yana jang" dan keyin u eski jang natijasini ushlab turadi va yangi jang yakunlanmay qolardi.
+  const yakunlanganRef = React.useRef<number | null>(null);
   React.useEffect(() => {
-    if (h?.tur === "tugadi" && yakun.isIdle) yakun.mutate(h.jang.jangId);
+    if (h?.tur !== "tugadi" || yakunlanganRef.current === h.jang.jangId) return;
+    yakunlanganRef.current = h.jang.jangId;
+    yakun.mutate(h.jang.jangId);
   }, [h, yakun]);
 
-  const boshlash = () => {
-    yakun.reset();
-    javob.reset();
-    boshla.mutate(undefined, { onSuccess: (jang) => dispatch({ tur: "boshlandi", jang }) });
-  };
+  // Eski mutatsiyalar faqat yangi jang BOSHLANGANDAN keyin tozalanadi: aks holda
+  // tugagan jang ekranida eski jang qayta yakunlanardi.
+  const boshlash = () =>
+    boshla.mutate(undefined, {
+      onSuccess: (jang) => {
+        yakun.reset();
+        javob.reset();
+        dispatch({ tur: "boshlandi", jang });
+      },
+    });
+
+  // Faqat serverning 400 javobi "kunlik limit tugadi" degani; boshqa xato (tarmoq, 409) — umumiy.
+  const boshlaXato = boshla.isError
+    ? axios.isAxiosError(boshla.error) && boshla.error.response?.status === 400
+      ? t("Bugungi janglar tugadi")
+      : t("Jangni boshlab bo'lmadi")
+    : null;
 
   return (
     <Screen narrow>
@@ -130,7 +156,7 @@ export function JangEkrani() {
           <Button block onClick={boshlash} disabled={boshla.isPending}>
             {t("Jangni boshlash")}
           </Button>
-          {boshla.isError ? <p className="text-sm text-danger">{t("Jangni boshlab bo'lmadi")}</p> : null}
+          {boshlaXato ? <p className="text-sm text-danger">{boshlaXato}</p> : null}
         </Card>
       ) : h.tur === "kirish" ? (
         <div className="space-y-3 text-center">
@@ -188,11 +214,11 @@ export function JangEkrani() {
               <Button block onClick={boshlash} disabled={boshla.isPending}>
                 {t("Yana jang")}
               </Button>
-              {boshla.isError ? <p className="text-sm text-danger">{t("Bugungi janglar tugadi")}</p> : null}
             </>
           ) : (
             <p className="text-ink-500">{t("Natija hisoblanmoqda…")}</p>
           )}
+          {boshlaXato ? <p className="text-sm text-danger">{boshlaXato}</p> : null}
         </div>
       )}
     </Screen>
