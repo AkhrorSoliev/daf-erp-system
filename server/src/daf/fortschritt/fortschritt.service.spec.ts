@@ -388,3 +388,43 @@ describe('eslatmalar (S4)', () => {
     });
   });
 });
+
+describe('profil', () => {
+  it("boshqa o'quvchi uchun faqat ism, rasm va natijani qaytaradi", async () => {
+    const prisma = fakePrisma([{ studentId: 7, points: 1_600 }]);
+    prisma.student.findFirst = jest.fn(async () => ({
+      firstName: 'Ali',
+      lastName: 'Valiyev',
+      photo: 'a.jpg',
+    }));
+    const p = await new FortschrittService(prisma).profil(7, 1);
+    expect(p).toMatchObject({
+      studentId: 7,
+      name: 'Ali Valiyev',
+      photo: 'a.jpg',
+    });
+    expect(Object.keys(p!).sort()).toEqual(
+      [
+        'gesamt',
+        'naechsteStufe',
+        'name',
+        'photo',
+        'stufe',
+        'studentId',
+        'wochePlatzZentrum',
+        'wochePunkte',
+      ].sort(),
+    );
+    expect(prisma.student.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 7, companyId: 1, deletedAt: null },
+      }),
+    );
+  });
+
+  it("boshqa kompaniya yoki o'chirilgan o'quvchi uchun null", async () => {
+    const prisma = fakePrisma();
+    prisma.student.findFirst = jest.fn(async () => null);
+    expect(await new FortschrittService(prisma).profil(7, 1)).toBeNull();
+  });
+});

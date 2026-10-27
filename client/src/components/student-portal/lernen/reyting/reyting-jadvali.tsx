@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowUp, Trophy, UsersThree } from "@phosphor-icons/react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Avatar, EmptyState, LoadingCards } from "../../lumio";
 import { useT } from "@/i18n/use-t";
@@ -21,7 +22,9 @@ import { LoadFailed } from "../../load-failed";
 export function ReytingQatori({ qator, zona = false }: { qator: ReytingZeile; zona?: boolean }) {
   const t = useT();
   return (
-    <li
+    <li>
+    <Link
+      href={`/portal/lernen/reyting/${qator.studentId}`}
       className={cn(
         "flex min-h-[54px] items-center gap-3 rounded-card border px-3 py-2.5",
         qator.selbst ? "border-coral-500" : zona ? "border-success/40" : "border-line",
@@ -31,7 +34,7 @@ export function ReytingQatori({ qator, zona = false }: { qator: ReytingZeile; zo
       <span className="w-6 shrink-0 text-center font-display text-sm font-extrabold text-ink-500">
         {qator.platz}
       </span>
-      <Avatar name={qator.name} size={32} />
+      <Avatar src={qator.photo} name={qator.name} size={32} />
       {/* Ism TO'LIQ va QISQARTIRILMAYDI — dizayn 6.1: markaz jadvali
           ataylab barcha filiallarni aralashtiradi, bu leak emas, CEO
           qarori. */}
@@ -51,6 +54,7 @@ export function ReytingQatori({ qator, zona = false }: { qator: ReytingZeile; zo
       <span className="shrink-0 font-display text-sm font-extrabold text-ink-900">
         {t("{n} ball", { n: qisqaRaqam(qator.punkte) })}
       </span>
+    </Link>
     </li>
   );
 }

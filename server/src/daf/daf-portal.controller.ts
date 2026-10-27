@@ -1,5 +1,6 @@
 import {
   Body,
+  NotFoundException,
   Controller,
   Get,
   Param,
@@ -331,5 +332,16 @@ export class DafPortalController {
       companyId,
       dto.yoqilgan,
     );
+  }
+
+  /** Boshqa o'quvchining ochiq profili (reyting qatoridan ochiladi). */
+  @Get('profil/:id')
+  async getProfil(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('companyId') companyId: number,
+  ) {
+    const profil = await this.fortschritt.profil(id, companyId);
+    if (!profil) throw new NotFoundException();
+    return profil;
   }
 }

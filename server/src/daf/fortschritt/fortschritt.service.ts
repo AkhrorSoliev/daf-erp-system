@@ -55,9 +55,23 @@ export interface Fortschritt {
 export interface ReytingZeile {
   studentId: number;
   name: string;
+  /** Liga xonasi qatorlarida yo'q — u yerda bosh harflar chiziladi. */
+  photo?: string | null;
   punkte: number;
   platz: number;
   selbst: boolean;
+}
+
+/** Boshqa o'quvchiga ko'rsatiladigan profil: faqat ism, rasm va o'quv natijasi. */
+export interface OeffentlichesProfil {
+  studentId: number;
+  name: string;
+  photo: string | null;
+  gesamt: number;
+  stufe: Fortschritt['stufe'];
+  naechsteStufe: Fortschritt['naechsteStufe'];
+  wochePunkte: number;
+  wochePlatzZentrum: number;
 }
 
 /** What the session-end screen shows: this session's points, the streak, the rank before/after. */
@@ -470,6 +484,33 @@ export class FortschrittService {
     return guruhlarJavobi(this.prisma, studentId, companyId, new Date());
   }
 
+  /**
+   * Boshqa o'quvchining ochiq profili. Markaz reytingi kabi filialga
+   * cheklanmaydi (CEO 2026-09-06), lekin boshqa kompaniya yoki o'chirilgan
+   * o'quvchi uchun null. Telefon, guruh, to'lov va davomat qaytmaydi.
+   */
+  async profil(
+    targetId: number,
+    companyId: number,
+  ): Promise<OeffentlichesProfil | null> {
+    const talaba = await this.prisma.student.findFirst({
+      where: { id: targetId, companyId, deletedAt: null },
+      select: { firstName: true, lastName: true, photo: true },
+    });
+    if (!talaba) return null;
+    const u = await this.uebersicht(targetId, companyId);
+    return {
+      studentId: targetId,
+      name: reytingIsmi(talaba),
+      photo: talaba.photo,
+      gesamt: u.gesamt,
+      stufe: u.stufe,
+      naechsteStufe: u.naechsteStufe,
+      wochePunkte: u.wochePunkte,
+      wochePlatzZentrum: u.wochePlatzZentrum,
+    };
+  }
+
   async reyting(
     studentId: number,
     companyId: number,
@@ -697,13 +738,15 @@ export class FortschrittService {
     const idlar = qatorlar.map((q) => q.studentId);
     const talabalar = await this.prisma.student.findMany({
       where: { id: { in: idlar } },
-      select: { id: true, firstName: true, lastName: true },
+      select: { id: true, firstName: true, lastName: true, photo: true },
     });
     const nomMap = new Map(talabalar.map((t) => [t.id, reytingIsmi(t)]));
+    const rasmMap = new Map(talabalar.map((t) => [t.id, t.photo]));
 
     return qatorlar.map((q) => ({
       studentId: q.studentId,
       name: nomMap.get(q.studentId) ?? '',
+      photo: rasmMap.get(q.studentId) ?? null,
       punkte: q.punkte,
       platz: q.platz,
       selbst: q.studentId === studentId,
@@ -717,13 +760,15 @@ export class FortschrittService {
   ): Promise<ReytingZeile[]> {
     const talabalar = await this.prisma.student.findMany({
       where: { id: { in: idlar } },
-      select: { id: true, firstName: true, lastName: true },
+      select: { id: true, firstName: true, lastName: true, photo: true },
     });
     const nomMap = new Map(talabalar.map((t) => [t.id, reytingIsmi(t)]));
+    const rasmMap = new Map(talabalar.map((t) => [t.id, t.photo]));
 
     return saralangan.map((s, i) => ({
       studentId: s.studentId,
       name: nomMap.get(s.studentId) ?? '',
+      photo: rasmMap.get(s.studentId) ?? null,
       punkte: ballOl(s),
       platz: i + 1,
       selbst: s.studentId === studentId,

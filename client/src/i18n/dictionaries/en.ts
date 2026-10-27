@@ -58,6 +58,7 @@ const en: Dictionary = {
   "Ketgan o'quvchilar": "Former students",
   "Markaz faoliyati": "Center activity",
   "Profil": "Profile",
+  "Shu hafta markazda {n}-o'rin": "Ranked {n} in the centre this week",
   "Kompaniya ma'lumotlari": "Company details",
   "Kurslar": "Courses",
   "To'lov": "Payment",
