@@ -14,14 +14,18 @@ import {
 } from '../../common/date/tashkent';
 import {
   DAFI_BOT_ISMI,
+  KECHIKISH_MS,
   KIRISH_MS,
   KORILGAN_KUN,
   KUCH_OYNA,
   KUNLIK_CHEGARA,
   RUH_NOMZOD_LIMIT,
+  SAVOL_MS,
   SAVOL_SONI,
   TARIX_KUN,
+  TASHLANGAN_MS,
   UCHRASHMASLIK_KUN,
+  jangNatijasi,
   jangYoqilganmi,
   kuch,
   kunOldin,
@@ -33,8 +37,16 @@ import {
 } from './jang-qoidalari';
 import { aralashtir, savollarniTanla } from './savol-tanlash';
 import { ruhniTanla, type RuhNomzodi, type RuhSharti } from './ruh-tanlash';
-import { botJavoblari } from './dafi-bot';
-import type { JangBoshlandi, JangHolati, JangRaqibi } from './jang.types';
+import { botJavoblari, type BotJavobi } from './dafi-bot';
+import { javobTogrimi } from './jang-javob';
+import { grantBadges } from '../nishon/nishon-berish';
+import type {
+  JangBoshlandi,
+  JangHolati,
+  JangRaqibi,
+  JavobNatijasi,
+  YakunNatijasi,
+} from './jang.types';
 
 /**
  * Jang (spec 2026-10-27). Liga balliga TEGMAYDI: `DafAttempt`/`DafStudentDay`
@@ -227,6 +239,239 @@ export class JangService {
         };
       }),
     };
+  }
+
+  async javob(
+    studentId: number,
+    jangId: number,
+    dto: { pozitsiya: number; javob: string },
+    hozir = new Date(),
+  ): Promise<JavobNatijasi> {
+    const jang = await this.prisma.dafBattle.findFirst({
+      where: { id: jangId, studentId },
+      select: {
+        id: true,
+        status: true,
+        questionIds: true,
+        lastActivityAt: true,
+        opponent: true,
+        ghostBattleId: true,
+        botAnswers: true,
+        _count: { select: { answers: true } },
+      },
+    });
+    if (!jang) throw new NotFoundException();
+    if (jang.status !== 'OPEN') throw new ConflictException('Jang tugagan');
+    const otdi = hozir.getTime() - jang.lastActivityAt.getTime();
+    if (otdi > TASHLANGAN_MS) {
+      await this.prisma.dafBattle.update({
+        where: { id: jang.id },
+        data: { status: 'ABANDONED' },
+      });
+      throw new ConflictException('Jang tashlab ketilgan');
+    }
+    const questionId = jang.questionIds[dto.pozitsiya];
+    if (dto.pozitsiya !== jang._count.answers || questionId === undefined) {
+      throw new BadRequestException("Savol tartibi noto'g'ri");
+    }
+    const savol = await this.prisma.dafBattleQuestion.findUniqueOrThrow({
+      where: { id: questionId },
+      select: { kind: true, answer: true, akzeptiert: true },
+    });
+    // Vaqtni server o'lchaydi: mijoz vaqtiga ishonilsa, javobni qidirib topib keyin «tez» yuborish mumkin bo'lardi.
+    const togri =
+      otdi <= SAVOL_MS + KECHIKISH_MS && javobTogrimi(savol, dto.javob);
+    const ms = Math.min(Math.max(otdi, 0), SAVOL_MS);
+    try {
+      await this.prisma.$transaction([
+        this.prisma.dafBattleAnswer.create({
+          data: {
+            battleId: jang.id,
+            questionId,
+            position: dto.pozitsiya,
+            given: dto.javob,
+            correct: togri,
+            ms,
+          },
+        }),
+        this.prisma.dafBattle.update({
+          where: { id: jang.id },
+          data: {
+            lastActivityAt: hozir,
+            correctCount: { increment: togri ? 1 : 0 },
+            totalMs: { increment: ms },
+          },
+        }),
+      ]);
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new ConflictException('Javob allaqachon yozilgan');
+      }
+      throw e;
+    }
+    return {
+      togri,
+      togriJavob: savol.answer,
+      raqib: await this.raqibJavobi(jang, dto.pozitsiya),
+    };
+  }
+
+  async yakun(
+    studentId: number,
+    companyId: number,
+    jangId: number,
+    hozir = new Date(),
+  ): Promise<YakunNatijasi> {
+    const jang = await this.prisma.dafBattle.findFirst({
+      where: { id: jangId, studentId },
+      select: {
+        id: true,
+        status: true,
+        questionIds: true,
+        lastActivityAt: true,
+        opponent: true,
+        ghostBattleId: true,
+        botAnswers: true,
+        result: true,
+        correctCount: true,
+        totalMs: true,
+        opponentCorrect: true,
+        opponentMs: true,
+        _count: { select: { answers: true } },
+      },
+    });
+    if (!jang) throw new NotFoundException();
+    if (jang.status === 'DONE') {
+      return {
+        natija: jang.result!,
+        men: { togri: jang.correctCount, ms: jang.totalMs },
+        raqib: { togri: jang.opponentCorrect, ms: jang.opponentMs },
+        yangiNishonlar: [],
+      };
+    }
+    if (
+      jang.status === 'ABANDONED' ||
+      (jang._count.answers < jang.questionIds.length &&
+        hozir.getTime() - jang.lastActivityAt.getTime() > TASHLANGAN_MS)
+    ) {
+      await this.prisma.dafBattle.update({
+        where: { id: jang.id },
+        data: { status: 'ABANDONED' },
+      });
+      throw new ConflictException('Jang tashlab ketilgan');
+    }
+    // Javob berilmagan savollar — vaqti tugagan deb yoziladi, shunda har tugagan jang to'liq ruh bo'ladi.
+    await this.prisma.dafBattleAnswer.createMany({
+      data: jang.questionIds.map((questionId, position) => ({
+        battleId: jang.id,
+        questionId,
+        position,
+        given: '',
+        correct: false,
+        ms: SAVOL_MS,
+      })),
+      skipDuplicates: true,
+    });
+    const javoblar = await this.prisma.dafBattleAnswer.findMany({
+      where: { battleId: jang.id },
+      select: { correct: true, ms: true },
+    });
+    const men = {
+      togri: javoblar.filter((j) => j.correct).length,
+      ms: javoblar.reduce((s, j) => s + j.ms, 0),
+    };
+    const raqib = await this.raqibJami(jang);
+    const natija = jangNatijasi(men, raqib);
+    const yozildi = await this.prisma.dafBattle.updateMany({
+      where: { id: jang.id, status: 'OPEN' },
+      data: {
+        status: 'DONE',
+        result: natija,
+        finishedAt: hozir,
+        correctCount: men.togri,
+        totalMs: men.ms,
+        opponentCorrect: raqib.togri,
+        opponentMs: raqib.ms,
+      },
+    });
+    // Parallel `yakun` allaqachon yozgan — uning natijasi qaytariladi, nishon ikki marta berilmaydi.
+    if (yozildi.count === 0)
+      return this.yakun(studentId, companyId, jangId, hozir);
+    return {
+      natija,
+      men,
+      raqib,
+      yangiNishonlar:
+        natija === 'WIN' ? await this.nishonBer(studentId, companyId) : [],
+    };
+  }
+
+  private async raqibJavobi(
+    jang: {
+      opponent: string;
+      ghostBattleId: number | null;
+      botAnswers: Prisma.JsonValue;
+    },
+    pozitsiya: number,
+  ): Promise<{ togri: boolean; ms: number }> {
+    if (jang.opponent === 'BOT') {
+      const b = (jang.botAnswers as unknown as BotJavobi[])[pozitsiya];
+      return { togri: b.togri, ms: b.ms };
+    }
+    const a = await this.prisma.dafBattleAnswer.findUnique({
+      where: {
+        battleId_position: {
+          battleId: jang.ghostBattleId!,
+          position: pozitsiya,
+        },
+      },
+      select: { correct: true, ms: true },
+    });
+    return a ? { togri: a.correct, ms: a.ms } : { togri: false, ms: SAVOL_MS };
+  }
+
+  private async raqibJami(jang: {
+    opponent: string;
+    ghostBattleId: number | null;
+    botAnswers: Prisma.JsonValue;
+  }): Promise<{ togri: number; ms: number }> {
+    if (jang.opponent === 'BOT') {
+      const b = jang.botAnswers as unknown as BotJavobi[];
+      return {
+        togri: b.filter((x) => x.togri).length,
+        ms: b.reduce((s, x) => s + x.ms, 0),
+      };
+    }
+    const r = await this.prisma.dafBattle.findUniqueOrThrow({
+      where: { id: jang.ghostBattleId! },
+      select: { correctCount: true, totalMs: true },
+    });
+    return { togri: r.correctCount, ms: r.totalMs };
+  }
+
+  /** Nishon — bezak: xato natijani yiqitmaydi, keyingi g'alabada shart bo'yicha qaytadan beriladi. */
+  private async nishonBer(
+    studentId: number,
+    companyId: number,
+  ): Promise<string[]> {
+    try {
+      const jangGolib = await this.prisma.dafBattle.count({
+        where: { studentId, result: 'WIN' },
+      });
+      return await grantBadges(this.prisma, studentId, companyId, {
+        serie: 0,
+        woerter: 0,
+        jangGolib,
+      });
+    } catch (e) {
+      this.logger.error(
+        `Jang nishoni berilmadi (student ${studentId}): ${String(e)}`,
+      );
+      return [];
+    }
   }
 
   private async ruhQidir(
