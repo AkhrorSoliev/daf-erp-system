@@ -72,6 +72,19 @@ export class SendMessageDto {
   @IsNotEmpty({ message: "Xabar bo'sh bo'lmasin" })
   @MaxLength(MESSAGE_MAX, { message: `Xabar ${MESSAGE_MAX} belgidan oshmasin` })
   text!: string;
+
+  /** The message this one answers; it must be a live message of the same conversation. */
+  @IsOptional()
+  @IsUUID()
+  replyToId?: string;
+}
+
+export class EditMessageDto {
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty({ message: "Xabar bo'sh bo'lmasin" })
+  @MaxLength(MESSAGE_MAX, { message: `Xabar ${MESSAGE_MAX} belgidan oshmasin` })
+  text!: string;
 }
 
 export class MessagesQueryDto {
@@ -96,6 +109,11 @@ export class UploadChatFileDto {
   @Min(0)
   @Max(3600)
   durationSec?: number;
+
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsUUID()
+  replyToId?: string;
 }
 
 export class CreateReportDto {

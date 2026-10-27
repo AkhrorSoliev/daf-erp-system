@@ -8,6 +8,7 @@ import {
   backoffDelay,
   insertMessage,
   parseChatEvent,
+  replaceMessage,
   shouldResetBackoff,
   splitSse,
   streamIdle,
@@ -35,6 +36,19 @@ function apply(qc: QueryClient, ev: ChatEvent) {
       void qc.cancelQueries({ queryKey: key }).then(() => {
         const next = message
           ? insertMessage(qc.getQueryData<MessagesCache>(key), message)
+          : undefined;
+        if (next) qc.setQueryData(key, next);
+        else void qc.invalidateQueries({ queryKey: key });
+      });
+      void qc.invalidateQueries({ queryKey: CHAT_KEYS.list });
+      return;
+    }
+    case "edit": {
+      const key = CHAT_KEYS.messages(ev.conversationId);
+      const message = ev.message;
+      void qc.cancelQueries({ queryKey: key }).then(() => {
+        const next = message
+          ? replaceMessage(qc.getQueryData<MessagesCache>(key), message)
           : undefined;
         if (next) qc.setQueryData(key, next);
         else void qc.invalidateQueries({ queryKey: key });

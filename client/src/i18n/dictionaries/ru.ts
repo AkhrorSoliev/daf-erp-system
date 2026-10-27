@@ -5458,6 +5458,13 @@ const ru: Dictionary = {
   "Hali shikoyat kelmagan — o'quvchi shikoyat qilsa, shu yerda ko'rinadi": "Жалоб пока не поступало — если ученик пожалуется, она появится здесь",
   "Ochiq shikoyat yo'q — yangi shikoyat kelganda qo'ng'iroqchada ko'rinadi": "Открытых жалоб нет — новая жалоба появится в колокольчике",
   "Shikoyatlarni yuklab bo'lmadi.": "Не удалось загрузить жалобы.",
+  // Chat: reply and edit
+  "Javob berish": "Ответить",
+  "tahrirlangan": "изменено",
+  "O'chirilgan xabar": "Удалённое сообщение",
+  "Siz": "Вы",
+  "Xabarni o'zgartirib bo'lmadi": "Не удалось изменить сообщение",
+  "Asl matn": "Первоначальный текст",
 };
 
 export default ru;

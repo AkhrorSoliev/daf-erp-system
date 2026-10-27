@@ -68,6 +68,19 @@ export interface MessageView {
     purged: boolean;
   } | null;
   createdAt: string;
+  /** Set once the sender changed the text. */
+  editedAt?: string | null;
+  /** The message this one answers. */
+  replyTo?: ReplyView | null;
+}
+
+/** What a reply shows of the message it answers; never a file. */
+export interface ReplyView {
+  id: string;
+  mine: boolean;
+  kind: "TEXT" | "IMAGE" | "VOICE";
+  preview: string;
+  deleted: boolean;
 }
 
 export interface ConversationView {

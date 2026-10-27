@@ -5458,6 +5458,13 @@ const en: Dictionary = {
   "Hali shikoyat kelmagan — o'quvchi shikoyat qilsa, shu yerda ko'rinadi": "No reports yet — when a student reports someone, it will appear here",
   "Ochiq shikoyat yo'q — yangi shikoyat kelganda qo'ng'iroqchada ko'rinadi": "No open reports — a new report will appear in the bell",
   "Shikoyatlarni yuklab bo'lmadi.": "Could not load the reports.",
+  // Chat: reply and edit
+  "Javob berish": "Reply",
+  "tahrirlangan": "edited",
+  "O'chirilgan xabar": "Deleted message",
+  "Siz": "You",
+  "Xabarni o'zgartirib bo'lmadi": "Could not change the message",
+  "Asl matn": "Original text",
 };
 
 export default en;

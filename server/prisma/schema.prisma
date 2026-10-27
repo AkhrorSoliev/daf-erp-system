@@ -5003,6 +5003,11 @@ model ChatMessage {
   createdAt      DateTime        @default(now())
   deletedAt      DateTime?
   mediaPurgedAt  DateTime?
+  /// The message this one answers (same conversation).
+  replyToId      String?
+  /// Set on every text edit; `originalText` keeps the FIRST text for the CEO.
+  editedAt       DateTime?
+  originalText   String?
 
   conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
@@ -5063,6 +5068,9 @@ model ChatNotifyState {
   studentId      Int
   notifiedAt     DateTime?
   pendingSince   DateTime?
+  /// The one Telegram notice of the current unread stretch, edited in place.
+  telegramMessageId Int?
+  unreadCount       Int     @default(0)
 
   @@id([conversationId, studentId])
   @@index([pendingSince])

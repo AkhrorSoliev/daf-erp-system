@@ -117,6 +117,12 @@ function Bubble({ line, name }: { line: SnapshotLine; name: string | null }) {
           {line.kind === "IMAGE" ? t("Rasm") : t("Ovozli xabar")} · {t("fayl ko'rsatilmaydi")}
         </p>
       )}
+      {line.originalText !== null && (
+        <p className="mt-1 whitespace-pre-wrap break-words border-t border-dashed pt-1 text-xs text-muted-foreground">
+          <span className="font-medium">{t("Asl matn")}: </span>
+          {line.originalText}
+        </p>
+      )}
       <p className="mt-0.5 text-right text-[11px] text-muted-foreground">{formatReportDate(line.createdAt)}</p>
     </li>
   );

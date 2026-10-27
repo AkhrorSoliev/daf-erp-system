@@ -19,9 +19,52 @@ export function needsTelegram(
 const escapeHtml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-/** Who wrote, nothing else: the message itself stays in the chat. */
-export function noticeText(senderName: string): string {
-  return `<b>${escapeHtml(senderName)}</b> sizga yangi xabar yubordi.`;
+/** Who wrote and how many, nothing else: the messages stay in the chat. */
+export function noticeText(senderName: string, count = 1): string {
+  const name = `<b>${escapeHtml(senderName)}</b>`;
+  return count > 1
+    ? `${name} sizga <b>${count} ta</b> yangi xabar yubordi.`
+    : `${name} sizga yangi xabar yubordi.`;
+}
+
+/** A recipient who read this recently is in the chat: no notice for them. */
+export const NOTICE_ACTIVE_MS = 2 * 60 * 1000;
+/** Inside this window after a notice, a new stretch edits it instead of ringing again. */
+export const NOTICE_COOLDOWN_MS = 10 * 60 * 1000;
+
+export type NoticePlan =
+  /** Nothing to do. */
+  | 'SKIP'
+  /** The unread stretch goes on: edit the one notice to the new count. */
+  | 'EDIT_COUNT'
+  /** A new stretch soon after a notice: edit it back to one message, no ring. */
+  | 'EDIT_RESET'
+  /** Send a new notice (and take the old one away). */
+  | 'SEND';
+
+/**
+ * One notice per unread stretch, edited as messages arrive. A notice from
+ * before this rule has no message id and stays a single notice.
+ */
+export function planNotice(
+  state: { notifiedAt: Date | null; telegramMessageId: number | null } | null,
+  lastReadAt: Date | null,
+  now: Date,
+): NoticePlan {
+  if (!needsTelegram(state, lastReadAt)) {
+    return state?.telegramMessageId ? 'EDIT_COUNT' : 'SKIP';
+  }
+  if (lastReadAt && now.getTime() - lastReadAt.getTime() < NOTICE_ACTIVE_MS) {
+    return 'SKIP';
+  }
+  if (
+    state?.telegramMessageId &&
+    state.notifiedAt &&
+    now.getTime() - state.notifiedAt.getTime() < NOTICE_COOLDOWN_MS
+  ) {
+    return 'EDIT_RESET';
+  }
+  return 'SEND';
 }
 
 export function chatDeepLink(

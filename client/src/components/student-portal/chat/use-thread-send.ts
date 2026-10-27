@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CHAT_KEYS, useSendMessage } from "./chat-queries";
+import type { ReplyView } from "./chat-types";
 import { hasMessage, pendingStep, type MessagesCache } from "./chat-stream-model";
 import {
   addPending,
@@ -47,9 +48,9 @@ export function useThreadSend(conversationId: string) {
     }
   };
 
-  const run = async (key: string, text: string) => {
+  const run = async (key: string, text: string, replyToId?: string) => {
     try {
-      const sent = await send.mutateAsync(text);
+      const sent = await send.mutateAsync({ text, replyToId });
       // The message is already in the cache (useSendMessage), and the bubble
       // hides itself once it sees that id: no frame with both or with none.
       setPending((p) => confirmPending(p, key, sent.id));
@@ -60,18 +61,18 @@ export function useThreadSend(conversationId: string) {
     }
   };
 
-  const submit = (text: string) => {
+  const submit = (text: string, replyTo?: ReplyView | null) => {
     seq.current += 1;
     const key = `${Date.now()}-${seq.current}`;
-    setPending((p) => addPending(p, key, text, new Date()));
-    void run(key, text);
+    setPending((p) => addPending(p, key, text, new Date(), replyTo));
+    void run(key, text, replyTo?.id);
   };
 
   const retry = (key: string) => {
     const item = pending.find((p) => p.key === key);
     if (!item) return;
     setPending((p) => setPendingStatus(p, key, "sending"));
-    void run(key, item.text);
+    void run(key, item.text, item.replyTo?.id);
   };
 
   return {

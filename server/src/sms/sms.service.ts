@@ -132,6 +132,56 @@ export class SmsService {
   }
 
   /**
+   * Changes the text of a message the bot sent earlier (a silent edit, no new
+   * ring). False when it cannot be edited any more (the person deleted it).
+   */
+  async editTelegramMessage(
+    chatId: string,
+    messageId: number,
+    content: string,
+    replyMarkup?: InlineKeyboardMarkup,
+  ): Promise<boolean> {
+    try {
+      const bot = this.telegramService.getBot();
+      if (!bot) return false;
+      await bot.telegram.editMessageText(
+        chatId,
+        messageId,
+        undefined,
+        content,
+        {
+          parse_mode: 'HTML',
+          ...(replyMarkup && { reply_markup: replyMarkup }),
+        },
+      );
+      return true;
+    } catch (error) {
+      // Same text again is fine: the notice already reads right.
+      if (describeError(error).includes('message is not modified')) return true;
+      this.logger.warn(
+        `Telegram edit failed for chat ${chatId}: ${describeError(error)}`,
+      );
+      return false;
+    }
+  }
+
+  /** Best effort: a message that is already gone is not an error. */
+  async deleteTelegramMessage(
+    chatId: string,
+    messageId: number,
+  ): Promise<void> {
+    try {
+      await this.telegramService
+        .getBot()
+        ?.telegram.deleteMessage(chatId, messageId);
+    } catch (error) {
+      this.logger.warn(
+        `Telegram delete failed for chat ${chatId}: ${describeError(error)}`,
+      );
+    }
+  }
+
+  /**
    * The message log is the record of every contact this centre has made with
    * the student, free text included. `callerId` is optional only because the
    * signature predates the check; the one route that reaches it always passes

@@ -209,6 +209,8 @@ describe('ChatNotifyService.sendMorning', () => {
       data: {
         notifiedAt: new Date('2026-10-26T03:05:00Z'),
         pendingSince: null,
+        telegramMessageId: null,
+        unreadCount: 1,
       },
     });
   });
@@ -279,5 +281,132 @@ describe('ChatNotifyService.sendMorning', () => {
     await service.sendMorning(new Date('2026-10-26T03:05:00Z'));
     expect(sms.sendToStudent).not.toHaveBeenCalled();
     expect(prisma.chatNotifyState.update).toHaveBeenCalledWith(cleared);
+  });
+});
+
+describe('ChatNotifyService one notice per unread stretch', () => {
+  const T0 = new Date('2026-10-25T06:00:00Z'); // 11:00 Tashkent
+  const keyed = {
+    where: { conversationId_studentId: { conversationId: 'c1', studentId: 2 } },
+  };
+
+  function withEdits(o: Parameters<typeof make>[0]) {
+    const m = make(o);
+    const sms = m.sms as Record<string, jest.Mock>;
+    sms.editTelegramMessage = jest.fn().mockResolvedValue(true);
+    sms.deleteTelegramMessage = jest.fn().mockResolvedValue(undefined);
+    sms.sendToStudent = jest.fn().mockResolvedValue({ telegramMessageId: 88 });
+    return { ...m, sms };
+  }
+
+  it('stores the message id of the first notice', async () => {
+    const { service, prisma } = withEdits({});
+    await service.onMessage(input, DAY);
+    expect(prisma.chatNotifyState.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          telegramMessageId: 88,
+          unreadCount: 1,
+        }),
+      }),
+    );
+  });
+
+  it('edits the notice to the new count instead of sending another', async () => {
+    const { service, sms, prisma } = withEdits({
+      state: { notifiedAt: T0, telegramMessageId: 77, unreadCount: 2 },
+    });
+    await service.onMessage(input, DAY);
+    expect(sms.sendToStudent).not.toHaveBeenCalled();
+    expect(sms.editTelegramMessage).toHaveBeenCalledWith(
+      '555',
+      77,
+      '<b>Ali Valiyev</b> sizga <b>3 ta</b> yangi xabar yubordi.',
+      expect.anything(),
+    );
+    expect(prisma.chatNotifyState.update).toHaveBeenCalledWith({
+      ...keyed,
+      data: { unreadCount: 3 },
+    });
+  });
+
+  it('edits again at night: an edit makes no sound', async () => {
+    const { service, sms } = withEdits({
+      state: {
+        notifiedAt: new Date('2026-10-25T13:00:00Z'),
+        telegramMessageId: 77,
+        unreadCount: 1,
+      },
+    });
+    await service.onMessage(input, NIGHT);
+    expect(sms.editTelegramMessage).toHaveBeenCalled();
+  });
+
+  it('sends a new notice if the person deleted the old one', async () => {
+    const { service, sms } = withEdits({
+      state: { notifiedAt: T0, telegramMessageId: 77, unreadCount: 1 },
+    });
+    sms.editTelegramMessage.mockResolvedValue(false);
+    await service.onMessage(input, DAY);
+    expect(sms.sendToStudent).toHaveBeenCalledTimes(1);
+  });
+
+  it('after a read, takes the old notice away and sends one new notice', async () => {
+    const { service, sms, prisma } = withEdits({
+      state: {
+        notifiedAt: new Date('2026-10-25T03:00:00Z'),
+        telegramMessageId: 77,
+        unreadCount: 4,
+      },
+      read: { lastReadAt: new Date('2026-10-25T04:00:00Z') },
+    });
+    await service.onMessage(input, DAY);
+    expect(sms.deleteTelegramMessage).toHaveBeenCalledWith('555', 77);
+    expect(sms.sendToStudent).toHaveBeenCalledTimes(1);
+    expect(prisma.chatNotifyState.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({
+          telegramMessageId: 88,
+          unreadCount: 1,
+        }),
+      }),
+    );
+  });
+
+  it('sends nothing to someone who is reading the chat right now', async () => {
+    const { service, sms } = withEdits({
+      state: {
+        notifiedAt: new Date('2026-10-25T03:00:00Z'),
+        telegramMessageId: 77,
+        unreadCount: 1,
+      },
+      read: { lastReadAt: new Date(DAY.getTime() - 30_000) },
+    });
+    await service.onMessage(input, DAY);
+    expect(sms.sendToStudent).not.toHaveBeenCalled();
+    expect(sms.editTelegramMessage).not.toHaveBeenCalled();
+  });
+
+  it('a quick new stretch edits the notice back to one message and does not ring', async () => {
+    const { service, sms, prisma } = withEdits({
+      state: {
+        notifiedAt: new Date(DAY.getTime() - 5 * 60_000),
+        telegramMessageId: 77,
+        unreadCount: 3,
+      },
+      read: { lastReadAt: new Date(DAY.getTime() - 4 * 60_000) },
+    });
+    await service.onMessage(input, DAY);
+    expect(sms.sendToStudent).not.toHaveBeenCalled();
+    expect(sms.editTelegramMessage).toHaveBeenCalledWith(
+      '555',
+      77,
+      '<b>Ali Valiyev</b> sizga yangi xabar yubordi.',
+      expect.anything(),
+    );
+    expect(prisma.chatNotifyState.update).toHaveBeenCalledWith({
+      ...keyed,
+      data: { unreadCount: 1, notifiedAt: DAY, pendingSince: null },
+    });
   });
 });

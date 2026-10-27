@@ -71,7 +71,12 @@ describe('ChatMediaService.upload', () => {
   it('runs the send checks, stores the bytes, then commits the row', async () => {
     const { service, storage, conversations } = make();
     await service.upload(1, 1, 'c1', { buffer: PNG });
-    expect(conversations.prepareSend).toHaveBeenCalledWith(1, 1, 'c1');
+    expect(conversations.prepareSend).toHaveBeenCalledWith(
+      1,
+      1,
+      'c1',
+      undefined,
+    );
     expect(storage.put).toHaveBeenCalledWith(
       expect.stringMatching(/^chat\/1\/c1\/.+\.png$/),
       PNG,

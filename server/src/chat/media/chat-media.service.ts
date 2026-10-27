@@ -34,7 +34,7 @@ export class ChatMediaService {
     me: number,
     companyId: number,
     conversationId: string,
-    input: { buffer: Buffer; durationSec?: number },
+    input: { buffer: Buffer; durationSec?: number; replyToId?: string },
   ): Promise<MessageView> {
     if (!this.storage.enabled) {
       throw new ServiceUnavailableException(CHAT_FILES_OFF_MESSAGE);
@@ -43,6 +43,7 @@ export class ChatMediaService {
       me,
       companyId,
       conversationId,
+      input.replyToId,
     );
     const { mime, ext, kind } = checkChatFile(input);
     const key = chatFileKey(companyId, conversationId, ext);
@@ -59,6 +60,7 @@ export class ChatMediaService {
           mime,
           sizeBytes: input.buffer.length,
           durationSec: kind === 'VOICE' ? (input.durationSec ?? null) : null,
+          replyToId: input.replyToId,
         },
       );
     } catch (err) {
