@@ -241,8 +241,12 @@ export function ChatThreadPage({ id }: { id: string }) {
         >
           <CaretLeft size={20} weight="bold" />
         </Link>
-        {/* Task 7: wrap avatar + name into the button that opens the peer menu. */}
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+        <Link
+          href={peer ? `/portal/lernen/reyting/${peer.id}` : "#"}
+          aria-label={t("Profil")}
+          aria-disabled={!peer}
+          className="flex min-w-0 flex-1 items-center gap-3"
+        >
           <Avatar
             src={peer?.photo}
             name={peer ? peerName(peer) : null}
@@ -258,7 +262,7 @@ export function ChatThreadPage({ id }: { id: string }) {
               </p>
             )}
           </div>
-        </div>
+        </Link>
         <PeerMenu conversationId={id} peer={peer} />
 
       </header>
