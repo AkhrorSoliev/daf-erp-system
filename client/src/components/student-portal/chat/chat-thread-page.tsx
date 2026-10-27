@@ -36,6 +36,9 @@ import { MediaBubble } from "./media-bubble";
 import { MessageBubble } from "./message-bubble";
 import { useThreadSend } from "./use-thread-send";
 
+/** What the portal layout leaves under a page (pb-32 = 8rem) beyond the list's own padding. */
+const CLEARANCE_PX = 112;
+
 function subscribeVisibility(cb: () => void) {
   document.addEventListener("visibilitychange", cb);
   return () => document.removeEventListener("visibilitychange", cb);
@@ -82,6 +85,10 @@ export function ChatThreadPage({ id }: { id: string }) {
   const [replyTo, setReplyTo] = useState<ThreadItem | null>(null);
   const [editing, setEditing] = useState<ThreadItem | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLDivElement>(null);
+  // The fixed composer grows (reply banner, emoji panel): the end of the list
+  // keeps clear of it. The page already leaves `CLEARANCE_PX` below the list.
+  const [composerH, setComposerH] = useState(0);
   // Follow new height only while the student is at the end (true on open).
   const stick = useRef(true);
   const marked = useRef<string | undefined>(undefined);
@@ -94,6 +101,14 @@ export function ChatThreadPage({ id }: { id: string }) {
   const items = mergePending(messages, pending);
   const lastPeer = lastPeerMessageId(messages);
   const peerLabel = peer ? peerName(peer) : t("Suhbat");
+
+  useEffect(() => {
+    const el = composerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setComposerH(el.offsetHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [state]);
 
   // ONE scroll mechanism: when the list grows (images, new or optimistic
   // messages) and the student was near the end, stay at the end.
@@ -122,10 +137,41 @@ export function ChatThreadPage({ id }: { id: string }) {
       }
     });
     ro.observe(list);
+    // The keyboard opening or closing resizes the viewport, not the list: a
+    // student at the end of the thread stays at the end, above the composer.
+    const toEnd = () => {
+      if (stick.current) {
+        window.scrollTo({
+          top: document.documentElement.scrollHeight,
+          behavior: "auto",
+        });
+      }
+    };
+    // Focusing the field near the end means "I am about to write": follow the keyboard.
+    const onFocusIn = (e: FocusEvent) => {
+      if ((e.target as HTMLElement | null)?.tagName !== "TEXTAREA") return;
+      if (
+        isNearBottom(
+          window.scrollY,
+          window.innerHeight,
+          document.documentElement.scrollHeight,
+          300,
+        )
+      ) {
+        stick.current = true;
+        window.setTimeout(toEnd, 300); // after the keyboard animation
+      }
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", toEnd);
+    window.visualViewport?.addEventListener("resize", toEnd);
+    document.addEventListener("focusin", onFocusIn);
     return () => {
       ro.disconnect();
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", toEnd);
+      window.visualViewport?.removeEventListener("resize", toEnd);
+      document.removeEventListener("focusin", onFocusIn);
     };
   }, []);
 
@@ -219,10 +265,9 @@ export function ChatThreadPage({ id }: { id: string }) {
 
       <div
         ref={listRef}
-        className={cn(
-          "flex flex-col gap-2 pt-4",
-          "pb-4", // the layout already clears the fixed composer
-        )}
+        className="flex flex-col gap-2 pb-4 pt-4"
+        // The layout clears CLEARANCE_PX; a taller composer needs the rest.
+        style={{ paddingBottom: `calc(1rem + ${Math.max(0, composerH - CLEARANCE_PX)}px)` }}
       >
         {state === "loading" && <BubbleSkeleton />}
         {(state === "offline" || state === "failed") && (
@@ -278,6 +323,7 @@ export function ChatThreadPage({ id }: { id: string }) {
       {/* Outside the content column (fixed), so it clears the rail itself. */}
       {composerShown && (
         <div
+          ref={composerRef}
           className={cn(
             "fixed inset-x-0 bottom-0 z-20 transition-[padding] duration-200 ease-out",
             CONTENT_INSET[sidebarMode],

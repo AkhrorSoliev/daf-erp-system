@@ -72,7 +72,7 @@ function ReplyQuote({
 /**
  * One message. `mine` is coral on the right with a tail, the peer's is white on
  * the left, the time sits under it. The text is DATA: never through t(), never
- * as HTML. A swipe to the left (touch) or the arrow beside it (mouse) answers it.
+ * as HTML. The arrow beside it, or a swipe to the left, answers it.
  */
 export function MessageBubble({
   message,
@@ -175,12 +175,12 @@ export function MessageBubble({
             </button>
           ) : null}
           {canReply ? (
-            // Mouse and keyboard: an arrow beside the bubble. Touch has the swipe.
+            // Always visible (a phone has no hover); the swipe is the shortcut.
             <button
               type="button"
               aria-label={t("Javob berish")}
               onClick={() => onReply(message)}
-              className="hidden size-8 shrink-0 items-center justify-center rounded-full text-ink-400 opacity-0 transition-opacity hover:bg-tint focus-visible:opacity-100 group-hover:opacity-100 md:inline-flex"
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-ink-400 hover:bg-tint"
             >
               <ArrowBendUpLeft size={18} weight="bold" />
             </button>
