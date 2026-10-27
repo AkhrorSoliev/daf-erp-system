@@ -1029,6 +1029,21 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     ],
   },
   {
+    policy: 'SELF',
+    reason:
+      "Battle (spec 2026-10-27): keyed on `@CurrentUser('studentId')`; the DTO has no " +
+      '`studentId`, and a battle id owned by another student is 404. The ghost opponent ' +
+      'is drawn centre-wide on purpose — same CEO decision as the centre ranking ' +
+      '(06.09 §6.1) — and only a first name, last-name initial, photo and win count ' +
+      'are returned. The battle row stamps `companyId` from the token at creation.',
+    routes: [
+      'GET /student-portal/lernen/jang/holat',
+      'POST /student-portal/lernen/jang/boshla',
+      'POST /student-portal/lernen/jang/:id/javob',
+      'POST /student-portal/lernen/jang/:id/yakun',
+    ],
+  },
+  {
     policy: 'BRANCH_SCOPED_BY_SERVICE',
     reason:
       'The settings panel resolves its own scope by calling ' +

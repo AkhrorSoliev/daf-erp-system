@@ -1254,6 +1254,9 @@
   "GET /student-portal/lernen/guruhlar": [
     "Student"
   ],
+  "GET /student-portal/lernen/jang/holat": [
+    "Student"
+  ],
   "GET /student-portal/lernen/lessons/:id": [
     "Student"
   ],
@@ -2250,6 +2253,15 @@
     "Student"
   ],
   "POST /student-portal/lernen/drill/check": [
+    "Student"
+  ],
+  "POST /student-portal/lernen/jang/:id/javob": [
+    "Student"
+  ],
+  "POST /student-portal/lernen/jang/:id/yakun": [
+    "Student"
+  ],
+  "POST /student-portal/lernen/jang/boshla": [
     "Student"
   ],
   "POST /student-portal/lernen/lessons/:id/abschluss": [

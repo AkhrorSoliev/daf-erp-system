@@ -16,12 +16,15 @@ import { FortschrittService } from './fortschritt/fortschritt.service';
 import { LigaCron } from './liga/liga.cron';
 import { MusobaqaUstozController } from './ustoz/musobaqa-ustoz.controller';
 import { MusobaqaUstozService } from './ustoz/musobaqa-ustoz.service';
+import { JangController } from './jang/jang.controller';
+import { JangService } from './jang/jang.service';
 
 @Module({
   controllers: [
     DafPortalController,
     DafMediaController,
     MusobaqaUstozController,
+    JangController,
   ],
   providers: [
     DafPortalReadService,
@@ -38,6 +41,7 @@ import { MusobaqaUstozService } from './ustoz/musobaqa-ustoz.service';
     FortschrittService,
     LigaCron,
     MusobaqaUstozService,
+    JangService,
   ],
   exports: [DafSeedService, FortschrittService],
 })
