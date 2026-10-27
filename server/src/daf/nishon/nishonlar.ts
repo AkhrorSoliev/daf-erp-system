@@ -27,7 +27,7 @@ export async function nishonlarRoyxati(
   companyId: number,
   jetzt: Date,
 ): Promise<NishonQatori[]> {
-  const [kunlar, woerter, olinganlar, liga] = await Promise.all([
+  const [kunlar, woerter, olinganlar, liga, jangGolib] = await Promise.all([
     prisma.dafStudentDay.findMany({
       where: { studentId, attempts: { gt: 0 } },
       select: { day: true },
@@ -39,6 +39,7 @@ export async function nishonlarRoyxati(
       select: { key: true, earnedAt: true },
     }),
     ligaSharoiti(prisma, studentId, companyId, jetzt),
+    prisma.dafBattle.count({ where: { studentId, result: 'WIN' } }),
   ]);
   // `@db.Date` qiymati — o'sha kalendar kunining UTC yarim tuni.
   const serie = serieAus(
@@ -51,6 +52,7 @@ export async function nishonlarRoyxati(
     liga: liga.tier,
     xonaGolib: liga.xonaGolib,
     guruhBirinchi: liga.guruhBirinchi,
+    jangGolib,
   };
   const olingan = new Map(olinganlar.map((b) => [b.key, b.earnedAt]));
   return NISHON_KATALOGI.map((n) => {

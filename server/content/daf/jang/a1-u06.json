@@ -1,0 +1,347 @@
+{
+  "level": "A1",
+  "order": 6,
+  "tasdiqlangan": false,
+  "savollar": [
+    {
+      "id": "jang-a1-u06-001",
+      "kind": "CHOOSE",
+      "prompt": "«Freizeit» o'zbekcha?",
+      "options": [
+        "bo'sh vaqt",
+        "sevimli mashg'ulot",
+        "sayohat (bir kunlik)"
+      ],
+      "answer": "bo'sh vaqt"
+    },
+    {
+      "id": "jang-a1-u06-002",
+      "kind": "CHOOSE",
+      "prompt": "«hech qachon» nemischa?",
+      "options": [
+        "nie",
+        "selten",
+        "meistens"
+      ],
+      "answer": "nie"
+    },
+    {
+      "id": "jang-a1-u06-003",
+      "kind": "CHOOSE",
+      "prompt": "«kamdan-kam» nemischa?",
+      "options": [
+        "selten",
+        "meistens",
+        "nie"
+      ],
+      "answer": "selten"
+    },
+    {
+      "id": "jang-a1-u06-004",
+      "kind": "CHOOSE",
+      "prompt": "Ich ___ gut schwimmen.",
+      "options": [
+        "kann",
+        "kannst",
+        "können"
+      ],
+      "answer": "kann"
+    },
+    {
+      "id": "jang-a1-u06-005",
+      "kind": "CHOOSE",
+      "prompt": "___ du Tennis spielen?",
+      "options": [
+        "Kannst",
+        "Kann",
+        "Können"
+      ],
+      "answer": "Kannst"
+    },
+    {
+      "id": "jang-a1-u06-006",
+      "kind": "CHOOSE",
+      "prompt": "___ wir ins Kino gehen?",
+      "options": [
+        "Wollen",
+        "Will",
+        "Kann"
+      ],
+      "answer": "Wollen"
+    },
+    {
+      "id": "jang-a1-u06-007",
+      "kind": "CHOOSE",
+      "prompt": "Am Samstag gehen wir in ___ Disco.",
+      "options": [
+        "die",
+        "der",
+        "das"
+      ],
+      "answer": "die"
+    },
+    {
+      "id": "jang-a1-u06-008",
+      "kind": "CHOOSE",
+      "prompt": "Wir können ___ Kino gehen.",
+      "options": [
+        "ins",
+        "in die",
+        "im"
+      ],
+      "answer": "ins"
+    },
+    {
+      "id": "jang-a1-u06-009",
+      "kind": "CHOOSE",
+      "prompt": "«Wetter» o'zbekcha?",
+      "options": [
+        "ob-havo",
+        "quyosh",
+        "shamol"
+      ],
+      "answer": "ob-havo"
+    },
+    {
+      "id": "jang-a1-u06-010",
+      "kind": "CHOOSE",
+      "prompt": "Es ___. (yomg'ir yog'yapti)",
+      "options": [
+        "regnet",
+        "schneit",
+        "scheint"
+      ],
+      "answer": "regnet"
+    },
+    {
+      "id": "jang-a1-u06-011",
+      "kind": "CHOOSE",
+      "prompt": "«qish» nemischa?",
+      "options": [
+        "Winter",
+        "Sommer",
+        "Herbst"
+      ],
+      "answer": "Winter"
+    },
+    {
+      "id": "jang-a1-u06-012",
+      "kind": "CHOOSE",
+      "prompt": "«bahor» nemischa?",
+      "options": [
+        "Frühling",
+        "Herbst",
+        "Sommer"
+      ],
+      "answer": "Frühling"
+    },
+    {
+      "id": "jang-a1-u06-013",
+      "kind": "CHOOSE",
+      "prompt": "«kalt» o'zbekcha?",
+      "options": [
+        "sovuq",
+        "iliq",
+        "issiq"
+      ],
+      "answer": "sovuq"
+    },
+    {
+      "id": "jang-a1-u06-014",
+      "kind": "CHOOSE",
+      "prompt": "«Geschenk» o'zbekcha?",
+      "options": [
+        "sovg'a",
+        "taklifnoma",
+        "tug'ilgan kun"
+      ],
+      "answer": "sovg'a"
+    },
+    {
+      "id": "jang-a1-u06-015",
+      "kind": "CHOOSE",
+      "prompt": "«schade» o'zbekcha?",
+      "options": [
+        "afsus",
+        "balki",
+        "nega"
+      ],
+      "answer": "afsus"
+    },
+    {
+      "id": "jang-a1-u06-016",
+      "kind": "CHOOSE",
+      "prompt": "«schwimmen» o'zbekcha?",
+      "options": [
+        "suzmoq",
+        "yugurmoq",
+        "tirmashib chiqmoq"
+      ],
+      "answer": "suzmoq"
+    },
+    {
+      "id": "jang-a1-u06-017",
+      "kind": "CHOOSE",
+      "prompt": "«singen» o'zbekcha?",
+      "options": [
+        "qo'shiq aytmoq",
+        "raqsga tushmoq",
+        "o'qimoq"
+      ],
+      "answer": "qo'shiq aytmoq"
+    },
+    {
+      "id": "jang-a1-u06-018",
+      "kind": "CHOOSE",
+      "prompt": "«langweilig» o'zbekcha?",
+      "options": [
+        "zerikarli",
+        "qiziqarli",
+        "zo'r"
+      ],
+      "answer": "zerikarli"
+    },
+    {
+      "id": "jang-a1-u06-019",
+      "kind": "CHOOSE",
+      "prompt": "«Hast du Lust?» o'zbekcha?",
+      "options": [
+        "Xohlaysanmi?",
+        "Vaqting bormi?",
+        "Qayerga boramiz?"
+      ],
+      "answer": "Xohlaysanmi?"
+    },
+    {
+      "id": "jang-a1-u06-020",
+      "kind": "CHOOSE",
+      "prompt": "«Norden» o'zbekcha?",
+      "options": [
+        "shimol",
+        "janub",
+        "sharq"
+      ],
+      "answer": "shimol"
+    },
+    {
+      "id": "jang-a1-u06-021",
+      "kind": "CHOOSE",
+      "prompt": "«Idee» o'zbekcha?",
+      "options": [
+        "g'oya",
+        "tasodif",
+        "uchrashuv joyi"
+      ],
+      "answer": "g'oya"
+    },
+    {
+      "id": "jang-a1-u06-022",
+      "kind": "CHOOSE",
+      "prompt": "«wohin» o'zbekcha?",
+      "options": [
+        "qayerga",
+        "nega",
+        "balki"
+      ],
+      "answer": "qayerga"
+    },
+    {
+      "id": "jang-a1-u06-023",
+      "kind": "CHOOSE",
+      "prompt": "Es sind zwanzig ___. (daraja)",
+      "options": [
+        "Grad",
+        "Wind",
+        "Sonne"
+      ],
+      "answer": "Grad"
+    },
+    {
+      "id": "jang-a1-u06-024",
+      "kind": "TYPE",
+      "prompt": "«kitob» nemischa?",
+      "answer": "Buch",
+      "akzeptiert": [
+        "das Buch"
+      ]
+    },
+    {
+      "id": "jang-a1-u06-025",
+      "kind": "TYPE",
+      "prompt": "«musiqa» nemischa?",
+      "answer": "Musik",
+      "akzeptiert": [
+        "die Musik"
+      ]
+    },
+    {
+      "id": "jang-a1-u06-026",
+      "kind": "TYPE",
+      "prompt": "Am Samstag ___ ich Tennis. (o'ynamoq)",
+      "answer": "spiele"
+    },
+    {
+      "id": "jang-a1-u06-027",
+      "kind": "TYPE",
+      "prompt": "«quyosh» nemischa?",
+      "answer": "Sonne",
+      "akzeptiert": [
+        "die Sonne"
+      ]
+    },
+    {
+      "id": "jang-a1-u06-028",
+      "kind": "TYPE",
+      "prompt": "Morgen ___ die Sonne. (charaqlamoq)",
+      "answer": "scheint"
+    },
+    {
+      "id": "jang-a1-u06-029",
+      "kind": "TYPE",
+      "prompt": "«qor» nemischa?",
+      "answer": "Schnee",
+      "akzeptiert": [
+        "der Schnee"
+      ]
+    },
+    {
+      "id": "jang-a1-u06-030",
+      "kind": "TYPE",
+      "prompt": "«yoz» nemischa?",
+      "answer": "Sommer",
+      "akzeptiert": [
+        "der Sommer"
+      ]
+    },
+    {
+      "id": "jang-a1-u06-031",
+      "kind": "TYPE",
+      "prompt": "Ich ___ dich ein! (taklif qilmoq)",
+      "answer": "lade"
+    },
+    {
+      "id": "jang-a1-u06-032",
+      "kind": "TYPE",
+      "prompt": "Danke für die ___! (taklif)",
+      "answer": "Einladung"
+    },
+    {
+      "id": "jang-a1-u06-033",
+      "kind": "TYPE",
+      "prompt": "Tanzen macht viel ___. (zavq)",
+      "answer": "Spaß"
+    },
+    {
+      "id": "jang-a1-u06-034",
+      "kind": "TYPE",
+      "prompt": "«nega» nemischa?",
+      "answer": "warum"
+    },
+    {
+      "id": "jang-a1-u06-035",
+      "kind": "TYPE",
+      "prompt": "«balki» nemischa?",
+      "answer": "vielleicht"
+    }
+  ]
+}

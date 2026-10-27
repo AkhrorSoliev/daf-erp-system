@@ -18,6 +18,10 @@ import type {
   Fortschritt,
   FrageFormat,
   Guruhlar,
+  JangBoshlandi,
+  JangHolati,
+  JangJavobNatijasi,
+  JangYakuni,
   JuftNatija,
   LernenGrammarItem,
   LernenLesson,
@@ -447,5 +451,40 @@ export function wiederholungQuery(enabled: boolean = true) {
     refetchOnWindowFocus: false,
     staleTime: Infinity,
     gcTime: 0,
+  });
+}
+
+const JANG_HOLATI = ["lernen", "jang", "holat"] as const;
+
+export function useJangHolati() {
+  return useQuery<JangHolati>({
+    queryKey: JANG_HOLATI,
+    queryFn: () => api.get(`${BASE}/jang/holat`).then((r) => r.data),
+  });
+}
+
+export function useJangBoshla() {
+  return useMutation({
+    mutationFn: () => api.post<JangBoshlandi>(`${BASE}/jang/boshla`).then((r) => r.data),
+  });
+}
+
+export function useJangJavob() {
+  return useMutation({
+    mutationFn: (v: { jangId: number; pozitsiya: number; javob: string }) =>
+      api
+        .post<JangJavobNatijasi>(`${BASE}/jang/${v.jangId}/javob`, { pozitsiya: v.pozitsiya, javob: v.javob })
+        .then((r) => r.data),
+  });
+}
+
+export function useJangYakun() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (jangId: number) => api.post<JangYakuni>(`${BASE}/jang/${jangId}/yakun`).then((r) => r.data),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: JANG_HOLATI });
+      void qc.invalidateQueries({ queryKey: ["lernen", "nishonlar"] });
+    },
   });
 }

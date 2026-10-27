@@ -17,6 +17,11 @@ import {
   type VorschauFrage,
 } from './media/daf-media-fragen.service';
 
+import {
+  DafMediaJangService,
+  type JangOverview,
+} from './media/daf-media-jang.service';
+
 /**
  * Media bo'limi — yasalgan kontentni KO'RSATADI, yaratmaydi.
  * Yozish imkoniyati studiya qurilganda qo'shiladi.
@@ -29,7 +34,18 @@ export class DafMediaController {
     private readonly coverageService: DafMediaCoverageService,
     private readonly inhaltService: DafMediaInhaltService,
     private readonly fragenService: DafMediaFragenService,
+    private readonly jangService: DafMediaJangService,
   ) {}
+
+  /**
+   * Jang savollarining barchasi (qoralama ham) — CEO ko'rib chiqib, nimani
+   * o'zgartirishni aytishi uchun. Faqat o'qish; to'g'ri javob ATAYLAB bor —
+   * bu admin sahifasi, `media.view` bilan yopilgan.
+   */
+  @Get('jang')
+  jang(): Promise<JangOverview> {
+    return this.jangService.jang();
+  }
 
   @Get('overview')
   overview(): MediaOverview {

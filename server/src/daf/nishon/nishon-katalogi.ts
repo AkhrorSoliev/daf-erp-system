@@ -4,7 +4,13 @@
  * qo'shiladi. Nomni mijoz kalitdan quradi; Telegram matni uchun server ham
  * quradi (`eslatma-matn.ts` `nishonNomi`, ikkalasi testda solishtiriladi).
  */
-export type NishonTuri = 'SERIE' | 'WOERTER' | 'LIGA' | 'XONA' | 'GURUH';
+export type NishonTuri =
+  | 'SERIE'
+  | 'WOERTER'
+  | 'LIGA'
+  | 'XONA'
+  | 'GURUH'
+  | 'JANG';
 
 export interface Nishon {
   key: string;
@@ -33,6 +39,10 @@ export const NISHON_KATALOGI: readonly Nishon[] = [
   { key: 'XONA_GOLIB', tur: 'XONA', chegara: 1 },
   // Guruhlar jadvalida 1-o'rin olgan haftada shu guruh uchun ≥ 1 ball.
   { key: 'GURUH_BIRINCHI', tur: 'GURUH', chegara: 1 },
+  // Jang (spec 2026-10-27): chegara — g'alabalar soni. Liga balli bermaydi, shuning uchun nishon jangning o'z mukofoti.
+  { key: 'JANG_10', tur: 'JANG', chegara: 10 },
+  { key: 'JANG_50', tur: 'JANG', chegara: 50 },
+  { key: 'JANG_100', tur: 'JANG', chegara: 100 },
 ];
 
 /**
@@ -47,6 +57,8 @@ export interface NishonSharoiti {
   liga?: number;
   xonaGolib?: boolean;
   guruhBirinchi?: boolean;
+  /** Jang g'alabalari soni (`DafBattle.result = WIN`). */
+  jangGolib?: number;
 }
 
 function joriy(tur: NishonTuri, s: NishonSharoiti): number {
@@ -61,6 +73,8 @@ function joriy(tur: NishonTuri, s: NishonSharoiti): number {
       return s.xonaGolib ? 1 : 0;
     case 'GURUH':
       return s.guruhBirinchi ? 1 : 0;
+    case 'JANG':
+      return s.jangGolib ?? 0;
   }
 }
 

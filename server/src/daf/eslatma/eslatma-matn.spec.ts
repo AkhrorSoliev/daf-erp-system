@@ -147,6 +147,7 @@ describe('umumiy', () => {
         'LIGA_KUMUSH',
         'XONA_GOLIB',
         'GURUH_BIRINCHI',
+        'JANG_10',
         'NOMA_LUM',
       ].map(nishonNomi),
     ).toEqual([
@@ -156,6 +157,7 @@ describe('umumiy', () => {
       'Kumush ligasi',
       "Xona g'olibi",
       "Guruhlar jadvalida 1-o'rin",
+      "10 ta jang g'alabasi",
       'NOMA_LUM',
     ]);
     for (const n of NISHON_KATALOGI) expect(nishonNomi(n.key)).not.toBe(n.key);

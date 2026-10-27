@@ -15,6 +15,8 @@ export function nishonNomi(key: string, t: Translate = interpolate): string {
   }
   if (key === "XONA_GOLIB") return t("Xona g'olibi");
   if (key === "GURUH_BIRINCHI") return t("Guruhlar jadvalida 1-o'rin");
+  const jang = /^JANG_(\d+)$/.exec(key);
+  if (jang) return t("{n} ta jang g'alabasi", { n: Number(jang[1]) });
   const m = /^(SERIE|WOERTER)_(\d+)$/.exec(key);
   if (!m) return key;
   const n = Number(m[2]);
@@ -48,6 +50,8 @@ export function nishonQoldi(q: NishonQatori, t: Translate = interpolate): string
       });
     case "GURUH":
       return t("Guruhingiz hafta jadvalida 1-o'rin olganda");
+    case "JANG":
+      return t("yana {n} ta g'alaba", { n: q.qoldi });
     default:
       // Newer server may add a badge kind this client does not know yet.
       return null;

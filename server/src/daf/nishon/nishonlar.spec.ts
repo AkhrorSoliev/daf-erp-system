@@ -7,6 +7,7 @@ function prismaFor(opts: {
   woerter: number;
   olingan: { key: string; earnedAt: Date }[];
   liga?: number;
+  jangGolib?: number;
 }) {
   return {
     $queryRaw: jest.fn(async () => [
@@ -25,6 +26,7 @@ function prismaFor(opts: {
     },
     dafLexemeState: { count: jest.fn(async () => opts.woerter) },
     dafStudentBadge: { findMany: jest.fn(async () => opts.olingan) },
+    dafBattle: { count: jest.fn(async () => opts.jangGolib ?? 0) },
   } as any;
 }
 
@@ -40,7 +42,7 @@ describe('nishonlarRoyxati', () => {
       ],
     });
     const r = await nishonlarRoyxati(prisma, 55, 1, JETZT);
-    expect(r).toHaveLength(16);
+    expect(r).toHaveLength(19);
     expect(r[0]).toEqual({
       key: 'SERIE_3',
       tur: 'SERIE',

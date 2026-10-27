@@ -98,6 +98,8 @@ export const routeLabels: Record<string, string> = {
   // (haqiqatan "/media/assets" mavjud), shuning uchun breadcrumbda ko'rinishi
   // kerak.
   assets: msg("Media fayllari"),
+  // /media/jang — jang savollarini CEO ko'rib chiqishi uchun (faqat o'qish).
+  jang: msg("Jang savollari"),
   qollanma: msg("Qo'llanma"),
   yangiliklar: msg("Nima yangi"),
 };

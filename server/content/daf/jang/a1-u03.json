@@ -1,0 +1,346 @@
+{
+  "level": "A1",
+  "order": 3,
+  "tasdiqlangan": false,
+  "savollar": [
+    {
+      "id": "jang-a1-u03-001",
+      "kind": "CHOOSE",
+      "prompt": "«Bahnhof» o'zbekcha?",
+      "options": [
+        "vokzal",
+        "maydon",
+        "bekat"
+      ],
+      "answer": "vokzal"
+    },
+    {
+      "id": "jang-a1-u03-002",
+      "kind": "CHOOSE",
+      "prompt": "«pochta» nemischa?",
+      "options": [
+        "Post",
+        "Bank",
+        "Polizei"
+      ],
+      "answer": "Post"
+    },
+    {
+      "id": "jang-a1-u03-003",
+      "kind": "CHOOSE",
+      "prompt": "___ Bahnhof ist sehr alt.",
+      "options": [
+        "Der",
+        "Die",
+        "Das"
+      ],
+      "answer": "Der"
+    },
+    {
+      "id": "jang-a1-u03-004",
+      "kind": "CHOOSE",
+      "prompt": "___ Post ist hier.",
+      "options": [
+        "Die",
+        "Der",
+        "Das"
+      ],
+      "answer": "Die"
+    },
+    {
+      "id": "jang-a1-u03-005",
+      "kind": "CHOOSE",
+      "prompt": "Ist ___ Kino neu?",
+      "options": [
+        "das",
+        "der",
+        "die"
+      ],
+      "answer": "das"
+    },
+    {
+      "id": "jang-a1-u03-006",
+      "kind": "CHOOSE",
+      "prompt": "«links» o'zbekcha?",
+      "options": [
+        "chapda",
+        "o'ngda",
+        "u yerda"
+      ],
+      "answer": "chapda"
+    },
+    {
+      "id": "jang-a1-u03-007",
+      "kind": "CHOOSE",
+      "prompt": "«neben» o'zbekcha?",
+      "options": [
+        "yonida",
+        "orasida",
+        "oldida"
+      ],
+      "answer": "yonida"
+    },
+    {
+      "id": "jang-a1-u03-008",
+      "kind": "CHOOSE",
+      "prompt": "Wie komme ich ___ Bahnhof?",
+      "options": [
+        "zum",
+        "zur",
+        "mit"
+      ],
+      "answer": "zum"
+    },
+    {
+      "id": "jang-a1-u03-009",
+      "kind": "CHOOSE",
+      "prompt": "Wie komme ich ___ Bank?",
+      "options": [
+        "zur",
+        "zum",
+        "mit"
+      ],
+      "answer": "zur"
+    },
+    {
+      "id": "jang-a1-u03-010",
+      "kind": "CHOOSE",
+      "prompt": "Ich fahre mit ___ Bus.",
+      "options": [
+        "dem",
+        "der",
+        "das"
+      ],
+      "answer": "dem"
+    },
+    {
+      "id": "jang-a1-u03-011",
+      "kind": "CHOOSE",
+      "prompt": "Fahren Sie mit ___ U-Bahn.",
+      "options": [
+        "der",
+        "dem",
+        "die"
+      ],
+      "answer": "der"
+    },
+    {
+      "id": "jang-a1-u03-012",
+      "kind": "CHOOSE",
+      "prompt": "«poyezd» nemischa?",
+      "options": [
+        "Zug",
+        "Bus",
+        "Taxi"
+      ],
+      "answer": "Zug"
+    },
+    {
+      "id": "jang-a1-u03-013",
+      "kind": "CHOOSE",
+      "prompt": "«zu Fuß» o'zbekcha?",
+      "options": [
+        "piyoda",
+        "to'g'riga",
+        "doim"
+      ],
+      "answer": "piyoda"
+    },
+    {
+      "id": "jang-a1-u03-014",
+      "kind": "CHOOSE",
+      "prompt": "«manchmal» o'zbekcha?",
+      "options": [
+        "ba'zan",
+        "doim",
+        "tez-tez"
+      ],
+      "answer": "ba'zan"
+    },
+    {
+      "id": "jang-a1-u03-015",
+      "kind": "CHOOSE",
+      "prompt": "___ Sie geradeaus.",
+      "options": [
+        "Gehen",
+        "Gehst",
+        "Gehe"
+      ],
+      "answer": "Gehen"
+    },
+    {
+      "id": "jang-a1-u03-016",
+      "kind": "CHOOSE",
+      "prompt": "Heute ___ ich mit dem Taxi.",
+      "options": [
+        "fahre",
+        "fährst",
+        "fahren"
+      ],
+      "answer": "fahre"
+    },
+    {
+      "id": "jang-a1-u03-017",
+      "kind": "CHOOSE",
+      "prompt": "«Ampel» o'zbekcha?",
+      "options": [
+        "svetofor",
+        "bekat",
+        "burchak"
+      ],
+      "answer": "svetofor"
+    },
+    {
+      "id": "jang-a1-u03-018",
+      "kind": "CHOOSE",
+      "prompt": "«kutmoq» nemischa?",
+      "options": [
+        "warten",
+        "suchen",
+        "finden"
+      ],
+      "answer": "warten"
+    },
+    {
+      "id": "jang-a1-u03-019",
+      "kind": "TYPE",
+      "prompt": "«ko'cha» nemischa?",
+      "answer": "Straße",
+      "akzeptiert": [
+        "die Straße"
+      ]
+    },
+    {
+      "id": "jang-a1-u03-020",
+      "kind": "TYPE",
+      "prompt": "«mehmonxona» nemischa?",
+      "answer": "Hotel",
+      "akzeptiert": [
+        "das Hotel"
+      ]
+    },
+    {
+      "id": "jang-a1-u03-021",
+      "kind": "TYPE",
+      "prompt": "Gehen Sie hier ___. (to'g'riga)",
+      "answer": "geradeaus"
+    },
+    {
+      "id": "jang-a1-u03-022",
+      "kind": "TYPE",
+      "prompt": "Ich ___ das Hotel. (qidirmoq)",
+      "answer": "suche"
+    },
+    {
+      "id": "jang-a1-u03-023",
+      "kind": "TYPE",
+      "prompt": "Die Bank ist ___ der Post. (yonida)",
+      "answer": "neben"
+    },
+    {
+      "id": "jang-a1-u03-024",
+      "kind": "TYPE",
+      "prompt": "Mein Bruder ___ mit dem Taxi. (bormoq)",
+      "answer": "fährt"
+    },
+    {
+      "id": "jang-a1-u03-025",
+      "kind": "TYPE",
+      "prompt": "«avtobus» nemischa?",
+      "answer": "Bus",
+      "akzeptiert": [
+        "der Bus"
+      ]
+    },
+    {
+      "id": "jang-a1-u03-026",
+      "kind": "TYPE",
+      "prompt": "«bugun» nemischa?",
+      "answer": "heute"
+    },
+    {
+      "id": "jang-a1-u03-027",
+      "kind": "TYPE",
+      "prompt": "Das dauert dreißig ___. (daqiqa)",
+      "answer": "Minuten"
+    },
+    {
+      "id": "jang-a1-u03-028",
+      "kind": "TYPE",
+      "prompt": "Ich nehme die ___ Straße rechts. (birinchi)",
+      "answer": "erste"
+    },
+    {
+      "id": "jang-a1-u03-029",
+      "kind": "TYPE",
+      "prompt": "«doim» nemischa?",
+      "answer": "immer"
+    },
+    {
+      "id": "jang-a1-u03-030",
+      "kind": "TYPE",
+      "prompt": "Wo ist die ___? (bekat)",
+      "answer": "Haltestelle"
+    },
+    {
+      "id": "jang-a1-u03-031",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "Polizei",
+        "Post",
+        "Park"
+      ],
+      "answer": "Polizei",
+      "lexeme": "u03-s1-polizei"
+    },
+    {
+      "id": "jang-a1-u03-032",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "rechts",
+        "links",
+        "dort"
+      ],
+      "answer": "rechts",
+      "lexeme": "u03-s2-rechts"
+    },
+    {
+      "id": "jang-a1-u03-033",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "Straßenbahn",
+        "Straße",
+        "U-Bahn"
+      ],
+      "answer": "Straßenbahn",
+      "lexeme": "u03-s4-strassenbahn"
+    },
+    {
+      "id": "jang-a1-u03-034",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "Fahrrad",
+        "Auto",
+        "Taxi"
+      ],
+      "answer": "Fahrrad",
+      "lexeme": "u03-s4-fahrrad"
+    },
+    {
+      "id": "jang-a1-u03-035",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "Museum",
+        "Kino",
+        "Hotel"
+      ],
+      "answer": "Museum",
+      "lexeme": "u03-s1-museum"
+    }
+  ]
+}

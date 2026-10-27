@@ -4,6 +4,7 @@ import { DafMediaOverviewService } from './media/daf-media-overview.service';
 import { DafMediaCoverageService } from './media/daf-media-coverage.service';
 import { DafMediaInhaltService } from './media/daf-media-inhalt.service';
 import { DafMediaFragenService } from './media/daf-media-fragen.service';
+import { DafMediaJangService } from './media/daf-media-jang.service';
 import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
 /**
@@ -31,6 +32,9 @@ describe('DafMediaController — route access', () => {
   const fragenService = {
     fragen: jest.fn().mockResolvedValue([]),
   };
+  const jangService = {
+    jang: jest.fn().mockResolvedValue({ units: [] }),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -40,6 +44,7 @@ describe('DafMediaController — route access', () => {
         { provide: DafMediaCoverageService, useValue: coverageService },
         { provide: DafMediaInhaltService, useValue: inhaltService },
         { provide: DafMediaFragenService, useValue: fragenService },
+        { provide: DafMediaJangService, useValue: jangService },
       ],
     }).compile();
 
@@ -47,7 +52,7 @@ describe('DafMediaController — route access', () => {
   });
 
   it('every route is gated by the media view capability', () => {
-    for (const method of ['coverage', 'overview', 'fragen', 'inhalt']) {
+    for (const method of ['coverage', 'overview', 'fragen', 'inhalt', 'jang']) {
       expect(routeAccess(DafMediaController, method)).toEqual({
         kind: 'can',
         keys: ['media.view'],
@@ -84,6 +89,12 @@ describe('DafMediaController — route access', () => {
       phrasen: [],
       dialogZeilen: [],
     });
+  });
+
+  it('jang() DafMediaJangService.jang()ga delegatsiya qiladi', async () => {
+    const result = await controller.jang();
+    expect(jangService.jang).toHaveBeenCalled();
+    expect(result).toEqual({ units: [] });
   });
 
   it('fragen() DafMediaFragenService.fragen()ga delegatsiya qiladi', async () => {

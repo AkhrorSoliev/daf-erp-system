@@ -1,0 +1,348 @@
+{
+  "level": "A1",
+  "order": 5,
+  "tasdiqlangan": false,
+  "savollar": [
+    {
+      "id": "jang-a1-u05-001",
+      "kind": "CHOOSE",
+      "prompt": "Es ist ___ acht. (7:30)",
+      "options": [
+        "halb",
+        "Viertel",
+        "nach"
+      ],
+      "answer": "halb"
+    },
+    {
+      "id": "jang-a1-u05-002",
+      "kind": "CHOOSE",
+      "prompt": "«Viertel» o'zbekcha?",
+      "options": [
+        "chorak",
+        "yarim",
+        "soat"
+      ],
+      "answer": "chorak"
+    },
+    {
+      "id": "jang-a1-u05-003",
+      "kind": "CHOOSE",
+      "prompt": "«Woche» o'zbekcha?",
+      "options": [
+        "hafta",
+        "kun",
+        "dam olish kunlari"
+      ],
+      "answer": "hafta"
+    },
+    {
+      "id": "jang-a1-u05-004",
+      "kind": "CHOOSE",
+      "prompt": "«seshanba» nemischa?",
+      "options": [
+        "Dienstag",
+        "Donnerstag",
+        "Mittwoch"
+      ],
+      "answer": "Dienstag"
+    },
+    {
+      "id": "jang-a1-u05-005",
+      "kind": "CHOOSE",
+      "prompt": "«payshanba» nemischa?",
+      "options": [
+        "Donnerstag",
+        "Dienstag",
+        "Freitag"
+      ],
+      "answer": "Donnerstag"
+    },
+    {
+      "id": "jang-a1-u05-006",
+      "kind": "CHOOSE",
+      "prompt": "___ Montag habe ich Training.",
+      "options": [
+        "Am",
+        "Um",
+        "Im"
+      ],
+      "answer": "Am"
+    },
+    {
+      "id": "jang-a1-u05-007",
+      "kind": "CHOOSE",
+      "prompt": "Wir beginnen ___ neun Uhr.",
+      "options": [
+        "um",
+        "am",
+        "bis"
+      ],
+      "answer": "um"
+    },
+    {
+      "id": "jang-a1-u05-008",
+      "kind": "CHOOSE",
+      "prompt": "Ich stehe um sechs Uhr ___.",
+      "options": [
+        "auf",
+        "ab",
+        "aus"
+      ],
+      "answer": "auf"
+    },
+    {
+      "id": "jang-a1-u05-009",
+      "kind": "CHOOSE",
+      "prompt": "Wann holst du Lena ___?",
+      "options": [
+        "ab",
+        "auf",
+        "aus"
+      ],
+      "answer": "ab"
+    },
+    {
+      "id": "jang-a1-u05-010",
+      "kind": "CHOOSE",
+      "prompt": "«fernsehen» o'zbekcha?",
+      "options": [
+        "televizor ko'rmoq",
+        "tomosha qilmoq",
+        "uxlamoq"
+      ],
+      "answer": "televizor ko'rmoq"
+    },
+    {
+      "id": "jang-a1-u05-011",
+      "kind": "CHOOSE",
+      "prompt": "Ich ___ das Geschirr waschen.",
+      "options": [
+        "muss",
+        "musst",
+        "müssen"
+      ],
+      "answer": "muss"
+    },
+    {
+      "id": "jang-a1-u05-012",
+      "kind": "CHOOSE",
+      "prompt": "Du ___ die Hausaufgaben machen.",
+      "options": [
+        "musst",
+        "muss",
+        "müssen"
+      ],
+      "answer": "musst"
+    },
+    {
+      "id": "jang-a1-u05-013",
+      "kind": "CHOOSE",
+      "prompt": "«pünktlich» o'zbekcha?",
+      "options": [
+        "o'z vaqtida",
+        "erta",
+        "kech"
+      ],
+      "answer": "o'z vaqtida"
+    },
+    {
+      "id": "jang-a1-u05-014",
+      "kind": "CHOOSE",
+      "prompt": "«Kalender» o'zbekcha?",
+      "options": [
+        "kalendar",
+        "boshlanish",
+        "soat vaqti"
+      ],
+      "answer": "kalendar"
+    },
+    {
+      "id": "jang-a1-u05-015",
+      "kind": "CHOOSE",
+      "prompt": "«ertaga» nemischa?",
+      "options": [
+        "morgen",
+        "heute",
+        "jetzt"
+      ],
+      "answer": "morgen"
+    },
+    {
+      "id": "jang-a1-u05-016",
+      "kind": "CHOOSE",
+      "prompt": "«Wochenende» o'zbekcha?",
+      "options": [
+        "dam olish kunlari",
+        "hafta kuni",
+        "hafta"
+      ],
+      "answer": "dam olish kunlari"
+    },
+    {
+      "id": "jang-a1-u05-017",
+      "kind": "CHOOSE",
+      "prompt": "«schlafen» o'zbekcha?",
+      "options": [
+        "uxlamoq",
+        "o'rnidan turmoq",
+        "dush qabul qilmoq"
+      ],
+      "answer": "uxlamoq"
+    },
+    {
+      "id": "jang-a1-u05-018",
+      "kind": "CHOOSE",
+      "prompt": "Es ist Viertel ___ zwölf. (11:45)",
+      "options": [
+        "vor",
+        "nach",
+        "halb"
+      ],
+      "answer": "vor"
+    },
+    {
+      "id": "jang-a1-u05-019",
+      "kind": "TYPE",
+      "prompt": "Wie ___ ist es? (soat necha)",
+      "answer": "spät"
+    },
+    {
+      "id": "jang-a1-u05-020",
+      "kind": "TYPE",
+      "prompt": "«dushanba» nemischa?",
+      "answer": "Montag",
+      "akzeptiert": [
+        "der Montag"
+      ]
+    },
+    {
+      "id": "jang-a1-u05-021",
+      "kind": "TYPE",
+      "prompt": "«juma» nemischa?",
+      "answer": "Freitag",
+      "akzeptiert": [
+        "der Freitag"
+      ]
+    },
+    {
+      "id": "jang-a1-u05-022",
+      "kind": "TYPE",
+      "prompt": "«shanba» nemischa?",
+      "answer": "Samstag",
+      "akzeptiert": [
+        "Sonnabend",
+        "der Samstag",
+        "der Sonnabend"
+      ]
+    },
+    {
+      "id": "jang-a1-u05-023",
+      "kind": "TYPE",
+      "prompt": "Die Woche hat sieben ___. (kun)",
+      "answer": "Tage"
+    },
+    {
+      "id": "jang-a1-u05-024",
+      "kind": "TYPE",
+      "prompt": "Eine Stunde hat sechzig ___. (daqiqa)",
+      "answer": "Minuten"
+    },
+    {
+      "id": "jang-a1-u05-025",
+      "kind": "TYPE",
+      "prompt": "«hozir» nemischa?",
+      "answer": "jetzt"
+    },
+    {
+      "id": "jang-a1-u05-026",
+      "kind": "TYPE",
+      "prompt": "«qachon» nemischa?",
+      "answer": "wann"
+    },
+    {
+      "id": "jang-a1-u05-027",
+      "kind": "TYPE",
+      "prompt": "Wir bleiben heute zu ___. (uyda)",
+      "answer": "Hause"
+    },
+    {
+      "id": "jang-a1-u05-028",
+      "kind": "TYPE",
+      "prompt": "Hast du morgen ___? (vaqt)",
+      "answer": "Zeit"
+    },
+    {
+      "id": "jang-a1-u05-029",
+      "kind": "TYPE",
+      "prompt": "Ich ___ morgen einen Termin. (bor)",
+      "answer": "habe"
+    },
+    {
+      "id": "jang-a1-u05-030",
+      "kind": "TYPE",
+      "prompt": "Das tut mir ___. (afsus)",
+      "answer": "leid"
+    },
+    {
+      "id": "jang-a1-u05-031",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "Mittwoch",
+        "mittags",
+        "Montag"
+      ],
+      "answer": "Mittwoch",
+      "lexeme": "u05-s2-mittwoch"
+    },
+    {
+      "id": "jang-a1-u05-032",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "Stunde",
+        "Sekunde",
+        "Uhrzeit"
+      ],
+      "answer": "Stunde",
+      "lexeme": "u05-s1-stunde"
+    },
+    {
+      "id": "jang-a1-u05-033",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "früh",
+        "frei",
+        "spät"
+      ],
+      "answer": "früh",
+      "lexeme": "u05-s1-frueh"
+    },
+    {
+      "id": "jang-a1-u05-034",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "Kalender",
+        "Termin",
+        "Beginn"
+      ],
+      "answer": "Kalender",
+      "lexeme": "u05-s4-kalender"
+    },
+    {
+      "id": "jang-a1-u05-035",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "duschen",
+        "waschen",
+        "schlafen"
+      ],
+      "answer": "duschen",
+      "lexeme": "u05-s3-duschen"
+    }
+  ]
+}

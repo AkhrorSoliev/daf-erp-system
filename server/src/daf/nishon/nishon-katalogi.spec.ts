@@ -4,7 +4,7 @@ import { NISHON_KATALOGI, qoldi, shartBajarilganlar } from './nishon-katalogi';
 const bosh = { serie: 0, woerter: 0 };
 
 describe('nishon katalogi', () => {
-  it('S2 ning o`n kaliti va S3 ning olti kaliti, shu tartibda', () => {
+  it('S2 ning o`n kaliti va S3 ning olti kaliti va jangning uch kaliti, shu tartibda', () => {
     expect(NISHON_KATALOGI.map((n) => n.key)).toEqual([
       'SERIE_3',
       'SERIE_7',
@@ -22,6 +22,9 @@ describe('nishon katalogi', () => {
       'LIGA_OLMOS',
       'XONA_GOLIB',
       'GURUH_BIRINCHI',
+      'JANG_10',
+      'JANG_50',
+      'JANG_100',
     ]);
   });
 
@@ -85,5 +88,14 @@ describe('nishon katalogi', () => {
     expect(qoldi(oltin, { ...bosh, liga: 1 })).toBe(1);
     expect(qoldi(oltin, { ...bosh, liga: 4 })).toBe(0);
     expect(qoldi(golib, bosh)).toBe(1);
+  });
+});
+
+describe('jang nishonlari', () => {
+  it("g'alaba soni bo'yicha", () => {
+    expect(shartBajarilganlar({ serie: 0, woerter: 0, jangGolib: 50 })).toEqual(
+      ['JANG_10', 'JANG_50'],
+    );
+    expect(shartBajarilganlar({ serie: 0, woerter: 0 })).toEqual([]);
   });
 });
