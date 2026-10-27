@@ -5507,7 +5507,7 @@ const en: Dictionary = {
   "Bugun {n} ta qoldi": "{n} left today",
   "{n} ta g'alaba": "{n} wins",
   "Seriya: {n}": "Streak: {n}",
-  "Jang: avval birinchi unitni tugating": "Battle: finish the first unit first",
+  "Jang tez orada ochiladi": "Battles open soon",
   "Jang to'xtadi": "The battle has stopped",
   "Natijani hisoblab bo'lmadi": "Could not count the result",
   "Jang savollari hali tayyor emas": "The battle questions are not ready yet",

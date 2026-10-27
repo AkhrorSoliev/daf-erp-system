@@ -5507,7 +5507,7 @@ const ru: Dictionary = {
   "Bugun {n} ta qoldi": "Сегодня осталось {n}",
   "{n} ta g'alaba": "Побед: {n}",
   "Seriya: {n}": "Серия: {n}",
-  "Jang: avval birinchi unitni tugating": "Битва: сначала завершите первый раздел",
+  "Jang tez orada ochiladi": "Битвы скоро откроются",
   "Jang to'xtadi": "Битва остановлена",
   "Natijani hisoblab bo'lmadi": "Не удалось подсчитать результат",
   "Jang savollari hali tayyor emas": "Вопросы для битвы ещё не готовы",

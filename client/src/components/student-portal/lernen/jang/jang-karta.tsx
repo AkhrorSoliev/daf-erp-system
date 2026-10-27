@@ -15,7 +15,7 @@ export function JangKarta() {
     return (
       <Card className="flex items-center gap-3 opacity-70">
         <Sword size={28} weight="bold" />
-        <p className="text-ink-700">{t("Jang: avval birinchi unitni tugating")}</p>
+        <p className="text-ink-700">{t("Jang tez orada ochiladi")}</p>
       </Card>
     );
   }
