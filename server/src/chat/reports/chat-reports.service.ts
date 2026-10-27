@@ -60,6 +60,8 @@ export class ChatReportsService {
       senderId: m.senderId,
       kind: m.kind,
       text: m.text,
+      // The first text of an edited message: an insult cannot be tidied away.
+      ...(m.originalText != null && { originalText: m.originalText }),
       hasFile: m.fileKey != null,
       deleted: m.deletedAt != null,
       createdAt: m.createdAt.toISOString(),

@@ -1132,6 +1132,9 @@
   "PATCH /chat/conversations/:id/read": [
     "Student"
   ],
+  "PATCH /chat/messages/:id": [
+    "Student"
+  ],
   "PATCH /chat/privacy": [
     "Student"
   ],

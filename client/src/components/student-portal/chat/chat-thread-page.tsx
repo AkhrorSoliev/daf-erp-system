@@ -14,18 +14,21 @@ import { BlockedNotice, PeerMenu } from "./peer-menu";
 import {
   useBlockedIds,
   useChatAccess,
+  useEditMessage,
   useMarkRead,
   useMessages,
   usePeer,
   useRemoveMessage,
 } from "./chat-queries";
 import {
+  canEdit,
   isNearBottom,
   lastPeerMessageId,
   mergePending,
   threadMessages,
   type ThreadItem,
 } from "./chat-thread-model";
+import type { ReplyView } from "./chat-types";
 import { useChatPeerTyping } from "./chat-stream-store";
 import { ChatAccessBanner } from "./chat-access-banner";
 import { ChatComposer } from "./chat-composer";
@@ -49,6 +52,15 @@ function BubbleSkeleton() {
   );
 }
 
+/** The message as a reply card; its words are the text, a file is named by kind. */
+const asReply = (m: ThreadItem): ReplyView => ({
+  id: m.id,
+  mine: m.mine,
+  kind: m.kind,
+  deleted: false,
+  preview: m.text ?? "",
+});
+
 export function ChatThreadPage({ id }: { id: string }) {
   const t = useT();
   const sidebarMode = useSidebar((s) => s.mode);
@@ -58,8 +70,17 @@ export function ChatThreadPage({ id }: { id: string }) {
   const state = loadState(query);
   const { pending, submit, retry, busy } = useThreadSend(id);
   const remove = useRemoveMessage(id);
+  const edit = useEditMessage(id);
   const { mutate: markRead } = useMarkRead(id);
   const [toDelete, setToDelete] = useState<ThreadItem | null>(null);
+  // The message whose actions are open, and whether it may still be edited
+  // (decided when it opens, so render stays free of the clock).
+  const [actions, setActions] = useState<{
+    message: ThreadItem;
+    editable: boolean;
+  } | null>(null);
+  const [replyTo, setReplyTo] = useState<ThreadItem | null>(null);
+  const [editing, setEditing] = useState<ThreadItem | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   // Follow new height only while the student is at the end (true on open).
   const stick = useRef(true);
@@ -72,6 +93,7 @@ export function ChatThreadPage({ id }: { id: string }) {
   const messages = threadMessages(query.data?.pages);
   const items = mergePending(messages, pending);
   const lastPeer = lastPeerMessageId(messages);
+  const peerLabel = peer ? peerName(peer) : t("Suhbat");
 
   // ONE scroll mechanism: when the list grows (images, new or optimistic
   // messages) and the student was near the end, stay at the end.
@@ -119,8 +141,32 @@ export function ChatThreadPage({ id }: { id: string }) {
 
   const onSend = (text: string) => {
     stick.current = true;
-    submit(text);
+    submit(text, replyTo ? asReply(replyTo) : null);
+    setReplyTo(null);
   };
+
+  const onEdit = (text: string) => {
+    if (!editing) return;
+    edit.mutate(
+      { messageId: editing.id, text },
+      { onSuccess: () => setEditing(null) },
+    );
+  };
+
+  const jumpTo = (messageId: string) => {
+    const el = document.getElementById(`msg-${messageId}`);
+    if (!el) return;
+    stick.current = false; // the student chose to look back
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+  };
+
+  const replyLabel = (m: ThreadItem) => (m.mine ? t("Siz") : peerLabel);
+  const replyPreview = (m: ThreadItem) =>
+    m.kind === "IMAGE"
+      ? t("Rasm")
+      : m.kind === "VOICE"
+        ? t("Ovozli xabar")
+        : (m.text ?? "");
 
   // Composer is fixed; every other state is a notice at the end of the thread.
   const notice =
@@ -152,7 +198,7 @@ export function ChatThreadPage({ id }: { id: string }) {
           />
           <div className="min-w-0">
             <h1 className="truncate font-display text-lg font-extrabold text-ink-900">
-              {peer ? peerName(peer) : t("Suhbat")}
+              {peerLabel}
             </h1>
             {peerTyping && (
               <p className="truncate text-xs font-semibold text-ink-500">
@@ -205,7 +251,14 @@ export function ChatThreadPage({ id }: { id: string }) {
                 <MessageBubble
                   key={m.id}
                   message={m}
-                  onDelete={setToDelete}
+                  peerLabel={peerLabel}
+                  onActions={(msg) =>
+                    setActions({
+                      message: msg,
+                      editable: canEdit(msg, Date.now()),
+                    })
+                  }
+                  onJump={jumpTo}
                   onRetry={() => retry(m.id.replace("pending:", ""))}
                   renderMedia={(msg) => <MediaBubble message={msg} />}
                 />
@@ -226,7 +279,28 @@ export function ChatThreadPage({ id }: { id: string }) {
           <div className="border-t border-line bg-surface">
             <div className="mx-auto w-full max-w-[600px] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
               {access ? (
-                <ChatComposer conversationId={id} onSend={onSend} busy={busy} />
+                <ChatComposer
+                  key={editing?.id ?? "compose"}
+                  conversationId={id}
+                  onSend={onSend}
+                  busy={busy}
+                  reply={
+                    replyTo
+                      ? {
+                          id: replyTo.id,
+                          label: replyLabel(replyTo),
+                          preview: replyPreview(replyTo),
+                        }
+                      : null
+                  }
+                  onCancelReply={() => setReplyTo(null)}
+                  editing={
+                    editing ? { id: editing.id, text: editing.text ?? "" } : null
+                  }
+                  onEdit={onEdit}
+                  onCancelEdit={() => setEditing(null)}
+                  editBusy={edit.isPending}
+                />
               ) : (
                 <Skeleton className="h-12 w-full rounded-[26px]" />
               )}
@@ -234,6 +308,55 @@ export function ChatThreadPage({ id }: { id: string }) {
           </div>
         </div>
       )}
+
+      <BottomSheet
+        open={actions !== null}
+        onOpenChange={(open) => !open && setActions(null)}
+        title={t("Xabar amallari")}
+      >
+        <div className="flex flex-col gap-2.5">
+          {composerShown && (
+            <Button
+              variant="secondary"
+              block
+              onClick={() => {
+                if (!actions) return;
+                setEditing(null);
+                setReplyTo(actions.message);
+                setActions(null);
+              }}
+            >
+              {t("Javob berish")}
+            </Button>
+          )}
+          {composerShown && actions?.editable && (
+            <Button
+              variant="secondary"
+              block
+              onClick={() => {
+                if (!actions) return;
+                setReplyTo(null);
+                setEditing(actions.message);
+                setActions(null);
+              }}
+            >
+              {t("Tahrirlash")}
+            </Button>
+          )}
+          {actions?.message.mine && (
+            <Button
+              variant="danger"
+              block
+              onClick={() => {
+                setToDelete(actions.message);
+                setActions(null);
+              }}
+            >
+              {t("O'chirish")}
+            </Button>
+          )}
+        </div>
+      </BottomSheet>
 
       <BottomSheet
         open={toDelete !== null}

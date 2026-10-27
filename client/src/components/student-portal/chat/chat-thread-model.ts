@@ -1,4 +1,20 @@
-import type { MessageView, MessagesPage } from "./chat-types";
+import type { MessageView, MessagesPage, ReplyView } from "./chat-types";
+
+/** Mirrors EDIT_WINDOW_MS in server/src/chat/chat.constants.ts. */
+export const EDIT_WINDOW_MS = 3 * 60 * 60 * 1000;
+
+/** My own sent text, not older than the edit window (the server decides for real). */
+export function canEdit(
+  m: Pick<MessageView, "mine" | "kind" | "createdAt"> & { pending?: unknown },
+  now: number,
+): boolean {
+  return (
+    m.mine &&
+    m.kind === "TEXT" &&
+    !m.pending &&
+    now - Date.parse(m.createdAt) < EDIT_WINDOW_MS
+  );
+}
 
 /** A message the server has not answered yet, or answered with an error. */
 export interface PendingMessage {
@@ -6,6 +22,8 @@ export interface PendingMessage {
   text: string;
   createdAt: string;
   status: "sending" | "failed";
+  /** The message this one answers, shown on the bubble at once. */
+  replyTo?: ReplyView | null;
   /** Set once the server answered: the bubble hides as soon as that message is in the thread. */
   serverId?: string;
 }
@@ -52,10 +70,17 @@ export function addPending(
   key: string,
   text: string,
   now: Date,
+  replyTo?: ReplyView | null,
 ): PendingMessage[] {
   return [
     ...list,
-    { key, text, createdAt: now.toISOString(), status: "sending" },
+    {
+      key,
+      text,
+      createdAt: now.toISOString(),
+      status: "sending",
+      replyTo: replyTo ?? null,
+    },
   ];
 }
 
@@ -99,6 +124,8 @@ export function mergePending(
       text: p.text,
       file: null,
       createdAt: p.createdAt,
+      editedAt: null,
+      replyTo: p.replyTo ?? null,
       pending: p.status,
     })),
   ];
