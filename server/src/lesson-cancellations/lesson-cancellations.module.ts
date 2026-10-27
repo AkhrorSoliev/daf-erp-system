@@ -8,10 +8,12 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { TelegramModule } from '../telegram/telegram.module';
 import { HolidaysModule } from '../holidays/holidays.module';
 import { GroupPauseLessonsService } from './group-pause-lessons.service';
+import { LessonReschedulesModule } from '../lesson-reschedules/lesson-reschedules.module';
 
 @Module({
   imports: [
     BillingModule,
+    LessonReschedulesModule,
     SmsModule,
     NotificationsModule,
     TelegramModule,

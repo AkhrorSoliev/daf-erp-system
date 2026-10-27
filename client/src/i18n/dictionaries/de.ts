@@ -1444,6 +1444,8 @@ const de: Dictionary = {
   "Bo'sh xonani tanlang": "Wählen Sie einen freien Raum",
   "Ko'chirilgan dars yangilandi": "Der verlegte Unterricht wurde aktualisiert",
   "Ko'chirishda xatolik": "Fehler beim Verlegen",
+  "Bekor qilish qaytarib olinadi: bekor qilishda o'quvchilarga qaytgan dars puli ulardan qayta yechiladi, dars esa yangi kunda o'tadi. Muzlatilgan yoki guruhdan chiqqan o'quvchining puli qoladi.": "Die Absage wird zurückgenommen: Das bei der Absage zurückgegebene Geld für die Stunde wird den Teilnehmern wieder abgebucht, die Stunde findet am neuen Tag statt. Bei eingefrorenen oder aus der Gruppe ausgeschiedenen Teilnehmern bleibt das Geld.",
+  "Dars ko'chirildi: {n} o'quvchidan {amount} so'm qayta yechildi": "Stunde verlegt. Erneut abgebucht: {amount} Sum (Teilnehmer: {n})",
   "Ko'chirilgan darsni tahrirlash": "Verlegten Unterricht bearbeiten",
   "Darsni boshqa kunga ko'chirish": "Unterricht auf einen anderen Tag verlegen",
   "Asl sana o'zgartirib bo'lmaydi (audit yozuvi). Yangi sana, vaqt, xona va sababni o'zgartirishingiz mumkin.": "Das ursprüngliche Datum kann nicht geändert werden (Audit-Eintrag). Neues Datum, Uhrzeit, Raum und Grund können Sie ändern.",

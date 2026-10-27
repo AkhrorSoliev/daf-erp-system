@@ -6,6 +6,13 @@ import type { Yangilik } from "./turlar";
  */
 export const yangiliklar: Yangilik[] = [
   {
+    sana: "2026-10-27",
+    sarlavha: "Bekor qilingan darsni bir qadamda boshqa kunga ko'chirish",
+    matn: "Guruh sahifasining «Dars o'zgarishlari» tabida bekor qilingan dars qatorining «Amallar» menyusida yangi band bor: «Boshqa kunga ko'chirish». Ustoz bekor qilingan darsni boshqa kuni o'tib bermoqchi bo'lsa, endi bekor qilishni o'chirib, savolni kutib, so'ng ko'chirib o'tirmaysiz: yangi sana, vaqt va xonani tanlab «Ko'chirish» ni bosasiz. Tizim bitta amalda bekor qilishni qaytarib oladi (bekor qilishda qaytgan dars puli o'quvchilardan qayta yechiladi; muzlatilgan yoki guruhdan chiqqan o'quvchining puli qoladi) va darsni yangi kunga ko'chiradi; biror qadam rad etilsa, hech narsa o'zgarmaydi. Guruhga va ustozlarga «Dars ko'chirildi» xabari boradi. Bu amalni administrator ham qiladi; bekor qilishni shunchaki o'chirish avvalgidek faqat CEO va filial direktoriga ochiq.",
+    rollar: [1, 2, 3],
+    sahifa: { bolim: "guruhlar", sahifa: "dars-ozgarishlari" },
+  },
+  {
     sana: "2026-10-25",
     sarlavha: "Sozlamalar → Soliq va komissiyalar: sof foydadan ayriladi",
     matn: "Sozlamalar → «Soliq va komissiyalar» sahifasida to'lov komissiyasi (Payme, Click, Uzum ilovasi orqali, integratsiya orqali, QR-kod), oylikdan ushlanma va korxona ijtimoiy solig'i, hisob raqamga tushgan puldan aylanma solig'i va bank xarajati stavkalarini kiritasiz. Har stavka qaysi oydan kuchga kirishi bilan yoziladi, shuning uchun stavka o'zgarsa o'tgan oylar o'zgarmaydi. Kiritilgan stavkalar sof foydadan o'zi ayriladi. «Foyda tarkibi»da va Excel «Sof foyda» varag'ida to'rtta alohida qator chiqadi (to'lov komissiyasi, ijtimoiy soliq, aylanma solig'i, bank xarajati); bosh panelda bitta jamlangan «Soliq va komissiyalar» qatori turadi; Telegram hisobotlarida sof foyda ko'rsatiladi. Qaysi stavka kiritilmagan bo'lsa, hisob 0 bilan davom etadi: «Foyda tarkibi»da, Excelda va Telegramda «Hisob to'liq emas» ogohlantirishi chiqadi. Avtomatik hisoblanadigan soliqlarni xarajatga qo'lda yozmang — ikki marta sanaladi. Xodim profilida yangi «Rasmiy oylik (so'm)» maydoni bor; oylik berishda oynada rasmiy qism, budjetga ketadigan qism va xodim qo'liga beriladigan summa ko'rinadi. Sahifani sukut bo'yicha faqat CEO ko'radi; CEO uni «Ruxsatlar» orqali boshqalarga bera oladi.",

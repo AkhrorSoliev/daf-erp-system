@@ -1444,6 +1444,8 @@ const ru: Dictionary = {
   "Bo'sh xonani tanlang": "Выберите свободную аудиторию",
   "Ko'chirilgan dars yangilandi": "Перенесённое занятие обновлено",
   "Ko'chirishda xatolik": "Ошибка при переносе",
+  "Bekor qilish qaytarib olinadi: bekor qilishda o'quvchilarga qaytgan dars puli ulardan qayta yechiladi, dars esa yangi kunda o'tadi. Muzlatilgan yoki guruhdan chiqqan o'quvchining puli qoladi.": "Отмена будет снята: деньги за занятие, возвращённые ученикам при отмене, спишутся с них снова, а занятие пройдёт в новый день. У замороженного или выбывшего из группы ученика деньги остаются.",
+  "Dars ko'chirildi: {n} o'quvchidan {amount} so'm qayta yechildi": "Занятие перенесено. Повторно списано: {amount} сум (учеников: {n})",
   "Ko'chirilgan darsni tahrirlash": "Изменить перенесённое занятие",
   "Darsni boshqa kunga ko'chirish": "Перенести занятие на другой день",
   "Asl sana o'zgartirib bo'lmaydi (audit yozuvi). Yangi sana, vaqt, xona va sababni o'zgartirishingiz mumkin.": "Исходную дату изменить нельзя (запись аудита). Можно изменить новую дату, время, аудиторию и причину.",

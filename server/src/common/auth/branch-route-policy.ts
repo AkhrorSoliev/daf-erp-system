@@ -430,6 +430,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /attendance/:groupId/qr-session/stop',
       'GET /lesson-cancellations',
       'POST /lesson-cancellations',
+      'POST /lesson-cancellations/:id/reschedule',
       'DELETE /lesson-cancellations/:id',
       'GET /lesson-reschedules',
       'POST /lesson-reschedules',

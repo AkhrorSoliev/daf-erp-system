@@ -1,7 +1,14 @@
 "use client";
 
 import { format } from "date-fns";
-import { Loader2, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  CalendarClock,
+  Loader2,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +30,7 @@ import {
 } from "@/components/ui/table";
 import { useT } from "@/i18n/context";
 import type {
+  LessonCancellationRow,
   LessonModificationRow,
   LessonRescheduleRow,
 } from "./aggregate";
@@ -40,6 +48,8 @@ export interface LessonModificationsTableProps {
   /** Fired when the admin picks a "+ Add ..." menu item. */
   onCreate: (kind: LessonModificationCreateKind) => void;
   onEditReschedule: (reschedule: LessonRescheduleRow) => void;
+  /** «Boshqa kunga ko'chirish» on a cancelled lesson (ADR-0135). */
+  onRescheduleCancellation: (cancellation: LessonCancellationRow) => void;
   onDeleteReschedule: (id: string) => void;
   onDeleteOverride: (id: string) => void;
   onDeleteCancellation: (id: string) => void;
@@ -54,6 +64,7 @@ export function LessonModificationsTable({
   canDelete,
   onCreate,
   onEditReschedule,
+  onRescheduleCancellation,
   onDeleteReschedule,
   onDeleteOverride,
   onDeleteCancellation,
@@ -142,6 +153,7 @@ export function LessonModificationsTable({
                       canDelete={canDelete}
                       busy={busyRowKey === row.dateKey}
                       onEditReschedule={onEditReschedule}
+                      onRescheduleCancellation={onRescheduleCancellation}
                       onDeleteReschedule={onDeleteReschedule}
                       onDeleteOverride={onDeleteOverride}
                       onDeleteCancellation={onDeleteCancellation}
@@ -231,6 +243,7 @@ interface RowActionsProps {
   canDelete: boolean;
   busy: boolean;
   onEditReschedule: (reschedule: LessonRescheduleRow) => void;
+  onRescheduleCancellation: (cancellation: LessonCancellationRow) => void;
   onDeleteReschedule: (id: string) => void;
   onDeleteOverride: (id: string) => void;
   onDeleteCancellation: (id: string) => void;
@@ -242,16 +255,20 @@ function RowActions({
   canDelete,
   busy,
   onEditReschedule,
+  onRescheduleCancellation,
   onDeleteReschedule,
   onDeleteOverride,
   onDeleteCancellation,
 }: RowActionsProps) {
   const t = useT();
   const hasEditableReschedule = !!row.reschedule && canCreate;
+  // A cancelled lesson can be moved to another day in one step; the server
+  // asks for `lessons.change` (not the delete capability) for it.
+  const canMoveCancelled = !!row.cancellation && canCreate;
   const hasDeletes =
     canDelete && (row.reschedule || row.override || row.cancellation);
 
-  if (!hasEditableReschedule && !hasDeletes) return null;
+  if (!hasEditableReschedule && !canMoveCancelled && !hasDeletes) return null;
 
   return (
     <DropdownMenu>
@@ -272,7 +289,17 @@ function RowActions({
             {t("Ko'chirishni tahrirlash")}
           </DropdownMenuItem>
         )}
-        {hasEditableReschedule && hasDeletes && <DropdownMenuSeparator />}
+        {canMoveCancelled && (
+          <DropdownMenuItem
+            onClick={() => onRescheduleCancellation(row.cancellation!)}
+          >
+            <CalendarClock className="mr-2 size-4" />
+            {t("Boshqa kunga ko'chirish")}
+          </DropdownMenuItem>
+        )}
+        {(hasEditableReschedule || canMoveCancelled) && hasDeletes && (
+          <DropdownMenuSeparator />
+        )}
         {canDelete && row.reschedule && (
           <DropdownMenuItem
             className="text-destructive focus:text-destructive"
