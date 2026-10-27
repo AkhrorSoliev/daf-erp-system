@@ -55,11 +55,16 @@ function VaqtChizigi() {
 }
 
 /** Jang to'xtab qolganda (javob 400/409/tarmoq xatosi) o'yinchi qotib qolmasin. */
-function XatoKarta({ matn }: { matn: string }) {
+function XatoKarta({ matn, qaytaUrinish }: { matn: string; qaytaUrinish?: () => void }) {
   const t = useT();
   return (
     <Card className="space-y-3 text-center">
       <p className="font-display font-extrabold text-ink-900">{matn}</p>
+      {qaytaUrinish ? (
+        <Button block onClick={qaytaUrinish}>
+          {t("Qayta urinish")}
+        </Button>
+      ) : null}
       <Link href="/portal/lernen" className={lumioButton({ block: true })}>
         {t("Qaytish")}
       </Link>
@@ -129,6 +134,12 @@ export function JangEkrani() {
     yakun.mutate(h.jang.jangId);
   }, [h, yakun]);
 
+  // Yakunlash xato bersa o'sha jang qayta yakunlanadi (server `yakun` takror chaqirishga chidamli).
+  const yakunniQaytar = () => {
+    yakunlanganRef.current = null;
+    yakun.reset();
+  };
+
   // Eski mutatsiyalar faqat yangi jang BOSHLANGANDAN keyin tozalanadi: aks holda
   // tugagan jang ekranida eski jang qayta yakunlanardi.
   const boshlash = () =>
@@ -140,11 +151,14 @@ export function JangEkrani() {
       },
     });
 
-  // Faqat serverning 400 javobi "kunlik limit tugadi" degani; boshqa xato (tarmoq, 409) — umumiy.
+  // 400 — "kunlik limit tugadi", 409 — tasdiqlangan savollar yetmaydi; boshqa xato (tarmoq) — umumiy.
+  const boshlaStatus = axios.isAxiosError(boshla.error) ? boshla.error.response?.status : undefined;
   const boshlaXato = boshla.isError
-    ? axios.isAxiosError(boshla.error) && boshla.error.response?.status === 400
+    ? boshlaStatus === 400
       ? t("Bugungi janglar tugadi")
-      : t("Jangni boshlab bo'lmadi")
+      : boshlaStatus === 409
+        ? t("Jang savollari hali tayyor emas")
+        : t("Jangni boshlab bo'lmadi")
     : null;
 
   return (
@@ -190,7 +204,7 @@ export function JangEkrani() {
           </div>
         )
       ) : yakun.isError ? (
-        <XatoKarta matn={t("Natijani hisoblab bo'lmadi")} />
+        <XatoKarta matn={t("Natijani hisoblab bo'lmadi")} qaytaUrinish={yakunniQaytar} />
       ) : (
         <div className="space-y-4 text-center">
           {yakun.data ? (

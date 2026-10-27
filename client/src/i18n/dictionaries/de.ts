@@ -5510,6 +5510,7 @@ const de: Dictionary = {
   "Jang: avval birinchi unitni tugating": "Duell: schließe zuerst die erste Einheit ab",
   "Jang to'xtadi": "Das Duell wurde beendet",
   "Natijani hisoblab bo'lmadi": "Das Ergebnis konnte nicht berechnet werden",
+  "Jang savollari hali tayyor emas": "Die Duell-Fragen sind noch nicht bereit",
   "Qaytish": "Zurück",
 };
 

@@ -9,7 +9,7 @@ import type { JangSavoli } from "../types";
 
 /**
  * Bitta jang savoli. `bloklangan` — javob yuborilgan, natija kutilmoqda.
- * Ota komponent `key={pozitsiya}` beradi: har savol yangi holat bilan ochiladi
+ * Ota komponent `key={`s-${pozitsiya}`}` beradi: har savol yangi holat bilan ochiladi
  * (effect ichida `setState` bilan tozalash shart emas).
  */
 export function SavolKorinishi({

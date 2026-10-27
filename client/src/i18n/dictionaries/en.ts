@@ -5510,6 +5510,7 @@ const en: Dictionary = {
   "Jang: avval birinchi unitni tugating": "Battle: finish the first unit first",
   "Jang to'xtadi": "The battle has stopped",
   "Natijani hisoblab bo'lmadi": "Could not count the result",
+  "Jang savollari hali tayyor emas": "The battle questions are not ready yet",
   "Qaytish": "Go back",
 };
 
