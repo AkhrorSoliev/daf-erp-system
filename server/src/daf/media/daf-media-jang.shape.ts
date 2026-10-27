@@ -106,7 +106,9 @@ export function shakllantir(
         order: u.order,
         titleUz: u.titleUz,
         titleDe: u.titleDe,
-        fayl: `${u.level.toLowerCase()}-${code}.json`,
+        // Seed skripti faylni level va order bo'yicha tanlaydi; `code` order
+        // dan farq qilishi mumkin, shuning uchun fayl nomi undan olinmaydi.
+        fayl: `${u.level.toLowerCase()}-u${String(u.order).padStart(2, '0')}.json`,
         counts: {
           jami: questions.length,
           tasdiqlangan,

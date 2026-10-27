@@ -52,6 +52,21 @@ describe('shakllantir', () => {
     expect(r[0].unitId).toBe(2);
   });
 
+  it('fayl nomi code emas, level va order dan chiqadi (code order dan farq qilsa ham)', () => {
+    const r = shakllantir(
+      [
+        unit({
+          order: 6,
+          code: 'u05',
+          battleQuestions: [savol()] as any,
+        }),
+      ],
+      url,
+    );
+    expect(r[0].code).toBe('u05');
+    expect(r[0].fayl).toBe('a1-u06.json');
+  });
+
   it('savollarni sourceId bo`yicha tartiblaydi', () => {
     const r = shakllantir(
       [

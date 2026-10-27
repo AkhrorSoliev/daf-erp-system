@@ -46,7 +46,10 @@ describe('DafMediaJangService', () => {
     expect(findMany).toHaveBeenCalledTimes(1);
     const arg = findMany.mock.calls[0][0] as any;
     expect(arg.orderBy).toEqual([{ level: 'asc' }, { order: 'asc' }]);
-    expect(arg.where).toEqual({ battleQuestions: { some: {} } });
+    expect(arg.where).toEqual({
+      retiredAt: null,
+      battleQuestions: { some: {} },
+    });
     expect(arg.include.battleQuestions.orderBy).toEqual({ sourceId: 'asc' });
 
     expect(r.units).toHaveLength(1);

@@ -30,7 +30,8 @@ export class DafMediaJangService {
   async jang(): Promise<JangOverview> {
     // Bitta so'rov: unitlar + savollari (N+1 yo'q).
     const rows = (await this.prisma.dafUnit.findMany({
-      where: { battleQuestions: { some: {} } },
+      // Jang faqat nafaqaga chiqmagan unitlardan o'ynaydi.
+      where: { retiredAt: null, battleQuestions: { some: {} } },
       orderBy: [{ level: 'asc' }, { order: 'asc' }],
       include: {
         battleQuestions: {
