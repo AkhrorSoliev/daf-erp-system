@@ -833,13 +833,17 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'behind them, directly by aggregating the `Daf*` content tables — the ' +
       'question preview takes no `studentId` (it re-derives every question the ' +
       'engine could build from the material, not the subset one student would ' +
-      'see, so there is nothing student- or branch-specific to scope) — either ' +
+      'see, so there is nothing student- or branch-specific to scope), and the ' +
+      'read-only list of the battle questions (`DafBattleQuestion`, seeded from ' +
+      'the shared content files, with their answers) for the CEO to review — ' +
+      'shared content with no student or branch data — either ' +
       'way this content is identical per branch and carries no `companyId`. ' +
       'Scoping these reads by branch would answer a ' +
       'question nobody asks and imply the catalogue differs per branch, which it ' +
       'does not.',
     routes: [
       'GET /daf/media/coverage',
+      'GET /daf/media/jang',
       'GET /daf/media/overview',
       'GET /daf/media/sections/:id/fragen',
       'GET /daf/media/sections/:id/inhalt',

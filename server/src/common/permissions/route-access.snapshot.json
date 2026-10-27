@@ -370,6 +370,11 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /daf/media/jang": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "GET /daf/media/overview": [
     "Administrator",
     "Branch Director",
