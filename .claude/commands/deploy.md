@@ -69,6 +69,8 @@ git push -u origin "$BRANCH_NAME"
 Print: `🚀 Pushing to origin...`
 
 ### 🌐 Step 6: Deploy Frontend (Vercel)
+**The deploy guard** (`.claude/hooks/deploy_guard.py`) refuses a deploy whose tree is missing commits from `origin/main`. If it denies, merge `origin/main` into the branch first (never bypass it by deploying from an older base).
+
 **Skip this step if no client/ changes were detected.**
 
 ```bash

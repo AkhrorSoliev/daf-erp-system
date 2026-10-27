@@ -286,3 +286,14 @@ Railway env (all four required, otherwise the webhook answers 503):
 `META_APP_SECRET`, `META_VERIFY_TOKEN` (any string, typed into Meta's webhook form), `META_PAGE_TOKEN` (long-lived Page token with `leads_retrieval`), `META_LEAD_SECTION_ID` (lead board section the leads land in).
 
 In developers.facebook.com: Webhooks → Page → callback `https://api.dafzentrum.uz/api/webhooks/meta-leads` + the verify token, subscribe to `leadgen`, and subscribe the app to the Page. Check with Meta's «Lead Ads Testing Tool».
+
+## Deploy guard: a deploy must contain `origin/main`
+
+Neither Railway nor Vercel is connected to GitHub, so `railway up` and `vercel --prod` ship whatever tree they run in. A deploy cut from a branch that never merged the latest `main` silently **removes** merged work from production (26.10.2026: a chat branch deployed at 23:34 and the whole tax feature, merged at 10:13, vanished from the live site until `main` was redeployed).
+
+- `.claude/hooks/deploy_guard.py` is a Claude Code `PreToolUse` hook (registered in `.claude/settings.json`). When a Bash command is a production deploy (`railway up`, `vercel --prod`, `vercel deploy`), it checks that the tree the deploy runs in (the command's `cd` target, else the session's cwd) contains everything on `origin/main`. If commits are missing it denies the command and lists them. It answers nothing on any doubt (no git, no `origin/main`, unreadable input): it never blocks ordinary work.
+- Fix for a denied deploy: merge or rebase `origin/main` into the branch (or deploy from a worktree at `origin/main`), then retry.
+- Deliberate hotfix from an older base: put `DEPLOY_ALLOW_BEHIND_MAIN=1` in front of the command. The missing commits are what the deploy will remove, so say so to the team.
+- Manual check from any terminal: `python3 .claude/hooks/deploy_guard.py --check [DIR]` (exit 1 when commits are missing). The guard does not see deploys typed into a plain terminal: run the check first.
+- Tests: `python3 .claude/hooks/test_deploy_guard.py`.
+- After every deploy confirm the live site still has the latest merged features (`vercel inspect` of the domains, `GET` of a new API route answering 401, not 404).
