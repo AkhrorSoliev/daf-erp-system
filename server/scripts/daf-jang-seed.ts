@@ -31,10 +31,17 @@ void run(async (prisma) => {
     ) as JangSavolFayli;
     const xatolar = jangFayliXatolari(f, eshitish);
     if (xatolar.length) throw new Error(`${nom}:\n${xatolar.join('\n')}`);
-    const unit = await prisma.dafUnit.findUniqueOrThrow({
+    // Yo'q unit yoki ovoz butun ishni to'xtatmaydi: shu fayl o'tkaziladi,
+    // qolganlari yoziladi, oxirida chiqish kodi 1 bo'ladi.
+    const unit = await prisma.dafUnit.findUnique({
       where: { level_order: { level: f.level, order: f.order } },
       select: { id: true },
     });
+    if (!unit) {
+      console.warn(`${nom}: unit yo'q, o'tkazildi`);
+      process.exitCode = 1;
+      continue;
+    }
     const lexemeIds = f.savollar.flatMap((s) => (s.lexeme ? [s.lexeme] : []));
     const lexemes = new Map(
       (
@@ -49,13 +56,21 @@ void run(async (prisma) => {
         })
       ).map((l) => [l.sourceId, l]),
     );
+    const ovozsiz = f.savollar.find(
+      (s) => s.kind === 'LISTEN' && !lexemes.get(s.lexeme ?? '')?.audioKey,
+    );
+    if (ovozsiz) {
+      console.warn(
+        `${nom}: ${ovozsiz.id}: ${ovozsiz.lexeme} ovozi bazada yo'q, fayl o'tkazildi`,
+      );
+      process.exitCode = 1;
+      continue;
+    }
     const status = f.tasdiqlangan ? 'APPROVED' : 'DRAFT';
     await prisma.$transaction(
       async (tx) => {
         for (const s of f.savollar) {
           const l = s.lexeme ? lexemes.get(s.lexeme) : undefined;
-          if (s.kind === 'LISTEN' && !l?.audioKey)
-            throw new Error(`${s.id}: ${s.lexeme} ovozi bazada yo'q`);
           const data = {
             unitId: unit.id,
             kind: s.kind,

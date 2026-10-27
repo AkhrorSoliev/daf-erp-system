@@ -10,7 +10,7 @@
       "options": [
         "halb",
         "Viertel",
-        "vor"
+        "nach"
       ],
       "answer": "halb"
     },
@@ -65,7 +65,7 @@
       "options": [
         "Am",
         "Um",
-        "Bis"
+        "Im"
       ],
       "answer": "Am"
     },
