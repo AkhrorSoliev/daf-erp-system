@@ -82,6 +82,8 @@ export function ChatThreadPage({ id }: { id: string }) {
   const [replyTo, setReplyTo] = useState<ThreadItem | null>(null);
   const [editing, setEditing] = useState<ThreadItem | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLDivElement>(null);
+  const spacerRef = useRef<HTMLDivElement>(null);
   // Follow new height only while the student is at the end (true on open).
   const stick = useRef(true);
   const marked = useRef<string | undefined>(undefined);
@@ -183,6 +185,28 @@ export function ChatThreadPage({ id }: { id: string }) {
     ) : null;
   const composerShown = !notice;
 
+  // The fixed composer grows (reply line, emoji panel): the spacer at the end
+  // of the list grows with it, so the last message stays above the composer.
+  // At the end the list's observer follows; scrolled up, the view moves by
+  // the same amount, like Telegram.
+  useEffect(() => {
+    const composer = composerRef.current;
+    const spacer = spacerRef.current;
+    if (!composer || !spacer) return;
+    let last = 0;
+    const ro = new ResizeObserver(() => {
+      const h = composer.offsetHeight;
+      spacer.style.height = `${h}px`;
+      if (!stick.current && last) window.scrollBy(0, h - last);
+      last = h;
+    });
+    ro.observe(composer);
+    return () => {
+      ro.disconnect();
+      spacer.style.height = "0px";
+    };
+  }, [composerShown]);
+
   const groups = groupByDay(items, new Date(), t);
 
   return (
@@ -221,7 +245,7 @@ export function ChatThreadPage({ id }: { id: string }) {
         ref={listRef}
         className={cn(
           "flex flex-col gap-2 pt-4",
-          "pb-4", // the layout already clears the fixed composer
+          "pb-4",
         )}
       >
         {state === "loading" && <BubbleSkeleton />}
@@ -273,11 +297,14 @@ export function ChatThreadPage({ id }: { id: string }) {
             </section>
           ))}
         {notice && <div className="pt-2">{notice}</div>}
+        {/* Height of the fixed composer, set by its observer. */}
+        <div ref={spacerRef} aria-hidden className="shrink-0" />
       </div>
 
       {/* Outside the content column (fixed), so it clears the rail itself. */}
       {composerShown && (
         <div
+          ref={composerRef}
           className={cn(
             "fixed inset-x-0 bottom-0 z-20 transition-[padding] duration-200 ease-out",
             CONTENT_INSET[sidebarMode],

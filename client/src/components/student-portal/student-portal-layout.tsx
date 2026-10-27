@@ -99,6 +99,8 @@ export function StudentPortalLayout({
               // The dock overlays the page; without this the last row of a long
               // screen sits underneath it and can't be tapped.
               dockShown && "pb-48 md:pb-28",
+              // The thread measures its own fixed composer and clears exactly that.
+              isChatThreadRoute(pathname) && "pb-0 md:pb-0",
             )}
           >
             {children}
