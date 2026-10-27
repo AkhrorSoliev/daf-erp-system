@@ -1444,6 +1444,8 @@ const en: Dictionary = {
   "Bo'sh xonani tanlang": "Pick a free room",
   "Ko'chirilgan dars yangilandi": "The rescheduled lesson was updated",
   "Ko'chirishda xatolik": "Error while rescheduling",
+  "Bekor qilish qaytarib olinadi: bekor qilishda o'quvchilarga qaytgan dars puli ulardan qayta yechiladi, dars esa yangi kunda o'tadi. Muzlatilgan yoki guruhdan chiqqan o'quvchining puli qoladi.": "The cancellation is taken back: the lesson money returned to students at cancellation is charged to them again, and the lesson is held on the new day. A student who was frozen or left the group keeps the money.",
+  "Dars ko'chirildi: {n} o'quvchidan {amount} so'm qayta yechildi": "Lesson moved. Charged again: {amount} UZS (students: {n})",
   "Ko'chirilgan darsni tahrirlash": "Edit the rescheduled lesson",
   "Darsni boshqa kunga ko'chirish": "Move the lesson to another day",
   "Asl sana o'zgartirib bo'lmaydi (audit yozuvi). Yangi sana, vaqt, xona va sababni o'zgartirishingiz mumkin.": "The original date cannot be changed (audit record). You can change the new date, time, room and reason.",

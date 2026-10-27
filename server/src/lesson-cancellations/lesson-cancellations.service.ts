@@ -12,6 +12,9 @@ import { LessonBillingService } from '../billing/lesson-billing.service';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { EntityHistoryService } from '../common/entity-history';
 import { CreateLessonCancellationDto } from './dto/create-lesson-cancellation.dto';
+import { RescheduleCancelledLessonDto } from './dto/reschedule-cancelled-lesson.dto';
+import { CreateLessonRescheduleDto } from '../lesson-reschedules/dto/create-lesson-reschedule.dto';
+import { LessonReschedulesService } from '../lesson-reschedules/lesson-reschedules.service';
 import { resolveBilledEnrollmentId } from '../billing/resolve-billed-enrollment';
 import {
   markUnmarkedLessonCancelled,
@@ -81,6 +84,7 @@ export class LessonCancellationsService {
     private monthlyChargeService: MonthlyChargeService,
     private entityHistoryService: EntityHistoryService,
     private eventEmitter: EventEmitter2,
+    private lessonReschedulesService: LessonReschedulesService,
   ) {}
 
   /**
@@ -440,55 +444,154 @@ export class LessonCancellationsService {
       now,
     );
 
-    const day = cancellation.date.toISOString().slice(0, 10);
-
     return this.prisma
-      .$transaction(async (tx) => {
-        await tx.lessonCancellation.update({
-          where: { id },
-          data: { deletedAt: new Date(), deletedById: userId },
-        });
-        const restored = await this.monthlyChargeService.restoreCancelledLesson(
-          tx,
-          {
-            cancellationId: id,
-            companyId,
-            performedById: userId,
-            reason: `${day.slice(8, 10)}.${day.slice(5, 7)} darsining bekor qilinishi o'chirildi`,
-          },
-        );
-        await this.entityHistoryService.recordDelete({
-          entityType: 'LessonCancellation',
-          entityId: id,
-          oldValues: {
-            guruh: cancellation.groupId,
-            sana: day,
-            qaytaYechilganOquvchilar: restored.students,
-            qaytaYechilganSumma: restored.restored,
-            pulQoldirilganOquvchilar: restored.kept,
-          },
-          changedById: userId,
-          companyId,
-          tx,
-        });
-        // The cancellation may have been the answer to «Dars bo'ldimi?» — or
-        // the only reason a finished lesson was never marked. Ask again.
-        await reopenAfterCancellationRemoved(tx, {
-          cancellationId: id,
-          groupId: cancellation.groupId,
-          date: cancellation.date,
-          cancelledAt: cancellation.createdAt,
-          now,
-          holidays,
-        });
-        return {
-          id,
-          restoredStudents: restored.students,
-          restoredAmount: restored.restored,
-          keptStudents: restored.kept,
-        };
-      }, SERIALIZABLE_TX)
+      .$transaction(
+        (tx) =>
+          this.removeWithin(tx, cancellation, companyId, userId, now, holidays),
+        SERIALIZABLE_TX,
+      )
       .catch(asConflict);
+  }
+
+  /**
+   * «Bekor qilingan darsni boshqa kunga ko'chirish»: ONE transaction that
+   * takes the cancellation back (`removeWithin`, exactly what `remove()` does —
+   * the released monthly money is charged again, the lesson goes back to
+   * «Dars bo'ldimi?» once its time has passed) and then moves the lesson
+   * (`createWithin`, which answers that question «Bo'lmadi → ko'chirildi»).
+   *
+   * Done as two calls from the screen, a failure in between left a lesson with
+   * neither a cancellation nor a move, or a move on a day still marked
+   * cancelled with its money already given back (ADR-0135).
+   */
+  async rescheduleInstead(
+    id: string,
+    dto: RescheduleCancelledLessonDto,
+    companyId: number,
+    userId: number,
+    roles: string[] = [],
+  ) {
+    const cancellation = await this.prisma.lessonCancellation.findFirst({
+      where: { id, companyId, deletedAt: null },
+    });
+    if (!cancellation) {
+      throw new NotFoundException('Bekor qilingan dars topilmadi');
+    }
+    await assertCallerMayTouchGroup(
+      this.prisma,
+      userId,
+      roles,
+      cancellation.groupId,
+    );
+
+    const now = new Date();
+    const holidays = await loadReaskHolidays(
+      this.prisma,
+      cancellation.groupId,
+      now,
+    );
+    const move: CreateLessonRescheduleDto = {
+      groupId: cancellation.groupId,
+      originalDate: cancellation.date.toISOString().slice(0, 10),
+      newDate: dto.newDate,
+      newRoomId: dto.newRoomId,
+      newLessonStartTime: dto.newLessonStartTime,
+      newLessonEndTime: dto.newLessonEndTime,
+      reason: dto.reason,
+    };
+
+    const { removed, created } = await this.prisma
+      .$transaction(
+        async (tx) => ({
+          removed: await this.removeWithin(
+            tx,
+            cancellation,
+            companyId,
+            userId,
+            now,
+            holidays,
+          ),
+          created: await this.lessonReschedulesService.createWithin(
+            tx,
+            move,
+            companyId,
+            userId,
+            roles,
+          ),
+        }),
+        // A move's own budget: its room check and cascade are the long part.
+        { ...SERIALIZABLE_TX, timeout: 30_000 },
+      )
+      .catch(asConflict);
+
+    this.lessonReschedulesService.announceCreated(
+      created,
+      move,
+      companyId,
+      userId,
+    );
+    return { ...removed, reschedule: created.reschedule };
+  }
+
+  /** The soft delete and everything that goes with it, on the caller's transaction. */
+  private async removeWithin(
+    tx: Prisma.TransactionClient,
+    cancellation: {
+      id: string;
+      groupId: string;
+      date: Date;
+      createdAt: Date;
+    },
+    companyId: number,
+    userId: number,
+    now: Date,
+    holidays: Awaited<ReturnType<typeof loadReaskHolidays>>,
+  ) {
+    const id = cancellation.id;
+    const day = cancellation.date.toISOString().slice(0, 10);
+    await tx.lessonCancellation.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedById: userId },
+    });
+    const restored = await this.monthlyChargeService.restoreCancelledLesson(
+      tx,
+      {
+        cancellationId: id,
+        companyId,
+        performedById: userId,
+        reason: `${day.slice(8, 10)}.${day.slice(5, 7)} darsining bekor qilinishi o'chirildi`,
+      },
+    );
+    await this.entityHistoryService.recordDelete({
+      entityType: 'LessonCancellation',
+      entityId: id,
+      oldValues: {
+        guruh: cancellation.groupId,
+        sana: day,
+        qaytaYechilganOquvchilar: restored.students,
+        qaytaYechilganSumma: restored.restored,
+        pulQoldirilganOquvchilar: restored.kept,
+      },
+      changedById: userId,
+      companyId,
+      tx,
+    });
+    // The cancellation may have been the answer to «Dars bo'ldimi?» — or
+    // the only reason a finished lesson was never marked. Ask again.
+    await reopenAfterCancellationRemoved(tx, {
+      cancellationId: id,
+      groupId: cancellation.groupId,
+      date: cancellation.date,
+      cancelledAt: cancellation.createdAt,
+      now,
+      holidays,
+    });
+    return {
+      id,
+      restoredStudents: restored.students,
+      restoredAmount: restored.restored,
+      keptStudents: restored.kept,
+    };
   }
 
   // ---------- internals ----------

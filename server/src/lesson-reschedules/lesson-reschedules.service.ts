@@ -61,6 +61,11 @@ const SERIALIZABLE_TX = {
 const asConflict = (err: unknown) =>
   rethrowAsConflict(err, { duplicate: true });
 
+/** What `createWithin` hands back: the row and the answer to «Dars bo'ldimi?». */
+export type CreatedMove = Awaited<
+  ReturnType<LessonReschedulesService['createWithin']>
+>;
+
 const DAY_NAME_BY_JS_DAY: Record<number, string> = {
   0: 'sunday',
   1: 'monday',
@@ -175,9 +180,29 @@ export class LessonReschedulesService {
       scheduledById,
       roles,
     );
-    // Fire-and-forget event after the tx commits — the listener handles
-    // Telegram + 4-channel teacher notifications. Errors there are
-    // swallowed and never affect the caller.
+    this.announceCreated(
+      { reschedule, decision },
+      dto,
+      companyId,
+      scheduledById,
+    );
+    return reschedule;
+  }
+
+  /**
+   * The events a committed move sends. `create()` calls it after its own
+   * transaction; a caller that ran `createWithin` inside a bigger transaction
+   * (`LessonCancellationsService.rescheduleInstead`) calls it after that one.
+   *
+   * Fire-and-forget: the listener handles Telegram + 4-channel teacher
+   * notifications, errors there are swallowed and never affect the caller.
+   */
+  announceCreated(
+    { reschedule, decision }: CreatedMove,
+    dto: CreateLessonRescheduleDto,
+    companyId: number,
+    scheduledById: number,
+  ) {
     this.eventEmitter.emit('lesson-reschedule.created', {
       groupId: dto.groupId,
       rescheduleId: reschedule.id,
@@ -203,10 +228,29 @@ export class LessonReschedulesService {
         newLessonEndTime: dto.newLessonEndTime ?? null,
       } satisfies UnmarkedLessonNotHeldPayload);
     }
-    return reschedule;
   }
 
-  private async createInTransaction(
+  private createInTransaction(
+    dto: CreateLessonRescheduleDto,
+    companyId: number,
+    scheduledById: number,
+    roles: string[] = [],
+  ) {
+    return this.prisma
+      .$transaction(
+        (tx) => this.createWithin(tx, dto, companyId, scheduledById, roles),
+        SERIALIZABLE_TX,
+      )
+      .catch(asConflict);
+  }
+
+  /**
+   * The whole move, on the caller's transaction: checks, the row, the attendance
+   * cascade and the answer to «Dars bo'ldimi?». It sends no event — the caller
+   * does, after ITS commit (`announceCreated`).
+   */
+  async createWithin(
+    tx: Prisma.TransactionClient,
     dto: CreateLessonRescheduleDto,
     companyId: number,
     scheduledById: number,
@@ -242,209 +286,200 @@ export class LessonReschedulesService {
       );
     }
 
-    return this.prisma
-      .$transaction(async (tx) => {
-        // A reschedule rewrites a group's timetable — its date, room and
-        // teacher — and through attendance that reaches billing. Checked here
-        // rather than before the transaction because the group is read anyway
-        // and a refusal rolls the whole thing back.
-        await assertCallerMayTouchGroup(tx, scheduledById, roles, dto.groupId);
+    // A reschedule rewrites a group's timetable — its date, room and
+    // teacher — and through attendance that reaches billing. Checked here
+    // rather than before the transaction because the group is read anyway
+    // and a refusal rolls the whole thing back.
+    await assertCallerMayTouchGroup(tx, scheduledById, roles, dto.groupId);
 
-        const group = await tx.group.findFirst({
-          where: { id: dto.groupId, companyId, deletedAt: null },
-          select: {
-            id: true,
-            branchId: true,
-            name: true,
-            exactDays: true,
-            roomId: true,
-            lessonStartTime: true,
-            lessonEndTime: true,
-          },
-        });
-        if (!group) throw new NotFoundException('Guruh topilmadi');
+    const group = await tx.group.findFirst({
+      where: { id: dto.groupId, companyId, deletedAt: null },
+      select: {
+        id: true,
+        branchId: true,
+        name: true,
+        exactDays: true,
+        roomId: true,
+        lessonStartTime: true,
+        lessonEndTime: true,
+      },
+    });
+    if (!group) throw new NotFoundException('Guruh topilmadi');
 
-        // Room scoping: if a room override is given, it must belong to the
-        // same branch as the group (and not be soft-deleted).
-        if (dto.newRoomId) {
-          const room = await tx.room.findFirst({
-            where: {
-              id: dto.newRoomId,
-              branchId: group.branchId,
-              deletedAt: null,
-            },
-            select: { id: true },
-          });
-          if (!room) {
-            throw new BadRequestException(
-              "Tanlangan xona ushbu filialga tegishli emas yoki o'chirilgan",
-            );
-          }
-        }
+    // Room scoping: if a room override is given, it must belong to the
+    // same branch as the group (and not be soft-deleted).
+    if (dto.newRoomId) {
+      const room = await tx.room.findFirst({
+        where: {
+          id: dto.newRoomId,
+          branchId: group.branchId,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+      if (!room) {
+        throw new BadRequestException(
+          "Tanlangan xona ushbu filialga tegishli emas yoki o'chirilgan",
+        );
+      }
+    }
 
-        // Reject duplicate origin
-        const existingOrigin = await tx.lessonReschedule.findFirst({
-          where: {
-            groupId: dto.groupId,
-            originalDate,
-            deletedAt: null,
-          },
-        });
-        if (existingOrigin) {
-          throw new BadRequestException(
-            "Bu sanadagi dars allaqachon ko'chirilgan",
-          );
-        }
+    // Reject duplicate origin
+    const existingOrigin = await tx.lessonReschedule.findFirst({
+      where: {
+        groupId: dto.groupId,
+        originalDate,
+        deletedAt: null,
+      },
+    });
+    if (existingOrigin) {
+      throw new BadRequestException("Bu sanadagi dars allaqachon ko'chirilgan");
+    }
 
-        // Reject duplicate destination
-        const existingDestination = await tx.lessonReschedule.findFirst({
-          where: { groupId: dto.groupId, newDate, deletedAt: null },
-        });
-        if (existingDestination) {
-          throw new BadRequestException(
-            "Yangi sanada boshqa ko'chirilgan dars allaqachon mavjud",
-          );
-        }
+    // Reject duplicate destination
+    const existingDestination = await tx.lessonReschedule.findFirst({
+      where: { groupId: dto.groupId, newDate, deletedAt: null },
+    });
+    if (existingDestination) {
+      throw new BadRequestException(
+        "Yangi sanada boshqa ko'chirilgan dars allaqachon mavjud",
+      );
+    }
 
-        // Don't allow moving onto a date that's already a cancelled lesson
-        const cancelledOnNew = await tx.lessonCancellation.findFirst({
-          where: { groupId: dto.groupId, date: newDate, deletedAt: null },
-        });
-        if (cancelledOnNew) {
-          throw new BadRequestException(
-            'Yangi sana — bekor qilingan dars sanasi',
-          );
-        }
+    // Don't allow moving onto a date that's already a cancelled lesson
+    const cancelledOnNew = await tx.lessonCancellation.findFirst({
+      where: { groupId: dto.groupId, date: newDate, deletedAt: null },
+    });
+    if (cancelledOnNew) {
+      throw new BadRequestException('Yangi sana — bekor qilingan dars sanasi');
+    }
 
-        // Room availability check on the new date.
-        // Resolve effective values: explicit override falls back to group default.
-        const effectiveRoomId = dto.newRoomId ?? group.roomId;
-        const effectiveStart =
-          dto.newLessonStartTime ?? group.lessonStartTime ?? null;
-        const effectiveEnd =
-          dto.newLessonEndTime ?? group.lessonEndTime ?? null;
-        if (effectiveRoomId && effectiveStart && effectiveEnd) {
-          await this.assertRoomAvailable(tx, {
-            roomId: effectiveRoomId,
-            date: newDate,
-            startTime: effectiveStart,
-            endTime: effectiveEnd,
-            excludeGroupId: dto.groupId,
-          });
-        }
+    // Room availability check on the new date.
+    // Resolve effective values: explicit override falls back to group default.
+    const effectiveRoomId = dto.newRoomId ?? group.roomId;
+    const effectiveStart =
+      dto.newLessonStartTime ?? group.lessonStartTime ?? null;
+    const effectiveEnd = dto.newLessonEndTime ?? group.lessonEndTime ?? null;
+    if (effectiveRoomId && effectiveStart && effectiveEnd) {
+      await this.assertRoomAvailable(tx, {
+        roomId: effectiveRoomId,
+        date: newDate,
+        startTime: effectiveStart,
+        endTime: effectiveEnd,
+        excludeGroupId: dto.groupId,
+      });
+    }
 
-        const reschedule = await tx.lessonReschedule.create({
-          data: {
-            groupId: dto.groupId,
-            originalDate,
-            newDate,
-            newRoomId: dto.newRoomId ?? null,
-            newLessonStartTime: dto.newLessonStartTime ?? null,
-            newLessonEndTime: dto.newLessonEndTime ?? null,
-            reason: dto.reason ?? null,
-            scheduledById,
-            companyId,
-          },
-        });
+    const reschedule = await tx.lessonReschedule.create({
+      data: {
+        groupId: dto.groupId,
+        originalDate,
+        newDate,
+        newRoomId: dto.newRoomId ?? null,
+        newLessonStartTime: dto.newLessonStartTime ?? null,
+        newLessonEndTime: dto.newLessonEndTime ?? null,
+        reason: dto.reason ?? null,
+        scheduledById,
+        companyId,
+      },
+    });
 
-        // Cascade: if attendance was taken on originalDate, reverse it.
-        const billable = await tx.attendance.findMany({
-          where: {
-            groupId: dto.groupId,
-            date: originalDate,
-            status: {
-              in: [
-                AttendanceStatus.PRESENT,
-                AttendanceStatus.LATE,
-                AttendanceStatus.ABSENT,
-              ],
-            },
-          },
-          select: { id: true, studentId: true, status: true },
-        });
+    // Cascade: if attendance was taken on originalDate, reverse it.
+    const billable = await tx.attendance.findMany({
+      where: {
+        groupId: dto.groupId,
+        date: originalDate,
+        status: {
+          in: [
+            AttendanceStatus.PRESENT,
+            AttendanceStatus.LATE,
+            AttendanceStatus.ABSENT,
+          ],
+        },
+      },
+      select: { id: true, studentId: true, status: true },
+    });
 
-        for (const a of billable) {
-          await tx.attendance.update({
-            where: { id: a.id },
-            data: { status: AttendanceStatus.EXCUSED, lateMinutes: null },
-          });
-          // The enrollment the charge actually landed on — see
-          // `resolveBilledEnrollmentId`. Guessing by (student, group) picks an
-          // arbitrary row for the 44 students who hold two live enrollments in
-          // the same group, and the prepaid unit is handed back to whichever
-          // one that happened to be.
-          const enrollmentId = await resolveBilledEnrollmentId(tx, {
-            attendanceId: a.id,
-            studentId: a.studentId,
-            groupId: dto.groupId,
-          });
-          if (!enrollmentId) continue;
-          await this.lessonBillingService.processAttendanceBilling(tx, {
-            attendanceId: a.id,
-            enrollmentId,
-            studentId: a.studentId,
-            groupId: dto.groupId,
-            branchId: group.branchId,
-            lessonDate: originalDate,
-            oldStatus: a.status,
-            newStatus: AttendanceStatus.EXCUSED,
-            companyId,
-            performedById: scheduledById,
-          });
-        }
+    for (const a of billable) {
+      await tx.attendance.update({
+        where: { id: a.id },
+        data: { status: AttendanceStatus.EXCUSED, lateMinutes: null },
+      });
+      // The enrollment the charge actually landed on — see
+      // `resolveBilledEnrollmentId`. Guessing by (student, group) picks an
+      // arbitrary row for the 44 students who hold two live enrollments in
+      // the same group, and the prepaid unit is handed back to whichever
+      // one that happened to be.
+      const enrollmentId = await resolveBilledEnrollmentId(tx, {
+        attendanceId: a.id,
+        studentId: a.studentId,
+        groupId: dto.groupId,
+      });
+      if (!enrollmentId) continue;
+      await this.lessonBillingService.processAttendanceBilling(tx, {
+        attendanceId: a.id,
+        enrollmentId,
+        studentId: a.studentId,
+        groupId: dto.groupId,
+        branchId: group.branchId,
+        lessonDate: originalDate,
+        oldStatus: a.status,
+        newStatus: AttendanceStatus.EXCUSED,
+        companyId,
+        performedById: scheduledById,
+      });
+    }
 
-        // Cascade: any active substitute-teacher override on the originalDate
-        // is now stranded (the lesson has moved). Soft-delete it. Salary
-        // accruals for those teachers were already reversed by the
-        // attendance cascade above (processAttendanceBilling reverses the
-        // SalaryAccrual rows linked to each attendance, regardless of
-        // whether they were override-routed or default-routed).
-        const overrideOnOriginal = await tx.lessonTeacherOverride.findFirst({
-          where: { groupId: dto.groupId, date: originalDate, deletedAt: null },
-          select: { id: true, teacherIds: true },
-        });
-        if (overrideOnOriginal) {
-          await tx.lessonTeacherOverride.update({
-            where: { id: overrideOnOriginal.id },
-            data: { deletedAt: new Date(), deletedById: scheduledById },
-          });
-        }
+    // Cascade: any active substitute-teacher override on the originalDate
+    // is now stranded (the lesson has moved). Soft-delete it. Salary
+    // accruals for those teachers were already reversed by the
+    // attendance cascade above (processAttendanceBilling reverses the
+    // SalaryAccrual rows linked to each attendance, regardless of
+    // whether they were override-routed or default-routed).
+    const overrideOnOriginal = await tx.lessonTeacherOverride.findFirst({
+      where: { groupId: dto.groupId, date: originalDate, deletedAt: null },
+      select: { id: true, teacherIds: true },
+    });
+    if (overrideOnOriginal) {
+      await tx.lessonTeacherOverride.update({
+        where: { id: overrideOnOriginal.id },
+        data: { deletedAt: new Date(), deletedById: scheduledById },
+      });
+    }
 
-        await this.entityHistoryService.recordCreate({
-          entityType: 'Group',
-          entityId: dto.groupId,
-          newValues: {
-            action: 'DARS_KOCHIRILDI',
-            aslSana: dto.originalDate,
-            yangiSana: dto.newDate,
-            xona: dto.newRoomId ?? null,
-            boshlanish: dto.newLessonStartTime ?? null,
-            tugash: dto.newLessonEndTime ?? null,
-            sabab: dto.reason ?? null,
-            tegilganDavomatlar: billable.length,
-            orinbosarBekorQilindi: overrideOnOriginal ? 'ha' : null,
-          },
-          changedById: scheduledById,
-          companyId,
-          tx,
-        });
+    await this.entityHistoryService.recordCreate({
+      entityType: 'Group',
+      entityId: dto.groupId,
+      newValues: {
+        action: 'DARS_KOCHIRILDI',
+        aslSana: dto.originalDate,
+        yangiSana: dto.newDate,
+        xona: dto.newRoomId ?? null,
+        boshlanish: dto.newLessonStartTime ?? null,
+        tugash: dto.newLessonEndTime ?? null,
+        sabab: dto.reason ?? null,
+        tegilganDavomatlar: billable.length,
+        orinbosarBekorQilindi: overrideOnOriginal ? 'ha' : null,
+      },
+      changedById: scheduledById,
+      companyId,
+      tx,
+    });
 
-        // «Dars bo'ldimi?» (spec §3.5 B): moving a lesson that waits for an
-        // answer answers it — the make-up lesson must still be ahead, and a
-        // lesson answered «Bo'ldi» cannot be moved.
-        const decision = await markUnmarkedLessonRescheduled(tx, {
-          groupId: dto.groupId,
-          originalDate,
-          rescheduleId: reschedule.id,
-          actorId: scheduledById,
-          newDate,
-          newStartTime: effectiveStart,
-          now: new Date(),
-        });
+    // «Dars bo'ldimi?» (spec §3.5 B): moving a lesson that waits for an
+    // answer answers it — the make-up lesson must still be ahead, and a
+    // lesson answered «Bo'ldi» cannot be moved.
+    const decision = await markUnmarkedLessonRescheduled(tx, {
+      groupId: dto.groupId,
+      originalDate,
+      rescheduleId: reschedule.id,
+      actorId: scheduledById,
+      newDate,
+      newStartTime: effectiveStart,
+      now: new Date(),
+    });
 
-        return { reschedule, decision };
-      }, SERIALIZABLE_TX)
-      .catch(asConflict);
+    return { reschedule, decision };
   }
 
   /**

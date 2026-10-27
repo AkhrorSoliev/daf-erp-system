@@ -2061,6 +2061,11 @@
     "Branch Director",
     "CEO"
   ],
+  "POST /lesson-cancellations/:id/reschedule": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "POST /lesson-reschedules": [
     "Administrator",
     "Branch Director",

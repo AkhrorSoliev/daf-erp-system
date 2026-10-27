@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { LessonCancellationsService } from './lesson-cancellations.service';
 import { CreateLessonCancellationDto } from './dto/create-lesson-cancellation.dto';
+import { RescheduleCancelledLessonDto } from './dto/reschedule-cancelled-lesson.dto';
 import { CurrentUser } from '../common/decorators';
 import { Can } from '../common/permissions/access.decorators';
 
@@ -60,6 +61,23 @@ export class LessonCancellationsController {
     @CurrentUser('roles') roles: string[],
   ) {
     return this.service.create(dto, companyId, userId, roles);
+  }
+
+  // «Bekor qilingan darsni boshqa kunga ko'chirish» — takes the cancellation
+  // back and moves the lesson in one transaction. It is a MOVE for the caller,
+  // so it asks for `lessons.change` (CEO, BD, Administrator), not for the
+  // delete capability: the money it takes back from the students is the one the
+  // cancellation had given them, and the lesson is held on the new day (ADR-0135).
+  @Post(':id/reschedule')
+  @Can('lessons.change')
+  reschedule(
+    @Param('id') id: string,
+    @Body() dto: RescheduleCancelledLessonDto,
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('roles') roles: string[],
+  ) {
+    return this.service.rescheduleInstead(id, dto, companyId, userId, roles);
   }
 
   @Delete(':id')

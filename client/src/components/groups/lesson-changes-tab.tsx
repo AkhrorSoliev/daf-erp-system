@@ -146,6 +146,9 @@ export function LessonChangesTab({ group }: Props) {
   const [editingReschedule, setEditingReschedule] = useState<LessonReschedule | null>(
     null,
   );
+  // The cancelled lesson being moved to another day (ADR-0135).
+  const [movingCancellation, setMovingCancellation] =
+    useState<LessonCancellation | null>(null);
   const [busyRowKey, setBusyRowKey] = useState<string | null>(null);
   // Shared confirm-delete dialog. We never use native `confirm()` —
   // it's unstyled, blocks the main thread, and can't render formatted
@@ -301,6 +304,9 @@ export function LessonChangesTab({ group }: Props) {
             onEditReschedule={(r) =>
               setEditingReschedule(r as unknown as LessonReschedule)
             }
+            onRescheduleCancellation={(c) =>
+              setMovingCancellation(c as unknown as LessonCancellation)
+            }
             onDeleteReschedule={handleDeleteReschedule}
             onDeleteOverride={handleDeleteOverride}
             onDeleteCancellation={handleDeleteCancellation}
@@ -340,6 +346,20 @@ export function LessonChangesTab({ group }: Props) {
             rescheduleDestinations={rescheduleDestinations}
             excludeDates={lessonDateExcludes}
           />
+          {movingCancellation && (
+            <CreateRescheduleDialog
+              key={`cancelled-${movingCancellation.id}`}
+              open={!!movingCancellation}
+              onOpenChange={(v) => {
+                if (!v) setMovingCancellation(null);
+              }}
+              group={group}
+              onSaved={refetchAll}
+              fromCancellation={movingCancellation}
+              rescheduleDestinations={rescheduleDestinations}
+              excludeDates={lessonDateExcludes}
+            />
+          )}
           {editingReschedule && (
             <CreateRescheduleDialog
               key={editingReschedule.id}
@@ -733,6 +753,12 @@ interface RescheduleProps {
   onSaved: () => void;
   /** When present, the dialog runs in edit mode for this reschedule. */
   existing?: LessonReschedule | null;
+  /**
+   * When present, the dialog moves this CANCELLED lesson: the original day is
+   * fixed, and saving takes the cancellation back and moves the lesson in one
+   * server call (`POST /lesson-cancellations/:id/reschedule`, ADR-0135).
+   */
+  fromCancellation?: LessonCancellation | null;
   rescheduleDestinations?: (Date | string)[];
   excludeDates?: (Date | string)[];
 }
@@ -743,17 +769,25 @@ function CreateRescheduleDialog({
   group,
   onSaved,
   existing,
+  fromCancellation,
   rescheduleDestinations,
   excludeDates,
 }: RescheduleProps) {
   const t = useT();
   const isEdit = !!existing;
+  // The original day cannot be picked in edit mode nor when moving a
+  // cancelled lesson: both already name it.
+  const originalFixed = isEdit || !!fromCancellation;
   const groupStartFallback = normalizeTime(group.lessonStartTime ?? "");
   const groupEndFallback = normalizeTime(group.lessonEndTime ?? "");
   const groupRoomFallback = group.room?.id ?? "";
 
   const [originalDate, setOriginalDate] = useState<Date | undefined>(() =>
-    existing ? new Date(existing.originalDate) : undefined,
+    existing
+      ? new Date(existing.originalDate)
+      : fromCancellation
+        ? new Date(fromCancellation.date)
+        : undefined,
   );
   const [newDate, setNewDate] = useState<Date | undefined>(() =>
     existing ? new Date(existing.newDate) : undefined,
@@ -895,6 +929,25 @@ function CreateRescheduleDialog({
           reason: reason.trim() || null,
         });
         toast.success(t("Ko'chirilgan dars yangilandi"));
+      } else if (fromCancellation) {
+        const { data } = await api.post<{
+          restoredStudents?: number;
+          restoredAmount?: number;
+        }>(`/lesson-cancellations/${fromCancellation.id}/reschedule`, {
+          newDate: format(newDate, "yyyy-MM-dd"),
+          newRoomId: roomOverride ?? undefined,
+          newLessonStartTime: timeChanged ? newStartTime : undefined,
+          newLessonEndTime: timeChanged ? newEndTime : undefined,
+          reason: reason.trim() || undefined,
+        });
+        toast.success(
+          data?.restoredAmount
+            ? t("Dars ko'chirildi: {n} o'quvchidan {amount} so'm qayta yechildi", {
+                n: data.restoredStudents ?? 0,
+                amount: formatPrice(data.restoredAmount),
+              })
+            : t("Dars boshqa kunga ko'chirildi"),
+        );
       } else {
         await api.post("/lesson-reschedules", {
           groupId: group.id,
@@ -949,9 +1002,13 @@ function CreateRescheduleDialog({
               ? t(
                   "Asl sana o'zgartirib bo'lmaydi (audit yozuvi). Yangi sana, vaqt, xona va sababni o'zgartirishingiz mumkin.",
                 )
-              : t(
-                  "Bu kungi dars yangi sanaga o'tkaziladi. Asl kunda davomat olingan bo'lsa, to'lov va oylik avtomatik qaytariladi.",
-                )}
+              : fromCancellation
+                ? t(
+                    "Bekor qilish qaytarib olinadi: bekor qilishda o'quvchilarga qaytgan dars puli ulardan qayta yechiladi, dars esa yangi kunda o'tadi. Muzlatilgan yoki guruhdan chiqqan o'quvchining puli qoladi.",
+                  )
+                : t(
+                    "Bu kungi dars yangi sanaga o'tkaziladi. Asl kunda davomat olingan bo'lsa, to'lov va oylik avtomatik qaytariladi.",
+                  )}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -961,7 +1018,7 @@ function CreateRescheduleDialog({
               <Label className="text-xs text-muted-foreground">
                 {t("Asl dars sanasi")}
               </Label>
-              {isEdit && originalDate ? (
+              {originalFixed && originalDate ? (
                 <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-muted-foreground tabular-nums">
                   {format(originalDate, "dd.MM.yyyy")}
                 </div>

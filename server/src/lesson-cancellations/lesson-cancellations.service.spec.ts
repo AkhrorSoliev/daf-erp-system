@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { LessonBillingService } from '../billing/lesson-billing.service';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { EntityHistoryService } from '../common/entity-history';
+import { LessonReschedulesService } from '../lesson-reschedules/lesson-reschedules.service';
 
 describe('LessonCancellationsService', () => {
   let service: LessonCancellationsService;
@@ -18,6 +19,7 @@ describe('LessonCancellationsService', () => {
   let billing: any;
   let monthly: any;
   let history: any;
+  let reschedules: any;
   let tx: any;
   let emitter: { emit: jest.Mock };
 
@@ -100,6 +102,7 @@ describe('LessonCancellationsService', () => {
       recordStatusChange: jest.fn(),
       recordRestore: jest.fn(),
     };
+    reschedules = { createWithin: jest.fn(), announceCreated: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -109,6 +112,7 @@ describe('LessonCancellationsService', () => {
         { provide: MonthlyChargeService, useValue: monthly },
         { provide: EntityHistoryService, useValue: history },
         { provide: EventEmitter2, useValue: emitter },
+        { provide: LessonReschedulesService, useValue: reschedules },
       ],
     }).compile();
 
@@ -671,6 +675,145 @@ describe('LessonCancellationsService', () => {
           }),
         );
       });
+    });
+  });
+
+  // ADR-0135: a cancelled lesson is moved to another day in ONE transaction —
+  // the cancellation is taken back, then the lesson is moved.
+  describe('rescheduleInstead', () => {
+    const cancellation = {
+      id: 'x1',
+      groupId: 'group-1',
+      date: new Date('2026-04-15T00:00:00.000Z'),
+      createdAt: new Date('2026-04-14T05:00:00.000Z'),
+    };
+    const dto = {
+      newDate: '2026-04-22',
+      newLessonStartTime: '16:00',
+      newLessonEndTime: '17:30',
+      reason: 'Ustoz qaytdi',
+    };
+    const created = {
+      reschedule: { id: 'm1' },
+      decision: null,
+    };
+
+    beforeEach(() => {
+      prisma.lessonCancellation.findFirst.mockResolvedValue(cancellation);
+      // The caller-may-touch-group check.
+      tx.group.findFirst.mockResolvedValue({ branchId: 1 });
+      tx.lessonCancellation.update.mockResolvedValue({});
+      monthly.restoreCancelledLesson.mockResolvedValue({
+        students: 3,
+        restored: 96_429,
+        kept: 1,
+      });
+      reschedules.createWithin.mockResolvedValue(created);
+    });
+
+    it('throws when the cancellation is not found', async () => {
+      prisma.lessonCancellation.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.rescheduleInstead('x1', dto, 1, 99, ['CEO']),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('takes the cancellation back and moves the lesson in one transaction', async () => {
+      const res = await service.rescheduleInstead('x1', dto, 1, 99, ['CEO']);
+
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(tx.lessonCancellation.update).toHaveBeenCalledWith({
+        where: { id: 'x1' },
+        data: expect.objectContaining({ deletedById: 99 }),
+      });
+      expect(monthly.restoreCancelledLesson).toHaveBeenCalledWith(tx, {
+        cancellationId: 'x1',
+        companyId: 1,
+        performedById: 99,
+        reason: "15.04 darsining bekor qilinishi o'chirildi",
+      });
+      // The move names the cancelled day and runs on the SAME transaction.
+      expect(reschedules.createWithin).toHaveBeenCalledWith(
+        tx,
+        {
+          groupId: 'group-1',
+          originalDate: '2026-04-15',
+          newDate: '2026-04-22',
+          newRoomId: undefined,
+          newLessonStartTime: '16:00',
+          newLessonEndTime: '17:30',
+          reason: 'Ustoz qaytdi',
+        },
+        1,
+        99,
+        ['CEO'],
+      );
+      // Taking the cancellation back comes first: the move refuses nothing on
+      // the original day, and the money is charged again before the new day.
+      expect(
+        tx.lessonCancellation.update.mock.invocationCallOrder[0],
+      ).toBeLessThan(reschedules.createWithin.mock.invocationCallOrder[0]);
+      expect(res).toEqual({
+        id: 'x1',
+        restoredStudents: 3,
+        restoredAmount: 96_429,
+        keptStudents: 1,
+        reschedule: { id: 'm1' },
+      });
+    });
+
+    it('runs the transaction Serializable with the move’s longer budget', async () => {
+      await service.rescheduleInstead('x1', dto, 1, 99, ['CEO']);
+
+      expect(prisma.$transaction).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.objectContaining({
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          timeout: 30_000,
+        }),
+      );
+    });
+
+    it('announces the move only after the transaction committed', async () => {
+      await service.rescheduleInstead('x1', dto, 1, 99, ['CEO']);
+
+      expect(reschedules.announceCreated).toHaveBeenCalledTimes(1);
+      expect(reschedules.announceCreated).toHaveBeenCalledWith(
+        created,
+        expect.objectContaining({ originalDate: '2026-04-15' }),
+        1,
+        99,
+      );
+      expect(prisma.$transaction.mock.invocationCallOrder[0]).toBeLessThan(
+        reschedules.announceCreated.mock.invocationCallOrder[0],
+      );
+      // It is a move for the group, not a new cancellation.
+      expect(emitter.emit).not.toHaveBeenCalledWith(
+        'lesson-cancellation.created',
+        expect.anything(),
+      );
+    });
+
+    it('sends nothing when the move is refused', async () => {
+      reschedules.createWithin.mockRejectedValue(
+        new BadRequestException('Yangi sana — bekor qilingan dars sanasi'),
+      );
+
+      await expect(
+        service.rescheduleInstead('x1', dto, 1, 99, ['CEO']),
+      ).rejects.toThrow('Yangi sana — bekor qilingan dars sanasi');
+      expect(reschedules.announceCreated).not.toHaveBeenCalled();
+    });
+
+    it('answers a lost race with 409 and sends nothing', async () => {
+      prisma.$transaction.mockRejectedValueOnce({ code: 'P2034' });
+
+      await expect(
+        service.rescheduleInstead('x1', dto, 1, 99, ['CEO']),
+      ).rejects.toThrow(ConflictException);
+      expect(reschedules.announceCreated).not.toHaveBeenCalled();
     });
   });
 });

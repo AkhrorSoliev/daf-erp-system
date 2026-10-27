@@ -87,9 +87,10 @@ export const guruhlar: QollanmaSahifa[] = [
     qisqacha:
       "Guruh sahifasining «Dars o'zgarishlari» tabida darsni bekor qilasiz, boshqa kunga ko'chirasiz yoki bir kunga o'rinbosar ustoz qo'yasiz. Bekor qilinganda shu kungi davomat belgilari «Sababli» ga o'tadi va oylik to'lovchiga bir dars puli darhol qaytadi; bekor qilish yozuvini o'chirsangiz qaytgan pul qayta yechiladi, davomat esa tiklanmaydi.",
     rollar: [1, 2, 3],
-    adr: ["0048", "0053", "0054", "0063"],
+    adr: ["0048", "0053", "0054", "0063", "0135"],
     yollar: ["/groups/*"],
     kalitSozlar: [
+      "bekor qilingan darsni ko'chirish",
       "darsni bekor qilish",
       "dars bekor",
       "bekor qilingan dars",
@@ -115,7 +116,7 @@ export const guruhlar: QollanmaSahifa[] = [
       "o'rinbosar stavka",
       "bekor qilishni o'chirish",
     ],
-    yangilangan: "2026-10-10",
+    yangilangan: "2026-10-27",
   },
   {
     bolim: "guruhlar",
