@@ -190,31 +190,44 @@ function leafRules(css: string): CssRule[] {
   return rules;
 }
 
-const inOrmonKeyframes = (r: CssRule) => r.context.some((c) => c.startsWith("@keyframes ormon-"));
+/**
+ * The scene themes and, for each, the one layer that may carry a compositor
+ * hint: the shown biome's or zone's moving layer (ADR-0132, ADR-0133).
+ */
+const SCENE_THEMES = {
+  ormon: ".lumio .ormon-biome[data-faol] .ormon-layer",
+  dengiz: ".lumio .dengiz-zone[data-faol] .dengiz-strip",
+} as const;
+type SceneTheme = keyof typeof SCENE_THEMES;
 
-/** The rules that are the «O'rmon» theme's: a selector naming an `.ormon-*` class, and the steps of an `@keyframes ormon-*`. */
-const ormonRules = (css: string) => leafRules(css).filter((r) => /\.ormon-/.test(r.selector) || inOrmonKeyframes(r));
+const inThemeKeyframes = (r: CssRule, theme: SceneTheme) => r.context.some((c) => c.startsWith(`@keyframes ${theme}-`));
+
+/** The rules that are a theme's: a selector naming one of its `.<theme>-*` classes, and the steps of an `@keyframes <theme>-*`. */
+const themeRules = (css: string, theme: SceneTheme) =>
+  leafRules(css).filter((r) => r.selector.includes(`.${theme}-`) || inThemeKeyframes(r, theme));
 
 /** The comma-separated parts of a selector list, leaving the commas inside `:is( … )` alone. */
 const selectorParts = (selector: string) => selector.split(/,(?![^(]*\))/).map((s) => s.trim());
 
-const LAYER_SHOWN = ".lumio .ormon-biome[data-faol] .ormon-layer";
-const LAYER_SHOWN_NO_PARALLAX = ".lumio [data-kam-harakat] .ormon-biome[data-faol] .ormon-layer";
-
 /** Each slip as `kind: where`. */
-function ormonViolations(rules: CssRule[]): string[] {
+function themeViolations(rules: CssRule[], theme: SceneTheme): string[] {
+  const LAYER_SHOWN = SCENE_THEMES[theme];
+  // The same layer where there is no parallax («Kam harakat»): its hint is taken back.
+  const LAYER_SHOWN_NO_PARALLAX = LAYER_SHOWN.replace(".lumio ", ".lumio [data-kam-harakat] ");
   const out: string[] = [];
   for (const r of rules) {
     const where = [...r.context, r.selector].join(" > ");
     const reduced = r.context.some((c) => c.startsWith("@media") && c.includes("prefers-reduced-motion"));
     const body = withoutComments(r.body);
-    if (!inOrmonKeyframes(r)) {
+    if (!inThemeKeyframes(r, theme)) {
       for (const part of selectorParts(r.selector)) {
         if (!/^(?:\.dark )?\.lumio(?![\w-])/.test(part)) out.push(`scope: ${part}`);
       }
     }
     if (r.body.includes("/*")) out.push(`comment: ${where}`);
     if (/(?:^|[\s;])(?:-webkit-)?(?:backdrop-)?filter\s*:/.test(body)) out.push(`filter: ${where}`);
+    // Its own kind, so O'rmon's negative self-test keeps its list as it is.
+    if (/(?:^|[\s;])mix-blend-mode\s*:/.test(body)) out.push(`blend: ${where}`);
     for (const [, raw] of body.matchAll(/will-change\s*:\s*([^;]+)/g)) {
       const value = raw.trim();
       const allowed =
@@ -229,11 +242,11 @@ function ormonViolations(rules: CssRule[]): string[] {
 
 describe("every «O'rmon» rule in globals.css (ADR-0132)", () => {
   it("is scoped to .lumio, has no comment inside its block, no filter, and a will-change only where the layers move", () => {
-    const rules = ormonRules(readFileSync(path.join(__dirname, "globals.css"), "utf8"));
+    const rules = themeRules(readFileSync(path.join(__dirname, "globals.css"), "utf8"), "ormon");
     // A scan that sees nothing would pass on any stylesheet.
     expect(rules.length, "no .ormon-* rule found: the scan is blind").toBeGreaterThan(0);
-    expect(rules.some(inOrmonKeyframes), "no @keyframes ormon-* found: the scan is blind").toBe(true);
-    expect(ormonViolations(rules)).toEqual([]);
+    expect(rules.some((r) => inThemeKeyframes(r, "ormon")), "no @keyframes ormon-* found: the scan is blind").toBe(true);
+    expect(themeViolations(rules, "ormon")).toEqual([]);
   });
 
   it("does catch each kind of slip in a stylesheet that has them", () => {
@@ -249,7 +262,7 @@ describe("every «O'rmon» rule in globals.css (ADR-0132)", () => {
         .lumio .ormon-biome[data-faol] .ormon-layer { will-change: transform; }
       }
     `;
-    const kinds = ormonViolations(ormonRules(bad)).map((v) => v.split(":")[0]);
+    const kinds = themeViolations(themeRules(bad, "ormon"), "ormon").map((v) => v.split(":")[0]);
     expect(kinds.sort()).toEqual(["comment", "filter", "filter", "filter", "scope", "scope", "will-change", "will-change"]);
   });
 });
@@ -293,5 +306,144 @@ describe("the backdrop blur over a scene reaches the portaled overlays too (ADR-
     const rules = leafRules(css).filter((r) => r.selector.includes("data-sahna"));
     expect(rules.map((r) => r.selector)).toEqual([".lumio:has([data-sahna]) .glass", overlays]);
     for (const r of rules) expect(flat(withoutComments(r.body)), r.selector).toBe(noBlur);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// «Dengiz» (ADR-0133): O'rmon's rules, its own pins and the same scan.
+// ---------------------------------------------------------------------------
+
+/** A theme's `@keyframes <theme>-*` blocks (each closes with a `}` at the start of a line), in file order. */
+const keyframeBlocks = (css: string, theme: SceneTheme) =>
+  [...css.matchAll(new RegExp(`@keyframes (${theme}-[\\w-]+) \\{([\\s\\S]*?)\\n\\}`, "g"))].map((m) => ({
+    name: m[1],
+    body: m[2],
+  }));
+
+/** What a `@keyframes` body animates besides the two properties the compositor can move on its own. */
+const slowProps = (body: string) =>
+  [...new Set([...body.matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1]))].filter((p) => p !== "transform" && p !== "opacity");
+
+describe("the «Dengiz» scene's motion (ADR-0133)", () => {
+  const css = readFileSync(path.join(__dirname, "globals.css"), "utf8");
+  const flat = css.replace(/\s+/g, " ");
+  const list =
+    ":is(.dengiz-bubble, .dengiz-school, .dengiz-rays, .dengiz-sway, .dengiz-ring, .dengiz-bob, .dengiz-burst)";
+
+  it("animates only transform and opacity", () => {
+    const frames = keyframeBlocks(css, "dengiz");
+    expect(frames.map((f) => f.name)).toEqual([
+      "dengiz-sway",
+      "dengiz-rise",
+      "dengiz-swim",
+      "dengiz-rays",
+      "dengiz-ring",
+      "dengiz-bob",
+      "dengiz-spin",
+    ]);
+    for (const { name, body } of frames) expect(slowProps(body), name).toEqual([]);
+  });
+
+  it("holds the drifting life still while the scene is paused", () => {
+    expect(flat).toContain(
+      ".lumio [data-tinch] :is(.dengiz-bubble, .dengiz-school, .dengiz-rays, .dengiz-sway) { animation-play-state: paused; }",
+    );
+  });
+
+  it("holds a hidden zone's fronds still, so they run no timeline unseen", () => {
+    expect(flat).toContain(".lumio .dengiz-zone:not([data-faol]) .dengiz-sway { animation-play-state: paused; }");
+  });
+
+  it("stops every animation and the zone fade under the device's «Kam harakat» switch", () => {
+    expect(flat).toContain(
+      `.lumio [data-kam-harakat] ${list}, .lumio [data-kam-harakat] .dengiz-zone { animation: none; transition: none; }`,
+    );
+  });
+
+  it("does the same under the system setting, also for the shown zone", () => {
+    expect(flat).toContain(
+      `@media (prefers-reduced-motion: reduce) { .lumio ${list}, .lumio .dengiz-zone, .lumio .dengiz-zone[data-faol] { animation: none; transition: none; }`,
+    );
+  });
+
+  it("gives only the shown zone's wall strips a compositor hint, and takes it back where there is no parallax", () => {
+    const base = ".lumio .dengiz-zone[data-faol] .dengiz-strip { will-change: transform; }";
+    const kamReset = ".lumio [data-kam-harakat] .dengiz-zone[data-faol] .dengiz-strip { will-change: auto; }";
+    const mediaReset = ".lumio .dengiz-zone[data-faol] .dengiz-strip { will-change: auto; } }";
+    const mediaAt = flat.indexOf(`@media (prefers-reduced-motion: reduce) { .lumio ${list}`);
+    expect(flat).toContain(base);
+    expect(flat).toContain(kamReset);
+    expect(mediaAt).toBeGreaterThan(-1);
+    expect(flat.slice(mediaAt)).toContain(mediaReset);
+    expect(flat.indexOf(base)).toBeLessThan(flat.indexOf(kamReset));
+    expect(flat.indexOf(base)).toBeLessThan(mediaAt);
+  });
+
+  // The shown zone's rule, the «Kam harakat» rule and the system-setting group tie on specificity: the later one wins.
+  it("writes the shown zone's rule before the rules that must beat it", () => {
+    const shown = flat.indexOf(".lumio .dengiz-zone[data-faol] { opacity: 1;");
+    const kam = flat.indexOf(`.lumio [data-kam-harakat] ${list}`);
+    const media = flat.indexOf(`@media (prefers-reduced-motion: reduce) { .lumio ${list}`);
+    expect(shown, "the shown zone's rule is missing").toBeGreaterThan(-1);
+    expect(kam, "the «Kam harakat» rule is missing").toBeGreaterThan(-1);
+    expect(media, "the system-setting group is missing").toBeGreaterThan(-1);
+    expect(shown).toBeLessThan(kam);
+    expect(shown).toBeLessThan(media);
+  });
+
+  // The glass and overlay rules key on `[data-sahna]`: Dengiz needs no rule of its own, only the attribute.
+  it("is covered by the glass and overlay rules through the attribute its root carries", () => {
+    const portal = path.join(__dirname, "../components/student-portal");
+    expect(readFileSync(path.join(portal, "lernen/tema/dengiz/dengiz-sahna.tsx"), "utf8")).toContain('data-sahna="dengiz"');
+  });
+});
+
+describe("every «Dengiz» rule in globals.css (ADR-0133)", () => {
+  it("is scoped to .lumio, has no comment inside its block, no filter, and a will-change only where the strips move", () => {
+    const rules = themeRules(readFileSync(path.join(__dirname, "globals.css"), "utf8"), "dengiz");
+    // A scan that sees nothing would pass on any stylesheet.
+    expect(rules.length, "no .dengiz-* rule found: the scan is blind").toBeGreaterThan(0);
+    expect(rules.some((r) => inThemeKeyframes(r, "dengiz")), "no @keyframes dengiz-* found: the scan is blind").toBe(true);
+    expect(themeViolations(rules, "dengiz")).toEqual([]);
+  });
+
+  // The same slips as O'rmon's self-test, one stylesheet each, fed to the Dengiz path of the scan
+  // (its own layer to put `will-change` on) so a rule the scan would let through shows up here.
+  const clean = `
+    /* above a rule is fine */
+    .lumio .dengiz-zone[data-faol] .dengiz-strip { will-change: transform; }
+    .lumio [data-kam-harakat] .dengiz-zone[data-faol] .dengiz-strip { will-change: auto; }
+    .lumio :is(.dengiz-a, .dengiz-b) { animation: none; background: radial-gradient(#fff, #000); }
+    @keyframes dengiz-x { from { transform: none; } to { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      .lumio .dengiz-zone[data-faol] .dengiz-strip { will-change: auto; }
+    }
+  `;
+  const slips: [string, string, string[]][] = [
+    ["nothing in a clean stylesheet", clean, []],
+    ["a rule without the .lumio scope", ".dengiz-x { opacity: 1; }", ["scope"]],
+    ["a filter", ".lumio .dengiz-x { filter: blur(2px); }", ["filter"]],
+    ["a backdrop-filter", ".lumio .dengiz-x { -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }", ["filter"]],
+    ["a filter in a keyframe step", "@keyframes dengiz-x { to { filter: blur(1px); } }", ["filter"]],
+    ["a mix-blend-mode", ".lumio .dengiz-x { mix-blend-mode: screen; }", ["blend"]],
+    ["a comment inside a block", ".lumio .dengiz-x { color: red; /* inside is not fine */ }", ["comment"]],
+    ["a will-change on any other rule", ".lumio .dengiz-x { will-change: transform; }", ["will-change"]],
+    ["a will-change on the strips of every zone", ".lumio .dengiz-zone .dengiz-strip { will-change: transform; }", ["will-change"]],
+    [
+      "a will-change: transform kept under the system setting",
+      "@media (prefers-reduced-motion: reduce) { .lumio .dengiz-zone[data-faol] .dengiz-strip { will-change: transform; } }",
+      ["will-change"],
+    ],
+  ];
+  it.each(slips)("reports %s", (_what, sheet, kinds) => {
+    const found = themeViolations(themeRules(sheet, "dengiz"), "dengiz").map((v) => v.split(":")[0]);
+    expect(found).toEqual(kinds);
+  });
+
+  it("sees, through the helper the motion pin uses, a keyframe that animates more than transform and opacity", () => {
+    const sheet = "@keyframes dengiz-x {\n  from {\n    transform: none;\n  }\n  to {\n    opacity: 0;\n    background-color: red;\n  }\n}\n";
+    const quiet = "@keyframes dengiz-y {\n  to {\n    transform: none;\n  }\n}\n";
+    expect(keyframeBlocks(sheet, "dengiz").map((f) => [f.name, slowProps(f.body)])).toEqual([["dengiz-x", ["background-color"]]]);
+    expect(keyframeBlocks(quiet, "dengiz").map((f) => [f.name, slowProps(f.body)])).toEqual([["dengiz-y", []]]);
   });
 });

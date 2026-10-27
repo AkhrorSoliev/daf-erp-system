@@ -3,13 +3,14 @@ import { msg } from "@/i18n/msg";
 /**
  * The Ta'lim looks a student can pick (ADR-0125). The ids mirror
  * `server/src/common/lernen-temalar.ts` (lernen-temalar.test.ts compares
- * them). `tayyor` says the look is built: only those are offered in
- * Sozlamalar. `swatch` is only the dot drawn on the card.
+ * them). `tayyor` says the look is built: only those can be picked in
+ * Sozlamalar, the others are listed greyed out with «Tez orada» (ADR-0131).
+ * `swatch` is only the dot drawn on the card.
  */
 export const LERNEN_TEMALAR = [
   { id: "toza", label: msg("Toza"), hint: msg("Oq fon, qalin yumshoq tugmalar"), swatch: "#ff6b4a", tayyor: true },
   { id: "ormon", label: msg("O'rmon"), hint: msg("Yumshoq qatlamli o'rmon"), swatch: "#2f6b4f", tayyor: true },
-  { id: "dengiz", label: msg("Dengiz"), hint: msg("Suv osti dunyosi"), swatch: "#2b78a8", tayyor: false },
+  { id: "dengiz", label: msg("Dengiz"), hint: msg("Suv osti dunyosi"), swatch: "#2b78a8", tayyor: true },
   { id: "alp", label: msg("Nemis sayohati"), hint: msg("Tongdan tungacha"), swatch: "#8b5cf6", tayyor: false },
 ] as const;
 

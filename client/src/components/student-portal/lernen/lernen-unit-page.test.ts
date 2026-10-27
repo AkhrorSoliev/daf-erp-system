@@ -247,3 +247,61 @@ describe("the unit page in the «Toza» look", () => {
     expect(h).not.toMatch(/^<div[^>]*\bisolate\b/);
   });
 });
+
+// ADR-0133: «Dengiz» stands the unit's zone behind the page and draws the
+// lessons as places under the sea, through the same page wiring as «O'rmon».
+async function dengizHtml(order = unit.order): Promise<string> {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
+  await client.prefetchQuery({ queryKey: ["lernen", "unit", 7], queryFn: () => ({ ...unit, order }) });
+  client.setQueryData(["student-portal", "profile"], { lernenTema: "dengiz" });
+  return renderToStaticMarkup(
+    createElement(QueryClientProvider, { client }, createElement(LernenUnitPage, { unitId: 7 })),
+  );
+}
+
+describe("the unit page in the «Dengiz» look (ADR-0133)", () => {
+  it("stands the unit's zone in a frame behind the content (unit 4: the reef again)", async () => {
+    const h = await dengizHtml();
+    expect(h).toContain('data-sahna="dengiz"');
+    expect(h).toMatch(/data-zona="marjon" data-faol=""/);
+    expect(h).toContain("pointer-events-none fixed inset-0 -z-10");
+    expect(h).toMatch(/^<div[^>]*class="[^"]*\bisolate\b/);
+    // The reef is 5 m deep, and its header says so.
+    expect(h).toMatch(/<span aria-hidden="true"[^>]*>5 m<\/span>/);
+  });
+
+  it.each([
+    [2, "kelp", "25 m"],
+    [3, "chuqur", "70 m"],
+  ] as const)("follows the unit's order: unit %i stands the %s zone in the scene and on the header, %s deep", async (order, zona, depth) => {
+    const h = await dengizHtml(order);
+    expect(h).toContain(`data-zona="${zona}" data-faol=""`);
+    expect(h).not.toContain('data-zona="marjon" data-faol=""');
+    expect(h).toContain(`data-lavha-zona="${zona}"`);
+    expect(h).not.toMatch(/>5 m</);
+    expect(h).toMatch(new RegExp(`<span aria-hidden="true"[^>]*>${depth}<\/span>`));
+  });
+
+  it("draws each lesson as its place under the sea", async () => {
+    const h = await dengizHtml();
+    expect(h).toContain('data-joy="chiganoq"');
+    expect(h).toContain('data-joy="kema"');
+    expect(h).toContain('data-joy="gor"');
+    expect(h).toContain('data-lavha-zona="marjon"');
+  });
+
+  it("gives the same lock answers: «Boshlash» once, two closed places", async () => {
+    const h = await dengizHtml();
+    expect(h.replace(/<[^>]*>/g, " ").match(/Boshlash/g)).toHaveLength(1);
+    expect(h.match(/aria-disabled="true"/g)).toHaveLength(2);
+    expect(h).toContain("Tanishuv — hali ochilmagan");
+  });
+
+  it("puts the page's own text on plates and uses no unreadable ink", async () => {
+    const h = await dengizHtml();
+    expect(h).toContain(SAHNA_PARDASI);
+    expect(h).not.toMatch(/\btext-(?:ink-500|ink-400|success|coral-600)\b/);
+  });
+});
