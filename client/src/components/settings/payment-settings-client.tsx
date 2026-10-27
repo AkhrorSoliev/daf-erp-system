@@ -159,7 +159,7 @@ export function PaymentSettingsClient() {
   const creditOn = settings["payment.excusedCreditEnabled"];
 
   return (
-    <div className="max-w-3xl space-y-4">
+    <div className="mx-auto max-w-3xl space-y-4">
       <SettingsPageHeader
         title={t(TITLE)}
         description={t(DESCRIPTION)}

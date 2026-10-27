@@ -32,6 +32,8 @@ export interface ChatSnapshotMessage {
   senderId: number;
   kind: "TEXT" | "IMAGE" | "VOICE";
   text: string | null;
+  /** The first text, when the sender edited the message afterwards. */
+  originalText?: string;
   hasFile: boolean;
   deleted: boolean;
   createdAt: string;

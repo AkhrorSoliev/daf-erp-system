@@ -953,6 +953,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'PATCH /chat/conversations/:id/read',
       'POST /chat/conversations/:id/typing',
       'DELETE /chat/messages/:id',
+      'PATCH /chat/messages/:id',
       'POST /chat/conversations/:id/files',
       'GET /chat/messages/:id/file',
       'POST /chat/report',

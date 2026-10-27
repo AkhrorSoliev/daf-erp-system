@@ -49,6 +49,7 @@ function make(
     chatMessage: {
       findFirst: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       count: jest.fn(),
       findMany: jest.fn(),
     },
@@ -767,5 +768,185 @@ describe('ChatConversationsService.typing', () => {
     const { service, gateway } = make({ rate: 2 });
     await expect(service.typing(1, 'c1')).resolves.toBeUndefined();
     expect(gateway.sendToUser).not.toHaveBeenCalled();
+  });
+});
+
+describe('ChatConversationsService reply', () => {
+  it('refuses a reply to a message of another conversation or a deleted one', async () => {
+    const { service, prisma } = make();
+    prisma.chatMessage.findFirst.mockResolvedValue(null);
+    await expect(service.send(1, 1, 'c1', 'javob', 'p1')).rejects.toThrow(
+      'Javob berilayotgan xabar topilmadi',
+    );
+    expect(prisma.chatMessage.findFirst).toHaveBeenCalledWith({
+      where: { id: 'p1', conversationId: 'c1', deletedAt: null },
+      select: { id: true },
+    });
+  });
+
+  it('stores replyToId and shows the answered message to both sides', async () => {
+    const { service, prisma, tx, gateway } = make();
+    prisma.chatMessage.findFirst.mockResolvedValue({ id: 'p1' });
+    tx.chatMessage.create.mockResolvedValue({
+      id: 'm2',
+      conversationId: 'c1',
+      senderId: 1,
+      kind: 'TEXT',
+      text: 'javob',
+      replyToId: 'p1',
+      createdAt: new Date('2026-10-25T07:00:00Z'),
+    });
+    prisma.chatMessage.findMany.mockResolvedValue([
+      { id: 'p1', senderId: 2, kind: 'TEXT', text: 'savol', deletedAt: null },
+    ]);
+    const out = await service.send(1, 1, 'c1', 'javob', 'p1');
+    expect(tx.chatMessage.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ replyToId: 'p1', text: 'javob' }),
+    });
+    expect(out.replyTo).toEqual({
+      id: 'p1',
+      mine: false,
+      kind: 'TEXT',
+      preview: 'savol',
+      deleted: false,
+    });
+    expect(gateway.sendToUser).toHaveBeenCalledWith(
+      22,
+      expect.objectContaining({
+        message: expect.objectContaining({
+          replyTo: expect.objectContaining({ mine: true, preview: 'savol' }),
+        }),
+      }),
+    );
+  });
+
+  it('shows no words of a message that was deleted after being answered', async () => {
+    const { service, prisma } = make();
+    prisma.chatMessage.findMany
+      .mockResolvedValueOnce([
+        {
+          id: 'm2',
+          conversationId: 'c1',
+          senderId: 1,
+          kind: 'TEXT',
+          text: 'javob',
+          replyToId: 'p1',
+          createdAt: new Date('2026-10-25T07:00:00Z'),
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'p1',
+          senderId: 2,
+          kind: 'TEXT',
+          text: 'sir',
+          deletedAt: new Date(),
+        },
+      ]);
+    const out = await service.messages(1, 'c1');
+    expect(out.data[0].replyTo).toEqual(
+      expect.objectContaining({ deleted: true, preview: '' }),
+    );
+  });
+});
+
+describe('ChatConversationsService.editOwn', () => {
+  const sent = (minAgo: number, extra: object = {}) => ({
+    id: 'm1',
+    conversationId: 'c1',
+    senderId: 1,
+    kind: 'TEXT',
+    text: 'eski',
+    originalText: null,
+    replyToId: null,
+    deletedAt: null,
+    createdAt: new Date(Date.now() - minAgo * 60_000),
+    ...extra,
+  });
+
+  it('changes the text, keeps the first one and pushes chat.edit to the peer', async () => {
+    const { service, prisma, gateway } = make();
+    prisma.chatMessage.findFirst.mockResolvedValue(sent(10));
+    const out = await service.editOwn(1, 'm1', 'yangi');
+    expect(prisma.chatMessage.updateMany).toHaveBeenCalledWith({
+      where: { id: 'm1', senderId: 1, deletedAt: null },
+      data: {
+        text: 'yangi',
+        editedAt: expect.any(Date),
+        originalText: 'eski',
+      },
+    });
+    expect(out).toMatchObject({ text: 'yangi', mine: true });
+    expect(out.editedAt).not.toBeNull();
+    expect(gateway.sendToUser).toHaveBeenCalledWith(
+      22,
+      expect.objectContaining({
+        type: 'chat.edit',
+        conversationId: 'c1',
+        message: expect.objectContaining({ text: 'yangi', mine: false }),
+      }),
+    );
+  });
+
+  it('keeps the very first text through later edits', async () => {
+    const { service, prisma } = make();
+    prisma.chatMessage.findFirst.mockResolvedValue(
+      sent(10, { text: 'ikkinchi', originalText: 'birinchi' }),
+    );
+    await service.editOwn(1, 'm1', 'uchinchi');
+    expect(prisma.chatMessage.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ originalText: 'birinchi' }),
+      }),
+    );
+  });
+
+  it('refuses after 3 hours and edits just inside the window', async () => {
+    const late = make();
+    late.prisma.chatMessage.findFirst.mockResolvedValue(sent(181));
+    await expect(late.service.editOwn(1, 'm1', 'x')).rejects.toThrow('3 soat');
+    expect(late.prisma.chatMessage.updateMany).not.toHaveBeenCalled();
+    const ok = make();
+    ok.prisma.chatMessage.findFirst.mockResolvedValue(sent(179));
+    await expect(ok.service.editOwn(1, 'm1', 'x')).resolves.toBeDefined();
+  });
+
+  it('is not allowed for files, another sender, a deleted message or a banned student', async () => {
+    const file = make();
+    file.prisma.chatMessage.findFirst.mockResolvedValue(
+      sent(1, { kind: 'IMAGE' }),
+    );
+    await expect(file.service.editOwn(1, 'm1', 'x')).rejects.toThrow(
+      'Faqat matnli',
+    );
+    const other = make();
+    other.prisma.chatMessage.findFirst.mockResolvedValue(null);
+    await expect(other.service.editOwn(2, 'm1', 'x')).rejects.toThrow(
+      NotFoundException,
+    );
+    const banned = make();
+    banned.prisma.chatMessage.findFirst.mockResolvedValue(sent(1));
+    banned.prisma.student.findFirst.mockResolvedValue({
+      chatBannedAt: new Date(),
+    });
+    await expect(banned.service.editOwn(1, 'm1', 'x')).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('does nothing and tells nobody when the text is the same', async () => {
+    const { service, prisma, gateway } = make();
+    prisma.chatMessage.findFirst.mockResolvedValue(sent(1));
+    await service.editOwn(1, 'm1', 'eski');
+    expect(prisma.chatMessage.updateMany).not.toHaveBeenCalled();
+    expect(gateway.sendToUser).not.toHaveBeenCalled();
+  });
+
+  it('answers 429 past the per-minute limit', async () => {
+    const { service, prisma } = make({ rate: 31 });
+    prisma.chatMessage.findFirst.mockResolvedValue(sent(1));
+    await expect(service.editOwn(1, 'm1', 'yangi')).rejects.toThrow(
+      HttpException,
+    );
   });
 });

@@ -95,7 +95,7 @@ export function LeadOwnershipSettingsClient() {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-56 w-full max-w-xl" />
+        <Skeleton className="mx-auto h-56 w-full max-w-xl" />
       </div>
     );
   }
@@ -110,7 +110,7 @@ export function LeadOwnershipSettingsClient() {
         title={t("Lidlar egaligi")}
         description={t("Lidni band qilish chegarasi va harakat muddatlari")}
       />
-      <div className="max-w-xl space-y-5 rounded-lg border p-4">
+      <div className="mx-auto max-w-xl space-y-5 rounded-lg border p-4">
         {FIELDS.map((f) => {
           const { label, hint } = f;
           return (

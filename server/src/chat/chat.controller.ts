@@ -23,6 +23,7 @@ import { ChatEnabledGuard, ChatGateOpen } from './chat-enabled.guard';
 import {
   BlockDto,
   CreateReportDto,
+  EditMessageDto,
   MessagesQueryDto,
   OpenConversationDto,
   SearchQueryDto,
@@ -99,7 +100,13 @@ export class ChatController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: SendMessageDto,
   ) {
-    return this.conversations.send(studentId, companyId, id, dto.text);
+    return this.conversations.send(
+      studentId,
+      companyId,
+      id,
+      dto.text,
+      dto.replyToId,
+    );
   }
 
   @Post('conversations/:id/files')
@@ -115,6 +122,7 @@ export class ChatController {
     return this.media.upload(studentId, companyId, id, {
       buffer: file.buffer,
       durationSec: dto.durationSec,
+      replyToId: dto.replyToId,
     });
   }
 
@@ -141,6 +149,15 @@ export class ChatController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.conversations.markRead(studentId, id);
+  }
+
+  @Patch('messages/:id')
+  edit(
+    @CurrentUser('studentId') studentId: number,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: EditMessageDto,
+  ) {
+    return this.conversations.editOwn(studentId, id, dto.text);
   }
 
   @Delete('messages/:id')

@@ -3,6 +3,7 @@ import {
   isQuietHour,
   needsTelegram,
   noticeText,
+  planNotice,
 } from './chat-notify.rules';
 
 // Tashkent is UTC+5 all year: 17:00Z = 22:00, 03:00Z = 08:00.
@@ -51,5 +52,42 @@ describe('texts', () => {
     );
     expect(chatDeepLink(undefined, 'c1')).toBeUndefined();
     expect(chatDeepLink('not a url', 'c1')).toBeUndefined();
+  });
+});
+
+describe('noticeText with a count', () => {
+  it('names the number from the second message on', () => {
+    expect(noticeText('Ali', 1)).toBe('<b>Ali</b> sizga yangi xabar yubordi.');
+    expect(noticeText('Ali', 3)).toBe(
+      '<b>Ali</b> sizga <b>3 ta</b> yangi xabar yubordi.',
+    );
+  });
+});
+
+describe('planNotice', () => {
+  const now = new Date('2026-10-25T10:00:00Z');
+  const ago = (min: number) => new Date(now.getTime() - min * 60_000);
+  const out = (min: number, id: number | null = 7) => ({
+    notifiedAt: ago(min),
+    telegramMessageId: id,
+  });
+
+  it('sends the first notice', () => {
+    expect(planNotice(null, null, now)).toBe('SEND');
+  });
+  it('edits the one notice while the stretch is unread', () => {
+    expect(planNotice(out(5), ago(30), now)).toBe('EDIT_COUNT');
+  });
+  it('leaves an old notice without a message id alone', () => {
+    expect(planNotice(out(5, null), ago(30), now)).toBe('SKIP');
+  });
+  it('sends nothing to someone who read a moment ago', () => {
+    expect(planNotice(out(30), ago(1), now)).toBe('SKIP');
+  });
+  it('edits back to one message soon after a notice, without a new ring', () => {
+    expect(planNotice(out(5), ago(4), now)).toBe('EDIT_RESET');
+  });
+  it('rings again after the cooldown', () => {
+    expect(planNotice(out(30), ago(20), now)).toBe('SEND');
   });
 });

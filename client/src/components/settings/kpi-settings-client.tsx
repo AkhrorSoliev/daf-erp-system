@@ -64,7 +64,7 @@ export function KpiSettingsClient() {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-72 w-full max-w-xl" />
+        <Skeleton className="mx-auto h-72 w-full max-w-xl" />
       </div>
     );
   }
@@ -76,7 +76,7 @@ export function KpiSettingsClient() {
   return (
     <div>
       <SettingsPageHeader title={t(TITLE)} description={t(DESCRIPTION)} />
-      <div className="max-w-xl space-y-6 rounded-lg border p-4">
+      <div className="mx-auto max-w-xl space-y-6 rounded-lg border p-4">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <Switch

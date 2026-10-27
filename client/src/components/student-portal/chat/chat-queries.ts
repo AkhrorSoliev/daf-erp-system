@@ -13,7 +13,12 @@ import { getErrorMessage } from "@/lib/get-error-message";
 import { useT } from "@/i18n/context";
 import { msg } from "@/i18n/msg";
 import { unreadTotal } from "./chat-format";
-import { insertMessage, listAfterSend, type MessagesCache } from "./chat-stream-model";
+import {
+  insertMessage,
+  listAfterSend,
+  replaceMessage,
+  type MessagesCache,
+} from "./chat-stream-model";
 import { useChatStreamConnected } from "./chat-stream-store";
 import type {
   ChatAccess,
@@ -104,13 +109,19 @@ export function usePeer(id: string): PeerSummary | undefined {
   return fromList ?? fromOpen;
 }
 
+export interface SendVars {
+  text: string;
+  /** The message this one answers. */
+  replyToId?: string;
+}
+
 export function useSendMessage(id: string) {
   const qc = useQueryClient();
   const t = useT();
-  return useMutation<MessageView, unknown, string>({
-    mutationFn: (text) =>
+  return useMutation<MessageView, unknown, SendVars>({
+    mutationFn: ({ text, replyToId }) =>
       api
-        .post(`/chat/conversations/${id}/messages`, { text })
+        .post(`/chat/conversations/${id}/messages`, { text, replyToId })
         .then((r) => r.data),
     // The server's committed message goes straight into the cache (deduped by
     // id against the stream), so the pending bubble can be swapped for it
@@ -131,6 +142,26 @@ export function useSendMessage(id: string) {
     },
     onError: (err) =>
       toast.error(getErrorMessage(err, t("Xabar yuborilmadi"))),
+  });
+}
+
+/** Changes the text of one of my own messages (the server allows 3 hours). */
+export function useEditMessage(id: string) {
+  const qc = useQueryClient();
+  const t = useT();
+  return useMutation<MessageView, unknown, { messageId: string; text: string }>({
+    mutationFn: ({ messageId, text }) =>
+      api.patch(`/chat/messages/${messageId}`, { text }).then((r) => r.data),
+    onSuccess: async (message) => {
+      const key = CHAT_KEYS.messages(id);
+      await qc.cancelQueries({ queryKey: key });
+      const next = replaceMessage(qc.getQueryData<MessagesCache>(key), message);
+      if (next) qc.setQueryData(key, next);
+      else void qc.invalidateQueries({ queryKey: key });
+      void qc.invalidateQueries({ queryKey: CHAT_KEYS.list });
+    },
+    onError: (err) =>
+      toast.error(getErrorMessage(err, t("Xabarni o'zgartirib bo'lmadi"))),
   });
 }
 

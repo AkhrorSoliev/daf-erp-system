@@ -32,6 +32,7 @@ export function splitSse(buffer: string): { payloads: unknown[]; rest: string } 
 
 export type ChatEvent =
   | { kind: "message"; conversationId: string; message: MessageView | null }
+  | { kind: "edit"; conversationId: string; message: MessageView | null }
   | { kind: "read"; conversationId: string }
   | { kind: "access" }
   | { kind: "typing"; conversationId: string };
@@ -56,6 +57,8 @@ export function parseChatEvent(p: unknown): ChatEvent | null {
   switch (p.type) {
     case "chat.message":
       return id ? { kind: "message", conversationId: id, message: asMessage(p.message) } : null;
+    case "chat.edit":
+      return id ? { kind: "edit", conversationId: id, message: asMessage(p.message) } : null;
     case "chat.read":
       return id ? { kind: "read", conversationId: id } : null;
     case "chat.typing":
@@ -89,6 +92,24 @@ export function insertMessage(
       ? [...first.data, message]
       : [...first.data.slice(0, i), message, ...first.data.slice(i)];
   return { ...data, pages: [{ ...first, data: merged }, ...rest] };
+}
+
+/**
+ * Swaps an edited message in place. Undefined when it is not in the cache
+ * (the caller refetches).
+ */
+export function replaceMessage(
+  data: MessagesCache | undefined,
+  message: MessageView,
+): MessagesCache | undefined {
+  if (!data) return undefined;
+  let found = false;
+  const pages = data.pages.map((p) => {
+    if (!p.data.some((m) => m.id === message.id)) return p;
+    found = true;
+    return { ...p, data: p.data.map((m) => (m.id === message.id ? message : m)) };
+  });
+  return found ? { ...data, pages } : undefined;
 }
 
 /** The list after I sent `message`: that conversation first, preview updated, unread 0. */

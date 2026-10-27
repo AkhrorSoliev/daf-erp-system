@@ -14,6 +14,8 @@ export interface SnapshotLine {
   kind: ChatSnapshotMessage["kind"];
   /** TEXT only, as stored (data, never translated); null for IMAGE/VOICE. */
   text: string | null;
+  /** TEXT only: the first text of an edited message, null when never edited. */
+  originalText: string | null;
   deleted: boolean;
   hasFile: boolean;
   createdAt: string;
@@ -25,6 +27,7 @@ export function snapshotLines(report: ChatReportDetail): SnapshotLine[] {
     side: m.senderId === report.reporter.id ? "reporter" : m.senderId === report.reported.id ? "reported" : "other",
     kind: m.kind,
     text: m.kind === "TEXT" ? (m.text ?? "") : null,
+    originalText: m.kind === "TEXT" ? (m.originalText ?? null) : null,
     deleted: m.deleted,
     hasFile: m.hasFile,
     createdAt: m.createdAt,

@@ -28,6 +28,13 @@ import {
   type PeerSummary,
 } from '../people/chat-people.service';
 import type { OpenConversationDto } from '../dto/chat.dto';
+import {
+  BANNED_EDIT_MESSAGE,
+  EDIT_EXPIRED_MESSAGE,
+  EDIT_ONLY_TEXT_MESSAGE,
+  EDIT_WINDOW_MS,
+  REPLY_GONE_MESSAGE,
+} from '../chat.constants';
 
 export interface MessageView {
   id: string;
@@ -42,6 +49,18 @@ export interface MessageView {
     purged: boolean;
   } | null;
   createdAt: string;
+  /** Set once the sender changed the text; the first text stays with the CEO. */
+  editedAt: string | null;
+  replyTo: ReplyView | null;
+}
+
+/** What a reply shows of the message it answers; never a file or a key. */
+export interface ReplyView {
+  id: string;
+  mine: boolean;
+  kind: 'TEXT' | 'IMAGE' | 'VOICE';
+  preview: string;
+  deleted: boolean;
 }
 
 export interface ConversationView {
@@ -75,6 +94,10 @@ const PAGE = 30;
 const pair = (a: number, b: number) =>
   a < b ? { low: a, high: b } : { low: b, high: a };
 
+const REPLY_PREVIEW_MAX = 120;
+const truncate = (t: string, n: number) =>
+  t.length > n ? `${t.slice(0, n - 1)}…` : t;
+
 const PREVIEW: Record<string, string> = {
   IMAGE: 'Rasm',
   VOICE: 'Ovozli xabar',
@@ -104,8 +127,10 @@ export class ChatConversationsService {
       durationSec?: number | null;
       mediaPurgedAt?: Date | null;
       createdAt: Date;
+      editedAt?: Date | null;
     },
     me: number,
+    replyTo: ReplyView | null = null,
   ): MessageView {
     return {
       id: m.id,
@@ -124,7 +149,45 @@ export class ChatConversationsService {
               purged: m.mediaPurgedAt != null,
             },
       createdAt: m.createdAt.toISOString(),
+      editedAt: m.editedAt?.toISOString() ?? null,
+      replyTo,
     };
+  }
+
+  /** The cards of the messages `rows` answer: one query whatever the page size. */
+  private async replyViews(
+    rows: { replyToId?: string | null }[],
+    me: number,
+  ): Promise<Map<string, ReplyView>> {
+    const ids = [
+      ...new Set(rows.map((r) => r.replyToId).filter((x): x is string => !!x)),
+    ];
+    if (ids.length === 0) return new Map();
+    const parents = await this.prisma.chatMessage.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        senderId: true,
+        kind: true,
+        text: true,
+        deletedAt: true,
+      },
+    });
+    return new Map(
+      parents.map((p) => [
+        p.id,
+        {
+          id: p.id,
+          mine: p.senderId === me,
+          kind: p.kind as ReplyView['kind'],
+          deleted: p.deletedAt != null,
+          // A deleted message keeps no words in someone else's reply.
+          preview: p.deletedAt
+            ? ''
+            : truncate(p.text ?? PREVIEW[p.kind] ?? '', REPLY_PREVIEW_MAX),
+        },
+      ]),
+    );
   }
 
   /** The conversation, or 404 — the same answer for "missing" and "not yours". */
@@ -349,8 +412,11 @@ export class ChatConversationsService {
       ...(cursor && { cursor: { id: cursor }, skip: 1 }),
     });
     const page = rows.slice(0, limit);
+    const replies = await this.replyViews(page, me);
     return {
-      data: page.map((m) => this.view(m, me)),
+      data: page.map((m) =>
+        this.view(m, me, (m.replyToId && replies.get(m.replyToId)) || null),
+      ),
       nextCursor: rows.length > limit ? page[page.length - 1].id : null,
     };
   }
@@ -360,12 +426,23 @@ export class ChatConversationsService {
     me: number,
     companyId: number,
     conversationId: string,
+    replyToId?: string,
   ): Promise<{ peerId: number }> {
     await this.access.assertCanWrite(me, companyId);
     const { peerId } = await this.mine(me, conversationId);
     await this.assertMayReach(me, peerId);
     await this.countAgainstLimit(`chat:rate:${me}`, RATE_PER_MINUTE);
+    if (replyToId) await this.assertReplyTarget(conversationId, replyToId);
     return { peerId };
+  }
+
+  /** A reply answers a live message of the SAME conversation, nothing else. */
+  private async assertReplyTarget(conversationId: string, replyToId: string) {
+    const parent = await this.prisma.chatMessage.findFirst({
+      where: { id: replyToId, conversationId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!parent) throw new BadRequestException(REPLY_GONE_MESSAGE);
   }
 
   async commitMessage(
@@ -380,6 +457,7 @@ export class ChatConversationsService {
       mime?: string;
       sizeBytes?: number;
       durationSec?: number | null;
+      replyToId?: string;
     },
   ): Promise<MessageView> {
     const row = await this.prisma.$transaction(async (tx) => {
@@ -399,10 +477,13 @@ export class ChatConversationsService {
       return m;
     });
 
+    const reply = row.replyToId
+      ? (await this.replyViews([row], peerId)).get(row.replyToId)
+      : undefined;
     await this.pushToPeer(peerId, {
       type: 'chat.message',
       conversationId,
-      message: this.view(row, peerId),
+      message: this.view(row, peerId, reply ?? null),
     });
     // After the commit, not awaited: the notifier never throws and Telegram is slow.
     void this.notify.onMessage({
@@ -411,7 +492,10 @@ export class ChatConversationsService {
       recipientId: peerId,
       companyId,
     });
-    return this.view(row, me);
+    const mineReply = row.replyToId
+      ? (await this.replyViews([row], me)).get(row.replyToId)
+      : undefined;
+    return this.view(row, me, mineReply ?? null);
   }
 
   async send(
@@ -419,11 +503,18 @@ export class ChatConversationsService {
     companyId: number,
     conversationId: string,
     text: string,
+    replyToId?: string,
   ): Promise<MessageView> {
-    const { peerId } = await this.prepareSend(me, companyId, conversationId);
+    const { peerId } = await this.prepareSend(
+      me,
+      companyId,
+      conversationId,
+      replyToId,
+    );
     return this.commitMessage(me, companyId, conversationId, peerId, {
       kind: 'TEXT',
       text,
+      replyToId,
     });
   }
 
@@ -442,6 +533,53 @@ export class ChatConversationsService {
       readAt: readAt.toISOString(),
     });
     return { ok: true };
+  }
+
+  /**
+   * The sender changes the text of their own message, up to 3 hours after it
+   * was sent. The first text is kept (once) for a report; the peer sees the new
+   * one live. Files cannot be edited, and a banned student cannot edit.
+   */
+  async editOwn(
+    me: number,
+    messageId: string,
+    text: string,
+  ): Promise<MessageView> {
+    const m = await this.prisma.chatMessage.findFirst({
+      where: { id: messageId, senderId: me, deletedAt: null },
+    });
+    if (!m) throw new NotFoundException('Xabar topilmadi');
+    if (m.kind !== 'TEXT') {
+      throw new BadRequestException(EDIT_ONLY_TEXT_MESSAGE);
+    }
+    const self = await this.prisma.student.findFirst({
+      where: { id: me },
+      select: { chatBannedAt: true },
+    });
+    if (self?.chatBannedAt) throw new ForbiddenException(BANNED_EDIT_MESSAGE);
+    if (Date.now() - m.createdAt.getTime() > EDIT_WINDOW_MS) {
+      throw new BadRequestException(EDIT_EXPIRED_MESSAGE);
+    }
+    const { peerId } = await this.mine(me, m.conversationId);
+    const reply = (await this.replyViews([m], me)).get(m.replyToId ?? '');
+    if (m.text === text) return this.view(m, me, reply ?? null);
+    await this.countAgainstLimit(`chat:edit:${me}`, RATE_PER_MINUTE);
+    const editedAt = new Date();
+    const done = await this.prisma.chatMessage.updateMany({
+      where: { id: messageId, senderId: me, deletedAt: null },
+      data: { text, editedAt, originalText: m.originalText ?? m.text },
+    });
+    if (done.count === 0) throw new NotFoundException('Xabar topilmadi');
+    const row = { ...m, text, editedAt };
+    const peerReply = (await this.replyViews([m], peerId)).get(
+      m.replyToId ?? '',
+    );
+    await this.pushToPeer(peerId, {
+      type: 'chat.edit',
+      conversationId: m.conversationId,
+      message: this.view(row, peerId, peerReply ?? null),
+    });
+    return this.view(row, me, reply ?? null);
   }
 
   async removeOwn(me: number, messageId: string): Promise<{ ok: true }> {

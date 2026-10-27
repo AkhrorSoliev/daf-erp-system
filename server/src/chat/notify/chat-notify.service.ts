@@ -15,6 +15,7 @@ import {
   isQuietHour,
   needsTelegram,
   noticeText,
+  planNotice,
 } from './chat-notify.rules';
 
 export interface ChatNotifyInput {
@@ -68,7 +69,7 @@ export class ChatNotifyService {
       if (recipient.userId) await this.bell(recipient.userId, name, i);
       // A chat the bot marked disconnected is skipped (ADR-0129, ADR-0117 precedent).
       if (recipient.telegramChatId && !recipient.telegramDisconnectedAt) {
-        await this.telegram(i, name, now);
+        await this.telegram(i, name, recipient.telegramChatId, now);
       }
     } catch (err) {
       this.warn('notice', i.recipientId, err);
@@ -131,7 +132,12 @@ export class ChatNotifyService {
     }
   }
 
-  private async telegram(i: ChatNotifyInput, name: string, now: Date) {
+  private async telegram(
+    i: ChatNotifyInput,
+    name: string,
+    chatId: string,
+    now: Date,
+  ) {
     const key = {
       conversationId_studentId: {
         conversationId: i.conversationId,
@@ -143,53 +149,92 @@ export class ChatNotifyService {
         this.prisma.chatNotifyState.findUnique({ where: key }),
         this.prisma.chatReadState.findUnique({ where: key }),
       ]);
-      if (!needsTelegram(state, read?.lastReadAt ?? null)) return;
+      const plan = planNotice(state, read?.lastReadAt ?? null, now);
+      if (plan === 'SKIP') return;
+      const data = {
+        conversationId: i.conversationId,
+        studentId: i.recipientId,
+      };
+      if (plan === 'EDIT_COUNT' || plan === 'EDIT_RESET') {
+        const count = plan === 'EDIT_COUNT' ? (state?.unreadCount ?? 1) + 1 : 1;
+        const edited = await this.sms.editTelegramMessage(
+          chatId,
+          state!.telegramMessageId!,
+          noticeText(name, count),
+          this.noticeMarkup(i),
+        );
+        if (edited) {
+          await this.prisma.chatNotifyState.update({
+            where: key,
+            data:
+              plan === 'EDIT_COUNT'
+                ? { unreadCount: count }
+                : { unreadCount: 1, notifiedAt: now, pendingSince: null },
+          });
+          return;
+        }
+        // The person deleted it: fall through and send a fresh one.
+      }
       if (isQuietHour(now)) {
         await this.prisma.chatNotifyState.upsert({
           where: key,
-          create: {
-            conversationId: i.conversationId,
-            studentId: i.recipientId,
-            pendingSince: now,
-          },
+          create: { ...data, pendingSince: now },
           update: { pendingSince: now },
         });
         return;
       }
-      await this.sendNotice(i, name);
+      // The old notice goes: a stretch has exactly one.
+      if (state?.telegramMessageId) {
+        await this.sms.deleteTelegramMessage(chatId, state.telegramMessageId);
+      }
+      const messageId = await this.sendNotice(i, name, 1);
       await this.prisma.chatNotifyState.upsert({
         where: key,
         create: {
-          conversationId: i.conversationId,
-          studentId: i.recipientId,
+          ...data,
           notifiedAt: now,
+          telegramMessageId: messageId,
+          unreadCount: 1,
         },
-        update: { notifiedAt: now, pendingSince: null },
+        update: {
+          notifiedAt: now,
+          pendingSince: null,
+          telegramMessageId: messageId,
+          unreadCount: 1,
+        },
       });
     } catch (err) {
       this.warn('telegram', i.recipientId, err);
     }
   }
 
-  private async sendNotice(i: ChatNotifyInput, name: string) {
+  private noticeMarkup(i: ChatNotifyInput) {
     const link = chatDeepLink(
       this.config.get<string>('TELEGRAM_MINI_APP_URL'),
       i.conversationId,
     );
-    await this.sms.sendToStudent(
+    return link
+      ? Markup.inlineKeyboard([[Markup.button.webApp(BUTTON_TEXT, link)]])
+          .reply_markup
+      : undefined;
+  }
+
+  /** Sends the notice and returns its Telegram message id (null when unknown). */
+  private async sendNotice(
+    i: ChatNotifyInput,
+    name: string,
+    count: number,
+  ): Promise<number | null> {
+    const markup = this.noticeMarkup(i);
+    const sms = await this.sms.sendToStudent(
       i.recipientId,
-      noticeText(name),
+      noticeText(name, count),
       SmsMessageType.AUTO,
       undefined,
       i.companyId,
-      link
-        ? {
-            replyMarkup: Markup.inlineKeyboard([
-              [Markup.button.webApp(BUTTON_TEXT, link)],
-            ]).reply_markup,
-          }
-        : undefined,
+      markup ? { replyMarkup: markup } : undefined,
     );
+    return sms?.telegramMessageId ?? null;
   }
 
   /**
@@ -258,7 +303,7 @@ export class ChatNotifyService {
               select: { firstName: true, lastName: true },
             });
             if (sender) {
-              await this.sendNotice(
+              const messageId = await this.sendNotice(
                 {
                   conversationId: p.conversationId,
                   senderId,
@@ -266,10 +311,16 @@ export class ChatNotifyService {
                   companyId: conversation.companyId,
                 },
                 `${sender.firstName} ${sender.lastName}`.trim(),
+                unread,
               );
               await this.prisma.chatNotifyState.update({
                 where: key,
-                data: { notifiedAt: now, pendingSince: null },
+                data: {
+                  notifiedAt: now,
+                  pendingSince: null,
+                  telegramMessageId: messageId,
+                  unreadCount: unread,
+                },
               });
               continue;
             }

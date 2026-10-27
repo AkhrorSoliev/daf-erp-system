@@ -16,3 +16,10 @@ export const PURGE_INACTIVE_DAYS = 30;
 export const PURGE_BATCH = 200;
 /** A report keeps this many of the latest messages. */
 export const REPORT_SNAPSHOT_SIZE = 50;
+/** A text may be changed this long after it was sent. */
+export const EDIT_WINDOW_MS = 3 * 60 * 60 * 1000;
+export const EDIT_EXPIRED_MESSAGE =
+  "Xabarni faqat yuborilganiga 3 soat bo'lmaguncha tahrirlash mumkin";
+export const EDIT_ONLY_TEXT_MESSAGE = 'Faqat matnli xabarni tahrirlash mumkin';
+export const BANNED_EDIT_MESSAGE = 'Siz chatdan chiqarilgansiz. Yozish yopiq.';
+export const REPLY_GONE_MESSAGE = 'Javob berilayotgan xabar topilmadi';

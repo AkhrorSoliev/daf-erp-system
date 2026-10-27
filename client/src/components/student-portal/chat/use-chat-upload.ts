@@ -12,6 +12,8 @@ export interface ChatUpload {
   file: File;
   /** Whole seconds, voice only. */
   durationSec?: number;
+  /** The message this one answers. */
+  replyToId?: string;
 }
 
 /**
@@ -25,9 +27,10 @@ export function useUploadChatFile(conversationId: string) {
   const [progress, setProgress] = useState(0);
 
   const m = useMutation<unknown, unknown, ChatUpload>({
-    mutationFn: ({ file, durationSec }) => {
+    mutationFn: ({ file, durationSec, replyToId }) => {
       const body = new FormData();
       if (durationSec !== undefined) body.append("durationSec", String(durationSec));
+      if (replyToId) body.append("replyToId", replyToId);
       body.append("file", file, file.name);
       setProgress(0);
       return api.post(`/chat/conversations/${conversationId}/files`, body, {
