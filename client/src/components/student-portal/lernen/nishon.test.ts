@@ -29,6 +29,10 @@ describe("nishonNomi", () => {
     expect(nishonNomi("GURUH_BIRINCHI")).toBe("Guruhlar jadvalida 1-o'rin");
     expect(nishonNomi("LIGA_TEMIR")).toBe("LIGA_TEMIR");
   });
+
+  it("jang nishoni nomi", () => {
+    expect(nishonNomi("JANG_50")).toBe("50 ta jang g'alabasi");
+  });
 });
 
 describe("nishonQoldi", () => {

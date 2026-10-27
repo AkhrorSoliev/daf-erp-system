@@ -5156,6 +5156,8 @@ const de: Dictionary = {
   "Keyingi mashqda beriladi": "Kommt bei der nächsten Übung",
   "yana {n} kun": "noch Tage: {n}",
   "yana {n} ta so'z": "noch Wörter: {n}",
+  "{n} ta jang g'alabasi": "{n} Duellsiege",
+  "yana {n} ta g'alaba": "noch {n} Siege",
   "{name} ligasiga ko'tarilganda": "beim Aufstieg in die {name}-Liga",
   "Yuqori ligaga ko'tarilganda": "beim Aufstieg in eine höhere Liga",
   "Xonada 1-o'rin, kamida {points} ball, xonada kamida {n} kishi bo'lsa": "Platz 1 im Raum, mindestens {points} Punkte, mindestens {n} Personen im Raum",

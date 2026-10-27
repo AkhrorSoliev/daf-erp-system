@@ -320,7 +320,7 @@ export interface Maqsad {
 /** `GET .../nishonlar` qatori: `olingan` — ISO sana yoki `null`, `qoldi` — chegaragacha. */
 export interface NishonQatori {
   key: string;
-  tur: "SERIE" | "WOERTER" | "LIGA" | "XONA" | "GURUH";
+  tur: "SERIE" | "WOERTER" | "LIGA" | "XONA" | "GURUH" | "JANG";
   chegara: number;
   olingan: string | null;
   qoldi: number | null;

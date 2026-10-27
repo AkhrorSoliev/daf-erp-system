@@ -101,6 +101,8 @@ export function nishonNomi(key: string): string {
   }
   if (key === 'XONA_GOLIB') return "Xona g'olibi";
   if (key === 'GURUH_BIRINCHI') return "Guruhlar jadvalida 1-o'rin";
+  const jang = /^JANG_(\d+)$/.exec(key);
+  if (jang) return `${Number(jang[1])} ta jang g'alabasi`;
   const m = /^(SERIE|WOERTER)_(\d+)$/.exec(key);
   if (!m) return escapeHtml(key);
   const n = Number(m[2]);

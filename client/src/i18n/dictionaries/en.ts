@@ -5156,6 +5156,8 @@ const en: Dictionary = {
   "Keyingi mashqda beriladi": "Awarded at your next exercise",
   "yana {n} kun": "days to go: {n}",
   "yana {n} ta so'z": "words to go: {n}",
+  "{n} ta jang g'alabasi": "{n} battle wins",
+  "yana {n} ta g'alaba": "{n} more wins",
   "{name} ligasiga ko'tarilganda": "when you reach the {name} League",
   "Yuqori ligaga ko'tarilganda": "when you move up a league",
   "Xonada 1-o'rin, kamida {points} ball, xonada kamida {n} kishi bo'lsa": "1st place in the room, at least {points} points, at least {n} people in the room",

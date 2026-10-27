@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Crown, Fire, Trophy, UsersThree } from "@phosphor-icons/react";
+import { BookOpen, Crown, Fire, Sword, Trophy, UsersThree } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { LoadingCards, Section } from "../../lumio";
 import { useT } from "@/i18n/use-t";
@@ -16,6 +16,7 @@ const BELGI: Record<NishonQatori["tur"], typeof Fire> = {
   LIGA: Trophy,
   XONA: Crown,
   GURUH: UsersThree,
+  JANG: Sword,
 };
 
 /** Olingan nishonning to'ldirishi — to'q fon, oq matn (qorong'i rejimda ham o'qiladi). */
@@ -25,6 +26,7 @@ const TOLDIRISH: Record<NishonQatori["tur"], string> = {
   LIGA: "bg-grape-500 text-white",
   XONA: "bg-grape-500 text-white",
   GURUH: "bg-grape-500 text-white",
+  JANG: "bg-coral-500 text-white",
 };
 
 /**

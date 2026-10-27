@@ -5156,6 +5156,8 @@ const ru: Dictionary = {
   "Keyingi mashqda beriladi": "Выдаётся после следующего упражнения",
   "yana {n} kun": "осталось дней: {n}",
   "yana {n} ta so'z": "осталось слов: {n}",
+  "{n} ta jang g'alabasi": "{n} побед в дуэлях",
+  "yana {n} ta g'alaba": "ещё {n} побед",
   "{name} ligasiga ko'tarilganda": "при переходе в лигу «{name}»",
   "Yuqori ligaga ko'tarilganda": "при переходе в лигу выше",
   "Xonada 1-o'rin, kamida {points} ball, xonada kamida {n} kishi bo'lsa": "1-е место в комнате, не меньше {points} баллов, в комнате не меньше {n} участников",
