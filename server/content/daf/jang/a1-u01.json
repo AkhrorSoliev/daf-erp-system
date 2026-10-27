@@ -1,0 +1,343 @@
+{
+  "level": "A1",
+  "order": 1,
+  "tasdiqlangan": false,
+  "savollar": [
+    {
+      "id": "jang-a1-u01-001",
+      "kind": "CHOOSE",
+      "prompt": "«xayrli tong» nemischa?",
+      "options": [
+        "Guten Morgen",
+        "Guten Abend",
+        "Gute Nacht",
+        "Guten Tag"
+      ],
+      "answer": "Guten Morgen"
+    },
+    {
+      "id": "jang-a1-u01-002",
+      "kind": "CHOOSE",
+      "prompt": "«xayr» (rasmiy) nemischa?",
+      "options": [
+        "Auf Wiedersehen",
+        "Bis bald",
+        "Hallo",
+        "Danke"
+      ],
+      "answer": "Auf Wiedersehen"
+    },
+    {
+      "id": "jang-a1-u01-003",
+      "kind": "CHOOSE",
+      "prompt": "«woher» o'zbekcha?",
+      "options": [
+        "qayerdan",
+        "qayerda",
+        "qanday",
+        "kim"
+      ],
+      "answer": "qayerdan"
+    },
+    {
+      "id": "jang-a1-u01-004",
+      "kind": "CHOOSE",
+      "prompt": "«wer» o'zbekcha?",
+      "options": [
+        "kim",
+        "nima",
+        "qayerda"
+      ],
+      "answer": "kim"
+    },
+    {
+      "id": "jang-a1-u01-005",
+      "kind": "CHOOSE",
+      "prompt": "«Stadt» o'zbekcha?",
+      "options": [
+        "shahar",
+        "mamlakat",
+        "ism"
+      ],
+      "answer": "shahar"
+    },
+    {
+      "id": "jang-a1-u01-006",
+      "kind": "CHOOSE",
+      "prompt": "«17» nemischa?",
+      "options": [
+        "siebzehn",
+        "sieben",
+        "sechzehn"
+      ],
+      "answer": "siebzehn"
+    },
+    {
+      "id": "jang-a1-u01-007",
+      "kind": "CHOOSE",
+      "prompt": "«12» nemischa?",
+      "options": [
+        "zwölf",
+        "zwei",
+        "elf"
+      ],
+      "answer": "zwölf"
+    },
+    {
+      "id": "jang-a1-u01-008",
+      "kind": "CHOOSE",
+      "prompt": "Ich ___ Anna.",
+      "options": [
+        "bin",
+        "bist",
+        "ist"
+      ],
+      "answer": "bin"
+    },
+    {
+      "id": "jang-a1-u01-009",
+      "kind": "CHOOSE",
+      "prompt": "___ du Thomas?",
+      "options": [
+        "Bist",
+        "Bin",
+        "Ist"
+      ],
+      "answer": "Bist"
+    },
+    {
+      "id": "jang-a1-u01-010",
+      "kind": "CHOOSE",
+      "prompt": "Wie ___ Sie?",
+      "options": [
+        "heißen",
+        "heiße",
+        "heißt"
+      ],
+      "answer": "heißen"
+    },
+    {
+      "id": "jang-a1-u01-011",
+      "kind": "CHOOSE",
+      "prompt": "Ich komme ___ Usbekistan.",
+      "options": [
+        "aus",
+        "in",
+        "wo"
+      ],
+      "answer": "aus"
+    },
+    {
+      "id": "jang-a1-u01-012",
+      "kind": "CHOOSE",
+      "prompt": "Ich wohne ___ Deutschland.",
+      "options": [
+        "in",
+        "aus",
+        "woher"
+      ],
+      "answer": "in"
+    },
+    {
+      "id": "jang-a1-u01-013",
+      "kind": "CHOOSE",
+      "prompt": "___ wohnst du?",
+      "options": [
+        "Wo",
+        "Woher",
+        "Wer"
+      ],
+      "answer": "Wo"
+    },
+    {
+      "id": "jang-a1-u01-014",
+      "kind": "CHOOSE",
+      "prompt": "«xayrli kech» nemischa?",
+      "options": [
+        "Guten Abend",
+        "Gute Nacht",
+        "Guten Morgen"
+      ],
+      "answer": "Guten Abend"
+    },
+    {
+      "id": "jang-a1-u01-015",
+      "kind": "CHOOSE",
+      "prompt": "Zwei und drei ist ___.",
+      "options": [
+        "fünf",
+        "sechs",
+        "vier"
+      ],
+      "answer": "fünf"
+    },
+    {
+      "id": "jang-a1-u01-016",
+      "kind": "CHOOSE",
+      "prompt": "«Frau» o'zbekcha?",
+      "options": [
+        "xonim",
+        "janob",
+        "ism"
+      ],
+      "answer": "xonim"
+    },
+    {
+      "id": "jang-a1-u01-017",
+      "kind": "CHOOSE",
+      "prompt": "«sprechen» o'zbekcha?",
+      "options": [
+        "gapirmoq",
+        "yashamoq",
+        "kelmoq"
+      ],
+      "answer": "gapirmoq"
+    },
+    {
+      "id": "jang-a1-u01-018",
+      "kind": "CHOOSE",
+      "prompt": "Rasmiy «siz» nemischa?",
+      "options": [
+        "Sie",
+        "du",
+        "ich"
+      ],
+      "answer": "Sie"
+    },
+    {
+      "id": "jang-a1-u01-019",
+      "kind": "TYPE",
+      "prompt": "Guten ___! (ertalab)",
+      "answer": "Morgen"
+    },
+    {
+      "id": "jang-a1-u01-020",
+      "kind": "TYPE",
+      "prompt": "«rahmat» nemischa?",
+      "answer": "danke"
+    },
+    {
+      "id": "jang-a1-u01-021",
+      "kind": "TYPE",
+      "prompt": "«ism» nemischa?",
+      "answer": "Name",
+      "akzeptiert": [
+        "der Name"
+      ]
+    },
+    {
+      "id": "jang-a1-u01-022",
+      "kind": "TYPE",
+      "prompt": "Ich ___ aus Usbekistan. (kelmoq)",
+      "answer": "komme"
+    },
+    {
+      "id": "jang-a1-u01-023",
+      "kind": "TYPE",
+      "prompt": "Wo ___ du? (yashamoq)",
+      "answer": "wohnst"
+    },
+    {
+      "id": "jang-a1-u01-024",
+      "kind": "TYPE",
+      "prompt": "«8» nemischa?",
+      "answer": "acht"
+    },
+    {
+      "id": "jang-a1-u01-025",
+      "kind": "TYPE",
+      "prompt": "«19» nemischa?",
+      "answer": "neunzehn"
+    },
+    {
+      "id": "jang-a1-u01-026",
+      "kind": "TYPE",
+      "prompt": "Ich ___ Markus Neumann. (atalmoq)",
+      "answer": "heiße"
+    },
+    {
+      "id": "jang-a1-u01-027",
+      "kind": "TYPE",
+      "prompt": "«Germaniya» nemischa?",
+      "answer": "Deutschland"
+    },
+    {
+      "id": "jang-a1-u01-028",
+      "kind": "TYPE",
+      "prompt": "«0» nemischa?",
+      "answer": "null"
+    },
+    {
+      "id": "jang-a1-u01-029",
+      "kind": "TYPE",
+      "prompt": "«salom» nemischa?",
+      "answer": "hallo"
+    },
+    {
+      "id": "jang-a1-u01-030",
+      "kind": "TYPE",
+      "prompt": "Tschüss, bis ___!",
+      "answer": "bald"
+    },
+    {
+      "id": "jang-a1-u01-031",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "danke",
+        "hallo",
+        "wohnen"
+      ],
+      "answer": "danke",
+      "lexeme": "u01-s2-danke"
+    },
+    {
+      "id": "jang-a1-u01-032",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "woher",
+        "wohnen",
+        "wo"
+      ],
+      "answer": "woher",
+      "lexeme": "u01-s3-woher"
+    },
+    {
+      "id": "jang-a1-u01-033",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "Stadt",
+        "Land",
+        "Name"
+      ],
+      "answer": "Stadt",
+      "lexeme": "u01-s3-stadt"
+    },
+    {
+      "id": "jang-a1-u01-034",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "sechzehn",
+        "sechs",
+        "siebzehn"
+      ],
+      "answer": "sechzehn",
+      "lexeme": "u01-s4-sechzehn"
+    },
+    {
+      "id": "jang-a1-u01-035",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "heißen",
+        "wohnen",
+        "kommen"
+      ],
+      "answer": "heißen",
+      "lexeme": "u01-s2-heissen"
+    }
+  ]
+}

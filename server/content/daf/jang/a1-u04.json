@@ -1,0 +1,355 @@
+{
+  "level": "A1",
+  "order": 4,
+  "tasdiqlangan": false,
+  "savollar": [
+    {
+      "id": "jang-a1-u04-001",
+      "kind": "CHOOSE",
+      "prompt": "«Brot» o'zbekcha?",
+      "options": [
+        "non",
+        "sut",
+        "pishloq"
+      ],
+      "answer": "non"
+    },
+    {
+      "id": "jang-a1-u04-002",
+      "kind": "CHOOSE",
+      "prompt": "«tuxum» nemischa?",
+      "options": [
+        "Ei",
+        "Eis",
+        "Essen"
+      ],
+      "answer": "Ei"
+    },
+    {
+      "id": "jang-a1-u04-003",
+      "kind": "CHOOSE",
+      "prompt": "Das ist ___ Apfel.",
+      "options": [
+        "ein",
+        "eine",
+        "einen"
+      ],
+      "answer": "ein"
+    },
+    {
+      "id": "jang-a1-u04-004",
+      "kind": "CHOOSE",
+      "prompt": "Das ist ___ Banane.",
+      "options": [
+        "eine",
+        "ein",
+        "einen"
+      ],
+      "answer": "eine"
+    },
+    {
+      "id": "jang-a1-u04-005",
+      "kind": "CHOOSE",
+      "prompt": "Wir haben ___ Milch. (yo'q)",
+      "options": [
+        "keine",
+        "kein",
+        "nicht"
+      ],
+      "answer": "keine"
+    },
+    {
+      "id": "jang-a1-u04-006",
+      "kind": "CHOOSE",
+      "prompt": "Ich brauche ___ Topf.",
+      "options": [
+        "einen",
+        "eine",
+        "ein"
+      ],
+      "answer": "einen"
+    },
+    {
+      "id": "jang-a1-u04-007",
+      "kind": "CHOOSE",
+      "prompt": "«teuer» o'zbekcha?",
+      "options": [
+        "qimmat",
+        "arzon",
+        "yangi"
+      ],
+      "answer": "qimmat"
+    },
+    {
+      "id": "jang-a1-u04-008",
+      "kind": "CHOOSE",
+      "prompt": "«arzon» nemischa?",
+      "options": [
+        "billig",
+        "teuer",
+        "frisch"
+      ],
+      "answer": "billig"
+    },
+    {
+      "id": "jang-a1-u04-009",
+      "kind": "CHOOSE",
+      "prompt": "Du ___ gern Fisch.",
+      "options": [
+        "isst",
+        "esse",
+        "essen"
+      ],
+      "answer": "isst"
+    },
+    {
+      "id": "jang-a1-u04-010",
+      "kind": "CHOOSE",
+      "prompt": "Ich ___ lieber Wasser.",
+      "options": [
+        "trinke",
+        "trinkst",
+        "trinkt"
+      ],
+      "answer": "trinke"
+    },
+    {
+      "id": "jang-a1-u04-011",
+      "kind": "CHOOSE",
+      "prompt": "«Frühstück» o'zbekcha?",
+      "options": [
+        "nonushta",
+        "tushlik",
+        "kechki ovqat"
+      ],
+      "answer": "nonushta"
+    },
+    {
+      "id": "jang-a1-u04-012",
+      "kind": "CHOOSE",
+      "prompt": "Wir frühstücken ___ sieben Uhr.",
+      "options": [
+        "um",
+        "am",
+        "mit"
+      ],
+      "answer": "um"
+    },
+    {
+      "id": "jang-a1-u04-013",
+      "kind": "CHOOSE",
+      "prompt": "___ Morgen trinke ich Kaffee.",
+      "options": [
+        "Am",
+        "Um",
+        "Zu"
+      ],
+      "answer": "Am"
+    },
+    {
+      "id": "jang-a1-u04-014",
+      "kind": "CHOOSE",
+      "prompt": "Ich ___ die Tomatensuppe. (xohlamoq)",
+      "options": [
+        "möchte",
+        "möchtest",
+        "möchten"
+      ],
+      "answer": "möchte"
+    },
+    {
+      "id": "jang-a1-u04-015",
+      "kind": "CHOOSE",
+      "prompt": "«Rechnung» o'zbekcha?",
+      "options": [
+        "hisob",
+        "buyurtma",
+        "menyu"
+      ],
+      "answer": "hisob"
+    },
+    {
+      "id": "jang-a1-u04-016",
+      "kind": "CHOOSE",
+      "prompt": "«sanchqi» nemischa?",
+      "options": [
+        "Gabel",
+        "Löffel",
+        "Messer"
+      ],
+      "answer": "Gabel"
+    },
+    {
+      "id": "jang-a1-u04-017",
+      "kind": "CHOOSE",
+      "prompt": "«Hunger» o'zbekcha?",
+      "options": [
+        "ochlik",
+        "chanqoqlik",
+        "ishtaha"
+      ],
+      "answer": "ochlik"
+    },
+    {
+      "id": "jang-a1-u04-018",
+      "kind": "CHOOSE",
+      "prompt": "«Guten Appetit!» ga javob?",
+      "options": [
+        "Danke, gleichfalls!",
+        "Das ist alles, danke.",
+        "Stimmt so!"
+      ],
+      "answer": "Danke, gleichfalls!"
+    },
+    {
+      "id": "jang-a1-u04-019",
+      "kind": "TYPE",
+      "prompt": "«sut» nemischa?",
+      "answer": "Milch",
+      "akzeptiert": [
+        "die Milch"
+      ]
+    },
+    {
+      "id": "jang-a1-u04-020",
+      "kind": "TYPE",
+      "prompt": "«olma» nemischa?",
+      "answer": "Apfel",
+      "akzeptiert": [
+        "der Apfel"
+      ]
+    },
+    {
+      "id": "jang-a1-u04-021",
+      "kind": "TYPE",
+      "prompt": "«baliq» nemischa?",
+      "answer": "Fisch",
+      "akzeptiert": [
+        "der Fisch"
+      ]
+    },
+    {
+      "id": "jang-a1-u04-022",
+      "kind": "TYPE",
+      "prompt": "Was ___ das? (narxi)",
+      "answer": "kostet"
+    },
+    {
+      "id": "jang-a1-u04-023",
+      "kind": "TYPE",
+      "prompt": "«suv» nemischa?",
+      "answer": "Wasser",
+      "akzeptiert": [
+        "das Wasser"
+      ]
+    },
+    {
+      "id": "jang-a1-u04-024",
+      "kind": "TYPE",
+      "prompt": "Ich habe ___. (qornim och)",
+      "answer": "Hunger"
+    },
+    {
+      "id": "jang-a1-u04-025",
+      "kind": "TYPE",
+      "prompt": "Die Pizza ist sehr ___. (mazali)",
+      "answer": "lecker"
+    },
+    {
+      "id": "jang-a1-u04-026",
+      "kind": "TYPE",
+      "prompt": "Wir zahlen ___, bitte. (alohida)",
+      "answer": "getrennt"
+    },
+    {
+      "id": "jang-a1-u04-027",
+      "kind": "TYPE",
+      "prompt": "«choy» nemischa?",
+      "answer": "Tee",
+      "akzeptiert": [
+        "der Tee"
+      ]
+    },
+    {
+      "id": "jang-a1-u04-028",
+      "kind": "TYPE",
+      "prompt": "Ist das Fleisch ___? (halol)",
+      "answer": "halal"
+    },
+    {
+      "id": "jang-a1-u04-029",
+      "kind": "TYPE",
+      "prompt": "Die Rechnung, ___! (iltimos)",
+      "answer": "bitte"
+    },
+    {
+      "id": "jang-a1-u04-030",
+      "kind": "TYPE",
+      "prompt": "«tuz» nemischa?",
+      "answer": "Salz",
+      "akzeptiert": [
+        "das Salz"
+      ]
+    },
+    {
+      "id": "jang-a1-u04-031",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "Käse",
+        "Kasse",
+        "Kaffee"
+      ],
+      "answer": "Käse",
+      "lexeme": "u04-s1-kaese"
+    },
+    {
+      "id": "jang-a1-u04-032",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "Kartoffel",
+        "Karotte",
+        "Tomate"
+      ],
+      "answer": "Kartoffel",
+      "lexeme": "u04-s1-kartoffel"
+    },
+    {
+      "id": "jang-a1-u04-033",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "Kuchen",
+        "Keks",
+        "Kellner"
+      ],
+      "answer": "Kuchen",
+      "lexeme": "u04-s4-kuchen"
+    },
+    {
+      "id": "jang-a1-u04-034",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "Suppe",
+        "Sahne",
+        "Salat"
+      ],
+      "answer": "Suppe",
+      "lexeme": "u04-s5-suppe"
+    },
+    {
+      "id": "jang-a1-u04-035",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "Flasche",
+        "Fleisch",
+        "Fisch"
+      ],
+      "answer": "Flasche",
+      "lexeme": "u04-s6-flasche"
+    }
+  ]
+}

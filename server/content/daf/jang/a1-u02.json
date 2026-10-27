@@ -1,0 +1,350 @@
+{
+  "level": "A1",
+  "order": 2,
+  "tasdiqlangan": false,
+  "savollar": [
+    {
+      "id": "jang-a1-u02-001",
+      "kind": "CHOOSE",
+      "prompt": "«ona» nemischa?",
+      "options": [
+        "Mutter",
+        "Vater",
+        "Oma",
+        "Tochter"
+      ],
+      "answer": "Mutter"
+    },
+    {
+      "id": "jang-a1-u02-002",
+      "kind": "CHOOSE",
+      "prompt": "«Bruder» o'zbekcha?",
+      "options": [
+        "aka",
+        "opa",
+        "o'g'il"
+      ],
+      "answer": "aka"
+    },
+    {
+      "id": "jang-a1-u02-003",
+      "kind": "CHOOSE",
+      "prompt": "«Eltern» o'zbekcha?",
+      "options": [
+        "ota-ona",
+        "oila",
+        "odamlar"
+      ],
+      "answer": "ota-ona"
+    },
+    {
+      "id": "jang-a1-u02-004",
+      "kind": "CHOOSE",
+      "prompt": "«40» nemischa?",
+      "options": [
+        "vierzig",
+        "neunzig",
+        "sechzig"
+      ],
+      "answer": "vierzig"
+    },
+    {
+      "id": "jang-a1-u02-005",
+      "kind": "CHOOSE",
+      "prompt": "«99» nemischa?",
+      "options": [
+        "neunundneunzig",
+        "neunzig",
+        "achtundvierzig"
+      ],
+      "answer": "neunundneunzig"
+    },
+    {
+      "id": "jang-a1-u02-006",
+      "kind": "CHOOSE",
+      "prompt": "Das ist ___ Mutter.",
+      "options": [
+        "meine",
+        "mein",
+        "dein"
+      ],
+      "answer": "meine"
+    },
+    {
+      "id": "jang-a1-u02-007",
+      "kind": "CHOOSE",
+      "prompt": "Ist das ___ Bruder?",
+      "options": [
+        "dein",
+        "deine",
+        "meine"
+      ],
+      "answer": "dein"
+    },
+    {
+      "id": "jang-a1-u02-008",
+      "kind": "CHOOSE",
+      "prompt": "Ich ___ zwei Kinder.",
+      "options": [
+        "habe",
+        "hast",
+        "hat"
+      ],
+      "answer": "habe"
+    },
+    {
+      "id": "jang-a1-u02-009",
+      "kind": "CHOOSE",
+      "prompt": "___ du Kinder?",
+      "options": [
+        "Hast",
+        "Habe",
+        "Hat"
+      ],
+      "answer": "Hast"
+    },
+    {
+      "id": "jang-a1-u02-010",
+      "kind": "CHOOSE",
+      "prompt": "Meine Mutter ist ___. (shifokor ayol)",
+      "options": [
+        "Ärztin",
+        "Arzt",
+        "Lehrer"
+      ],
+      "answer": "Ärztin"
+    },
+    {
+      "id": "jang-a1-u02-011",
+      "kind": "CHOOSE",
+      "prompt": "«verheiratet» o'zbekcha?",
+      "options": [
+        "oilali",
+        "turmush qurmagan",
+        "baxtli"
+      ],
+      "answer": "oilali"
+    },
+    {
+      "id": "jang-a1-u02-012",
+      "kind": "CHOOSE",
+      "prompt": "«müde» o'zbekcha?",
+      "options": [
+        "charchagan",
+        "quvnoq",
+        "keksa"
+      ],
+      "answer": "charchagan"
+    },
+    {
+      "id": "jang-a1-u02-013",
+      "kind": "CHOOSE",
+      "prompt": "«klein» so'zining aksi?",
+      "options": [
+        "groß",
+        "alt",
+        "neu"
+      ],
+      "answer": "groß"
+    },
+    {
+      "id": "jang-a1-u02-014",
+      "kind": "CHOOSE",
+      "prompt": "«Kollege» o'zbekcha?",
+      "options": [
+        "hamkasb",
+        "do'st",
+        "rahbar"
+      ],
+      "answer": "hamkasb"
+    },
+    {
+      "id": "jang-a1-u02-015",
+      "kind": "CHOOSE",
+      "prompt": "___ ist meine Freundin.",
+      "options": [
+        "Sie",
+        "Er",
+        "Wir"
+      ],
+      "answer": "Sie"
+    },
+    {
+      "id": "jang-a1-u02-016",
+      "kind": "CHOOSE",
+      "prompt": "___ lernen zusammen.",
+      "options": [
+        "Wir",
+        "Er",
+        "Ich"
+      ],
+      "answer": "Wir"
+    },
+    {
+      "id": "jang-a1-u02-017",
+      "kind": "CHOOSE",
+      "prompt": "«Mädchen» o'zbekcha?",
+      "options": [
+        "qiz bola",
+        "o'g'il bola",
+        "erkak"
+      ],
+      "answer": "qiz bola"
+    },
+    {
+      "id": "jang-a1-u02-018",
+      "kind": "CHOOSE",
+      "prompt": "«maktab» nemischa?",
+      "options": [
+        "Schule",
+        "Firma",
+        "Beruf"
+      ],
+      "answer": "Schule"
+    },
+    {
+      "id": "jang-a1-u02-019",
+      "kind": "TYPE",
+      "prompt": "«ota» nemischa?",
+      "answer": "Vater",
+      "akzeptiert": [
+        "der Vater"
+      ]
+    },
+    {
+      "id": "jang-a1-u02-020",
+      "kind": "TYPE",
+      "prompt": "«bola» nemischa?",
+      "answer": "Kind",
+      "akzeptiert": [
+        "das Kind"
+      ]
+    },
+    {
+      "id": "jang-a1-u02-021",
+      "kind": "TYPE",
+      "prompt": "«30» nemischa?",
+      "answer": "dreißig"
+    },
+    {
+      "id": "jang-a1-u02-022",
+      "kind": "TYPE",
+      "prompt": "«100» nemischa?",
+      "answer": "hundert",
+      "akzeptiert": [
+        "einhundert"
+      ]
+    },
+    {
+      "id": "jang-a1-u02-023",
+      "kind": "TYPE",
+      "prompt": "Sie ___ drei Kinder. (ega bo'lmoq)",
+      "answer": "hat"
+    },
+    {
+      "id": "jang-a1-u02-024",
+      "kind": "TYPE",
+      "prompt": "Was ist dein ___? (kasb)",
+      "answer": "Beruf"
+    },
+    {
+      "id": "jang-a1-u02-025",
+      "kind": "TYPE",
+      "prompt": "Mein Bruder ___ in Deutschland. (o'qimoq)",
+      "answer": "studiert"
+    },
+    {
+      "id": "jang-a1-u02-026",
+      "kind": "TYPE",
+      "prompt": "Wo ___ du? (ishlamoq)",
+      "answer": "arbeitest"
+    },
+    {
+      "id": "jang-a1-u02-027",
+      "kind": "TYPE",
+      "prompt": "Wie ___ bist du? (yosh)",
+      "answer": "alt"
+    },
+    {
+      "id": "jang-a1-u02-028",
+      "kind": "TYPE",
+      "prompt": "«baxtli» nemischa?",
+      "answer": "glücklich"
+    },
+    {
+      "id": "jang-a1-u02-029",
+      "kind": "TYPE",
+      "prompt": "Meine Oma ist alt und ___. (quvnoq)",
+      "answer": "lustig"
+    },
+    {
+      "id": "jang-a1-u02-030",
+      "kind": "TYPE",
+      "prompt": "«do'st» nemischa?",
+      "answer": "Freund",
+      "akzeptiert": [
+        "der Freund"
+      ]
+    },
+    {
+      "id": "jang-a1-u02-031",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "Tochter",
+        "Mutter",
+        "Vater"
+      ],
+      "answer": "Tochter",
+      "lexeme": "u02-s1-tochter"
+    },
+    {
+      "id": "jang-a1-u02-032",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "fünfzig",
+        "sechzig",
+        "siebzig"
+      ],
+      "answer": "fünfzig",
+      "lexeme": "u02-s2-fuenfzig"
+    },
+    {
+      "id": "jang-a1-u02-033",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "jung",
+        "neu",
+        "klein"
+      ],
+      "answer": "jung",
+      "lexeme": "u02-s4-jung"
+    },
+    {
+      "id": "jang-a1-u02-034",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "Lehrerin",
+        "Lehrer",
+        "Ärztin"
+      ],
+      "answer": "Lehrerin",
+      "lexeme": "u02-s3-lehrerin"
+    },
+    {
+      "id": "jang-a1-u02-035",
+      "kind": "LISTEN",
+      "prompt": "Qaysi so'zni eshitdingiz?",
+      "options": [
+        "zusammen",
+        "lernen",
+        "machen"
+      ],
+      "answer": "zusammen",
+      "lexeme": "u02-s5-zusammen"
+    }
+  ]
+}
