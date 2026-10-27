@@ -1,10 +1,11 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { DotsThree } from "@phosphor-icons/react";
+import { useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { ArrowBendUpLeft, DotsThree } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { tashkentHhmm } from "@/lib/tashkent-time";
 import { useT } from "@/i18n/context";
+import { shouldReplyOnRelease, swipeStep, type SwipeState } from "./chat-swipe";
 import type { MessageView, ReplyView } from "./chat-types";
 import type { ThreadItem } from "./chat-thread-model";
 
@@ -71,11 +72,12 @@ function ReplyQuote({
 /**
  * One message. `mine` is coral on the right with a tail, the peer's is white on
  * the left, the time sits under it. The text is DATA: never through t(), never
- * as HTML.
+ * as HTML. A swipe to the left (touch) or the arrow beside it (mouse) answers it.
  */
 export function MessageBubble({
   message,
   peerLabel,
+  onReply,
   onActions,
   onJump,
   onRetry,
@@ -84,7 +86,9 @@ export function MessageBubble({
   message: ThreadItem;
   /** The peer's name, for the quote of a message of theirs. */
   peerLabel: string;
-  /** Opens the actions (reply, edit, delete); offered on every sent message. */
+  /** Answers this message (swipe on touch, arrow on hover). */
+  onReply?: (message: ThreadItem) => void;
+  /** Opens edit / delete; offered on my own sent messages only. */
   onActions?: (message: ThreadItem) => void;
   /** Scrolls to the message a reply answers. */
   onJump?: (id: string) => void;
@@ -96,74 +100,139 @@ export function MessageBubble({
   const me = message.mine;
   const failed = message.pending === "failed";
   const sending = message.pending === "sending";
-  const canAct = !message.pending && onActions;
+  const settled = !message.pending;
+  const canReply = settled && onReply;
+  const canAct = settled && me && onActions;
+
+  const swipe = useRef<SwipeState | null>(null);
+  const [dx, setDx] = useState(0);
+
+  const down = (e: PointerEvent<HTMLDivElement>) => {
+    if (!canReply || e.pointerType === "mouse") return;
+    swipe.current = { x: e.clientX, y: e.clientY, locked: false };
+  };
+  const move = (e: PointerEvent<HTMLDivElement>) => {
+    const s = swipe.current;
+    if (!s) return;
+    const step = swipeStep(s, e.clientX, e.clientY);
+    if (step.cancel) {
+      swipe.current = null;
+      setDx(0);
+      return;
+    }
+    swipe.current = step.state;
+    if (step.state.locked) setDx(step.dx);
+  };
+  const end = () => {
+    const s = swipe.current;
+    swipe.current = null;
+    if (s?.locked && shouldReplyOnRelease(dx) && onReply) {
+      onReply(message);
+      navigator.vibrate?.(10);
+    }
+    setDx(0);
+  };
+
+  const progress = Math.min(1, Math.abs(dx) / 44);
 
   return (
     <div
       id={`msg-${message.id}`}
-      className={cn(
-        "flex max-w-[78%] flex-col",
-        me ? "items-end self-end" : "items-start self-start",
-      )}
+      className={cn("group relative flex w-full", me ? "justify-end" : "justify-start")}
     >
-      <div className={cn("flex items-center gap-1", !me && "flex-row-reverse")}>
-        {canAct ? (
-          <button
-            type="button"
-            aria-label={t("Xabar amallari")}
-            onClick={() => onActions(message)}
-            className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-ink-400 hover:bg-tint"
-          >
-            <DotsThree size={20} weight="bold" />
-          </button>
-        ) : null}
-        <div
-          className={cn(
-            "min-w-0 rounded-[20px] px-[15px] py-[11px] text-[15.5px] font-semibold leading-[1.4]",
-            me
-              ? "rounded-br-md text-white shadow-[0_4px_12px_rgba(255,107,74,.28)]"
-              : "rounded-bl-md border border-line bg-surface text-ink-900 shadow-lumio-sm",
-            me && (failed ? "bg-danger" : "bg-coral-500"),
-            sending && "opacity-70",
-          )}
-        >
-          {message.replyTo ? (
-            <ReplyQuote
-              reply={message.replyTo}
-              label={peerLabel}
-              mine={me}
-              onJump={onJump}
-            />
-          ) : null}
-          {message.kind === "TEXT" ? (
-            <span className="whitespace-pre-wrap break-words">
-              {message.text}
-            </span>
-          ) : (
-            (renderMedia?.(message) ?? <MediaPlaceholder message={message} />)
-          )}
-        </div>
-      </div>
-      <div className="mx-1.5 mt-1 flex items-center gap-2 text-[11px] font-bold text-ink-400">
-        {sending ? (
-          <span>{t("yuborilmoqda")}</span>
-        ) : failed ? (
-          <>
-            <span className="text-danger">{t("Yuborilmadi")}</span>
+      {/* Under the sliding bubble: shows up as it moves. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute right-1 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-tint text-coral-500"
+        style={{ opacity: progress, transform: `translateY(-50%) scale(${0.6 + 0.4 * progress})` }}
+      >
+        <ArrowBendUpLeft size={18} weight="bold" />
+      </span>
+      <div
+        onPointerDown={down}
+        onPointerMove={move}
+        onPointerUp={end}
+        onPointerCancel={end}
+        style={{
+          transform: dx ? `translateX(${dx}px)` : undefined,
+          transition: dx ? "none" : "transform 160ms ease-out",
+          touchAction: "pan-y",
+        }}
+        className={cn(
+          "flex max-w-[78%] flex-col",
+          me ? "items-end" : "items-start",
+        )}
+      >
+        <div className={cn("flex items-center gap-1", !me && "flex-row-reverse")}>
+          {canAct ? (
             <button
               type="button"
-              onClick={() => onRetry?.(message)}
-              className="font-extrabold text-danger underline"
+              aria-label={t("Xabar amallari")}
+              onClick={() => onActions(message)}
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-ink-400 hover:bg-tint"
             >
-              {t("Qayta yuborish")}
+              <DotsThree size={20} weight="bold" />
             </button>
-          </>
-        ) : (
-          <>
-            {message.editedAt ? <span>{t("tahrirlangan")}</span> : null}
-            <span>{tashkentHhmm(message.createdAt)}</span>
-          </>
-        )}
+          ) : null}
+          {canReply ? (
+            // Mouse and keyboard: an arrow beside the bubble. Touch has the swipe.
+            <button
+              type="button"
+              aria-label={t("Javob berish")}
+              onClick={() => onReply(message)}
+              className="hidden size-8 shrink-0 items-center justify-center rounded-full text-ink-400 opacity-0 transition-opacity hover:bg-tint focus-visible:opacity-100 group-hover:opacity-100 md:inline-flex"
+            >
+              <ArrowBendUpLeft size={18} weight="bold" />
+            </button>
+          ) : null}
+          <div
+            className={cn(
+              "min-w-0 rounded-[20px] px-[15px] py-[11px] text-[15.5px] font-semibold leading-[1.4]",
+              me
+                ? "rounded-br-md text-white shadow-[0_4px_12px_rgba(255,107,74,.28)]"
+                : "rounded-bl-md border border-line bg-surface text-ink-900 shadow-lumio-sm",
+              me && (failed ? "bg-danger" : "bg-coral-500"),
+              sending && "opacity-70",
+            )}
+          >
+            {message.replyTo ? (
+              <ReplyQuote
+                reply={message.replyTo}
+                label={peerLabel}
+                mine={me}
+                onJump={onJump}
+              />
+            ) : null}
+            {message.kind === "TEXT" ? (
+              <span className="whitespace-pre-wrap break-words">
+                {message.text}
+              </span>
+            ) : (
+              (renderMedia?.(message) ?? <MediaPlaceholder message={message} />)
+            )}
+          </div>
+        </div>
+        <div className="mx-1.5 mt-1 flex items-center gap-2 text-[11px] font-bold text-ink-400">
+          {sending ? (
+            <span>{t("yuborilmoqda")}</span>
+          ) : failed ? (
+            <>
+              <span className="text-danger">{t("Yuborilmadi")}</span>
+              <button
+                type="button"
+                onClick={() => onRetry?.(message)}
+                className="font-extrabold text-danger underline"
+              >
+                {t("Qayta yuborish")}
+              </button>
+            </>
+          ) : (
+            <>
+              {message.editedAt ? <span>{t("tahrirlangan")}</span> : null}
+              <span>{tashkentHhmm(message.createdAt)}</span>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

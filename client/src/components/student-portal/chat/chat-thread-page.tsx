@@ -153,6 +153,12 @@ export function ChatThreadPage({ id }: { id: string }) {
     );
   };
 
+  // Swipe (touch) or the arrow beside a bubble (mouse) answers a message.
+  const startReply = (m: ThreadItem) => {
+    setEditing(null);
+    setReplyTo(m);
+  };
+
   const jumpTo = (messageId: string) => {
     const el = document.getElementById(`msg-${messageId}`);
     if (!el) return;
@@ -252,6 +258,7 @@ export function ChatThreadPage({ id }: { id: string }) {
                   key={m.id}
                   message={m}
                   peerLabel={peerLabel}
+                  onReply={composerShown ? startReply : undefined}
                   onActions={(msg) =>
                     setActions({
                       message: msg,
@@ -315,20 +322,6 @@ export function ChatThreadPage({ id }: { id: string }) {
         title={t("Xabar amallari")}
       >
         <div className="flex flex-col gap-2.5">
-          {composerShown && (
-            <Button
-              variant="secondary"
-              block
-              onClick={() => {
-                if (!actions) return;
-                setEditing(null);
-                setReplyTo(actions.message);
-                setActions(null);
-              }}
-            >
-              {t("Javob berish")}
-            </Button>
-          )}
           {composerShown && actions?.editable && (
             <Button
               variant="secondary"
