@@ -31,6 +31,7 @@ import { useLernenTema } from "./tema/use-lernen-tema";
 import { joriyUnitTartibi } from "./yol/joriy-unit";
 import { LernenYol } from "./yol/lernen-yol";
 import { RadioCard } from "../radio/radio-card";
+import { JangKarta } from "./jang/jang-karta";
 import { YolTepasi } from "./yol/yol-tepasi";
 
 /**
@@ -129,6 +130,7 @@ export function LernenLevelsPage() {
 
       {/* Radio is for listening while studying, so it sits at the top, within reach of a long path. */}
       <RadioCard />
+      <JangKarta />
 
       {loadState(query) === "loading" ? (
         <LoadingCards count={3} />
