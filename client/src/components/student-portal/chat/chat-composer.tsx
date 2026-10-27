@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { PaperPlaneRight, X } from "@phosphor-icons/react";
+import { Keyboard, PaperPlaneRight, Smiley, X } from "@phosphor-icons/react";
 import { useT } from "@/i18n/context";
+import { ChatEmojiPanel } from "./chat-emoji-panel";
+import { insertAtCaret } from "./chat-emoji";
 import { sendTyping, shouldPing } from "./chat-typing";
 import { ImagePicker, ImagePreviewChip } from "./image-picker";
 import { useUploadChatFile, type ChatUpload } from "./use-chat-upload";
@@ -59,6 +61,7 @@ export function ChatComposer({
   const { upload, uploading, progress } = useUploadChatFile(conversationId);
   const [image, setImage] = useState<File | null>(null);
   const [recording, setRecording] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
   const empty = text.trim().length === 0;
   const inFlight = busy || uploading;
   const unchanged = editing !== null && text.trim() === editing.text;
@@ -79,6 +82,30 @@ export function ChatComposer({
   useEffect(() => {
     if (replyId || editId) field.current?.focus();
   }, [replyId, editId]);
+
+  const touch = () =>
+    typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+
+  // Like Telegram: on a phone the panel takes the keyboard's place.
+  const toggleEmoji = () => {
+    if (emojiOpen) {
+      setEmojiOpen(false);
+      field.current?.focus();
+      return;
+    }
+    setEmojiOpen(true);
+    if (touch()) field.current?.blur();
+  };
+
+  const addEmoji = (emoji: string) => {
+    const el = field.current;
+    const start = el?.selectionStart ?? text.length;
+    const end = el?.selectionEnd ?? text.length;
+    const next = insertAtCaret(text, start, end, emoji, MESSAGE_MAX);
+    if (!next) return;
+    setText(next.text);
+    requestAnimationFrame(() => el?.setSelectionRange(next.caret, next.caret));
+  };
 
   const send = () => {
     if (blocked) return;
@@ -144,6 +171,21 @@ export function ChatComposer({
         )}
         {recording ? null : (
           <div className="flex min-h-12 flex-1 flex-col justify-center rounded-[26px] border border-line bg-background px-4">
+            <div className="flex items-end gap-2">
+            <button
+              type="button"
+              aria-label={emojiOpen ? t("Klaviatura") : t("Emoji")}
+              aria-pressed={emojiOpen}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={toggleEmoji}
+              className="mb-2 inline-flex size-8 shrink-0 items-center justify-center rounded-full text-ink-400 hover:text-coral-500"
+            >
+              {emojiOpen ? (
+                <Keyboard size={24} weight="bold" />
+              ) : (
+                <Smiley size={24} weight="bold" />
+              )}
+            </button>
             <textarea
               ref={field}
               rows={1}
@@ -151,6 +193,9 @@ export function ChatComposer({
               maxLength={MESSAGE_MAX}
               placeholder={t("Xabar yozing…")}
               aria-label={t("Xabar yozing…")}
+              onFocus={() => {
+                if (touch()) setEmojiOpen(false);
+              }}
               onChange={(e) => {
                 const value = e.target.value;
                 setText(value);
@@ -172,8 +217,9 @@ export function ChatComposer({
                 e.preventDefault();
                 send();
               }}
-              className="max-h-[120px] w-full resize-none border-none bg-transparent py-3 text-[15.5px] font-semibold text-ink-900 outline-none placeholder:text-ink-400"
+              className="max-h-[120px] min-w-0 flex-1 resize-none border-none bg-transparent py-3 text-[15.5px] font-semibold text-ink-900 outline-none placeholder:text-ink-400"
             />
+            </div>
             {text.length >= COUNTER_FROM ? (
               <span className="pb-1.5 text-right text-[11px] font-bold text-ink-400">
                 {text.length}/{MESSAGE_MAX}
@@ -199,6 +245,7 @@ export function ChatComposer({
           </button>
         )}
       </div>
+      {emojiOpen && !recording ? <ChatEmojiPanel onPick={addEmoji} /> : null}
     </div>
   );
 }
