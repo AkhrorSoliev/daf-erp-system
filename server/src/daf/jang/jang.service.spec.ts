@@ -12,6 +12,8 @@ function yasa(
     oldingi?: number;
     ruhNomzodlari?: { id: number; studentId: number; questionIds: number[] }[];
     egaTarixi?: { studentId: number; correctCount: number }[];
+    tasdiqlangan?: number;
+    toliqOchiq?: { id: number } | null;
   } = {},
 ) {
   const savolQatori = (id: number) => ({
@@ -33,6 +35,7 @@ function yasa(
       findMany: jest.fn(async (q: { where: { id?: { in: number[] } } }) =>
         q.where.id ? q.where.id.in.map(savolQatori) : (o.savollar ?? []),
       ),
+      count: jest.fn().mockResolvedValue(o.tasdiqlangan ?? 30),
     },
     dafBattle: {
       updateMany: jest.fn().mockResolvedValue({ count: 0 }),
@@ -55,6 +58,7 @@ function yasa(
           return [];
         },
       ),
+      findFirst: jest.fn().mockResolvedValue(o.toliqOchiq ?? null),
       create: jest.fn().mockResolvedValue({ id: 55 }),
     },
     student: {
@@ -92,6 +96,18 @@ describe('JangService.holat', () => {
       ochiq: true,
       bugunQoldi: 3,
     });
+  });
+  it("tasdiqlangan savol 5 ta — ochiq:false, qolgani o'zgarmaydi", async () => {
+    const { servis } = yasa({ bugun: 2, tasdiqlangan: 5 });
+    expect(await servis.holat(10, HOZIR)).toMatchObject({
+      yoqilgan: true,
+      ochiq: false,
+      bugunQoldi: 3,
+    });
+  });
+  it('tasdiqlangan savol 6 ta — ochiq:true', async () => {
+    const { servis } = yasa({ tasdiqlangan: 6 });
+    expect((await servis.holat(10, HOZIR)).ochiq).toBe(true);
   });
 });
 
@@ -172,6 +188,36 @@ describe('JangService.boshla', () => {
       ],
     });
     expect((await servis.boshla(10, 1, HOZIR)).raqib.tur).toBe('BOT');
+  });
+  it("to'liq javoblangan OPEN jang eskisini tashlashdan OLDIN yakunlanadi", async () => {
+    const { servis, prisma } = yasa({
+      savollar: olti,
+      toliqOchiq: { id: 77 },
+    });
+    const yakun = jest.spyOn(servis, 'yakun').mockResolvedValue({} as never);
+    await servis.boshla(10, 1, HOZIR, () => 0.5);
+    expect(prisma.dafBattle.findFirst).toHaveBeenCalledWith({
+      where: {
+        studentId: 10,
+        status: 'OPEN',
+        answers: { some: { position: 5 } },
+      },
+      select: { id: true },
+    });
+    expect(yakun).toHaveBeenCalledWith(10, 1, 77, HOZIR);
+    expect(yakun.mock.invocationCallOrder[0]).toBeLessThan(
+      prisma.dafBattle.updateMany.mock.invocationCallOrder[0],
+    );
+  });
+  it('yakun xato bersa ham boshla davom etadi', async () => {
+    const { servis, prisma } = yasa({
+      savollar: olti,
+      toliqOchiq: { id: 77 },
+    });
+    jest.spyOn(servis, 'yakun').mockRejectedValue(new Error('tarmoq'));
+    const r = await servis.boshla(10, 1, HOZIR, () => 0.5);
+    expect(r.jangId).toBe(55);
+    expect(prisma.dafBattle.updateMany).toHaveBeenCalled();
   });
   it('savol yetmasa — 409', async () => {
     const { servis } = yasa({ savollar: olti.slice(0, 4) });

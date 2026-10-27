@@ -104,8 +104,8 @@ describe('JangService.javob', () => {
     await expect(
       servis.javob(10, 55, { pozitsiya: 0, javob: 'x' }, at(61_000)),
     ).rejects.toBeInstanceOf(ConflictException);
-    expect(prisma.dafBattle.update).toHaveBeenCalledWith({
-      where: { id: 55 },
+    expect(prisma.dafBattle.updateMany).toHaveBeenCalledWith({
+      where: { id: 55, status: 'OPEN' },
       data: { status: 'ABANDONED' },
     });
   });
@@ -255,9 +255,14 @@ describe('JangService.yakun', () => {
     expect(prisma.dafBattle.updateMany).not.toHaveBeenCalled();
   });
   it("yarim qolib 60 s o'tgan — tashlab ketilgan, 409", async () => {
-    const { servis } = yasa(ochiqJang({ _count: { answers: 2 } }));
+    const { servis, prisma } = yasa(ochiqJang({ _count: { answers: 2 } }));
     await expect(servis.yakun(10, 1, 55, at(70_000))).rejects.toBeInstanceOf(
       ConflictException,
     );
+    expect(prisma.dafBattle.updateMany).toHaveBeenCalledWith({
+      where: { id: 55, status: 'OPEN' },
+      data: { status: 'ABANDONED' },
+    });
+    expect(prisma.dafBattle.update).not.toHaveBeenCalled();
   });
 });

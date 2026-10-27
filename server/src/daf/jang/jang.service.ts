@@ -76,8 +76,8 @@ export class JangService {
         seriya: 0,
       };
     }
-    const [unitlar, bugun, golibSoni, oxirgilar] = await Promise.all([
-      this.otilganUnitIdlar(studentId),
+    const unitlar = await this.otilganUnitIdlar(studentId);
+    const [bugun, golibSoni, oxirgilar, tasdiqlangan] = await Promise.all([
       this.bugungiJanglar(studentId, hozir),
       this.prisma.dafBattle.count({ where: { studentId, result: 'WIN' } }),
       // ponytail: seriya 100 jang bilan cheklanadi; undan uzun seriya kam uchraydi.
@@ -87,10 +87,16 @@ export class JangService {
         take: 100,
         select: { result: true },
       }),
+      // Tasdiqlangan savol yetmasa karta bosishga chorlamasin: har bosish 409 bo'lardi.
+      unitlar.length > 0
+        ? this.prisma.dafBattleQuestion.count({
+            where: { unitId: { in: unitlar }, status: 'APPROVED' },
+          })
+        : Promise.resolve(0),
     ]);
     return {
       yoqilgan: true,
-      ochiq: unitlar.length > 0,
+      ochiq: unitlar.length > 0 && tasdiqlangan >= SAVOL_SONI,
       bugunQoldi: Math.max(0, KUNLIK_CHEGARA - bugun),
       golibSoni,
       seriya: seriya(oxirgilar.map((o) => o.result as Natija)),
@@ -104,6 +110,20 @@ export class JangService {
     rng: () => number = Math.random,
   ): Promise<JangBoshlandi> {
     if (!this.yoqilgan(studentId)) throw new NotFoundException();
+    // Hamma savoli javoblangan, lekin `yakun` tarmoq xatosidan o'tmay qolgan jang yo'qolmasin: avval yakunlanadi.
+    const toliq = await this.prisma.dafBattle.findFirst({
+      where: {
+        studentId,
+        status: 'OPEN',
+        answers: { some: { position: SAVOL_SONI - 1 } },
+      },
+      select: { id: true },
+    });
+    if (toliq) {
+      await this.yakun(studentId, companyId, toliq.id, hozir).catch(
+        () => undefined,
+      );
+    }
     // Yangi jang boshlansa eskisi davom ettirilmaydi — u mag'lubiyat emas, ruh ham bo'lmaydi.
     await this.prisma.dafBattle.updateMany({
       where: { studentId, status: 'OPEN' },
@@ -265,8 +285,8 @@ export class JangService {
     if (jang.status !== 'OPEN') throw new ConflictException('Jang tugagan');
     const otdi = hozir.getTime() - jang.lastActivityAt.getTime();
     if (otdi > TASHLANGAN_MS) {
-      await this.prisma.dafBattle.update({
-        where: { id: jang.id },
+      await this.prisma.dafBattle.updateMany({
+        where: { id: jang.id, status: 'OPEN' },
         data: { status: 'ABANDONED' },
       });
       throw new ConflictException('Jang tashlab ketilgan');
@@ -362,8 +382,8 @@ export class JangService {
       (jang._count.answers < jang.questionIds.length &&
         hozir.getTime() - jang.lastActivityAt.getTime() > TASHLANGAN_MS)
     ) {
-      await this.prisma.dafBattle.update({
-        where: { id: jang.id },
+      await this.prisma.dafBattle.updateMany({
+        where: { id: jang.id, status: 'OPEN' },
         data: { status: 'ABANDONED' },
       });
       throw new ConflictException('Jang tashlab ketilgan');
