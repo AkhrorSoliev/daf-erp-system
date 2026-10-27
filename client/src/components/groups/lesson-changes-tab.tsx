@@ -804,7 +804,11 @@ function CreateRescheduleDialog({
       ? normalizeTime(existing.newLessonStartTime ?? groupStartFallback)
       : groupStartFallback,
   );
-  const [reason, setReason] = useState(() => existing?.reason ?? "");
+  // Moving a cancelled lesson starts from the cancellation's own reason, so
+  // the admin does not type it twice; it can still be changed or cleared.
+  const [reason, setReason] = useState(
+    () => existing?.reason ?? fromCancellation?.reason ?? "",
+  );
   const [submitting, setSubmitting] = useState(false);
 
   // Lesson duration in minutes: prefer explicit `lessonMinutes`, otherwise
