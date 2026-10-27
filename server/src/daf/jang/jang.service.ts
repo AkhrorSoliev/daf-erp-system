@@ -14,6 +14,7 @@ import {
 } from '../../common/date/tashkent';
 import {
   DAFI_BOT_ISMI,
+  JAVOB_KORISH_MS,
   KECHIKISH_MS,
   KIRISH_MS,
   KORILGAN_KUN,
@@ -270,6 +271,9 @@ export class JangService {
       });
       throw new ConflictException('Jang tashlab ketilgan');
     }
+    // `boshla` barcha savollarni oldindan beradi: haqiqiy mijoz savol ochilmasdan javob yubora olmaydi,
+    // skript esa 0 ms bilan «eng tez» bo'lib olardi.
+    if (otdi < 0) throw new BadRequestException('Savol hali ochilmagan');
     const questionId = jang.questionIds[dto.pozitsiya];
     if (dto.pozitsiya !== jang._count.answers || questionId === undefined) {
       throw new BadRequestException("Savol tartibi noto'g'ri");
@@ -281,7 +285,7 @@ export class JangService {
     // Vaqtni server o'lchaydi: mijoz vaqtiga ishonilsa, javobni qidirib topib keyin «tez» yuborish mumkin bo'lardi.
     const togri =
       otdi <= SAVOL_MS + KECHIKISH_MS && javobTogrimi(savol, dto.javob);
-    const ms = Math.min(Math.max(otdi, 0), SAVOL_MS);
+    const ms = Math.min(otdi, SAVOL_MS);
     try {
       await this.prisma.$transaction([
         this.prisma.dafBattleAnswer.create({
@@ -297,7 +301,8 @@ export class JangService {
         this.prisma.dafBattle.update({
           where: { id: jang.id },
           data: {
-            lastActivityAt: hozir,
+            // Mijoz natija kartasini JAVOB_KORISH_MS ko'rsatib, keyin keyingi savolni ochadi.
+            lastActivityAt: new Date(hozir.getTime() + JAVOB_KORISH_MS),
             correctCount: { increment: togri ? 1 : 0 },
             totalMs: { increment: ms },
           },

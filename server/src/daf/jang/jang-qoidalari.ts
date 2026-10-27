@@ -9,6 +9,14 @@ export const SAVOL_MS = 10_000;
 export const KECHIKISH_MS = 2_000;
 /** Raqib kartasi ko'rinadigan vaqt — birinchi savol vaqti shundan keyin boshlanadi. */
 export const KIRISH_MS = 3_000;
+/**
+ * Javob qabul qilingach mijoz to'g'ri/xato kartasini shuncha ko'rsatadi va
+ * keyin keyingi savolni ochib, 10 s taymerni boshlaydi. Server keyingi savol
+ * vaqtini shundan boshlaydi, aks holda o'yinchining ekranidan ~1,5 s oldinda
+ * yurib, KECHIKISH_MS ni yeb qo'yadi va `ms` ni oshirib yuboradi.
+ * MIJOZDAGI JAVOB_KORISH_MS (client/.../lernen/jang/jang-holati.ts) BILAN BIR XIL BO'LISHI SHART.
+ */
+export const JAVOB_KORISH_MS = 1_500;
 export const KUNLIK_CHEGARA = 5;
 export const TASHLANGAN_MS = 60_000;
 export const YANGI_TOPLAM_HAR = 3;

@@ -1,4 +1,8 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { JangService } from './jang.service';
 
@@ -138,6 +142,44 @@ describe('JangService.javob', () => {
       select: { correct: true, ms: true },
     });
     expect(r.raqib).toEqual({ togri: true, ms: 4000 });
+  });
+});
+
+describe('JangService.javob — vaqt qoidalari', () => {
+  it("qabul qilingan javobdan keyin keyingi savol vaqti ko'rsatish oralig'idan keyin boshlanadi", async () => {
+    const { servis, prisma } = yasa(ochiqJang());
+    await servis.javob(10, 55, { pozitsiya: 0, javob: 'x' }, at(4000));
+    expect(prisma.dafBattle.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ lastActivityAt: at(4000 + 1500) }),
+      }),
+    );
+  });
+  it('savol ochilmasdan oldin kelgan javob — 400, javob yozilmaydi', async () => {
+    const { servis, prisma } = yasa(ochiqJang({ lastActivityAt: at(3000) }));
+    await expect(
+      servis.javob(10, 55, { pozitsiya: 0, javob: 'Tschüss' }, at(1000)),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.dafBattleAnswer.create).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+  it("aniq 12 000 ms — hali to'g'ri, 12 001 ms — xato", async () => {
+    const a = yasa(ochiqJang());
+    const r1 = await a.servis.javob(
+      10,
+      55,
+      { pozitsiya: 0, javob: 'Tschüss' },
+      at(12_000),
+    );
+    expect(r1.togri).toBe(true);
+    const b = yasa(ochiqJang());
+    const r2 = await b.servis.javob(
+      10,
+      55,
+      { pozitsiya: 0, javob: 'Tschüss' },
+      at(12_001),
+    );
+    expect(r2.togri).toBe(false);
   });
 });
 
