@@ -29,7 +29,7 @@ function RaqibKartasi({ raqib }: { raqib: JangRaqibi }) {
 
 /**
  * 10 soniyalik ko'rinadigan chiziq. Faqat ko'rsatish uchun — vaqtni server o'lchaydi.
- * Ota komponent `key={pozitsiya}` beradi: har savolda chiziq to'lib, qaytadan boshlanadi.
+ * Ota komponent `key={`t-${pozitsiya}`}` beradi (SavolKorinishi bilan aka-uka, shuning uchun kalit boshqacha): har savolda chiziq to'lib, qaytadan boshlanadi.
  */
 function VaqtChizigi() {
   const [bosh, setBosh] = React.useState(false);
@@ -171,9 +171,9 @@ export function JangEkrani() {
             <p className="text-center font-display font-extrabold text-ink-700">
               {t("{n}-savol", { n: h.pozitsiya + 1 })} · {h.hisob.men} : {h.hisob.raqib}
             </p>
-            {h.tur === "savol" ? <VaqtChizigi key={h.pozitsiya} /> : <div className="h-2" aria-hidden />}
+            {h.tur === "savol" ? <VaqtChizigi key={`t-${h.pozitsiya}`} /> : <div className="h-2" aria-hidden />}
             <SavolKorinishi
-              key={h.pozitsiya}
+              key={`s-${h.pozitsiya}`}
               savol={h.jang.savollar[h.pozitsiya]}
               bloklangan={h.tur === "javob" || javob.isPending}
               onJavob={yubor}
