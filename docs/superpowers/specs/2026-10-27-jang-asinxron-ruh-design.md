@@ -43,7 +43,7 @@ raqib (har jang uchun xarajat, javoblar baribir oldindan ma'lum); mashq bazasida
 ## 3. Foydalanuvchi oqimi
 
 1. O'quvchi «Jang» tugmasini bosadi.
-2. Server avval **mos ruh jangini** qidiradi. Topilsa, savollar o'sha jangdan olinadi (6 savol). Topilmasa, o'quvchining **o'tgan unitlaridan** 6 ta tasdiqlangan savol tanlanadi va raqib Dafi bot bo'ladi.
+2. Server avval **mos ruh jangini** qidiradi. Topilsa, savollar o'sha jangdan olinadi (6 savol). Topilmasa — yoki bu o'quvchining har **3-jangi** bo'lsa — o'quvchining **o'tgan unitlaridan** 6 ta yangi tasdiqlangan savol tanlanadi va raqib Dafi bot bo'ladi (§6, «Yangi to'plam»).
 3. O'quvchiga raqib kartasi ko'rinadi.
 4. 6 savol: har biri 10 soniya. Javob berilgach to'g'ri/xato ko'rinadi, raqibning shu savoldagi natijasi ham.
 5. Natija ekrani: g'alaba / mag'lubiyat / durang, ikkala tomon hisobi, vaqt.
@@ -65,14 +65,23 @@ jami ~210. Yangi unit chiqsa — unga ham ~35 jang savoli yoziladi (unit qo'shis
 **Yozish tekshiruvi.** `ä/ö/ü/ß` uchun yumshoq qoida: `ae/oe/ue/ss` ham qabul qilinadi
 (telefonda nemischa harf terish qiyin). Boshqa xatoga yon berilmaydi.
 
-**Eshitish.** Mavjud so'z ovozlaridan olinadi. 3 soniyadan uzun audio ishlatilmaydi.
-Mavjud ovozlarning uzunligi hali o'lchanmagan — rejada birinchi vazifa.
+**Eshitish.** Mavjud so'z ovozlaridan (`DafLexeme.audioKey`) olinadi. 3 soniyadan uzun audio ishlatilmaydi.
+`audioKey` ikki xil bo'ladi: so'zning o'z fayli (`audioStartMs`/`audioEndMs` = `null`) yoki bir nechta
+so'zga umumiy bo'lim fayli (oraliq to'ldirilgan). Jang savoli o'z faylini yoki **aniq oraliqni** ishlatadi;
+umumiy faylni oraliqsiz o'ynatish TAQIQ (boshqa so'z yangraydi). Savolda audio manbasi (`audioKey` +
+oraliq) savol yaratilganda nusxalanadi. Mavjud ovozlarning uzunligi hali o'lchanmagan — rejada birinchi vazifa.
 
 **Yozilishi.** AI loyiha yozadi, CEO ko'rib chiqadi. Savol `DRAFT` holatida yaratiladi, faqat
 `APPROVED` jangga tushadi.
 
-**Tanlash qoidasi.** Faqat o'quvchi o'tgan unitlardan; oxirgi 3 kunda ko'rgani chiqarib tashlanadi
-(bo'sh qolsa filtr yumshatiladi); bir jangda turlar aralash.
+**O'tgan unit.** Unitning barcha darslari uchun o'quvchida `DafLessonProgress.completedAt` to'ldirilgan
+bo'lsa, unit o'tilgan hisoblanadi. O'tgan uniti yo'q o'quvchiga «Jang» tugmasi ko'rinmaydi
+(«Birinchi unitni tugating» yozuvi).
+
+**Tanlash qoidasi.** Faqat o'quvchi o'tgan unitlardan; oxirgi 3 kunda ko'rgani chiqarib tashlanadi;
+bir jangda turlar aralash. Filtrdan keyin 6 tadan kam qolsa, yetishmagani **eng uzoq vaqt oldin
+ko'rilgan** savollardan to'ldiriladi (hech ko'rilmagani birinchi). Masalan faqat u01 ni o'tgan o'quvchi
+(~35 savol) kuniga 5 jangda 30 savol ko'radi — ertasiga eng eskilari qaytadi.
 
 ## 5. Ma'lumotlar
 
@@ -96,8 +105,15 @@ Yangi modul `server/src/daf/battle/`:
 - Kunlik chegara (5 jang) serverda, Toshkent kuni bo'yicha.
 - 60 soniya javobsiz qolgan `OPEN` jang `ABANDONED` bo'ladi, mag'lubiyat hisoblanmaydi va ruh bo'lmaydi.
 
+**Yangi to'plam.** O'quvchining har 3-jangi (3, 6, 9, … — tugagan va tashlab ketilgan janglar
+sanaladi) mos ruh bo'lsa ham **yangi savol to'plami + Dafi bot** bilan o'tadi. Sabab: yangi savollar
+faqat bot janglarida tanlanadi, ruh janglari esa eski to'plamni takrorlaydi; bu qoidasiz ruh ko'paygan
+sari bir xil to'plamlar aylanib qoladi.
+
 **Ruh tanlash.** Shartlar: raqib shu unitlarni o'tgan; oxirgi 10 jangida to'g'ri javob ulushi
-o'quvchinikidan ±15 % ichida; bu o'quvchi bilan 7 kundan beri uchrashmagan. Ruh **bitta tugagan jang**:
+o'quvchinikidan ±15 % ichida (3 tadan kam tugagan jangi bo'lgan o'quvchining kuchi **60 %** deb olinadi —
+o'zi uchun ham, ruh sifatida ham); bu o'quvchi bilan 7 kundan beri uchrashmagan; o'quvchining o'zi emas.
+Ruh **istalgan filialdan** bo'lishi mumkin (markaz reytingi filialga cheklanmaydi degan CEO qarori bilan bir xil). Ruh **bitta tugagan jang**:
 o'quvchi shu jangning 6 savolini aynan o'sha tartibda oladi (ruh javoblari shu savollarga berilgan).
 Jangning barcha savollari o'quvchi o'tgan unitlardan bo'lishi va oxirgi 3 kunda ko'rilmagan bo'lishi shart,
 aks holda bu jang tanlanmaydi.
@@ -120,6 +136,9 @@ durang, kunlik chegara, yozish tekshiruvi (`ä`/`ae`), tashlab ketilgan jang. Mi
 ekran holatlari, taymer. Yuklama: 500 o'quvchi bir vaqtda `start` — p95 o'lchovi (S1 dagi kabi).
 Brauzerda telefon o'lchamida haqiqiy jangni o'ynab skrinshot olinadi.
 
+**ADR.** Jang qarorlari (ruh + bot, liga balli yo'q, kunlik chegara, har 3-jangda yangi to'plam)
+uchun ADR **shu PR ichida** yoziladi; raqam merge oldidan `docs/adr/README.md` bo'yicha qayta tekshiriladi.
+
 **Ishga tushirish.**
 1. Migratsiya va kod prodga chiqadi, jang yashirin (`DAF_JANG` o'chiq).
 2. CEO jang savollarini ko'rib tasdiqlaydi.
@@ -135,7 +154,8 @@ Brauzerda telefon o'lchamida haqiqiy jangni o'ynab skrinshot olinadi.
 ## 10. Xavflar
 
 - Boshida deyarli barcha raqib Dafi bot bo'ladi; o'ynalgan sari ruhlar botni siqib chiqaradi.
-- ~210 savol faol o'quvchiga tez tugashi mumkin; 3 kunlik filtr yumshatiladi, hajm keyin oshiriladi.
+- ~210 savol faol o'quvchiga tez tugashi mumkin; eng eski ko'rilganlar qaytadi (§4), hajm keyin oshiriladi.
+- Har 3-jang bot bilan bo'lgani uchun ruh ko'p bo'lsa ham o'quvchi botni muntazam ko'radi — bu ataylab.
 - Eshitish savollari faqat 3 soniyadan qisqa audio mavjud bo'lsa chiqadi.
 - Ruh egasi bilmasdan boshqalarga raqib bo'ladi (CEO qarori: muammo emas).
 
