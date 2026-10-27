@@ -792,6 +792,7 @@ model Student {
   appSessions       StudentAppSession[]
   dafLexemeStates   DafLexemeState[]
   dafLessonProgress DafLessonProgress[]
+  dafBattles        DafBattle[]
   callLogs          CallLog[]
   discounts         Discount[]
   scholarships      Scholarship[]
@@ -3963,6 +3964,7 @@ model DafUnit {
   sections  DafSection[]
   dialoge   DafDialog[]
   phrasen   DafPhrase[]
+  battleQuestions DafBattleQuestion[]
 
   @@unique([level, order])
   @@index([level])
@@ -5074,4 +5076,107 @@ model ChatNotifyState {
 
   @@id([conversationId, studentId])
   @@index([pendingSince])
+}
+
+/// Jang (spec 2026-10-27): savol turi. Hammasi ≤10 soniyada javob beriladigan.
+enum DafBattleQuestionKind {
+  CHOOSE
+  TYPE
+  LISTEN
+}
+
+/// Faqat `APPROVED` jangga tushadi; holatni `content/daf/jang/*.json` dagi `tasdiqlangan` boshqaradi.
+enum DafBattleQuestionStatus {
+  DRAFT
+  APPROVED
+}
+
+enum DafBattleOpponent {
+  GHOST
+  BOT
+}
+
+enum DafBattleStatus {
+  OPEN
+  DONE
+  ABANDONED
+}
+
+enum DafBattleResult {
+  WIN
+  LOSS
+  DRAW
+}
+
+/// Jang savoli — mashq bazasidan ALOHIDA, unitga bog'liq (spec §4).
+model DafBattleQuestion {
+  id           Int                     @id @default(autoincrement())
+  sourceId     String                  @unique
+  unitId       Int
+  kind         DafBattleQuestionKind
+  prompt       String
+  options      String[]                @default([])
+  answer       String
+  akzeptiert   String[]                @default([])
+  /// LISTEN uchun: `DafLexeme` dan seed paytida nusxalanadi (oraliq bilan).
+  audioKey     String?
+  audioStartMs Int?
+  audioEndMs   Int?
+  status       DafBattleQuestionStatus @default(DRAFT)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+
+  unit    DafUnit           @relation(fields: [unitId], references: [id])
+  answers DafBattleAnswer[]
+
+  @@index([unitId, status])
+}
+
+/// Bitta o'ynalgan jang. `DONE` jang javoblari keyingi o'quvchilar uchun «ruh» (spec §5–6).
+model DafBattle {
+  id              Int                @id @default(autoincrement())
+  studentId       Int
+  companyId       Int
+  opponent        DafBattleOpponent
+  /// Ruh jangi bo'lsa — manba jang; savollar o'sha jangdan aynan nusxalanadi.
+  ghostBattleId   Int?
+  questionIds     Int[]
+  /// Bot jangi: `[{ togri, ms }]` — boshida hisoblanadi, jang davomida o'zgarmaydi.
+  botAnswers      Json?
+  status          DafBattleStatus    @default(OPEN)
+  result          DafBattleResult?
+  correctCount    Int                @default(0)
+  totalMs         Int                @default(0)
+  opponentCorrect Int                @default(0)
+  opponentMs      Int                @default(0)
+  /// Keyingi savol vaqti shu paytdan o'lchanadi; boshida kirish ekrani uchun kelajakka suriladi.
+  lastActivityAt  DateTime           @default(now())
+  createdAt       DateTime           @default(now())
+  finishedAt      DateTime?
+
+  student     Student           @relation(fields: [studentId], references: [id])
+  ghostBattle DafBattle?        @relation("DafBattleGhost", fields: [ghostBattleId], references: [id])
+  ghostOf     DafBattle[]       @relation("DafBattleGhost")
+  answers     DafBattleAnswer[]
+
+  @@index([studentId, createdAt])
+  @@index([companyId, status, finishedAt])
+  @@index([studentId, status, finishedAt])
+}
+
+model DafBattleAnswer {
+  id         Int      @id @default(autoincrement())
+  battleId   Int
+  questionId Int
+  position   Int
+  given      String
+  correct    Boolean
+  ms         Int
+  createdAt  DateTime @default(now())
+
+  battle   DafBattle         @relation(fields: [battleId], references: [id])
+  question DafBattleQuestion @relation(fields: [questionId], references: [id])
+
+  @@unique([battleId, position])
+  @@index([questionId])
 }
