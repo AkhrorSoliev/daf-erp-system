@@ -5512,6 +5512,21 @@ const de: Dictionary = {
   "Natijani hisoblab bo'lmadi": "Das Ergebnis konnte nicht berechnet werden",
   "Jang savollari hali tayyor emas": "Die Duell-Fragen sind noch nicht bereit",
   "Qaytish": "Zurück",
+  "Jang savollari": "Duell-Fragen",
+  "Barcha jang savollarini unit bo'yicha o'qib chiqish": "Alle Duell-Fragen nach Unit durchlesen",
+  "{n} ta savol — unit bo'yicha o'qib chiqish": "{n} Fragen — nach Unit durchlesen",
+  "Tanlash": "Auswahl",
+  "Qo'shimcha to'g'ri yozuvlar: {list}": "Weitere richtige Schreibweisen: {list}",
+  "Ovoz yo'q": "Kein Ton",
+  "{choose} ta tanlash · {type} ta yozish · {listen} ta eshitish": "{choose} Auswahl · {type} Schreiben · {listen} Hören",
+  "{tasdiqlangan} ta tasdiqlangan · {qoralama} ta qoralama": "{tasdiqlangan} bestätigt · {qoralama} Entwürfe",
+  "Fayl: {fayl}": "Datei: {fayl}",
+  "Raqam": "Nummer",
+  "Savol": "Frage",
+  "Savol, variant, javob yoki raqam bo'yicha qidirish...": "Suche nach Frage, Option, Antwort oder Nummer...",
+  "Faqat ko'rish uchun. O'zgartirish kerak bo'lsa, savol raqamini (masalan jang-a1-u02-023) yozib yuboring.": "Nur zur Ansicht. Wenn etwas geändert werden soll, schicken Sie die Fragennummer (z. B. jang-a1-u02-023).",
+  "Hali jang savollari yo'q — ular kontent fayllaridan yuklanganda shu yerda ko'rinadi.": "Noch keine Duell-Fragen — sie erscheinen hier, sobald sie aus den Inhaltsdateien geladen sind.",
+  "Jami {jami} ta savol · {tasdiqlangan} ta tasdiqlangan · {qoralama} ta qoralama — qoralamalar o'quvchilarga ko'rinmaydi": "Insgesamt {jami} Fragen · {tasdiqlangan} bestätigt · {qoralama} Entwürfe — Entwürfe sind für Lernende nicht sichtbar",
 };
 
 export default de;

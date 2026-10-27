@@ -328,6 +328,7 @@ export const STRICT_FILES: string[] = [
   "components/media/section-detail-client.tsx",
   "components/media/media-inhalt-panel.tsx",
   "components/media/media-fragen-panel.tsx",
+  "components/media/media-jang-client.tsx",
   "components/payments/debt/debt-months-badge.tsx",
   "components/groups/app-activity/student-activity-panel.tsx",
   "components/groups/app-activity/student-activity-sections.tsx",

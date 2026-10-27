@@ -5512,6 +5512,21 @@ const en: Dictionary = {
   "Natijani hisoblab bo'lmadi": "Could not count the result",
   "Jang savollari hali tayyor emas": "The battle questions are not ready yet",
   "Qaytish": "Go back",
+  "Jang savollari": "Battle questions",
+  "Barcha jang savollarini unit bo'yicha o'qib chiqish": "Read all battle questions unit by unit",
+  "{n} ta savol — unit bo'yicha o'qib chiqish": "{n} questions — read unit by unit",
+  "Tanlash": "Choice",
+  "Qo'shimcha to'g'ri yozuvlar: {list}": "Other accepted spellings: {list}",
+  "Ovoz yo'q": "No audio",
+  "{choose} ta tanlash · {type} ta yozish · {listen} ta eshitish": "{choose} choice · {type} writing · {listen} listening",
+  "{tasdiqlangan} ta tasdiqlangan · {qoralama} ta qoralama": "{tasdiqlangan} approved · {qoralama} drafts",
+  "Fayl: {fayl}": "File: {fayl}",
+  "Raqam": "Number",
+  "Savol": "Question",
+  "Savol, variant, javob yoki raqam bo'yicha qidirish...": "Search by question, option, answer or number...",
+  "Faqat ko'rish uchun. O'zgartirish kerak bo'lsa, savol raqamini (masalan jang-a1-u02-023) yozib yuboring.": "View only. If something needs to change, send the question number (for example jang-a1-u02-023).",
+  "Hali jang savollari yo'q — ular kontent fayllaridan yuklanganda shu yerda ko'rinadi.": "No battle questions yet — they will appear here once loaded from the content files.",
+  "Jami {jami} ta savol · {tasdiqlangan} ta tasdiqlangan · {qoralama} ta qoralama — qoralamalar o'quvchilarga ko'rinmaydi": "{jami} questions in total · {tasdiqlangan} approved · {qoralama} drafts — drafts are not visible to students",
 };
 
 export default en;

@@ -5512,6 +5512,21 @@ const ru: Dictionary = {
   "Natijani hisoblab bo'lmadi": "Не удалось подсчитать результат",
   "Jang savollari hali tayyor emas": "Вопросы для битвы ещё не готовы",
   "Qaytish": "Вернуться",
+  "Jang savollari": "Вопросы для битвы",
+  "Barcha jang savollarini unit bo'yicha o'qib chiqish": "Прочитать все вопросы для битвы по юнитам",
+  "{n} ta savol — unit bo'yicha o'qib chiqish": "{n} вопросов — читать по юнитам",
+  "Tanlash": "Выбор",
+  "Qo'shimcha to'g'ri yozuvlar: {list}": "Дополнительные верные написания: {list}",
+  "Ovoz yo'q": "Нет звука",
+  "{choose} ta tanlash · {type} ta yozish · {listen} ta eshitish": "{choose} на выбор · {type} на письмо · {listen} на слух",
+  "{tasdiqlangan} ta tasdiqlangan · {qoralama} ta qoralama": "{tasdiqlangan} подтверждено · {qoralama} черновиков",
+  "Fayl: {fayl}": "Файл: {fayl}",
+  "Raqam": "Номер",
+  "Savol": "Вопрос",
+  "Savol, variant, javob yoki raqam bo'yicha qidirish...": "Поиск по вопросу, варианту, ответу или номеру...",
+  "Faqat ko'rish uchun. O'zgartirish kerak bo'lsa, savol raqamini (masalan jang-a1-u02-023) yozib yuboring.": "Только для просмотра. Если нужно изменить, пришлите номер вопроса (например, jang-a1-u02-023).",
+  "Hali jang savollari yo'q — ular kontent fayllaridan yuklanganda shu yerda ko'rinadi.": "Вопросов для битвы пока нет — они появятся здесь после загрузки из файлов контента.",
+  "Jami {jami} ta savol · {tasdiqlangan} ta tasdiqlangan · {qoralama} ta qoralama — qoralamalar o'quvchilarga ko'rinmaydi": "Всего вопросов: {jami} · подтверждено: {tasdiqlangan} · черновиков: {qoralama} — черновики ученикам не видны",
 };
 
 export default ru;
