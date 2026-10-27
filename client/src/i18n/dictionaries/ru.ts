@@ -58,6 +58,7 @@ const ru: Dictionary = {
   "Ketgan o'quvchilar": "Ушедшие ученики",
   "Markaz faoliyati": "Активность центра",
   "Profil": "Профиль",
+  "Shu hafta markazda {n}-o'rin": "На этой неделе {n}-е место в центре",
   "Kompaniya ma'lumotlari": "Данные компании",
   "Kurslar": "Курсы",
   "To'lov": "Оплата",

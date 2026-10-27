@@ -58,6 +58,7 @@ const de: Dictionary = {
   "Ketgan o'quvchilar": "Ausgeschiedene Teilnehmer",
   "Markaz faoliyati": "Zentrumsaktivität",
   "Profil": "Profil",
+  "Shu hafta markazda {n}-o'rin": "Diese Woche Platz {n} im Zentrum",
   "Kompaniya ma'lumotlari": "Firmendaten",
   "Kurslar": "Kurse",
   "To'lov": "Zahlung",

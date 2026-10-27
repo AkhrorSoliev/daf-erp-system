@@ -361,6 +361,8 @@ export interface EslatmalarJavob {
 export interface ReytingZeile {
   studentId: number;
   name: string;
+  /** Liga xonasi qatorlarida yo'q. */
+  photo?: string | null;
   punkte: number;
   platz: number;
   /** Shu qator so'rovni yuborgan o'quvchining o'zimi. */
@@ -441,4 +443,16 @@ export interface SeansYakun {
   questionCount: number;
   firstTryCorrect: number;
   natija?: SeansNatijasi | null;
+}
+
+/** Boshqa o'quvchining ochiq profili: faqat ism, rasm, daraja va haftalik o'rin. */
+export interface OeffentlichesProfil {
+  studentId: number;
+  name: string;
+  photo: string | null;
+  gesamt: number;
+  stufe: Fortschritt["stufe"];
+  naechsteStufe: Fortschritt["naechsteStufe"];
+  wochePunkte: number;
+  wochePlatzZentrum: number;
 }

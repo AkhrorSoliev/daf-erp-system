@@ -1017,6 +1017,9 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     routes: [
       'GET /student-portal/lernen/fortschritt',
       'GET /student-portal/lernen/reyting',
+      // Boshqa o'quvchining ochiq profili: markaz reytingi bilan bir qaror
+      // (CEO 2026-09-06), faqat ism, rasm, ball va daraja qaytadi.
+      'GET /student-portal/lernen/profil/:id',
       'GET /student-portal/lernen/nishonlar',
       'PATCH /student-portal/lernen/maqsad',
       'GET /student-portal/lernen/liga',

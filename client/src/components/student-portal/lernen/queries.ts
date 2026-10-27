@@ -31,6 +31,7 @@ import type {
   PruefErgebnis,
   PublicFrage,
   ReytingZeile,
+  OeffentlichesProfil,
   SeansYakun,
 } from "./types";
 
@@ -293,6 +294,14 @@ export function useFortschritt() {
   return useQuery<Fortschritt>({
     queryKey: ["lernen", "fortschritt"],
     queryFn: () => api.get(`${BASE}/fortschritt`).then((r) => r.data),
+  });
+}
+
+/** Boshqa o'quvchining ochiq profili (reyting qatoridan). */
+export function useOeffentlichesProfil(id: number) {
+  return useQuery<OeffentlichesProfil>({
+    queryKey: ["lernen", "profil", id],
+    queryFn: () => api.get(`${BASE}/profil/${id}`).then((r) => r.data),
   });
 }
 

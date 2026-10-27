@@ -14,6 +14,7 @@ import {
 import { msg } from "@/i18n/msg";
 import { useLocale, useT } from "@/i18n/use-t";
 import { useFortschritt } from "../queries";
+import type { Fortschritt } from "../types";
 import { darajaFoizi, qisqaRaqam } from "../yol/yol-tuzilishi";
 import { Nishonlarim } from "./nishonlarim";
 import { EslatmalarQatori } from "./eslatmalar-qatori";
@@ -36,6 +37,60 @@ export const REYTING_TABLARI: SegmentOption<ReytingTab>[] = [
   { value: "guruhlar", label: msg("Guruhlar") },
   { value: "darajam", label: msg("Darajam") },
 ];
+
+/** Umumiy ball, daraja va keyingi darajagacha progress — Darajam va boshqa o‘quvchi profili uchun umumiy. */
+export function DarajaKartasi({
+  gesamt,
+  stufe,
+  naechsteStufe,
+}: Pick<Fortschritt, "gesamt" | "stufe" | "naechsteStufe">) {
+  const t = useT();
+  const { locale } = useLocale();
+  const foiz = darajaFoizi(gesamt, stufe.ab, naechsteStufe?.ab ?? null);
+  const qoldi = naechsteStufe ? Math.max(0, naechsteStufe.ab - gesamt) : 0;
+
+  return (
+    <Card className="space-y-6 text-center">
+      <div>
+        <p className="font-display text-4xl font-extrabold text-ink-900">
+          {qisqaRaqam(gesamt)}
+        </p>
+        <p className="text-sm font-semibold text-ink-500">{t("umumiy ball")}</p>
+      </div>
+
+      <div>
+        <p className="font-display text-2xl font-extrabold text-ink-900">
+          {stufe.de}
+        </p>
+        <p className="text-sm font-semibold text-ink-500">{stufe.uz}</p>
+      </div>
+
+      {naechsteStufe ? (
+        <div className="space-y-1.5 text-left">
+          <ProgressBar value={foiz} />
+          <p className="text-xs font-semibold text-ink-500">
+            {/* The Uzbek level name comes from the server: only the Uzbek
+                sentence carries it. */}
+            {locale === "uz"
+              ? t("{level} ({levelUz}) darajagacha {n} ball qoldi", {
+                  level: naechsteStufe.de,
+                  levelUz: naechsteStufe.uz,
+                  n: qisqaRaqam(qoldi),
+                })
+              : t("{level} darajagacha {n} ball qoldi", {
+                  level: naechsteStufe.de,
+                  n: qisqaRaqam(qoldi),
+                })}
+          </p>
+        </div>
+      ) : (
+        <Badge tone="amber" size="md" className="mx-auto">
+          {t("Eng yuqori daraja")}
+        </Badge>
+      )}
+    </Card>
+  );
+}
 
 /**
  * Darajam — jadval emas, o'quvchining o'z o'sishi: umumiy ball, hozirgi
@@ -61,51 +116,9 @@ function DarajamTab() {
   if (loadState(query) === "loading") return <LoadingCards count={2} />;
   if (!data) return <LoadFailed query={query} />;
 
-  const { gesamt, stufe, naechsteStufe } = data;
-  const foiz = darajaFoizi(gesamt, stufe.ab, naechsteStufe?.ab ?? null);
-  const qoldi = naechsteStufe ? Math.max(0, naechsteStufe.ab - gesamt) : 0;
-
   return (
     <div className="space-y-4">
-      <Card className="space-y-6 text-center">
-        <div>
-          <p className="font-display text-4xl font-extrabold text-ink-900">
-            {qisqaRaqam(gesamt)}
-          </p>
-          <p className="text-sm font-semibold text-ink-500">{t("umumiy ball")}</p>
-        </div>
-
-        <div>
-          <p className="font-display text-2xl font-extrabold text-ink-900">
-            {stufe.de}
-          </p>
-          <p className="text-sm font-semibold text-ink-500">{stufe.uz}</p>
-        </div>
-
-        {naechsteStufe ? (
-          <div className="space-y-1.5 text-left">
-            <ProgressBar value={foiz} />
-            <p className="text-xs font-semibold text-ink-500">
-              {/* The Uzbek level name comes from the server: only the Uzbek
-                  sentence carries it. */}
-              {locale === "uz"
-                ? t("{level} ({levelUz}) darajagacha {n} ball qoldi", {
-                    level: naechsteStufe.de,
-                    levelUz: naechsteStufe.uz,
-                    n: qisqaRaqam(qoldi),
-                  })
-                : t("{level} darajagacha {n} ball qoldi", {
-                    level: naechsteStufe.de,
-                    n: qisqaRaqam(qoldi),
-                  })}
-            </p>
-          </div>
-        ) : (
-          <Badge tone="amber" size="md" className="mx-auto">
-            {t("Eng yuqori daraja")}
-          </Badge>
-        )}
-      </Card>
+      <DarajaKartasi {...data} />
       <Nishonlarim />
       <EslatmalarQatori />
     </div>
