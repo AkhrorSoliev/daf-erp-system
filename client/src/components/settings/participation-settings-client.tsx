@@ -71,7 +71,7 @@ export function ParticipationSettingsClient() {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-56 w-full max-w-xl" />
+        <Skeleton className="mx-auto h-56 w-full max-w-xl" />
       </div>
     );
   }
