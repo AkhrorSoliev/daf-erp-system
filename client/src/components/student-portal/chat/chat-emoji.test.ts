@@ -1,5 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { insertAtCaret, pushRecent, RECENT_MAX } from "./chat-emoji";
+import {
+  categoryText,
+  insertAtCaret,
+  pushRecent,
+  RECENT_MAX,
+} from "./chat-emoji";
+
+describe("categoryText", () => {
+  it("maps frimousse's capitalised label", () => {
+    expect(categoryText("Smileys & emotion")).toBe(
+      "Kulgichlar va his-tuyg'ular",
+    );
+  });
+  it("leaves an unknown group to the caller", () => {
+    expect(categoryText("Something new")).toBeNull();
+  });
+});
 
 describe("insertAtCaret", () => {
   it("inserts at the caret and moves it behind the emoji", () => {

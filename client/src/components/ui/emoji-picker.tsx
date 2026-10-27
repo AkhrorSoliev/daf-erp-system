@@ -4,7 +4,7 @@ import type { ComponentProps } from "react";
 import { EmojiPicker as Frimousse } from "frimousse";
 import { cn } from "@/lib/utils";
 
-/** shadcn-style wrapper over frimousse: search, categories, skin tone, virtualized grid. */
+/** shadcn-style wrapper over frimousse: search, categories, virtualized grid. */
 function EmojiPicker({
   className,
   ...props
@@ -32,14 +32,21 @@ function EmojiPickerSearch({
   );
 }
 
+/** The emoji button; the recent row draws the same one so both grids line up. */
+const EMOJI_BUTTON =
+  "flex aspect-square w-full items-center justify-center rounded-xl text-[26px] leading-none hover:bg-tint data-[active]:bg-tint";
+
 function EmojiPickerContent({
   className,
   loadingText,
   emptyText,
+  categoryLabel = (label) => label,
   ...props
 }: ComponentProps<typeof Frimousse.Viewport> & {
   loadingText: string;
   emptyText: string;
+  /** Translates the data's (English) category names. */
+  categoryLabel?: (label: string) => string;
 }) {
   return (
     <Frimousse.Viewport
@@ -57,23 +64,19 @@ function EmojiPickerContent({
         components={{
           CategoryHeader: ({ category, ...rest }) => (
             <div
-              className="bg-card px-2 pb-1 pt-3 text-xs font-extrabold text-ink-400"
+              className="bg-surface pb-1 pt-2 text-xs font-extrabold text-ink-400"
               {...rest}
             >
-              {category.label}
+              {categoryLabel(category.label)}
             </div>
           ),
           Row: ({ children, ...rest }) => (
-            <div className="scroll-my-1 px-1" {...rest}>
+            <div className="grid grid-cols-[repeat(var(--frimousse-list-columns),1fr)]" {...rest}>
               {children}
             </div>
           ),
           Emoji: ({ emoji, ...rest }) => (
-            <button
-              type="button"
-              className="flex size-10 items-center justify-center rounded-xl text-[24px] data-[active]:bg-tint"
-              {...rest}
-            >
+            <button type="button" className={EMOJI_BUTTON} {...rest}>
               {emoji.emoji}
             </button>
           ),
@@ -83,4 +86,4 @@ function EmojiPickerContent({
   );
 }
 
-export { EmojiPicker, EmojiPickerSearch, EmojiPickerContent };
+export { EmojiPicker, EmojiPickerSearch, EmojiPickerContent, EMOJI_BUTTON };

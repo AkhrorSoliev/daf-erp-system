@@ -1,4 +1,24 @@
+import { msg } from "@/i18n/msg";
+
 const RECENT_KEY = "daf.chat.emoji.recent";
+
+/** Emojibase group names (English, any case) → our texts. */
+const CATEGORY_TEXT: Record<string, string> = {
+  "smileys & emotion": msg("Kulgichlar va his-tuyg'ular"),
+  "people & body": msg("Odamlar"),
+  "animals & nature": msg("Hayvonlar va tabiat"),
+  "food & drink": msg("Ovqat va ichimliklar"),
+  "travel & places": msg("Sayohat va joylar"),
+  activities: msg("Faoliyat"),
+  objects: msg("Narsalar"),
+  symbols: msg("Belgi va ramzlar"),
+  flags: msg("Bayroqlar"),
+};
+
+/** The Uzbek source text for a category, or null for one we do not know. */
+export function categoryText(label: string): string | null {
+  return CATEGORY_TEXT[label.toLowerCase()] ?? null;
+}
 export const RECENT_MAX = 16;
 
 /** Puts `emoji` over the selection [start, end); null when the result would pass `max`. */

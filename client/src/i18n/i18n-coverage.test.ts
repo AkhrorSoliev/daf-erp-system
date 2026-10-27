@@ -837,6 +837,7 @@ export const STRICT_FILES: string[] = [
   "components/student-portal/chat/chat-access-banner.tsx",
   "components/student-portal/chat/chat-composer.tsx",
   "components/student-portal/chat/chat-emoji-panel.tsx",
+  "components/student-portal/chat/chat-emoji.ts",
   "components/student-portal/chat/chat-format.ts",
   "components/student-portal/chat/chat-gate.tsx",
   "components/student-portal/chat/chat-list-page.tsx",
