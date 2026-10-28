@@ -557,9 +557,10 @@ export class MonthlyChargeService {
 
   /**
    * Lesson dates of this month that another CHARGED charge of the same
-   * student in the same group still covers: its `coveredDates` minus the ones
-   * it has returned (`frozenOutDates`). A charge written before
-   * `coveredDates` existed stores no dates and so takes nothing away.
+   * student still covers: in the same group, its `coveredDates` minus the
+   * ones it has returned (`frozenOutDates`); in a group he has left, the
+   * same up to the day he left. A charge written before `coveredDates`
+   * existed stores no dates and so takes nothing away.
    */
   private async datesPaidByOtherCharges(
     tx: Prisma.TransactionClient,
@@ -587,6 +588,40 @@ export class MonthlyChargeService {
       const returned = new Set(other.frozenOutDates ?? []);
       for (const d of other.coveredDates ?? []) {
         if (!returned.has(d)) paid.add(d);
+      }
+    }
+
+    // A student is in ONE group at a time, so a lesson day is paid once. The
+    // group he LEFT keeps the day he left (`reverseChargeForDeparture`: `d <=
+    // departureDate` stays covered), and this charge starts from that same
+    // day: both groups billed it (#11398, 28.10.2026). Only the days up to
+    // the one he left count here: when the old group kept its money (contract
+    // 6.2) its LATER days are still covered, but they are not lessons of this
+    // group, and counting them would make the new group free.
+    const leftGroups = await tx.enrollmentMonthlyCharge.findMany({
+      where: {
+        studentId: params.studentId,
+        groupId: { not: params.groupId },
+        periodYear: params.periodYear,
+        periodMonth: params.periodMonth,
+        status: MonthlyChargeStatus.CHARGED,
+        enrollment: {
+          status: { not: EnrollmentStatus.ACTIVE },
+          deletedAt: null,
+        },
+      },
+      select: {
+        coveredDates: true,
+        frozenOutDates: true,
+        enrollment: { select: { statusChangedAt: true } },
+      },
+    });
+    for (const other of leftGroups) {
+      if (!other.enrollment.statusChangedAt) continue;
+      const leftOn = tashkentDateStr(other.enrollment.statusChangedAt);
+      const returned = new Set(other.frozenOutDates ?? []);
+      for (const d of other.coveredDates ?? []) {
+        if (d <= leftOn && !returned.has(d)) paid.add(d);
       }
     }
     return paid;
