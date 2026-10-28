@@ -1370,6 +1370,11 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /students/:id/past-enrollments": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "GET /students/:id/level-tests": [
     "Administrator",
     "Branch Director",

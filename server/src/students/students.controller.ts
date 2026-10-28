@@ -213,6 +213,18 @@ export class StudentsController {
     return this.studentsService.getClosedEnrollments(id, companyId, userId);
   }
 
+  // Every group the student has left (transferred, removed, finished,
+  // frozen), for the "Guruhlar" tab's "Oldingi guruhlar" section.
+  @Get(':id/past-enrollments')
+  @Can('students.details')
+  getPastEnrollments(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.studentsService.getPastEnrollments(id, companyId, userId);
+  }
+
   // O'quvchi monitoringi uchun "Darslar" ko'rinishi — har guruh bo'yicha
   // davomat (kelgan/kelmagan) + har dars qaysi siklga tegishli + sikl sana
   // oraliqlari. Operatsion monitoring bo'lgani uchun Cashier KIRITILMAYDI

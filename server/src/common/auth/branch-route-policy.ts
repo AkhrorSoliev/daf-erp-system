@@ -562,6 +562,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'GET /students/:id/active-enrollments-prepaid',
       'GET /students/:id/closed-enrollments',
       'GET /students/:id/lessons-overview',
+      'GET /students/:id/past-enrollments',
       'GET /students/:id/sms',
       'POST /students/:id/sms',
       'POST /students/:id/initial-balance',

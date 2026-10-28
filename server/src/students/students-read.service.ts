@@ -545,6 +545,70 @@ export class StudentsReadService {
   }
 
   /**
+   * Every group the student has left — transferred, removed, finished or
+   * frozen out of — newest first, for the profile's "Guruhlar" tab. The tab's
+   * own list (`formatStudent`) is ACTIVE only, so without this a transferred
+   * student's former group appeared nowhere on that tab. An archived group is
+   * included (its students were closed with it) and flagged, because only
+   * the CEO can open it.
+   */
+  async getPastEnrollments(id: number, companyId: number) {
+    const student = await this.prisma.student.findFirst({
+      where: { id, companyId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!student) throw new NotFoundException(`O'quvchi topilmadi`);
+
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: {
+        studentId: id,
+        deletedAt: null,
+        status: { not: EnrollmentStatus.ACTIVE },
+        group: { companyId },
+      },
+      orderBy: [{ statusChangedAt: 'desc' }, { createdAt: 'desc' }],
+      select: {
+        id: true,
+        status: true,
+        startDate: true,
+        createdAt: true,
+        statusChangedAt: true,
+        statusChangeReason: true,
+        group: {
+          select: {
+            id: true,
+            name: true,
+            level: true,
+            deletedAt: true,
+            course: { select: { name: true } },
+            teachers: {
+              select: {
+                teacher: {
+                  select: { id: true, firstName: true, lastName: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return enrollments.map((e) => ({
+      enrollmentId: e.id,
+      groupId: e.group.id,
+      groupName: e.group.name,
+      groupDeleted: e.group.deletedAt !== null,
+      level: e.group.level,
+      courseName: e.group.course?.name ?? null,
+      status: e.status,
+      startedAt: (e.startDate ?? e.createdAt).toISOString(),
+      leftAt: e.statusChangedAt?.toISOString() ?? null,
+      reason: e.statusChangeReason,
+      teachers: (e.group.teachers ?? []).map((gt) => gt.teacher),
+    }));
+  }
+
+  /**
    * O'quvchi monitoringi uchun "Darslar" ko'rinishi: har bir guruh bo'yicha
    * o'quvchining DAVOMATI (kelgan/kelmagan/kech/sababli), darslar sana bo'yicha
    * tartibda, har `lessonPaymentCount` tasi bitta SIKL bloki qilib guruhlangan.

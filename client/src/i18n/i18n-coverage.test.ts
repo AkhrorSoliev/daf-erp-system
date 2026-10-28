@@ -245,6 +245,7 @@ export const STRICT_FILES: string[] = [
   "components/students/student-profile-tabs.tsx",
   "components/students/student-profile-tabs-utils.ts",
   "components/students/student-group-card.tsx",
+  "components/students/student-past-groups-section.tsx",
   "components/students/student-debt-origin.tsx",
   "components/students/student-lead-tab.tsx",
   "components/students/student-call-history-tab.tsx",

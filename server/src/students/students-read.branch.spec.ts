@@ -57,6 +57,7 @@ describe('StudentsService — profile reads are branch-gated', () => {
       getStatusHistory: jest.fn().mockResolvedValue([]),
       getActiveEnrollmentsWithPrepaid: jest.fn().mockResolvedValue([]),
       getClosedEnrollments: jest.fn().mockResolvedValue([]),
+      getPastEnrollments: jest.fn().mockResolvedValue([]),
       getLessonsOverview: jest.fn().mockResolvedValue({}),
     };
     transactions = { getBalanceSummary: jest.fn().mockResolvedValue({}) };
@@ -101,6 +102,12 @@ describe('StudentsService — profile reads are branch-gated', () => {
       () =>
         service.getClosedEnrollments(FARGONA_STUDENT, 1001, NAMANGAN_DIRECTOR),
       () => read.getClosedEnrollments,
+    ],
+    [
+      'past-enrollments',
+      () =>
+        service.getPastEnrollments(FARGONA_STUDENT, 1001, NAMANGAN_DIRECTOR),
+      () => read.getPastEnrollments,
     ],
     [
       'lessons-overview',
