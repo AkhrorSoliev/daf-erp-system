@@ -25,6 +25,7 @@ import {
   kvRow,
   sheetNotes,
 } from './reports-excel.helpers';
+import { BANK_FEES_ENTERED_KEY } from '../tax/tax-costs';
 
 // ---- Sheet 3: Sof foyda (the single, clear "aniq sof foyda") ----
 /**
@@ -131,12 +132,19 @@ export function netProfitSheet(wb: Workbook, np: NetProfit, period: string) {
   m.getCell(2).font = { bold: true };
   m.getCell(3).font = { italic: true, size: 9, color: { argb: SUBTLE } };
   if (np.taxes.missingRates.length > 0) {
-    kvRow(
-      ws,
-      'Diqqat: hisob to‘liq emas',
-      '',
-      `Stavka kiritilmagan: ${np.taxes.missingRates.join(', ')}`,
+    // «bank.feesEntered» stavka emas — alohida, tushunarli matn bilan chiqadi.
+    const rateKeys = np.taxes.missingRates.filter(
+      (k) => k !== BANK_FEES_ENTERED_KEY,
     );
+    const notes = [
+      ...(rateKeys.length > 0
+        ? [`Stavka kiritilmagan: ${rateKeys.join(', ')}`]
+        : []),
+      ...(rateKeys.length < np.taxes.missingRates.length
+        ? ['Bank xarajati kiritilmagan']
+        : []),
+    ];
+    kvRow(ws, 'Diqqat: hisob to‘liq emas', '', notes.join('. '));
   }
 
   sectionHeader(ws, 'Ma‘lumot uchun (foydadan AYIRILMAGAN)');

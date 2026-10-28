@@ -50,14 +50,31 @@ describe('netProfitSheet — tax and fee rows (spec 2026-10-25)', () => {
     expect(rowOf(ws, 'Gateway komissiyasi (Payme/Click)')).toBeNull();
   });
 
-  it('warns that the figure is incomplete when a used rate is missing', () => {
+  it('says the bank fee is not entered, in words, not as a raw key', () => {
     const ws = render({
       ...emptyTaxCosts(),
       missingRates: ['bank.feesEntered'],
     });
     const warn = rowOf(ws, 'Diqqat: hisob to‘liq emas');
+    expect(cellText(warn.getCell(3).value)).toBe('Bank xarajati kiritilmagan');
+  });
+
+  it('names the missing rate keys apart from the bank fee note', () => {
+    const ws = render({
+      ...emptyTaxCosts(),
+      missingRates: ['fees.qr', 'bank.feesEntered'],
+    });
+    const warn = rowOf(ws, 'Diqqat: hisob to‘liq emas');
     expect(cellText(warn.getCell(3).value)).toBe(
-      'Stavka kiritilmagan: bank.feesEntered',
+      'Stavka kiritilmagan: fees.qr. Bank xarajati kiritilmagan',
+    );
+  });
+
+  it('prints only the rate keys when the bank fee is entered', () => {
+    const ws = render({ ...emptyTaxCosts(), missingRates: ['fees.qr'] });
+    const warn = rowOf(ws, 'Diqqat: hisob to‘liq emas');
+    expect(cellText(warn.getCell(3).value)).toBe(
+      'Stavka kiritilmagan: fees.qr',
     );
   });
 });

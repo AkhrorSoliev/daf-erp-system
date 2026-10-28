@@ -697,6 +697,9 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /month-close/:month": [
+    "CEO"
+  ],
   "GET /notifications": "ANY",
   "GET /notifications/counts": "ANY",
   "GET /notifications/stream": "ANY",
@@ -2460,6 +2463,9 @@
   "PUT /lesson-teacher-overrides/:groupId/:date": [
     "Administrator",
     "Branch Director",
+    "CEO"
+  ],
+  "PUT /month-close/:month/bank-fees": [
     "CEO"
   ],
   "PUT /permissions/roles/:roleId": [
