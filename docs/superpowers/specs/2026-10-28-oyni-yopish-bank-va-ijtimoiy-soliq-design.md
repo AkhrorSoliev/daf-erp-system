@@ -42,9 +42,9 @@ Foizlar (12% va 12%) hozirgidek `/settings/tax` dagi oyga bog'langan stavkalarda
 - Har hisob uchun shu oyning tirik `BANK_FEES` xarajati qidiriladi (`cashAccountId` + `date` oy ichida + `deletedAt = null`):
   - yo'q, `amount > 0` → yangi xarajat;
   - bor, summa boshqa → tahrir (xarajat sahifasidagi tahrir yo'li bilan: reverse + qayta yozish);
-  - bor, `amount = 0` → o'chirish (soft delete + reverse);
   - bor, summa teng → hech narsa.
-- Hammasi bitta Serializable tranzaksiyada; to'qnashuv `rethrowAsConflict` → 409.
+- `amount = 0` ham yozuv: qator 0 bilan qoladi (pul harakati yo'q), hisob «kiritilgan» bo'ladi. O'chirish faqat xarajatlar sahifasidan.
+- Har hisob `ExpensesService` ning o'z Serializable tranzaksiyasida yoziladi; biri xato bersa oldingilari saqlanib qoladi, qayta saqlash xavfsiz (bir xil summa — hech narsa).
 - `EntityHistory` va xarajatlar tarixi xarajat sahifasidagi bilan bir xil yoziladi.
 - Saqlangach `invalidateNetProfitCache`.
 
