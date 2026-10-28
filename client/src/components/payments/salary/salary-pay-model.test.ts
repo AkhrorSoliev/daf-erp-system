@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatPrice } from "@/lib/format-utils";
-import { accountsByKind, buildPayBody, officialLines, payTitle, payToast, sliceCheck } from "./salary-pay-model";
+import { accountsByKind, buildPayBody, bankPayLine, payTitle, payToast, sliceCheck } from "./salary-pay-model";
 import type { SalaryDetail } from "./salary-types";
 
 // Intl writes a no-break space between thousands; the expectations use a plain one.
@@ -104,19 +104,17 @@ describe("payTitle", () => {
   });
 });
 
-describe("officialLines", () => {
-  it("names the official part, the budget part and what the employee takes home", () => {
-    const lines = officialLines({
-      official: 2_000_000,
-      withholding: 240_000,
-      employerSocial: 240_000,
-      toHand: 2_260_000,
-    });
-    expect(lines.split).toBe(
-      `Rasmiy qism: ${formatPrice(2_000_000)} so'm · Budjetga: ${formatPrice(240_000)} so'm · Xodim qo'liga: ${formatPrice(2_260_000)} so'm`,
+
+describe("bankPayLine", () => {
+  const rates = { withholdingPercent: 12, employerSocialPercent: 12 };
+  it("splits a bank payout like the CEO's example", () => {
+    expect(bankPayLine(2_000_000, rates)).toBe(
+      `Kartaga tushadi: ${formatPrice(1_760_000)} so'm · Ushlanadi: ${formatPrice(240_000)} so'm · Korxona solig'i: ${formatPrice(240_000)} so'm (alohida)`,
     );
-    expect(lines.social).toBe(
-      `Korxona ijtimoiy solig'i: ${formatPrice(240_000)} so'm (alohida to'lanadi)`,
-    );
+  });
+  it("nothing for 0 or without rates", () => {
+    expect(bankPayLine(0, rates)).toBeNull();
+    expect(bankPayLine(1000, { withholdingPercent: null, employerSocialPercent: null })).toBeNull();
+    expect(bankPayLine(1000, undefined)).toBeNull();
   });
 });

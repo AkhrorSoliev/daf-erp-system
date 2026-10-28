@@ -22,7 +22,7 @@ export function ExpensesMonthCardSkeleton() {
       <CardContent className="space-y-3">
         <Skeleton className="h-4 w-48" />
         <Skeleton className="h-8 w-40" />
-        {Array.from({ length: 8 }, (_, i) => <Skeleton key={i} className="h-6" />)}
+        {Array.from({ length: 9 }, (_, i) => <Skeleton key={i} className="h-6" />)}
       </CardContent>
     </Card>
   );

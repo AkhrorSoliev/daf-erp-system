@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { useCan } from "@/hooks/use-permissions";
 import { useT } from "@/i18n/context";
 import { monthShort } from "@/components/payments/salary-utils";
-import { FULL_TEACHER_PAY_MONTH, profitLines, som } from "./overview-math";
+import { FULL_TEACHER_PAY_MONTH, missingRatesNote, profitLines, som } from "./overview-math";
 import type { ProfitComposition } from "./types";
 
 /** «Qanday hisoblandi» (spec B1 §2.4): only the lines that make up the profit, as one equation. */
@@ -52,7 +52,7 @@ export function ProfitDialog({
 export function ProfitBreakdown({ month, composition }: { month: string; composition: ProfitComposition }) {
   const t = useT();
   const canEditRates = useCan("settings.tax");
-  const missing = composition.taxes?.missingRates.length ?? 0;
+  const missing = missingRatesNote(composition.taxes?.missingRates ?? [], t);
   const manualTax = composition.taxes?.manualTaxExpenses ?? 0;
   const doubleTax = manualTax > 0 && (composition.taxes?.turnoverTax ?? 0) > 0;
   return (
@@ -67,17 +67,18 @@ export function ProfitBreakdown({ month, composition }: { month: string; composi
         <span>{t("Foyda")}</span>
         <span className="tabular-nums">{som(composition.netProfit, t)}</span>
       </div>
-      {missing > 0 && (
+      {missing && (
         <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-          {t("Hisob to'liq emas: {n} ta stavka kiritilmagan", { n: missing })}
-          {canEditRates && (
-            <>
-              {" "}
-              <Link href="/settings/tax" className="font-medium underline">
-                {t("Stavkalarni kiritish →")}
-              </Link>
-            </>
-          )}
+          {missing.text}
+          {canEditRates &&
+            missing.links.map((l) => (
+              <span key={l.href}>
+                {" "}
+                <Link href={l.href} className="font-medium underline">
+                  {l.label}
+                </Link>
+              </span>
+            ))}
         </p>
       )}
       {doubleTax && (

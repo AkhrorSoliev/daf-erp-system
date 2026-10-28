@@ -692,7 +692,6 @@ export const STRICT_FILES: string[] = [
   "components/settings/archive-settings-client.tsx",
   "components/settings/tax-settings-client.tsx",
   "components/settings/tax-rate-row.tsx",
-  "components/settings/tax-bank-tiers.tsx",
   "components/settings/tax-past-month-confirm.tsx",
   "components/settings/tax-settings-draft.ts",
   "components/settings/archive-detail-sheet.tsx",

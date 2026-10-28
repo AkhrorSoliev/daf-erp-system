@@ -4,9 +4,7 @@ import {
   mergeRateRow,
   percentInput,
   rowError,
-  tiersError,
   toRatePayload,
-  toTierPayload,
 } from "./tax-settings-draft";
 
 describe("tax settings draft", () => {
@@ -25,46 +23,8 @@ describe("tax settings draft", () => {
     }
   });
 
-  it("validates tiers", () => {
-    expect(tiersError([{ fromAmount: "0", toAmount: "", percent: "0.1" }])).toBeNull();
-    expect(tiersError([])).toBe("Kamida bitta oraliq kiriting");
-    expect(tiersError([{ fromAmount: "5", toAmount: "", percent: "0.1" }])).toBe("1-oraliq 0 dan boshlanadi");
-    expect(tiersError([{ fromAmount: "0", toAmount: "100", percent: "0.1" }])).toBe(
-      "Oxirgi oraliqning yuqori chegarasi bo'sh qoladi",
-    );
-    expect(
-      tiersError([
-        { fromAmount: "0", toAmount: "100", percent: "1" },
-        { fromAmount: "120", toAmount: "", percent: "1" },
-      ]),
-    ).toBe("Oraliqlar orasida bo'shliq bor");
-    expect(
-      tiersError([
-        { fromAmount: "0", toAmount: "100", percent: "1.15" },
-        { fromAmount: "100", toAmount: "", percent: "0.07" },
-      ]),
-    ).toBeNull();
-  });
-
-  it("refuses a fractional or comma amount instead of silently stripping it", () => {
-    expect(tiersError([{ fromAmount: "0", toAmount: "1,5", percent: "1" }])).toBe("Faqat butun so'm kiriting");
-    expect(tiersError([{ fromAmount: "0", toAmount: "1.5", percent: "1" }])).toBe("Faqat butun so'm kiriting");
-  });
-
   it("builds payloads and reads the current rate", () => {
     expect(toRatePayload([{ fromMonth: "2026-10", value: "4" }])).toEqual([{ fromMonth: "2026-10", value: 4 }]);
-    expect(
-      toTierPayload("2026-10", [
-        { fromAmount: "0", toAmount: "100", percent: "1" },
-        { fromAmount: "100", toAmount: "", percent: "0.5" },
-      ]),
-    ).toEqual({
-      fromMonth: "2026-10",
-      tiers: [
-        { fromAmount: 0, toAmount: 100, percent: 1 },
-        { fromAmount: 100, toAmount: null, percent: 0.5 },
-      ],
-    });
     expect(currentRate([{ fromMonth: "2026-10", value: 4 }, { fromMonth: "2027-01", value: 6 }], "2026-12")).toBe(4);
     expect(currentRate([], "2026-12")).toBeNull();
   });

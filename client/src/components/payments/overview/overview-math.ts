@@ -81,6 +81,26 @@ export function profitLines(
     ...((c.taxes?.providerFees ?? 0) !== 0 ? [{ label: t("To'lov komissiyasi"), amount: -(c.taxes?.providerFees ?? 0) }] : []),
     ...((c.taxes?.employerSocialTax ?? 0) !== 0 ? [{ label: t("Ijtimoiy soliq"), amount: -(c.taxes?.employerSocialTax ?? 0) }] : []),
     ...((c.taxes?.turnoverTax ?? 0) !== 0 ? [{ label: t("Aylanma solig'i"), amount: -(c.taxes?.turnoverTax ?? 0) }] : []),
-    ...((c.taxes?.bankFees ?? 0) !== 0 ? [{ label: t("Bank xarajati"), amount: -(c.taxes?.bankFees ?? 0) }] : []),
   ];
+}
+
+/** The server's key for «no bank fee entered for the month» (not a rate; `tax-costs.ts`). */
+export const BANK_FEES_ENTERED_KEY = "bank.feesEntered";
+
+export interface MissingRatesNote {
+  text: string;
+  /** What to open: the rates page when a rate is missing, «Oyni yopish» when the bank fee is. */
+  links: { href: string; label: string }[];
+}
+
+/** The amber warning under the profit lines; the wording follows what is missing (spec 2026-10-28). */
+export function missingRatesNote(missing: string[], t: Translate = interpolate): MissingRatesNote | null {
+  const n = missing.filter((k) => k !== BANK_FEES_ENTERED_KEY).length;
+  const bank = n < missing.length;
+  if (n === 0 && !bank) return null;
+  const rates = { href: "/settings/tax", label: t("Stavkalarni kiritish →") };
+  const close = { href: "/reports/oyni-yopish", label: t("Oyni yopish →") };
+  if (!bank) return { text: t("Hisob to'liq emas: {n} ta stavka kiritilmagan", { n }), links: [rates] };
+  if (n === 0) return { text: t("Bank xarajati kiritilmagan"), links: [close] };
+  return { text: t("Hisob to'liq emas: {n} ta stavka va bank xarajati kiritilmagan", { n }), links: [rates, close] };
 }

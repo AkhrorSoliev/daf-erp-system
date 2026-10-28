@@ -223,7 +223,7 @@ export const settingsNavSections: SettingsNavSection[] = [
         title: msg("Soliq va komissiyalar"),
         url: "/settings/tax",
         icon: Percent,
-        description: msg("To'lov komissiyasi, oylik, aylanma solig'i va bank xarajati stavkalari"),
+        description: msg("To'lov komissiyasi, oylik va aylanma solig'i stavkalari"),
         keywords: ["soliq", "komissiya", "stavka", "foiz", "bank", "payme", "click", "uzum", "ijtimoiy"],
         permission: "settings.tax",
       },

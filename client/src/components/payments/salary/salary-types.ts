@@ -160,11 +160,6 @@ export interface SalaryDetail {
   } | null;
   cashAccounts: { id: string; name: string; type: "CASH" | "BANK" | "CARD" }[];
   payeeBranchMissing: boolean;
-  /** The official-salary split (spec 2026-10-25); null without an official salary. */
-  official?: {
-    official: number;
-    withholding: number;
-    employerSocial: number;
-    toHand: number;
-  } | null;
+  /** The month's payroll rates for the bank line of «Berildi» (spec 2026-10-28). */
+  bankTax?: { withholdingPercent: number | null; employerSocialPercent: number | null };
 }

@@ -92,7 +92,7 @@ const COMPOSITION: ProfitComposition = {
   staff: { total: 13_410_000 },
   expenses: { total: 11_340_000 },
   refunds: 450_000,
-  taxes: { providerFees: 0, employerSocialTax: 0, turnoverTax: 0, bankFees: 0, total: 0, missingRates: [] },
+  taxes: { providerFees: 0, employerSocialTax: 0, turnoverTax: 0, total: 0, missingRates: [] },
   forecast: { expectedNetProfit: 52_200_000 },
 };
 
