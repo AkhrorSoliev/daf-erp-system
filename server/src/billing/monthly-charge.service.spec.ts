@@ -363,6 +363,92 @@ describe('MonthlyChargeService', () => {
       });
     });
 
+    // A student is in ONE group at a time. Moving to another group on a day
+    // both meet used to bill that day twice: the old group keeps the day the
+    // student left (`reverseChargeForDeparture`), and the new group's charge
+    // starts from the same day (#11398, 28.10.2026, #005 -> #045).
+    describe('a student moved to ANOTHER group in the same month', () => {
+      const THU_17 = new Date('2026-09-17T08:00:00Z'); // 13:00 Tashkent
+      const SEPT_FROM_17 = [
+        '2026-09-17',
+        '2026-09-19',
+        '2026-09-22',
+        '2026-09-24',
+        '2026-09-26',
+        '2026-09-29',
+      ];
+      const moved = () =>
+        service.createChargeForEnrollment(tx, {
+          enrollment: enrollment({
+            id: 'enr-2',
+            startDate: new Date('2026-09-17T00:00:00Z'),
+          }),
+          periodYear: 2026,
+          periodMonth: 9,
+          companyId: 1,
+        });
+      // First `findMany` is the same-group lookup (none), the second the
+      // other groups' departed enrollments.
+      const oldGroupCharge = (frozenOutDates: string[]) => {
+        prismaMock.enrollmentMonthlyCharge.findMany
+          .mockResolvedValueOnce([])
+          .mockResolvedValueOnce([
+            {
+              coveredDates: SEPT_FROM_17,
+              frozenOutDates,
+              enrollment: { statusChangedAt: THU_17 },
+            },
+          ]);
+      };
+
+      it('bills the day the student left only once: the old group keeps it', async () => {
+        oldGroupCharge(SEPT_FROM_17.slice(1)); // leaving returned the later days
+
+        const charge = await moved();
+
+        expect(
+          prismaMock.enrollmentMonthlyCharge.findMany,
+        ).toHaveBeenCalledWith({
+          where: {
+            studentId: 10453,
+            groupId: { not: 'grp-1' },
+            periodYear: 2026,
+            periodMonth: 9,
+            status: 'CHARGED',
+            enrollment: { status: { not: 'ACTIVE' }, deletedAt: null },
+          },
+          select: {
+            coveredDates: true,
+            frozenOutDates: true,
+            enrollment: { select: { statusChangedAt: true } },
+          },
+        });
+        expect((charge as { coveredDates: string[] }).coveredDates).toEqual(
+          SEPT_FROM_17.slice(1),
+        ); // 19, 22, 24, 26, 29
+        expect(charge?.coveredLessons).toBe(5);
+      });
+
+      it('does not give the later days free when the old group kept its money (contract 6.2)', async () => {
+        // Nothing was returned (`withheld`): the old charge still covers every
+        // day, but only the days up to the one the student left are "paid" for
+        // this student's lessons; the new group's own days are his to pay.
+        oldGroupCharge([]);
+
+        const charge = await moved();
+
+        expect((charge as { coveredDates: string[] }).coveredDates).toEqual(
+          SEPT_FROM_17.slice(1),
+        );
+      });
+
+      it('takes nothing away when the other group has no departed enrollment', async () => {
+        const charge = await moved();
+
+        expect(charge?.coveredLessons).toBe(6);
+      });
+    });
+
     it('o`tgan oyning uzrli darslarini kredit sifatida chegiradi', async () => {
       // Sentabr hisobida excusedLessons = 2 turibdi. `findUnique` ikki xil
       // maqsadda chaqiriladi — joriy davr (oktabr) uchun "mavjudmi" tekshiruvi
@@ -1544,10 +1630,17 @@ describe('MonthlyChargeService', () => {
       'equals what createChargeForEnrollment then charges: %s',
       async (_label, day, discountPercent, rejoin) => {
         if (rejoin) {
-          // Both calls read it: the write must see what the preview saw.
-          prismaMock.enrollmentMonthlyCharge.findMany.mockResolvedValue([
-            { coveredDates: SEPT, frozenOutDates: SEPT.slice(3) },
-          ]);
+          // Both calls read it: the write must see what the preview saw. Only
+          // the same-group lookup (it names `enrollmentId`) finds the row; the
+          // other-groups lookup finds nothing.
+          prismaMock.enrollmentMonthlyCharge.findMany.mockImplementation(
+            ({ where }: any) =>
+              Promise.resolve(
+                where.enrollmentId
+                  ? [{ coveredDates: SEPT, frozenOutDates: SEPT.slice(3) }]
+                  : [],
+              ),
+          );
         }
         // The dialog asks before the enrollment exists; the write runs on the
         // enrollment just created. No earlier month, so no carried credit.
