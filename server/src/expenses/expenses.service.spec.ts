@@ -1170,4 +1170,136 @@ describe('ExpensesService — findAll filters + summary', () => {
       });
     });
   });
+
+  describe('BANK_FEES', () => {
+    const CEO_ID = 1;
+    const ADMIN_ID = 42;
+    const baseDto = {
+      category: 'RENT',
+      paymentMethod: 'CASH',
+      amount: 100,
+      description: 'Bank xizmati',
+      date: '2026-10-31',
+      branchId: 1,
+    };
+    const existingRow = {
+      id: 'e1',
+      category: 'OTHER',
+      paymentMethod: 'CARD',
+      amount: 100,
+      branchId: 1,
+      companyId: COMPANY_ID,
+      deletedAt: null,
+      relatedUserId: null,
+      leadSourceId: null,
+      cashAccountId: null,
+      description: 'x',
+    };
+
+    beforeEach(() => {
+      prisma.expense.create.mockResolvedValue({
+        ...existingRow,
+        category: 'BANK_FEES',
+        cashAccountId: 'acc-1',
+      });
+      (tx as any).expense.create = prisma.expense.create;
+      tx.transaction.findFirst.mockResolvedValue(null);
+    });
+
+    it('create refuses BANK_FEES without an account (expenses page)', async () => {
+      await expect(
+        service.create(
+          { ...baseDto, category: 'BANK_FEES' } as any,
+          CEO_ID,
+          COMPANY_ID,
+        ),
+      ).rejects.toThrow('Bank xizmati «Oyni yopish» sahifasida kiritiladi');
+    });
+
+    it('create refuses an account on any other category', async () => {
+      await expect(
+        service.create(baseDto as any, CEO_ID, COMPANY_ID, {
+          cashAccountId: 'acc-1',
+        }),
+      ).rejects.toThrow('Bank xizmati «Oyni yopish» sahifasida kiritiladi');
+    });
+
+    it('create with an account writes cashAccountId and passes it to the ledger', async () => {
+      await service.create(
+        { ...baseDto, category: 'BANK_FEES', paymentMethod: 'CARD' } as any,
+        CEO_ID,
+        COMPANY_ID,
+        { cashAccountId: 'acc-1' },
+      );
+      expect(prisma.expense.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ cashAccountId: 'acc-1' }),
+        }),
+      );
+      expect(transactionsService.recordExpense).toHaveBeenCalledWith(
+        expect.objectContaining({ cashAccountId: 'acc-1' }),
+        expect.anything(),
+      );
+    });
+
+    it('BANK_FEES needs settings.tax, not expenses.manage', async () => {
+      permissions.has.mockImplementation(
+        async (_u: number, key: string) => key === 'expenses.manage',
+      );
+      await expect(
+        service.create(
+          { ...baseDto, category: 'BANK_FEES' } as any,
+          ADMIN_ID,
+          COMPANY_ID,
+          { cashAccountId: 'acc-1' },
+        ),
+      ).rejects.toThrow("Bu xarajatni kiritish huquqingiz yo'q");
+    });
+
+    it('update refuses moving a row into or out of BANK_FEES, or changing its branch or method', async () => {
+      prisma.expense.findFirst.mockResolvedValue({
+        ...existingRow,
+        category: 'BANK_FEES',
+        cashAccountId: 'acc-1',
+      });
+      for (const patch of [
+        { category: 'OTHER' },
+        { branchId: 2 },
+        { paymentMethod: 'CASH' },
+      ]) {
+        await expect(
+          service.update('e1', patch as any, CEO_ID, COMPANY_ID),
+        ).rejects.toThrow(
+          "Bank xizmatining turkumi, filiali va to'lov turi o'zgarmaydi",
+        );
+      }
+      prisma.expense.findFirst.mockResolvedValue({
+        ...existingRow,
+        category: 'OTHER',
+      });
+      await expect(
+        service.update(
+          'e1',
+          { category: 'BANK_FEES' } as any,
+          CEO_ID,
+          COMPANY_ID,
+        ),
+      ).rejects.toThrow('Bank xizmati «Oyni yopish» sahifasida kiritiladi');
+    });
+
+    it('an amount edit re-posts the ledger on the same account', async () => {
+      const row = {
+        ...existingRow,
+        category: 'BANK_FEES',
+        cashAccountId: 'acc-1',
+      };
+      prisma.expense.findFirst.mockResolvedValue({ ...row, amount: 100 });
+      tx.expense.update.mockResolvedValue({ ...row, amount: 250 });
+      await service.update('e1', { amount: 250 } as any, CEO_ID, COMPANY_ID);
+      expect(transactionsService.recordExpense).toHaveBeenCalledWith(
+        expect.objectContaining({ amount: 250, cashAccountId: 'acc-1' }),
+        expect.anything(),
+      );
+    });
+  });
 });

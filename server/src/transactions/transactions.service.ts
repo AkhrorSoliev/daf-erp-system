@@ -140,6 +140,7 @@ export class TransactionsService {
       relatedUserId?: number;
       description?: string;
       paymentMethod?: ExpensePaymentMethod;
+      cashAccountId?: string;
     },
     tx?: Prisma.TransactionClient,
   ) {

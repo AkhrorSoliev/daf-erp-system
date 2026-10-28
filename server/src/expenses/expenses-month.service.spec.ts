@@ -89,7 +89,7 @@ describe('ExpensesMonthService.monthSummary (spec B6 §5.2)', () => {
     service = moduleRef.get(ExpensesMonthService);
   });
 
-  it('the current month: totals, eight categories, the per-branch gaps, the empty branch, the authors', async () => {
+  it('the current month: totals, nine categories, the per-branch gaps, the empty branch, the authors', async () => {
     const s = await service.monthSummary(1, null, undefined, NOW);
     expect(s).toMatchObject({
       month: '2026-10',
@@ -101,7 +101,7 @@ describe('ExpensesMonthService.monthSummary (spec B6 §5.2)', () => {
       lastMonthTotal: 10_900_000,
       multiBranch: true,
     });
-    expect(s.byCategory).toHaveLength(8);
+    expect(s.byCategory).toHaveLength(9);
     expect(s.byCategory.find((r) => r.category === 'UTILITIES')).toEqual({
       category: 'UTILITIES',
       amount: 70_000,
