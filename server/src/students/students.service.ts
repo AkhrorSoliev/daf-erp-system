@@ -72,6 +72,10 @@ export class StudentsService {
     await assertCallerMayTouchStudent(this.prisma, userId, id, companyId);
     return this.read.getClosedEnrollments(id, companyId);
   }
+  async getPastEnrollments(id: number, companyId: number, userId?: number) {
+    await assertCallerMayTouchStudent(this.prisma, userId, id, companyId);
+    return this.read.getPastEnrollments(id, companyId);
+  }
   async getLessonsOverview(
     id: number,
     companyId: number,

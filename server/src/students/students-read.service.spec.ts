@@ -779,4 +779,59 @@ describe('StudentsReadService', () => {
       );
     });
   });
+
+  describe('getPastEnrollments — the groups a student has left', () => {
+    beforeEach(() => {
+      prisma.student.findFirst.mockResolvedValue({ id: 11398 });
+    });
+
+    it('reads every non-ACTIVE enrollment, archived groups included', async () => {
+      prisma.enrollment.findMany.mockResolvedValue([]);
+
+      await service.getPastEnrollments(11398, 1001);
+
+      const where = prisma.enrollment.findMany.mock.calls[0][0].where;
+      expect(where.status).toEqual({ not: 'ACTIVE' });
+      expect(where.group).toEqual({ companyId: 1001 });
+    });
+
+    it('maps a transfer with its dates, reason and archived flag', async () => {
+      prisma.enrollment.findMany.mockResolvedValue([
+        {
+          id: 'e1',
+          status: 'TRANSFERRED',
+          startDate: new Date('2026-10-21T00:00:00Z'),
+          createdAt: new Date('2026-10-21T05:00:00Z'),
+          statusChangedAt: new Date('2026-10-28T06:00:00Z'),
+          statusChangeReason: "Boshqa guruhga o'tkazildi",
+          group: {
+            id: 5,
+            name: '#005',
+            level: 'A1',
+            deletedAt: null,
+            course: { name: 'Nemis tili A1' },
+            teachers: [
+              { teacher: { id: 10500, firstName: 'A', lastName: 'B' } },
+            ],
+          },
+        },
+      ]);
+
+      await expect(service.getPastEnrollments(11398, 1001)).resolves.toEqual([
+        {
+          enrollmentId: 'e1',
+          groupId: 5,
+          groupName: '#005',
+          groupDeleted: false,
+          level: 'A1',
+          courseName: 'Nemis tili A1',
+          status: 'TRANSFERRED',
+          startedAt: '2026-10-21T00:00:00.000Z',
+          leftAt: '2026-10-28T06:00:00.000Z',
+          reason: "Boshqa guruhga o'tkazildi",
+          teachers: [{ id: 10500, firstName: 'A', lastName: 'B' }],
+        },
+      ]);
+    });
+  });
 });

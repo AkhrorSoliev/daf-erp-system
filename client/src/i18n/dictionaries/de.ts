@@ -707,6 +707,7 @@ const de: Dictionary = {
   "Ilova": "App",
   "Talaba faol guruhga qo'shilmagan!": "Der Teilnehmer ist keiner aktiven Gruppe zugeordnet!",
   "Guruhlar mavjud emas": "Keine Gruppen vorhanden",
+  "Oldingi guruhlar": "Frühere Gruppen",
   "To'lov ma'lumotlari mavjud emas": "Keine Zahlungsdaten vorhanden",
   "Dars ma'lumotlari mavjud emas": "Keine Unterrichtsdaten vorhanden",
   "Izohlar mavjud emas": "Keine Kommentare vorhanden",

@@ -29,6 +29,7 @@ import { LessonTrailTab } from "./lesson-trail-tab";
 import { StudentRemoveFromGroupDialog } from "./student-remove-from-group-dialog";
 import type { DepartureChoice } from "./departure-money";
 import { StudentClosedEnrollmentsSection } from "./student-closed-enrollments-section";
+import { StudentPastGroupsSection } from "./student-past-groups-section";
 import type { DebtWriteOffEligibility } from "./debt-write-off-types";
 
 function EmptyState({ message }: { message: string }) {
@@ -367,6 +368,13 @@ export function StudentProfileTabs({
             <div className="mb-6">
               <EmptyState message={t("Guruhlar mavjud emas")} />
             </div>
+          )}
+
+          {canSeeDetails && (
+            <StudentPastGroupsSection
+              studentId={student.id}
+              activeKey={localGroups.map((g) => g.enrollmentId).join(",")}
+            />
           )}
 
           {canSeeDetails && (

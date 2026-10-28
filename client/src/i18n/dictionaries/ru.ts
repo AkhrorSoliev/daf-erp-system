@@ -707,6 +707,7 @@ const ru: Dictionary = {
   "Ilova": "Приложение",
   "Talaba faol guruhga qo'shilmagan!": "Ученик не добавлен в активную группу!",
   "Guruhlar mavjud emas": "Групп нет",
+  "Oldingi guruhlar": "Прежние группы",
   "To'lov ma'lumotlari mavjud emas": "Данных о платежах нет",
   "Dars ma'lumotlari mavjud emas": "Данных о занятиях нет",
   "Izohlar mavjud emas": "Комментариев нет",
