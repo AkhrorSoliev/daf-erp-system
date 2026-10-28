@@ -4,22 +4,16 @@ import { RedisService } from '../redis/redis.service';
 import { invalidateNetProfitCache } from '../reports/net-profit-cache';
 import type { SettingKey } from '../settings/settings.types';
 import {
-  BANK_TIERS_KEY,
   DatedRate,
-  DatedTiers,
   TAX_RATE_KEYS,
   TAX_SETTING_KEYS,
   TaxRateKey,
-  TaxSettingKey,
 } from './tax-rates';
 import { UpdateTaxSettingsDto } from './dto/update-tax-settings.dto';
 
-export type TaxRateBook = {
-  rates: Record<TaxRateKey, DatedRate[]>;
-  bankTiers: DatedTiers[];
-};
+export type TaxRateBook = { rates: Record<TaxRateKey, DatedRate[]> };
 export type TaxSettingsView = {
-  values: Record<TaxSettingKey, DatedRate[] | DatedTiers[]>;
+  values: Record<TaxRateKey, DatedRate[]>;
   filled: number;
   total: number;
 };
@@ -38,16 +32,11 @@ export class TaxSettingsService {
     const rates = Object.fromEntries(
       TAX_RATE_KEYS.map((k, i) => [k, lists[i]]),
     ) as Record<TaxRateKey, DatedRate[]>;
-    const bankTiers = await this.settings.get(companyId, BANK_TIERS_KEY);
-    return { rates, bankTiers };
+    return { rates };
   }
 
   async read(companyId: number): Promise<TaxSettingsView> {
-    const { rates, bankTiers } = await this.loadRates(companyId);
-    const values = {
-      ...rates,
-      [BANK_TIERS_KEY]: bankTiers,
-    } as TaxSettingsView['values'];
+    const { rates: values } = await this.loadRates(companyId);
     const filled = TAX_SETTING_KEYS.filter((k) => values[k].length > 0).length;
     return { values, filled, total: TAX_SETTING_KEYS.length };
   }

@@ -142,7 +142,6 @@ describe('SettingsService', () => {
         'payroll.employeeWithholdingPercent': [],
         'payroll.employerSocialPercent': [],
         'tax.turnoverPercent': [],
-        'bank.turnoverTiers': [],
       });
     });
   });
@@ -259,7 +258,6 @@ describe('SettingsService', () => {
         'payroll.employeeWithholdingPercent': [],
         'payroll.employerSocialPercent': [],
         'tax.turnoverPercent': [],
-        'bank.turnoverTiers': [],
       });
     });
 

@@ -26,7 +26,7 @@ describe('TaxSettingsService', () => {
   it('counts filled keys', async () => {
     store['tax.turnoverPercent'] = [{ fromMonth: '2026-10', value: 4 }];
     const view = await service.read(1);
-    expect(view.total).toBe(9);
+    expect(view.total).toBe(8);
     expect(view.filled).toBe(1);
   });
 

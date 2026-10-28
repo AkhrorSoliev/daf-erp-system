@@ -94,7 +94,7 @@ export function netProfitSheet(wb: Workbook, np: NetProfit, period: string) {
     ws,
     '−  Ijtimoiy soliq (korxona)',
     np.taxes.employerSocialTax,
-    'Rasmiy oylikdan',
+    'Bankdan berilgan oylikdan',
   );
   kvRow(
     ws,
@@ -102,7 +102,6 @@ export function netProfitSheet(wb: Workbook, np: NetProfit, period: string) {
     np.taxes.turnoverTax,
     'Naqd bo‘lmagan tushumdan',
   );
-  kvRow(ws, '−  Bank xarajati', np.taxes.bankFees, 'Aylanmaga qarab');
 
   // Bottom-line — big, bold, green/red.
   const t = ws.addRow([

@@ -204,7 +204,7 @@ export class ReportsService {
     const startDate = `${month}-01`;
     const endDate = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
     const scope = { branchIds, startDate, endDate };
-    const [lessons, salaries, profitLoss, outflows, withdrawals] =
+    const [lessons, salaries, profitLoss, outflows, withdrawals, taxes] =
       await Promise.all([
         this.financial.valueHeldLessons(companyId, {
           start: new Date(Date.UTC(y, m - 1, 1)),
@@ -226,16 +226,9 @@ export class ReportsService {
         this.getPeriodOutflows(companyId, scope),
         // «Yechib olish» — revenue of the month it is withdrawn in (ADR-0055).
         this.getBalanceWithdrawals(companyId, { months: [month], branchIds }),
+        this.taxCosts.forMonth(companyId, month, branchIds),
       ]);
     const recognizedRevenue = lessons.reduce((sum, l) => sum + l.value, 0);
-    // Sequential after `salaries`: the payroll-tax leg is a share of the
-    // official salary, so `forMonth` needs it.
-    const taxes = await this.taxCosts.forMonth(
-      companyId,
-      month,
-      branchIds,
-      salaries,
-    );
     return {
       month,
       lessons,

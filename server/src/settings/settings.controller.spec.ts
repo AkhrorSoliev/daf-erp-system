@@ -111,7 +111,6 @@ describe('SettingsController — branch scope', () => {
     settingsService.getMany.mockResolvedValue({
       'payment.defaultModel': 'LESSON_PACK',
       'tax.turnoverPercent': [{ fromMonth: '2026-10', value: 4 }],
-      'bank.turnoverTiers': [],
     });
     settingsService.getBranchOverrides.mockResolvedValue({
       'payment.defaultModel': [],

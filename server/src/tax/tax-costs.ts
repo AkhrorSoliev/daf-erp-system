@@ -1,25 +1,25 @@
 import { PaymentMethod, PaymentSource } from '@prisma/client';
-import { isTopUpMonth } from '../salary/shared/topup';
 import { channelRateKey, feeChannelOf } from './fee-channel';
-import {
-  BANK_TIERS_KEY,
-  rateForMonth,
-  TaxSettingKey,
-  tierPercentFor,
-  tiersForMonth,
-} from './tax-rates';
-import type { TaxRateBook } from './tax-settings.service';
+import { DatedRate, rateForMonth, TaxRateKey } from './tax-rates';
 
-/** Sof foydadan ayriladigan soliq va komissiyalar (spec 2026-10-25). `withholding` faqat ma'lumot. */
+/** O'tgan oyda bank hisobiga bank xarajati kiritilmagan (spec 2026-10-28 §5). */
+export const BANK_FEES_ENTERED_KEY = 'bank.feesEntered' as const;
+export type TaxMissingKey = TaxRateKey | typeof BANK_FEES_ENTERED_KEY;
+
+/**
+ * Sof foydadan ayriladigan soliq va komissiyalar (spec 2026-10-25, 2026-10-28).
+ * `withholding` va `bankPaidSalary` faqat ma'lumot. Bank xizmati bu yerda yo'q:
+ * u oddiy xarajat (`BANK_FEES`), `operatingExpenses` ichida.
+ */
 export interface TaxCosts {
   providerFees: number;
   employerSocialTax: number;
   turnoverTax: number;
-  bankFees: number;
   withholding: number;
+  bankPaidSalary: number;
   turnover: number;
   total: number;
-  missingRates: TaxSettingKey[];
+  missingRates: TaxMissingKey[];
 }
 
 export function emptyTaxCosts(): TaxCosts {
@@ -27,8 +27,8 @@ export function emptyTaxCosts(): TaxCosts {
     providerFees: 0,
     employerSocialTax: 0,
     turnoverTax: 0,
-    bankFees: 0,
     withholding: 0,
+    bankPaidSalary: 0,
     turnover: 0,
     total: 0,
     missingRates: [],
@@ -37,13 +37,13 @@ export function emptyTaxCosts(): TaxCosts {
 
 export function sumTaxCosts(list: TaxCosts[]): TaxCosts {
   const out = emptyTaxCosts();
-  const missing = new Set<TaxSettingKey>();
+  const missing = new Set<TaxMissingKey>();
   for (const t of list) {
     out.providerFees += t.providerFees;
     out.employerSocialTax += t.employerSocialTax;
     out.turnoverTax += t.turnoverTax;
-    out.bankFees += t.bankFees;
     out.withholding += t.withholding;
+    out.bankPaidSalary += t.bankPaidSalary;
     out.turnover += t.turnover;
     out.total += t.total;
     t.missingRates.forEach((k) => missing.add(k));
@@ -65,12 +65,11 @@ export type PaymentGroup = {
 
 export function computePaymentCosts(input: {
   groups: PaymentGroup[];
-  companyTurnover: number;
   month: string;
-  book: TaxRateBook;
+  rates: Record<TaxRateKey, DatedRate[]>;
 }) {
-  const { groups, companyTurnover, month, book } = input;
-  const missing = new Set<TaxSettingKey>();
+  const { groups, month, rates } = input;
+  const missing = new Set<TaxRateKey>();
   let providerFees = 0;
   let turnover = 0;
   for (const g of groups) {
@@ -82,38 +81,46 @@ export function computePaymentCosts(input: {
     const channel = feeChannelOf(g.method, g.source);
     if (!channel || g.amount === 0) continue;
     const key = channelRateKey(channel);
-    const rate = rateForMonth(book.rates[key], month);
+    const rate = rateForMonth(rates[key], month);
     if (rate === null) missing.add(key);
     else providerFees += pct(g.amount, rate);
   }
-
   let turnoverTax = 0;
-  let bankFees = 0;
   if (turnover > 0) {
-    const taxRate = rateForMonth(book.rates['tax.turnoverPercent'], month);
+    const taxRate = rateForMonth(rates['tax.turnoverPercent'], month);
     if (taxRate === null) missing.add('tax.turnoverPercent');
     else turnoverTax = pct(turnover, taxRate);
-
-    const tiers = tiersForMonth(book.bankTiers, month);
-    if (tiers === null) missing.add(BANK_TIERS_KEY);
-    else if (companyTurnover > 0) {
-      // ponytail: bitta yaxlitlash ulush bo'yicha; filiallar yig'indisi kompaniyadan 1 so'm farq qilishi mumkin.
-      const companyFee =
-        (companyTurnover * tierPercentFor(tiers, companyTurnover)) / 100;
-      bankFees = Math.round((companyFee * turnover) / companyTurnover);
-    }
   }
+  return { providerFees, turnoverTax, turnover, missing: [...missing] };
+}
+
+/** Bankdan berilgan oylikdan: korxona solig'i (xarajat) va ushlanma (ma'lumot). */
+export function computePayrollTax(input: {
+  bankPaidSalary: number;
+  month: string;
+  rates: Record<TaxRateKey, DatedRate[]>;
+}) {
+  const { bankPaidSalary, month, rates } = input;
+  if (bankPaidSalary <= 0)
+    return {
+      employerSocialTax: 0,
+      withholding: 0,
+      missing: [] as TaxRateKey[],
+    };
+  const w = rateForMonth(rates['payroll.employeeWithholdingPercent'], month);
+  const s = rateForMonth(rates['payroll.employerSocialPercent'], month);
+  const missing: TaxRateKey[] = [];
+  if (w === null) missing.push('payroll.employeeWithholdingPercent');
+  if (s === null) missing.push('payroll.employerSocialPercent');
   return {
-    providerFees,
-    turnoverTax,
-    bankFees,
-    turnover,
-    missing: [...missing],
+    employerSocialTax: s === null ? 0 : pct(bankPaidSalary, s),
+    withholding: w === null ? 0 : pct(bankPaidSalary, w),
+    missing,
   };
 }
 
-export type PayrollRow = { userId: number; earned: number };
-
+// Task 4 olib tashlaydi: `User.officialSalary` bilan birga. Hozircha faqat
+// salary-monthly-detail.service.ts ishlatadi; soliq hisobi endi bunga tayanmaydi.
 export function officialSplit(
   earned: number,
   officialSalary: number,
@@ -126,53 +133,4 @@ export function officialSplit(
     withholding: withholdingPct === null ? 0 : pct(official, withholdingPct),
     employerSocial: socialPct === null ? 0 : pct(official, socialPct),
   };
-}
-
-export function computePayrollTax(input: {
-  rows: PayrollRow[];
-  officialByUser: Map<number, number>;
-  month: string;
-  book: TaxRateBook;
-}) {
-  const w = rateForMonth(
-    input.book.rates['payroll.employeeWithholdingPercent'],
-    input.month,
-  );
-  const s = rateForMonth(
-    input.book.rates['payroll.employerSocialPercent'],
-    input.month,
-  );
-  let employerSocialTax = 0;
-  let withholding = 0;
-  let anyOfficial = false;
-  for (const row of input.rows) {
-    const split = officialSplit(
-      row.earned,
-      input.officialByUser.get(row.userId) ?? 0,
-      w,
-      s,
-    );
-    if (split.official > 0) anyOfficial = true;
-    employerSocialTax += split.employerSocial;
-    withholding += split.withholding;
-  }
-  const missing: TaxSettingKey[] = [];
-  if (anyOfficial && w === null)
-    missing.push('payroll.employeeWithholdingPercent');
-  if (anyOfficial && s === null) missing.push('payroll.employerSocialPercent');
-  return { employerSocialTax, withholding, missing };
-}
-
-/** `getSalaryMonthly` natijasidan har xodimning shu oy hisoblangan oyligi (sof foyda bilan bir xil asos). */
-export function payrollRowsOf(salaries: any, month: string): PayrollRow[] {
-  const topUp = isTopUpMonth(month);
-  const teachers: PayrollRow[] = (salaries?.data ?? []).map((t: any) => ({
-    userId: t.user.id,
-    earned: (topUp ? t.fullDeserved : t.covered) ?? 0,
-  }));
-  const staff: PayrollRow[] = (salaries?.staff ?? []).map((s: any) => ({
-    userId: s.user.id,
-    earned: s.monthly ?? 0,
-  }));
-  return [...teachers, ...staff];
 }

@@ -1,11 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { KpiRuleMode, PaymentModel } from '@prisma/client';
-import {
-  parseDatedRates,
-  parseDatedTiers,
-  type DatedRate,
-  type DatedTiers,
-} from '../tax/tax-rates';
+import { parseDatedRates, type DatedRate } from '../tax/tax-rates';
 
 /**
  * Sozlamalar registri — `/settings` panelining yagona manbasi.
@@ -65,8 +60,7 @@ export type SettingKey =
   | 'fees.qr'
   | 'payroll.employeeWithholdingPercent'
   | 'payroll.employerSocialPercent'
-  | 'tax.turnoverPercent'
-  | 'bank.turnoverTiers';
+  | 'tax.turnoverPercent';
 
 export interface SettingValueMap {
   'payment.defaultModel': PaymentModel;
@@ -107,7 +101,6 @@ export interface SettingValueMap {
   'payroll.employeeWithholdingPercent': DatedRate[];
   'payroll.employerSocialPercent': DatedRate[];
   'tax.turnoverPercent': DatedRate[];
-  'bank.turnoverTiers': DatedTiers[];
 }
 
 interface SettingDefinition<K extends SettingKey> {
@@ -552,12 +545,6 @@ export const SETTING_DEFINITIONS: {
     key: 'tax.turnoverPercent',
     defaultValue: [],
     parse: (raw) => parseDatedRates('tax.turnoverPercent', raw),
-    companyLevelOnly: true,
-  },
-  'bank.turnoverTiers': {
-    key: 'bank.turnoverTiers',
-    defaultValue: [],
-    parse: (raw) => parseDatedTiers('bank.turnoverTiers', raw),
     companyLevelOnly: true,
   },
 };

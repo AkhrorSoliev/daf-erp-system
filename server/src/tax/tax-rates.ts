@@ -17,20 +17,9 @@ export const TAX_RATE_KEYS = [
 ] as const;
 export type TaxRateKey = (typeof TAX_RATE_KEYS)[number];
 
-export const BANK_TIERS_KEY = 'bank.turnoverTiers' as const;
-export type TaxSettingKey = TaxRateKey | typeof BANK_TIERS_KEY;
-export const TAX_SETTING_KEYS: readonly TaxSettingKey[] = [
-  ...TAX_RATE_KEYS,
-  BANK_TIERS_KEY,
-];
+export const TAX_SETTING_KEYS: readonly TaxRateKey[] = TAX_RATE_KEYS;
 
 export type DatedRate = { fromMonth: string; value: number };
-export type BankTier = {
-  fromAmount: number;
-  toAmount: number | null;
-  percent: number;
-};
-export type DatedTiers = { fromMonth: string; tiers: BankTier[] };
 
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -48,10 +37,6 @@ function isPercent(v: unknown): v is number {
     v <= 100 &&
     Number(v.toFixed(2)) === v
   );
-}
-
-function isWholeSom(v: unknown): v is number {
-  return typeof v === 'number' && Number.isInteger(v) && v >= 0;
 }
 
 function parseMonths<T extends { fromMonth: string }>(
@@ -85,46 +70,6 @@ export function parseDatedRates(key: string, raw: unknown): DatedRate[] {
   });
 }
 
-function parseTiers(key: string, raw: unknown): BankTier[] {
-  if (!Array.isArray(raw) || raw.length === 0)
-    fail(key, "kamida bitta oraliq bo'lishi kerak", raw);
-  const tiers = raw.map((t) => {
-    const r = (t ?? {}) as Record<string, unknown>;
-    const toAmount = r.toAmount === null ? null : r.toAmount;
-    if (
-      !isWholeSom(r.fromAmount) ||
-      (toAmount !== null && !isWholeSom(toAmount)) ||
-      !isPercent(r.percent)
-    ) {
-      fail(key, "oraliq noto'g'ri", t);
-    }
-    return {
-      fromAmount: r.fromAmount,
-      toAmount: toAmount,
-      percent: r.percent,
-    };
-  });
-  if (tiers[0].fromAmount !== 0)
-    fail(key, '1-oraliq 0 dan boshlanishi kerak', raw);
-  if (tiers[tiers.length - 1].toAmount !== null)
-    fail(key, "oxirgi oraliqning yuqori chegarasi bo'sh bo'lishi kerak", raw);
-  for (let i = 0; i < tiers.length - 1; i++) {
-    const t = tiers[i];
-    if (t.toAmount === null || t.toAmount <= t.fromAmount)
-      fail(key, "oraliq chegarasi noto'g'ri", raw);
-    if (tiers[i + 1].fromAmount !== t.toAmount)
-      fail(key, "oraliqlar orasida bo'shliq yoki kesishma bor", raw);
-  }
-  return tiers;
-}
-
-export function parseDatedTiers(key: string, raw: unknown): DatedTiers[] {
-  return parseMonths(key, raw, (r) => ({
-    fromMonth: r.fromMonth as string,
-    tiers: parseTiers(key, r.tiers),
-  }));
-}
-
 function inForce<T extends { fromMonth: string }>(
   list: T[],
   month: string,
@@ -136,20 +81,4 @@ function inForce<T extends { fromMonth: string }>(
 
 export function rateForMonth(list: DatedRate[], month: string): number | null {
   return inForce(list, month)?.value ?? null;
-}
-
-export function tiersForMonth(
-  list: DatedTiers[],
-  month: string,
-): BankTier[] | null {
-  return inForce(list, month)?.tiers ?? null;
-}
-
-export function tierPercentFor(tiers: BankTier[], amount: number): number {
-  if (tiers.length === 0) throw new Error("tierPercentFor: tiers bo'sh");
-  const hit = tiers.find(
-    (t) =>
-      amount >= t.fromAmount && (t.toAmount === null || amount < t.toAmount),
-  );
-  return (hit ?? tiers[tiers.length - 1]).percent;
 }

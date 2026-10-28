@@ -30,8 +30,9 @@ const TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
  * company-wide entry. v4: balance withdrawals count as revenue of the month
  * they are made (ADR-0055). v5: a cancelled refund no longer counts as a refund
  * — both of its ledger rows are left out of the figure. v6: tax and fee costs subtracted (spec 2026-10-25).
+ * v7: bank fee is an expense, social tax on bank-paid salary (spec 2026-10-28).
  */
-const NET_PROFIT_CACHE_VERSION = 'v6';
+const NET_PROFIT_CACHE_VERSION = 'v7';
 const logger = new Logger('NetProfitCache');
 
 /** Seconds remaining until the next Tashkent midnight (min 60). */
