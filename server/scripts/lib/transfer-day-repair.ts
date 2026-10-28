@@ -64,6 +64,8 @@ const effective = (c: RepairCharge): string[] => {
 export function planRepair(
   charges: readonly RepairCharge[],
   attendanceGroups: ReadonlyMap<string, ReadonlySet<string>>,
+  /** CEO ruling for a day two groups both hold attendance for: the group he was in first keeps it. */
+  bothAttendanceFirst = false,
 ): RepairPlan {
   const drops: RepairDrop[] = [];
   const ambiguous: RepairPlan['ambiguous'] = [];
@@ -95,7 +97,7 @@ export function planRepair(
           holders.filter((h) => att.has(h.groupId)).map((h) => h.groupId),
         ),
       ];
-      if (withAtt.length > 1) {
+      if (withAtt.length > 1 && !bothAttendanceFirst) {
         ambiguous.push({
           studentId: holders[0].studentId,
           day,

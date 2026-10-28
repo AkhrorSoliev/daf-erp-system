@@ -43,8 +43,11 @@ function readOnlyUrl(url: string): string {
 async function main() {
   const rest = process.argv.slice(2);
   const studentsArg = rest.find((a) => a.startsWith('--students='));
+  const bothFirst = rest.includes('--both-attendance-first');
   const { apply, expect } = parseApplyExpectArgs(
-    rest.filter((a) => !a.startsWith('--students=')),
+    rest.filter(
+      (a) => !a.startsWith('--students=') && a !== '--both-attendance-first',
+    ),
     USAGE,
   );
   const studentIds = (studentsArg ?? '')
@@ -112,7 +115,11 @@ async function main() {
       );
     }
 
-    const { drops, ambiguous } = planRepair(charges, attendanceGroups);
+    const { drops, ambiguous } = planRepair(
+      charges,
+      attendanceGroups,
+      bothFirst,
+    );
     const balances = new Map(
       (
         await prisma.student.findMany({
