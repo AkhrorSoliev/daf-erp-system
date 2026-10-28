@@ -29,9 +29,10 @@ export const ENTITY_EXCLUDED_KEYS: Readonly<Record<string, readonly string[]>> =
 
 /**
  * Fields that ARE stored in history but read only by a `salary.view` holder:
- * `User.officialSalary` (the official part of an employee's pay). Every
- * reader of User history passes whether its caller may see pay; the default
- * is no.
+ * `User.officialSalary`. The column was dropped (spec 2026-10-28), but old
+ * history rows still carry the value, so the entry stays to keep them hidden
+ * from a reader without `salary.view`. Every reader of User history passes
+ * whether its caller may see pay; the default is no.
  */
 const SALARY_ONLY_KEYS: Readonly<Record<string, readonly string[]>> = {
   User: ['officialSalary'],

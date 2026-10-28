@@ -24,7 +24,6 @@ import { EntityHistoryService } from '../common/entity-history';
 import { userArchiveData } from '../common/status/user-archive';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { RedisService } from '../redis/redis.service';
-import { invalidateNetProfitCache } from '../reports/net-profit-cache';
 import {
   passwordWrite,
   recordSessionsEnded,
@@ -51,7 +50,6 @@ import {
   whereUserMayAct,
 } from '../common/auth/blocked-user';
 import { grantableRoleIdsFor } from '../telegram/constants';
-import { PermissionsService } from '../common/permissions/permissions.service';
 
 const userSelect = {
   id: true,
@@ -80,20 +78,8 @@ const userSelect = {
   },
 } satisfies Prisma.UserSelect;
 
-/**
- * What only a `salary.view` holder reads or writes on an employee: the
- * balance and the official (bank) part of the salary. One list for the select
- * and for stripping a response.
- */
-const payOnlySelect = { balance: true, officialSalary: true } as const;
-
-const OFFICIAL_SALARY_FORBIDDEN =
-  "Rasmiy oylikni faqat oylikni ko'ra oladigan xodim o'zgartiradi";
-
-function omitOfficialSalary<T extends { officialSalary?: unknown }>(user: T) {
-  const { officialSalary: _omitted, ...rest } = user;
-  return rest;
-}
+/** Faqat `salary.view` egasi o'qiydigan maydon: xodimning oylik balansi. */
+const payOnlySelect = { balance: true } as const;
 
 function formatUser(user: any) {
   const { groupTeachers, ...rest } = user;
@@ -147,7 +133,6 @@ export class UsersService {
     private entityHistoryService: EntityHistoryService,
     private events: EventEmitter2,
     private redis: RedisService,
-    private permissions: PermissionsService,
   ) {}
 
   private async assertRoleAndBranchRules(
@@ -691,19 +676,9 @@ export class UsersService {
       telegramChatId?: string;
       roleIds?: number[];
       branchIds?: number[];
-      officialSalary?: number;
     },
     actor: UserWriteActor,
   ) {
-    // Pay data: only a signed-in `salary.view` holder writes or reads it. A
-    // self-registration is nobody's pay decision.
-    const canSeePay =
-      actor.kind === 'user' &&
-      (await this.permissions.has(actor.id, 'salary.view'));
-    if (data.officialSalary !== undefined && !canSeePay) {
-      throw new ForbiddenException(OFFICIAL_SALARY_FORBIDDEN);
-    }
-
     // Validate role IDs exist
     if (data.roleIds?.length) {
       const validRoles = await this.prisma.role.findMany({
@@ -770,9 +745,6 @@ export class UsersService {
           telegramChatId: data.telegramChatId || null,
           login: data.login || null,
           position,
-          ...(data.officialSalary !== undefined && {
-            officialSalary: data.officialSalary,
-          }),
           password: hashedPassword || null,
           roles: data.roleIds?.length
             ? { create: data.roleIds.map((roleId) => ({ roleId })) }
@@ -781,7 +753,7 @@ export class UsersService {
             ? { create: data.branchIds.map((branchId) => ({ branchId })) }
             : undefined,
         },
-        select: { ...userSelect, officialSalary: true },
+        select: userSelect,
       });
     } catch (error: any) {
       if (error.code === 'P2003') {
@@ -802,7 +774,7 @@ export class UsersService {
       companyId: data.companyId,
     });
 
-    return formatUser(canSeePay ? user : omitOfficialSalary(user));
+    return formatUser(user);
   }
 
   /**
@@ -849,7 +821,7 @@ export class UsersService {
       // account already has one — a role holder left with none can never sign
       // in. It is never returned: the response is built from `updated`, and
       // `computeChangedFields` drops `password` from the audit trail.
-      select: { ...userSelect, password: true, officialSalary: true },
+      select: { ...userSelect, password: true },
     });
 
     if (!user) {
@@ -857,10 +829,6 @@ export class UsersService {
     }
 
     this.assertSameCompany(user.companyId, callerCompanyId);
-    const canSeePay = await this.permissions.has(changedById, 'salary.view');
-    if (dto.officialSalary !== undefined && !canSeePay) {
-      throw new ForbiddenException(OFFICIAL_SALARY_FORBIDDEN);
-    }
     // The form resends `status` on every save; only a new value is a change.
     await this.assertCallerMayManageLoadedUser(user, changedById, {
       changesStatus: dto.status !== undefined && dto.status !== user.status,
@@ -932,9 +900,6 @@ export class UsersService {
       }
     }
     if (dto.position !== undefined) updateData.position = dto.position.trim();
-    if (dto.officialSalary !== undefined) {
-      updateData.officialSalary = dto.officialSalary;
-    }
     if (dto.gender !== undefined) updateData.gender = dto.gender;
     if (dto.mainBranch !== undefined) updateData.mainBranch = dto.mainBranch;
     if (dto.telegramChatId !== undefined) {
@@ -991,20 +956,10 @@ export class UsersService {
           data: updateData,
           // `sessionVersion` rides along only so a password write can be
           // mirrored below; it is split off before anything is returned.
-          select: { ...userSelect, sessionVersion: true, officialSalary: true },
+          select: { ...userSelect, sessionVersion: true },
         });
       },
     );
-
-    // The official salary is undated (ADR-0130): a new value rewrites the social
-    // tax of every past month that already has a rate, so the cached net profit
-    // of those months is stale. Never fails the update (swallows its own errors).
-    if (
-      dto.officialSalary !== undefined &&
-      dto.officialSalary !== (user.officialSalary ?? 0)
-    ) {
-      await invalidateNetProfitCache(this.redis, user.companyId);
-    }
 
     // The password is committed now: mirror the bump before anything else can
     // fail, or the old access tokens keep working for the rest of their hour.
@@ -1052,7 +1007,7 @@ export class UsersService {
       } satisfies UserDeactivatedEvent);
     }
 
-    return formatUser(canSeePay ? updated : omitOfficialSalary(updated));
+    return formatUser(updated);
   }
 
   async softDelete(id: number, deletedById: number, callerCompanyId?: number) {

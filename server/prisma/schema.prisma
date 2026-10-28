@@ -396,8 +396,6 @@ model User {
   companyId      Int
   company        Company    @relation(fields: [companyId], references: [id])
   mainBranch     Int?
-  /// Rasmiy (bank orqali) oylik summasi, so'm. Qolgani naqd. Soliq faqat shu qismdan (spec 2026-10-25).
-  officialSalary Int?
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 

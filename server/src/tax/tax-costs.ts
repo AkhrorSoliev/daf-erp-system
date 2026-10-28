@@ -118,19 +118,3 @@ export function computePayrollTax(input: {
     missing,
   };
 }
-
-// Task 4 olib tashlaydi: `User.officialSalary` bilan birga. Hozircha faqat
-// salary-monthly-detail.service.ts ishlatadi; soliq hisobi endi bunga tayanmaydi.
-export function officialSplit(
-  earned: number,
-  officialSalary: number,
-  withholdingPct: number | null,
-  socialPct: number | null,
-) {
-  const official = Math.max(0, Math.min(officialSalary, earned));
-  return {
-    official,
-    withholding: withholdingPct === null ? 0 : pct(official, withholdingPct),
-    employerSocial: socialPct === null ? 0 : pct(official, socialPct),
-  };
-}
