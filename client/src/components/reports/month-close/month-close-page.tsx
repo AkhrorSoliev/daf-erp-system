@@ -77,14 +77,10 @@ function PictureCard({ view, month }: { view: MonthCloseView; month: string }) {
 }
 
 /** «Bank xarajati»: one amount per bank account, saved together. Drafts hold only what the person typed. */
-function BankFeesCard({ view, month, drafts, onDraft, onSaved }: {
-  view: MonthCloseView;
-  month: string;
-  drafts: Record<string, string>;
-  onDraft: (id: string, value: string) => void;
-  onSaved: () => void;
-}) {
+function BankFeesCard({ view, month }: { view: MonthCloseView; month: string }) {
   const t = useT();
+  // Keyed by month at the call site: a month change (stepper, Back/Forward, edited URL) remounts the card and drops the drafts.
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
   const save = useSaveBankFees(month);
   const body = bankFeeBody(view.bankAccounts, drafts);
 
@@ -92,7 +88,7 @@ function BankFeesCard({ view, month, drafts, onDraft, onSaved }: {
     try {
       await save.mutateAsync(body);
       toast.success(t("Saqlandi"));
-      onSaved();
+      setDrafts({});
     } catch (e) {
       toast.error(getErrorMessage(e, t("Saqlashda xatolik yuz berdi")));
     }
@@ -127,7 +123,7 @@ function BankFeesCard({ view, month, drafts, onDraft, onSaved }: {
                   <PriceInput
                     aria-label={`${a.name}, ${a.branchName}`}
                     value={drafts[a.id] ?? (a.amount === null ? "" : String(a.amount))}
-                    onChange={(e) => onDraft(a.id, e.target.value)}
+                    onChange={(e) => setDrafts((d) => ({ ...d, [a.id]: e.target.value }))}
                     disabled={!view.ended || save.isPending}
                   />
                   {a.amount !== null && (
@@ -184,11 +180,9 @@ export function MonthClosePage() {
   const { filters, setFilter } = useUrlFilters(FILTERS);
   const current = currentMonthKey();
   const month = closeMonth(filters.oy, current);
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
   const query = useMonthClose(month, allowed);
 
   function changeMonth(next: string) {
-    setDrafts({});
     // The default month (the previous one) stays out of the URL.
     setFilter("oy", next === closeMonth("", current) ? "" : next);
   }
@@ -219,8 +213,7 @@ export function MonthClosePage() {
       ) : (
         <div className="space-y-4">
           <PictureCard view={query.data} month={month} />
-          <BankFeesCard view={query.data} month={month} drafts={drafts}
-            onDraft={(id, value) => setDrafts((d) => ({ ...d, [id]: value }))} onSaved={() => setDrafts({})} />
+          <BankFeesCard key={month} view={query.data} month={month} />
           <ChecklistCard view={query.data} />
         </div>
       )}
