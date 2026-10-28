@@ -1360,6 +1360,11 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /students/groups/:groupId/enroll-today-lesson": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "GET /students/:id/enrollments/:enrollmentId/debt-write-off-eligibility": [
     "Administrator",
     "Branch Director",

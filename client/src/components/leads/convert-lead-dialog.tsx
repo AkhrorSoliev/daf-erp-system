@@ -30,6 +30,7 @@ import { useLeadsBoard, type LeadCard } from "@/hooks/use-leads-board";
 import { useLeadsUi } from "@/hooks/use-leads-ui";
 import { sortWeekdays, WEEKDAY_SHORT } from "@/lib/weekdays";
 import { useT } from "@/i18n/context";
+import { TodayLessonQuestion, useTodayLesson } from "@/components/students/today-lesson-question";
 
 interface GroupTeacher {
   id: number;
@@ -76,6 +77,7 @@ export function ConvertLeadDialog() {
   const [groupsReload, setGroupsReload] = useState(0);
   const [groupSearch, setGroupSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const todayLesson = useTodayLesson(groupId, null);
 
   const open = !!convertLead;
 
@@ -155,9 +157,14 @@ export function ConvertLeadDialog() {
     if (!convertLead) return;
     setSubmitting(true);
     try {
-      const payload: { branchId?: number; groupId?: string } = {};
+      const payload: {
+        branchId?: number;
+        groupId?: string;
+        attendedTodayLesson?: boolean;
+      } = {};
       if (branchId) payload.branchId = Number(branchId);
       if (groupId) payload.groupId = groupId;
+      Object.assign(payload, todayLesson.payload);
       await api.post<{ studentId: number; lead: LeadCard }>(
         `/leads/${convertLead.id}/convert`,
         payload,
@@ -336,6 +343,11 @@ export function ConvertLeadDialog() {
                     })
                   )}
                 </div>
+                <TodayLessonQuestion
+                  question={todayLesson.question}
+                  attended={todayLesson.attended}
+                  onChange={todayLesson.setAttended}
+                />
                 <p className="text-xs text-muted-foreground">
                   {t(
                     "Guruh tanlansa, o'quvchi shu guruhga qo'shiladi. Tanlanmasa, keyinroq o'quvchi sahifasida qo'shsa bo'ladi.",
@@ -358,7 +370,7 @@ export function ConvertLeadDialog() {
           <Button
             type="button"
             onClick={handleConfirm}
-            disabled={submitting || !branchId}
+            disabled={submitting || !branchId || !todayLesson.answered}
           >
             {submitting && <Loader2 className="size-4 animate-spin" />}
             {t("Aylantirish")}

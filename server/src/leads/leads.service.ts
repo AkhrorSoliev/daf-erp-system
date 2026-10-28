@@ -1297,7 +1297,10 @@ export class LeadsService {
           dto.groupId,
           userId,
           companyId,
-          dto.startDate ? { startDate: dto.startDate } : {},
+          {
+            ...(dto.startDate && { startDate: dto.startDate }),
+            attendedTodayLesson: dto.attendedTodayLesson,
+          },
         );
       }
     }

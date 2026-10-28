@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { LEAD_STATUS_LABELS, type LeadStatus } from "@/hooks/use-leads-board";
 import { useCan, usePermissionsReady } from "@/hooks/use-permissions";
 import { useT } from "@/i18n/context";
+import { TodayLessonQuestion, useTodayLesson } from "@/components/students/today-lesson-question";
 import { canApprove, decidedLine, initialGroupId, joinRequestNotes, requestedAtText, type JoinNote, type JoinRequestView } from "./join-request-rules";
 
 // Blue and yellow, not sky and amber: outside the student portal those two
@@ -44,6 +45,7 @@ export function JoinRequestPanel({ taskId, onDecided }: { taskId: string; onDeci
   const [rejectOpen, setRejectOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
+  const todayLesson = useTodayLesson(picked ?? (data ? initialGroupId(data) : null), null);
 
   if (!ready || (allowed && isLoading)) return <Skeleton className="h-44 w-full" />;
   if (!allowed) return <p className="rounded-md bg-muted px-3 py-2 text-sm">{t("Javob berish uchun ruxsat yo'q")}</p>;
@@ -77,7 +79,7 @@ export function JoinRequestPanel({ taskId, onDecided }: { taskId: string; onDeci
     if (!groupId) return;
     setBusy("approve");
     try {
-      const res = await api.post<{ studentId: number; delivered: boolean }>(`/student-join-requests/${data.id}/approve`, { groupId });
+      const res = await api.post<{ studentId: number; delivered: boolean }>(`/student-join-requests/${data.id}/approve`, { groupId, ...todayLesson.payload });
       toast.success(t("O'quvchi guruhga qo'shildi — #{id}", { id: String(res.data.studentId) }));
       if (!res.data.delivered) toast.error(t("Xabar Telegram'ga yetmadi — o'quvchi parolni botdagi «Parolni tiklash» orqali oladi"));
       onDecided();
@@ -133,11 +135,17 @@ export function JoinRequestPanel({ taskId, onDecided }: { taskId: string; onDeci
         </Select>
       </div>
 
+      <TodayLessonQuestion
+        question={todayLesson.question}
+        attended={todayLesson.attended}
+        onChange={todayLesson.setAttended}
+      />
+
       {notes.map((n) => <p key={n.text} className={cn("rounded-md px-3 py-2 text-xs", TONE[n.tone])}>{n.text}</p>)}
 
       <div className="flex justify-end gap-2">
         <Button variant="outline" disabled={busy !== null} onClick={() => setRejectOpen(true)}>{t("Rad etish")}</Button>
-        <Button disabled={!canApprove(data, groupId) || busy !== null} onClick={() => void approve()}>
+        <Button disabled={!canApprove(data, groupId) || !todayLesson.answered || busy !== null} onClick={() => void approve()}>
           {busy === "approve" && <Loader2 className="mr-1.5 size-4 animate-spin" />}{t("Tasdiqlash")}
         </Button>
       </div>

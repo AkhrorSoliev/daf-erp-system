@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsDateString,
   IsNotEmpty,
   IsOptional,
@@ -24,10 +25,15 @@ export class EnrollToGroupDto {
    * billed. Frontend's "qaysi darsdan boshlab" dropdown writes this. Format:
    * YYYY-MM-DD (Tashkent calendar). Omitted → service defaults to today.
    *
-   * Server validates: must be a real lesson date for the group's schedule
-   * (matches exactDays + within startDate..endDate + not a holiday).
+   * The server only checks the format; a start day that is today with today's
+   * lesson already over needs `attendedTodayLesson`.
    */
   @IsOptional()
   @IsDateString()
   startDate?: string;
+
+  /** Was the student at today's lesson? Needed when it already ended. */
+  @IsOptional()
+  @IsBoolean()
+  attendedTodayLesson?: boolean;
 }

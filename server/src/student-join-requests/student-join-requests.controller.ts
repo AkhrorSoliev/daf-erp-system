@@ -37,11 +37,12 @@ export class StudentJoinRequestsController {
     @CurrentUser('companyId') companyId: number,
     @CurrentUser('roles') roles: string[],
   ) {
-    return this.decisions.approve(id, dto.groupId, {
-      id: userId,
-      companyId,
-      roles,
-    });
+    return this.decisions.approve(
+      id,
+      dto.groupId,
+      { id: userId, companyId, roles },
+      dto.attendedTodayLesson,
+    );
   }
 
   @Post(':id/reject')

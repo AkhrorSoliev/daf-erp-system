@@ -1,4 +1,10 @@
-import { IsDateString, IsInt, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsDateString,
+  IsInt,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ConvertLeadDto {
@@ -21,6 +27,11 @@ export class ConvertLeadDto {
   @IsOptional()
   @IsDateString()
   startDate?: string;
+
+  // Was the student at today's lesson? Needed when it already ended.
+  @IsOptional()
+  @IsBoolean()
+  attendedTodayLesson?: boolean;
 
   // Optional: link this lead to an ALREADY-EXISTING student instead of creating
   // a new one. Set when the detail drawer surfaced a phone-matched student and

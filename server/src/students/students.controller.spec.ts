@@ -150,6 +150,7 @@ describe('StudentsController — route access', () => {
         10001,
         'grp-1',
         '2026-10-17',
+        undefined,
       );
     });
   });

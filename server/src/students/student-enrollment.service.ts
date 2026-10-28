@@ -14,6 +14,9 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
+import { tashkentClock } from '../attendance/shared/attendance-window';
+import { utcMidnightFromDateStr } from '../common/date/tashkent';
+import { loadTodayLessonQuestion, startDayFor } from './enroll-start-day';
 import { rethrowAsConflict } from '../common/transaction-conflict';
 import { EntityHistoryService } from '../common/entity-history';
 
@@ -94,7 +97,11 @@ export class StudentEnrollmentService {
     groupId: string,
     userId: number,
     companyId: number,
-    options: { transferReasonId?: string; startDate?: string } = {},
+    options: {
+      transferReasonId?: string;
+      startDate?: string;
+      attendedTodayLesson?: boolean;
+    } = {},
   ) {
     const student = await this.prisma.student.findFirst({
       where: { id: studentId, deletedAt: null, companyId },
@@ -189,6 +196,25 @@ export class StudentEnrollmentService {
       const m = String(tashkent.getUTCMonth() + 1).padStart(2, '0');
       const d = String(tashkent.getUTCDate()).padStart(2, '0');
       resolvedStartDate = new Date(`${y}-${m}-${d}T00:00:00.000Z`);
+    }
+
+    // Today is the start day and today's lesson is already over: the day is
+    // billed and sits on the register, so the caller must say whether the
+    // student was at it (no silent default, the API is callable directly).
+    const todayQuestion = await loadTodayLessonQuestion(
+      this.prisma,
+      group,
+      options.startDate ?? null,
+    );
+    if (todayQuestion.needed) {
+      resolvedStartDate = utcMidnightFromDateStr(
+        startDayFor(
+          todayQuestion,
+          options.startDate ?? null,
+          tashkentClock().todayStr,
+          options.attendedTodayLesson,
+        ),
+      );
     }
 
     const sameGroup = await this.prisma.enrollment.findFirst({

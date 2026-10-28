@@ -30,7 +30,12 @@ describe('StudentJoinRequestsController — route access', () => {
     await c.byTask('t1', 10002, 1001, ['Administrator']);
 
     const caller = { id: 10002, companyId: 1001, roles: ['Administrator'] };
-    expect(decisions.approve).toHaveBeenCalledWith('r1', 'g2', caller);
+    expect(decisions.approve).toHaveBeenCalledWith(
+      'r1',
+      'g2',
+      caller,
+      undefined,
+    );
     expect(decisions.reject).toHaveBeenCalledWith('r1', 'x', caller);
     expect(decisions.getByTask).toHaveBeenCalledWith('t1', caller);
   });

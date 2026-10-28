@@ -44,6 +44,9 @@ const NOW = new Date('2026-10-14T07:00:00.000Z');
 
 describe('StudentEnrollPreviewService (A3.4)', () => {
   let prisma: {
+    lessonReschedule: { findMany: jest.Mock };
+    lessonCancellation: { findMany: jest.Mock };
+    holiday: { findMany: jest.Mock };
     student: { findFirst: jest.Mock };
     studentBranch: { findFirst: jest.Mock };
     group: { findFirst: jest.Mock };
@@ -57,6 +60,9 @@ describe('StudentEnrollPreviewService (A3.4)', () => {
   beforeEach(() => {
     jest.useFakeTimers({ now: NOW });
     prisma = {
+      lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
+      lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
+      holiday: { findMany: jest.fn().mockResolvedValue([]) },
       // Read twice: the branch check asks whether the student exists, then
       // the preview reads the card itself.
       student: {
@@ -97,6 +103,7 @@ describe('StudentEnrollPreviewService (A3.4)', () => {
     );
 
     expect(r).toEqual({
+      todayLesson: { needed: false },
       paymentModel: 'MONTHLY',
       coursePrice: 450000,
       lessonPaymentCount: null,
@@ -280,6 +287,7 @@ describe('StudentEnrollPreviewService (A3.4)', () => {
     const r = await service.preview(studentId, companyId, 10001, groupId);
 
     expect(r).toEqual({
+      todayLesson: { needed: false },
       paymentModel: 'LESSON_PACK',
       coursePrice: 1200000,
       lessonPaymentCount: 12,
