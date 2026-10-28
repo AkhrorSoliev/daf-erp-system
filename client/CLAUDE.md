@@ -811,7 +811,7 @@ The financial section lives under `/payments/*` with these sub-pages:
 
 ### Month close (`/reports/oyni-yopish`, ADR-0139)
 
-- «Oyni yopish» in `reports-nav.ts` («Moliyaviy hisobotlar», `permission: "settings.tax"`). Files in `components/reports/month-close/`: `month-close-page.tsx` (month picker, month picture, bank fee entry, checklist), `month-close-model.ts` (pure rows and the save body), `month-close-queries.ts`. One `GET /month-close/:month` carries the page; «Saqlash» sends `PUT /month-close/:month/bank-fees` once for every bank account. The client computes no figure; the current month's bank fee fields are disabled.
+- «Oyni yopish» in `reports-nav.ts` («Moliyaviy hisobotlar», `permission: "settings.tax"`). Files in `components/reports/month-close/`: `month-close-page.tsx` (month picker, month picture, bank fee entry, checklist), `month-close-model.ts` (pure rows and the save body), `month-close-queries.ts`. One `GET /month-close/:month` carries the page; «Saqlash» sends `PUT /month-close/:month/bank-fees` once for every bank account. The client computes no figure; the current month's bank fee fields are disabled. A `BANK_FEES` row edited or deleted on the expenses page needs `settings.tax` on top of the route's `expenses.manage` / `salary.pay` (`ExpensesService.assertMayWrite`); `expenses.manage` alone gets a 403.
 
 ### Departed students report (`/reports/departed-students`, ADR-0098)
 
