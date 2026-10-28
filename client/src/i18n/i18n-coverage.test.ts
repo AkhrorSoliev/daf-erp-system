@@ -470,6 +470,8 @@ export const STRICT_FILES: string[] = [
   "components/payments/list/payment-drawer-model.ts",
   "components/payments/list/reverse-payment-dialog.tsx",
   "components/payments/expenses/expenses-page.tsx",
+  "components/reports/month-close/month-close-model.ts",
+  "components/reports/month-close/month-close-page.tsx",
   "components/payments/expenses/expenses-header.tsx",
   "components/payments/expenses/expenses-missing-card.tsx",
   "components/payments/expenses/expenses-month-card.tsx",

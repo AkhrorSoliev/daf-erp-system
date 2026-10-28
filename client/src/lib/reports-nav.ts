@@ -5,6 +5,7 @@ import {
   GraduationCap,
   Activity,
   CalendarCheck,
+  CalendarCheck2,
   Send,
   Megaphone,
   Star,
@@ -44,6 +45,8 @@ export const reportsNavSections: ReportsNavSection[] = [
     title: msg("Moliyaviy hisobotlar"),
     items: [
       { title: msg("Guruhlar bo'yicha to'lov"), url: "/reports/payment-reports", icon: Receipt, permission: "reports.payments" },
+      // «Oyni yopish»: bank xarajatini kiritish va oy hisobi (soliq stavkalari bilan bir imkoniyat).
+      { title: msg("Oyni yopish"), url: "/reports/oyni-yopish", icon: CalendarCheck2, permission: "settings.tax" },
     ],
   },
   {

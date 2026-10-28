@@ -20,12 +20,14 @@ describe("hisobotlar bo'limiga kirish", () => {
     expect(canOpenReportPath(canForRoles([3]), "/reports/departed-students", [3])).toBe(false);
   });
 
-  it("«Moliyaviy hisobotlar»da faqat «Guruhlar bo'yicha to'lov» bor; havolasi va imkoniyati o'zgarmagan", () => {
+  it("«Moliyaviy hisobotlar»da «Guruhlar bo'yicha to'lov» va «Oyni yopish» bor; havolalari va imkoniyatlari o'zgarmagan", () => {
     const section = reportsNavSections.find((s) => s.title === "Moliyaviy hisobotlar");
     expect(section?.items.map((i) => [i.title, i.url, i.permission])).toEqual([
       ["Guruhlar bo'yicha to'lov", "/reports/payment-reports", "reports.payments"],
+      ["Oyni yopish", "/reports/oyni-yopish", "settings.tax"],
     ]);
     expect(routeLabels["payment-reports"]).toBe("Guruhlar bo'yicha to'lov");
+    expect(routeLabels["oyni-yopish"]).toBe("Oyni yopish");
     expect(reportsNavSections.flatMap((s) => s.items).some((i) => i.url === "/reports/student-payments")).toBe(false);
   });
 
@@ -67,5 +69,14 @@ describe("Xodimlar KPI — kpi.view (ADR-0096)", () => {
       expect(canOpenReportPath(canForRoles([role]), "/reports/xodimlar-kpi", [role])).toBe(false);
     }
     expect(routeLabels["xodimlar-kpi"]).toBe("Xodimlar KPI");
+  });
+});
+
+describe("Oyni yopish — settings.tax", () => {
+  it("CEO ochadi; boshqa rollar (soliq imkoniyatisiz) ochmaydi", () => {
+    expect(canOpenReportPath(canForRoles([1]), "/reports/oyni-yopish", [1])).toBe(true);
+    for (const role of [3, 4, 5]) {
+      expect(canOpenReportPath(canForRoles([role]), "/reports/oyni-yopish", [role])).toBe(false);
+    }
   });
 });
