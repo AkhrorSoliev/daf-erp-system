@@ -36,6 +36,7 @@ import { useBranchSwitcher } from "@/hooks/use-branch-switcher";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toApiDateStr } from "@/components/groups/edit-group-form-utils";
 import { EnrollPreviewBlock } from "./enroll-preview-block";
+import { TodayLessonQuestion, useTodayLesson } from "./today-lesson-question";
 import { useT } from "@/i18n/context";
 
 interface GroupTeacher {
@@ -110,6 +111,10 @@ export function EnrollToGroupDialog({
   const [addingReason, setAddingReason] = useState(false);
   const [newReasonName, setNewReasonName] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>();
+  const todayLesson = useTodayLesson(
+    selectedId,
+    startDate ? toApiDateStr(startDate) : null,
+  );
 
   const qc = useQueryClient();
   const selectedBranch = useBranchSwitcher((s) => s.selectedBranch);
@@ -274,6 +279,7 @@ export function EnrollToGroupDialog({
         transferReasonId,
         // Backend defaults to today when omitted.
         ...(startDate && { startDate: toApiDateStr(startDate) }),
+        ...todayLesson.payload,
       });
       toast.success(t("O'quvchi guruhga qo'shildi"));
       onEnrolled?.();
@@ -497,8 +503,15 @@ export function EnrollToGroupDialog({
             groupId={targetGroup.id}
             startDate={startDate}
             onStartDateChange={setStartDate}
+            attendedTodayLesson={todayLesson.attended}
           />
         )}
+
+        <TodayLessonQuestion
+          question={todayLesson.question}
+          attended={todayLesson.attended}
+          onChange={todayLesson.setAttended}
+        />
 
         {teachersDiffer && (
           <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 p-3">
@@ -618,6 +631,7 @@ export function EnrollToGroupDialog({
             disabled={
               !selectedId ||
               submitting ||
+              !todayLesson.answered ||
               (teachersDiffer && !transferReasonId)
             }
           >

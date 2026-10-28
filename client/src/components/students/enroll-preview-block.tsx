@@ -17,6 +17,8 @@ import { toApiDateStr } from "@/components/groups/edit-group-form-utils";
  * the client.
  */
 export interface EnrollPreview {
+  /** Whether today's lesson is over (the dialog asks the question itself). */
+  todayLesson?: { needed: boolean };
   paymentModel: "MONTHLY" | "LESSON_PACK";
   /** The monthly price for MONTHLY, the pack price otherwise. */
   coursePrice: number;
@@ -59,20 +61,27 @@ export function EnrollPreviewBlock({
   groupId,
   startDate,
   onStartDateChange,
+  attendedTodayLesson,
 }: {
   studentId: number;
   groupId: string;
   startDate: Date | undefined;
   onStartDateChange: (date: Date | undefined) => void;
+  /** Answer to «was the student at today's lesson?»; undefined until asked. */
+  attendedTodayLesson?: boolean;
 }) {
   const t = useT();
   const day = startDate ? toApiDateStr(startDate) : null;
   const { data: preview, isLoading, isError } = useQuery<EnrollPreview>({
-    queryKey: ["enroll-preview", studentId, groupId, day],
+    queryKey: ["enroll-preview", studentId, groupId, day, attendedTodayLesson],
     queryFn: () =>
       api
         .get<EnrollPreview>(`/students/${studentId}/enroll-preview`, {
-          params: { groupId, ...(day && { startDate: day }) },
+          params: {
+            groupId,
+            ...(day && { startDate: day }),
+            ...(attendedTodayLesson !== undefined && { attendedTodayLesson }),
+          },
         })
         .then((r) => r.data),
     // The balance and today's date both move, so an old answer is never reused
