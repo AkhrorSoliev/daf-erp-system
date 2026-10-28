@@ -14,6 +14,11 @@ import { EntityHistoryService } from '../common/entity-history';
 import { StudentLeadOriginService } from '../common/student-origin';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
 import { loadContactPhone } from '../balance-notices/load-transfer-state';
+import { tashkentClock } from '../attendance/shared/attendance-window';
+import {
+  loadTodayLessonQuestion,
+  startDayFor,
+} from '../students/enroll-start-day';
 import { registerStudentFromTelegram } from '../telegram/scenes/student-registration-flow';
 import { isEnrollableGroupStatus } from '../groups/shared/enrollable-statuses';
 import { assertMayAnswer } from '../unmarked-lessons/answer-rules';
@@ -93,6 +98,7 @@ export class JoinRequestDecisionsService {
     id: string,
     groupId: string | undefined,
     caller: JoinRequestCaller,
+    attendedTodayLesson?: boolean,
   ): Promise<{ status: 'APPROVED'; studentId: number; delivered: boolean }> {
     const request = await this.loadForDecision(id, caller);
     const group = await loadJoinGroup(this.prisma, groupId ?? request.groupId);
@@ -128,6 +134,28 @@ export class JoinRequestDecisionsService {
       );
     }
 
+    const sweepGroup = await this.prisma.group.findUniqueOrThrow({
+      where: { id: group.id },
+      select: {
+        id: true,
+        name: true,
+        companyId: true,
+        branchId: true,
+        exactDays: true,
+        lessonStartTime: true,
+        lessonEndTime: true,
+        startDate: true,
+        endDate: true,
+      },
+    });
+    // Today's lesson already over: the administrator says whether the student
+    // was at it; no answer is a 400, never a silent "from today".
+    const startDay = startDayFor(
+      await loadTodayLessonQuestion(this.prisma, sweepGroup, null),
+      null,
+      tashkentClock().todayStr,
+      attendedTodayLesson,
+    );
     const now = new Date();
     let studentId = 0;
     let committed = false;
@@ -153,6 +181,7 @@ export class JoinRequestDecisionsService {
         this.events,
         {
           actorId: caller.id,
+          startDay,
           // Taken in the card's own transaction: a second approval finds it
           // decided and its card is rolled back.
           inTx: async (tx, newStudentId) => {

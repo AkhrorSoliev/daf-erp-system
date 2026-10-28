@@ -87,6 +87,8 @@ export async function uploadStudentPhoto(
  */
 export interface RegistrationOptions {
   actorId?: number;
+  /** The enrollment's start day (Tashkent); today when omitted. */
+  startDay?: string;
   inTx?: (tx: Prisma.TransactionClient, studentId: number) => Promise<void>;
   onCommit?: () => void;
 }
@@ -152,7 +154,9 @@ export async function registerStudentFromTelegram(
         data: {
           studentId: created.id,
           groupId: data.groupId,
-          startDate: utcMidnightFromDateStr(tashkentDateStr(new Date())),
+          startDate: utcMidnightFromDateStr(
+            options.startDay ?? tashkentDateStr(new Date()),
+          ),
         },
       });
 

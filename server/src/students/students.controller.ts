@@ -177,6 +177,7 @@ export class StudentsController {
       {
         transferReasonId: dto.transferReasonId,
         startDate: dto.startDate,
+        attendedTodayLesson: dto.attendedTodayLesson,
       },
     );
   }
@@ -300,6 +301,26 @@ export class StudentsController {
       userId,
       query.groupId,
       query.startDate,
+      query.attendedTodayLesson,
+    );
+  }
+
+  // Lead conversion and join-request approval have no student yet: they ask
+  // the group whether today's lesson is over (`todayLesson` of the preview).
+  // Three segments, so it never meets `:id` or `:id/enroll-preview`.
+  @Get('groups/:groupId/enroll-today-lesson')
+  @Can('students.enroll')
+  getEnrollTodayLesson(
+    @Param('groupId') groupId: string,
+    @Query('startDate') startDate: string | undefined,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.enrollPreview.todayLessonFor(
+      companyId,
+      userId,
+      groupId,
+      startDate,
     );
   }
 

@@ -9,6 +9,12 @@ import { chargeStartDate } from '../billing/charge-start-date';
 import { applyDiscount, clampDiscount } from '../billing/monthly-price';
 import { assertCallerInBranch } from '../common/auth/branch-scope';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
+import { tashkentClock } from '../attendance/shared/attendance-window';
+import {
+  loadTodayLessonQuestion,
+  startDayFor,
+  type TodayLessonQuestion,
+} from './enroll-start-day';
 import {
   addMonthsToMonthKey,
   tashkentDateStr,
@@ -16,6 +22,8 @@ import {
 } from '../common/date/tashkent';
 
 export interface EnrollPreview {
+  /** Whether today's lesson is over and the caller must say if the student was at it. */
+  todayLesson: TodayLessonQuestion;
   paymentModel: PaymentModel;
   /**
    * `Course.price` before any discount: the monthly price for MONTHLY, the
@@ -69,12 +77,39 @@ export class StudentEnrollPreviewService {
     private monthlyChargeService: MonthlyChargeService,
   ) {}
 
+  /** The «was the student at today's lesson?» question for a group, no student needed (lead conversion, join-request approval). */
+  async todayLessonFor(
+    companyId: number,
+    userId: number,
+    groupId: string,
+    startDate?: string,
+  ): Promise<TodayLessonQuestion> {
+    const group = await this.prisma.group.findFirst({
+      where: { id: groupId, companyId, deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        companyId: true,
+        branchId: true,
+        exactDays: true,
+        lessonStartTime: true,
+        lessonEndTime: true,
+        startDate: true,
+        endDate: true,
+      },
+    });
+    if (!group) throw new NotFoundException(`Guruh topilmadi`);
+    await assertCallerInBranch(this.prisma, userId, group.branchId);
+    return loadTodayLessonQuestion(this.prisma, group, startDate ?? null);
+  }
+
   async preview(
     studentId: number,
     companyId: number,
     userId: number,
     groupId: string,
     startDate?: string,
+    attendedTodayLesson?: boolean,
   ): Promise<EnrollPreview> {
     await assertCallerMayTouchStudent(
       this.prisma,
@@ -97,6 +132,10 @@ export class StudentEnrollPreviewService {
         statusEnum: true,
         startDate: true,
         exactDays: true,
+        name: true,
+        endDate: true,
+        lessonStartTime: true,
+        lessonEndTime: true,
         course: {
           select: { price: true, paymentModel: true, lessonPaymentCount: true },
         },
@@ -108,6 +147,21 @@ export class StudentEnrollPreviewService {
     const monthly = group.course.paymentModel === PaymentModel.MONTHLY;
     // The instant an enroll call confirmed now would use.
     const now = new Date();
+    const todayLesson = await loadTodayLessonQuestion(
+      this.prisma,
+      group,
+      startDate ?? null,
+      now,
+    );
+    // An unanswered question quotes today, as the form shows it until picked.
+    const effectiveStart = todayLesson.needed
+      ? startDayFor(
+          todayLesson,
+          startDate ?? null,
+          tashkentClock(now).todayStr,
+          attendedTodayLesson ?? true,
+        )
+      : (startDate ?? null);
     let firstMonth: EnrollPreview['firstMonth'] = null;
     // This gate MUST mirror the refusals of `previewChargeForNewEnrollment`
     // (not MONTHLY, group not ACTIVE): past it, that method's null can only
@@ -121,7 +175,9 @@ export class StudentEnrollPreviewService {
         studentId,
         groupId: group.id,
         status: EnrollmentStatus.ACTIVE,
-        startDate: startDate ? utcMidnightFromDateStr(startDate) : null,
+        startDate: effectiveStart
+          ? utcMidnightFromDateStr(effectiveStart)
+          : null,
         createdAt: now,
         returnedAt: null,
         group,
@@ -159,6 +215,7 @@ export class StudentEnrollPreviewService {
       now,
     );
     return {
+      todayLesson,
       paymentModel: group.course.paymentModel,
       coursePrice: group.course.price,
       lessonPaymentCount: monthly ? null : group.course.lessonPaymentCount,

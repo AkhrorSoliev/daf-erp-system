@@ -572,6 +572,7 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'POST /students/:id/enrollments/:enrollmentId/write-off-cycle-debt',
       'GET /students/:id/departure-preview',
       'GET /students/:id/enroll-preview',
+      'GET /students/groups/:groupId/enroll-today-lesson',
       'GET /groups/:id/students',
       'GET /groups/:id/status-history',
       'GET /groups/:id/delete-preview',

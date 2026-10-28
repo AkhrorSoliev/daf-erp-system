@@ -1,4 +1,6 @@
+import { Transform } from 'class-transformer';
 import {
+  IsBoolean,
   IsDateString,
   IsNotEmpty,
   IsOptional,
@@ -19,4 +21,12 @@ export class EnrollPreviewQueryDto {
     message: "Boshlanish sanasi YYYY-MM-DD formatida bo'lishi kerak",
   })
   startDate?: string;
+
+  // Was the student at today's lesson? Only meaningful when it already ended.
+  @IsOptional()
+  @Transform(({ value }) =>
+    value === 'true' ? true : value === 'false' ? false : value,
+  )
+  @IsBoolean()
+  attendedTodayLesson?: boolean;
 }

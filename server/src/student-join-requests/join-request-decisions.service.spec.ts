@@ -37,8 +37,22 @@ function setup() {
     },
   };
   const prisma: any = {
+    lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
+    lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
+    holiday: { findMany: jest.fn().mockResolvedValue([]) },
     student: { findFirst: jest.fn().mockResolvedValue(null) },
     group: {
+      findUniqueOrThrow: jest.fn().mockResolvedValue({
+        id: GROUP.id,
+        name: GROUP.name,
+        companyId: GROUP.companyId,
+        branchId: GROUP.branchId,
+        exactDays: GROUP.exactDays,
+        lessonStartTime: null,
+        lessonEndTime: null,
+        startDate: null,
+        endDate: null,
+      }),
       findFirst: jest.fn().mockResolvedValue(GROUP),
       findUnique: jest.fn().mockResolvedValue({ name: 'A1-07' }),
     },

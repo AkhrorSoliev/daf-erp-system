@@ -36,6 +36,9 @@ describe('StudentEnrollmentService', () => {
 
   beforeEach(async () => {
     prisma = {
+      lessonReschedule: { findMany: jest.fn().mockResolvedValue([]) },
+      lessonCancellation: { findMany: jest.fn().mockResolvedValue([]) },
+      holiday: { findMany: jest.fn().mockResolvedValue([]) },
       student: {
         findFirst: jest.fn().mockResolvedValue(mockStudent),
         findUnique: jest.fn().mockResolvedValue(mockStudent),
