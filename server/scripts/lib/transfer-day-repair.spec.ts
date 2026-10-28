@@ -84,6 +84,22 @@ describe('planRepair (ADR-0137)', () => {
     ]);
   });
 
+  it('with --both-attendance-first the group where he came keeps the day', () => {
+    const { drops } = planRepair(
+      [OLD, NEW],
+      att(['10001|2026-10-28', ['g1', 'g2']]),
+      true,
+      att(['10001|2026-10-28', ['g2']]),
+    );
+    expect(drops).toEqual([
+      expect.objectContaining({
+        chargeId: 'c1',
+        keptIn: '#045',
+        keptBecause: 'attended',
+      }),
+    ]);
+  });
+
   it('takes a day billed in three groups out of the two later ones', () => {
     const third = charge({
       id: 'c3',

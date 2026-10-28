@@ -43,7 +43,7 @@ export interface RepairDrop {
   day: string;
   amount: number;
   keptIn: string; // group name that keeps the day
-  keptBecause: 'attendance' | 'first';
+  keptBecause: 'attendance' | 'attended' | 'first';
 }
 
 export interface RepairPlan {
@@ -66,6 +66,13 @@ export function planRepair(
   attendanceGroups: ReadonlyMap<string, ReadonlySet<string>>,
   /** CEO ruling for a day two groups both hold attendance for: the group he was in first keeps it. */
   bothAttendanceFirst = false,
+  /**
+   * `${studentId}|${day}` -> ids of the groups where he was PRESENT or LATE. With
+   * `bothAttendanceFirst`, when exactly one of the groups holding attendance has
+   * him present, that group keeps the day (CEO ruling, 28.10.2026): he took the
+   * lesson there, the other row is a lesson he missed.
+   */
+  cameGroups: ReadonlyMap<string, ReadonlySet<string>> = new Map(),
 ): RepairPlan {
   const drops: RepairDrop[] = [];
   const ambiguous: RepairPlan['ambiguous'] = [];
@@ -105,12 +112,24 @@ export function planRepair(
         });
         continue;
       }
-      const keeper =
+      const came = withAtt.filter((g) =>
+        cameGroups.get(`${holders[0].studentId}|${day}`)?.has(g),
+      );
+      const because: RepairDrop['keptBecause'] =
         withAtt.length === 1
-          ? holders.find((h) => h.groupId === withAtt[0])!
-          : [...holders].sort(
+          ? 'attendance'
+          : came.length === 1
+            ? 'attended'
+            : 'first';
+      const keeper =
+        because === 'first'
+          ? [...holders].sort(
               (a, b) => +a.enrollmentCreatedAt - +b.enrollmentCreatedAt,
-            )[0];
+            )[0]
+          : holders.find(
+              (h) =>
+                h.groupId === (withAtt.length === 1 ? withAtt[0] : came[0]),
+            )!;
 
       for (const h of holders) {
         if (h.groupId === keeper.groupId) continue;
@@ -138,7 +157,7 @@ export function planRepair(
           day,
           amount: release.amount,
           keptIn: keeper.groupName,
-          keptBecause: withAtt.length === 1 ? 'attendance' : 'first',
+          keptBecause: because,
         });
       }
     }

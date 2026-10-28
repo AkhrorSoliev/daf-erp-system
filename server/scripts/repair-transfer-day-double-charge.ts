@@ -104,21 +104,26 @@ async function main() {
 
     const attendance = await prisma.attendance.findMany({
       where: { studentId: { in: studentIds } },
-      select: { studentId: true, groupId: true, date: true },
+      select: { studentId: true, groupId: true, date: true, status: true },
     });
     const attendanceGroups = new Map<string, Set<string>>();
+    const cameGroups = new Map<string, Set<string>>();
     for (const a of attendance) {
       const k = `${a.studentId}|${tashkentDateStr(a.date)}`;
       attendanceGroups.set(
         k,
         (attendanceGroups.get(k) ?? new Set()).add(a.groupId),
       );
+      if (a.status === 'PRESENT' || a.status === 'LATE') {
+        cameGroups.set(k, (cameGroups.get(k) ?? new Set()).add(a.groupId));
+      }
     }
 
     const { drops, ambiguous } = planRepair(
       charges,
       attendanceGroups,
       bothFirst,
+      cameGroups,
     );
     const balances = new Map(
       (
