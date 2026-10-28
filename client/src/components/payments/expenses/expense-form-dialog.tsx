@@ -212,6 +212,7 @@ export function ExpenseFormDialog({
               value={date}
               onChange={(d) => setDate(d ?? null)}
               placeholder={t("Sanani tanlang")}
+              disabled={bankFee}
             />
           </div>
         </div>

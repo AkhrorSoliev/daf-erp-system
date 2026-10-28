@@ -17,7 +17,7 @@ import {
   ReportBranchIds,
 } from '../common/finance/report-branch-scope';
 import { TaxSettingsService } from './tax-settings.service';
-import { bankFeeWindow } from './bank-fee';
+import { bankFeeWindow, MONTH_CLOSE_FIRST_MONTH } from './bank-fee';
 import {
   BANK_FEES_ENTERED_KEY,
   computePaymentCosts,
@@ -112,6 +112,8 @@ export class TaxCostsService {
     month: string,
     branchIds: ReportBranchIds,
   ): Promise<number> {
+    // Yopilgan oylar (may–sentabr) eski qoidalar bilan: ijtimoiy soliq bazasi 0.
+    if (month < MONTH_CLOSE_FIRST_MONTH) return 0;
     const periodStart = tashkentMonthRangeUtc(month);
     const [txs, advances] = await Promise.all([
       this.prisma.transaction.findMany({
@@ -158,6 +160,7 @@ export class TaxCostsService {
     month: string,
     branchIds: ReportBranchIds,
   ): Promise<boolean> {
+    if (month < MONTH_CLOSE_FIRST_MONTH) return false;
     if (month >= tashkentMonthKey(new Date())) return false;
     const accounts = await this.prisma.cashAccount.findMany({
       where: {

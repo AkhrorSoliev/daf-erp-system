@@ -60,13 +60,14 @@ describe("bankFeeBody", () => {
 });
 
 describe("closeMonth", () => {
-  it("opens on the previous month, kept inside 2026-05 … the current month", () => {
-    expect(closeMonth("", "2026-10")).toBe("2026-09");
+  it("opens on the previous month, kept inside 2026-10 … the current month", () => {
+    expect(closeMonth("", "2026-12")).toBe("2026-11");
     expect(closeMonth("", "2027-01")).toBe("2026-12");
-    expect(closeMonth("", "2026-05")).toBe("2026-05");
-    expect(closeMonth("2026-10", "2026-10")).toBe("2026-10");
-    expect(closeMonth("2026-01", "2026-10")).toBe("2026-05");
-    expect(closeMonth("2027-03", "2026-10")).toBe("2026-10");
-    expect(closeMonth("abc", "2026-10")).toBe("2026-09");
+    expect(closeMonth("", "2026-10")).toBe("2026-10");
+    expect(closeMonth("2026-10", "2026-12")).toBe("2026-10");
+    expect(closeMonth("2026-09", "2026-12")).toBe("2026-10");
+    expect(closeMonth("2026-01", "2026-12")).toBe("2026-10");
+    expect(closeMonth("2027-03", "2026-12")).toBe("2026-12");
+    expect(closeMonth("abc", "2026-12")).toBe("2026-11");
   });
 });

@@ -1270,7 +1270,7 @@ describe('ExpensesService — findAll filters + summary', () => {
         await expect(
           service.update('e1', patch as any, CEO_ID, COMPANY_ID),
         ).rejects.toThrow(
-          "Bank xizmatining turkumi, filiali va to'lov turi o'zgarmaydi",
+          "Bank xizmatining turkumi, filiali, sanasi va to'lov turi o'zgarmaydi",
         );
       }
       prisma.expense.findFirst.mockResolvedValue({
@@ -1285,6 +1285,43 @@ describe('ExpensesService — findAll filters + summary', () => {
           COMPANY_ID,
         ),
       ).rejects.toThrow('Bank xizmati «Oyni yopish» sahifasida kiritiladi');
+    });
+
+    it('update freezes the date of a BANK_FEES row; a same-date patch passes', async () => {
+      const row = {
+        ...existingRow,
+        category: 'BANK_FEES',
+        cashAccountId: 'acc-1',
+        date: new Date('2026-10-31T00:00:00.000Z'),
+      };
+      prisma.expense.findFirst.mockResolvedValue(row);
+      await expect(
+        service.update('e1', { date: '2026-11-01' } as any, CEO_ID, COMPANY_ID),
+      ).rejects.toThrow("sanasi va to'lov turi o'zgarmaydi");
+      tx.expense.update.mockResolvedValue(row);
+      await service.update(
+        'e1',
+        { date: '2026-10-31', amount: 100 } as any,
+        CEO_ID,
+        COMPANY_ID,
+      );
+      expect(tx.expense.update).toHaveBeenCalled();
+    });
+
+    it('a date edit on a non-BANK_FEES row is unaffected', async () => {
+      const row = {
+        ...existingRow,
+        date: new Date('2026-10-31T00:00:00.000Z'),
+      };
+      prisma.expense.findFirst.mockResolvedValue(row);
+      tx.expense.update.mockResolvedValue(row);
+      await service.update(
+        'e1',
+        { date: '2026-11-05' } as any,
+        CEO_ID,
+        COMPANY_ID,
+      );
+      expect(tx.expense.update).toHaveBeenCalled();
     });
 
     it('an amount edit re-posts the ledger on the same account', async () => {

@@ -180,7 +180,7 @@ it('update refuses moving a row into or out of BANK_FEES, or changing its branch
   prisma.expense.findFirst.mockResolvedValue({ ...existingRow, category: 'BANK_FEES', cashAccountId: 'acc-1' });
   for (const patch of [{ category: 'OTHER' }, { branchId: 2 }, { paymentMethod: 'CASH' }]) {
     await expect(service.update('e1', patch as any, CEO_ID, COMPANY_ID)).rejects.toThrow(
-      "Bank xizmatining turkumi, filiali va to'lov turi o'zgarmaydi",
+      "Bank xizmatining turkumi, filiali, sanasi va to'lov turi o'zgarmaydi",
     );
   }
   prisma.expense.findFirst.mockResolvedValue({ ...existingRow, category: 'OTHER' });
@@ -210,7 +210,7 @@ Run: `cd server && npx jest src/expenses/expenses.service.spec.ts -t BANK_FEES` 
   BANK_FEES: BANK_FEE_LABEL,
 
 const BANK_FEE_ELSEWHERE = "Bank xizmati «Oyni yopish» sahifasida kiritiladi";
-const BANK_FEE_FROZEN = "Bank xizmatining turkumi, filiali va to'lov turi o'zgarmaydi";
+const BANK_FEE_FROZEN = "Bank xizmatining turkumi, filiali, sanasi va to'lov turi o'zgarmaydi";
 ```
 
 `assertMayWrite`:

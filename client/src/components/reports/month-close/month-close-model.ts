@@ -1,6 +1,6 @@
 import { interpolate } from "@/i18n/translate";
 import { addMonths } from "@/components/payments/salary-utils";
-import { REPORT_FLOOR_MONTH, clampMonth } from "@/components/payments/overview/overview-math";
+import { clampMonth } from "@/components/payments/overview/overview-math";
 import type { Translate } from "@/components/payments/record-payment-admission";
 import type { BankFeesBody, MonthCloseView } from "./month-close-types";
 
@@ -65,10 +65,10 @@ export function bankFeeBody(accounts: MonthCloseView["bankAccounts"], drafts: Re
   };
 }
 
-/** The first month the page offers (the company's first month in the system). */
-export const MONTH_CLOSE_FIRST_MONTH = REPORT_FLOOR_MONTH;
+/** The first month the page offers: the server's `MONTH_CLOSE_FIRST_MONTH` (ADR-0139); earlier months were settled under the old rules. */
+export const MONTH_CLOSE_FIRST_MONTH = "2026-10";
 
-/** The page's month: `?oy=` kept in [2026-05, current]; empty or unreadable is the month a person closes now — the previous one. */
+/** The page's month: `?oy=` kept in [2026-10, current]; empty or unreadable is the month a person closes now — the previous one. */
 export function closeMonth(oy: string, current: string): string {
   const previous = addMonths(current, -1);
   const fallback = previous < MONTH_CLOSE_FIRST_MONTH ? MONTH_CLOSE_FIRST_MONTH : previous;

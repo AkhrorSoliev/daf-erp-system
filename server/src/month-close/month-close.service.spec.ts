@@ -10,6 +10,26 @@ const ACC = {
 };
 
 describe('MonthCloseService', () => {
+  // Joriy oy hisobda: 2026-10 tugagan, 2026-11 hali tugamagan.
+  beforeAll(() => {
+    jest.useFakeTimers({
+      now: new Date('2026-11-15T10:00:00Z'),
+      doNotFake: [
+        'nextTick',
+        'setImmediate',
+        'setTimeout',
+        'setInterval',
+        'clearTimeout',
+        'clearInterval',
+        'clearImmediate',
+        'queueMicrotask',
+        'performance',
+        'hrtime',
+      ],
+    });
+  });
+  afterAll(() => jest.useRealTimers());
+
   let prisma: {
     cashAccount: { findMany: jest.Mock };
     expense: { findFirst: jest.Mock; findMany: jest.Mock };
@@ -42,7 +62,7 @@ describe('MonthCloseService', () => {
     redis = {
       scanStream: jest.fn(() =>
         (async function* () {
-          yield ['rpt:np:v7:1:all:u10:2026-09'];
+          yield ['rpt:np:v7:1:all:u10:2026-10'];
         })(),
       ),
       del: jest.fn(),
@@ -68,6 +88,59 @@ describe('MonthCloseService', () => {
       ).rejects.toThrow('Joriy oy hali tugamagan');
     });
 
+    it('refuses a month before the start month', async () => {
+      await expect(
+        service.saveBankFees(
+          1,
+          '2026-09',
+          [{ cashAccountId: 'a1', amount: 5 }],
+          10,
+          null,
+        ),
+      ).rejects.toThrow('Bank xarajati 2026-10 oyidan boshlab kiritiladi');
+      expect(prisma.cashAccount.findMany).not.toHaveBeenCalled();
+    });
+
+    it('refuses the same account twice in one request', async () => {
+      await expect(
+        service.saveBankFees(
+          1,
+          '2026-10',
+          [
+            { cashAccountId: 'a1', amount: 5 },
+            { cashAccountId: 'a1', amount: 6 },
+          ],
+          10,
+          null,
+        ),
+      ).rejects.toThrow('Bir hisob ikki marta berilgan');
+      expect(expenses.create).not.toHaveBeenCalled();
+    });
+
+    it('still invalidates the cache when a later item throws', async () => {
+      prisma.cashAccount.findMany.mockResolvedValue([
+        ACC,
+        { ...ACC, id: 'a2', name: 'Ikkinchi' },
+      ]);
+      prisma.expense.findFirst.mockResolvedValue(null);
+      expenses.create
+        .mockResolvedValueOnce({})
+        .mockRejectedValueOnce(new Error('boom'));
+      await expect(
+        service.saveBankFees(
+          1,
+          '2026-10',
+          [
+            { cashAccountId: 'a1', amount: 5 },
+            { cashAccountId: 'a2', amount: 6 },
+          ],
+          10,
+          null,
+        ),
+      ).rejects.toThrow('boom');
+      expect(redis.del).toHaveBeenCalled();
+    });
+
     it('refuses a bad month string', async () => {
       await expect(
         service.saveBankFees(
@@ -85,7 +158,7 @@ describe('MonthCloseService', () => {
       await expect(
         service.saveBankFees(
           1,
-          '2026-09',
+          '2026-10',
           [{ cashAccountId: 'x', amount: 5 }],
           10,
           null,
@@ -98,7 +171,7 @@ describe('MonthCloseService', () => {
       await expect(
         service.saveBankFees(
           1,
-          '2026-09',
+          '2026-10',
           [{ cashAccountId: 'a1', amount: 5 }],
           10,
           [3],
@@ -111,7 +184,7 @@ describe('MonthCloseService', () => {
       prisma.expense.findFirst.mockResolvedValue(null);
       await service.saveBankFees(
         1,
-        '2026-09',
+        '2026-10',
         [{ cashAccountId: 'a1', amount: 125_000 }],
         10,
         null,
@@ -121,8 +194,8 @@ describe('MonthCloseService', () => {
           category: 'BANK_FEES',
           paymentMethod: 'CARD',
           amount: 125_000,
-          description: 'Bank xizmati — Bank hisobi, 2026-09',
-          date: '2026-09-30',
+          description: 'Bank xizmati — Bank hisobi, 2026-10',
+          date: '2026-10-31',
           branchId: 7,
         },
         10,
@@ -137,7 +210,7 @@ describe('MonthCloseService', () => {
       prisma.expense.findFirst.mockResolvedValue(null);
       await service.saveBankFees(
         1,
-        '2026-09',
+        '2026-10',
         [{ cashAccountId: 'a1', amount: 0 }],
         10,
         null,
@@ -155,7 +228,7 @@ describe('MonthCloseService', () => {
       prisma.expense.findFirst.mockResolvedValue({ id: 'e1', amount: 100 });
       await service.saveBankFees(
         1,
-        '2026-09',
+        '2026-10',
         [{ cashAccountId: 'a1', amount: 250 }],
         10,
         null,
@@ -170,7 +243,7 @@ describe('MonthCloseService', () => {
       prisma.expense.findFirst.mockResolvedValue({ id: 'e1', amount: 250 });
       await service.saveBankFees(
         1,
-        '2026-09',
+        '2026-10',
         [{ cashAccountId: 'a1', amount: 250 }],
         10,
         null,
@@ -196,7 +269,7 @@ describe('MonthCloseService', () => {
       reports.getMonthlyNetProfit.mockResolvedValue({
         taxes: { missingRates: ['bank.feesEntered'] },
       });
-      const v = await service.read(1, '2026-09', null, 10);
+      const v = await service.read(1, '2026-10', null, 10);
       expect(v.bankAccounts.map((a) => a.amount)).toEqual([0, null]);
       expect(v.salaries).toEqual({ paid: 3, total: 4 });
       expect(v.checklist).toEqual({
@@ -208,12 +281,20 @@ describe('MonthCloseService', () => {
       expect(v.bankAccounts[0].branchName).toBe('Toshkent');
     });
 
+    it('a month before the start month has no bank accounts and reads as entered', async () => {
+      const v = await service.read(1, '2026-09', null, 10);
+      expect(v.bankAccounts).toEqual([]);
+      expect(v.checklist.bankFeesEntered).toBe(true);
+      expect(prisma.cashAccount.findMany).not.toHaveBeenCalled();
+      expect(reports.getMonthlyNetProfit).toHaveBeenCalled();
+    });
+
     it('a real missing rate keeps ratesComplete false', async () => {
       prisma.cashAccount.findMany.mockResolvedValue([]);
       reports.getMonthlyNetProfit.mockResolvedValue({
         taxes: { missingRates: ['fees.qr'] },
       });
-      const v = await service.read(1, '2026-09', null, 10);
+      const v = await service.read(1, '2026-10', null, 10);
       expect(v.checklist.ratesComplete).toBe(false);
     });
   });

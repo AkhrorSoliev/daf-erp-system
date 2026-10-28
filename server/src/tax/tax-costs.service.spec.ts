@@ -18,6 +18,26 @@ const RATES = {
 };
 
 describe('TaxCostsService.forMonth', () => {
+  // Joriy oy hisobda 2026-12: 2026-10 tugagan oy.
+  beforeAll(() => {
+    jest.useFakeTimers({
+      now: new Date('2026-12-15T10:00:00Z'),
+      doNotFake: [
+        'nextTick',
+        'setImmediate',
+        'setTimeout',
+        'setInterval',
+        'clearTimeout',
+        'clearInterval',
+        'clearImmediate',
+        'queueMicrotask',
+        'performance',
+        'hrtime',
+      ],
+    });
+  });
+  afterAll(() => jest.useRealTimers());
+
   const prisma = {
     payment: { groupBy: jest.fn() },
     transaction: { findMany: jest.fn() },
@@ -54,7 +74,7 @@ describe('TaxCostsService.forMonth', () => {
     prisma.cashMovement.aggregate.mockResolvedValue({
       _sum: { amount: -2_000_000 },
     });
-    const out = await service.forMonth(1, '2026-09', null);
+    const out = await service.forMonth(1, '2026-10', null);
     expect(out).toEqual({
       providerFees: 250_000,
       turnoverTax: 400_000,
@@ -78,7 +98,7 @@ describe('TaxCostsService.forMonth', () => {
   });
 
   it('scopes payments to the given branches', async () => {
-    await service.forMonth(1, '2026-09', [2, 3]);
+    await service.forMonth(1, '2026-10', [2, 3]);
     expect(prisma.payment.groupBy.mock.calls[0][0].where).toEqual(
       expect.objectContaining({ branchId: { in: [2, 3] } }),
     );
@@ -90,7 +110,7 @@ describe('TaxCostsService.forMonth', () => {
       _sum: { amount: -1_500_000 },
     });
     prisma.expense.aggregate.mockResolvedValue({ _sum: { amount: 500_000 } });
-    const r = await service.forMonth(1, '2026-09', null);
+    const r = await service.forMonth(1, '2026-10', null);
     expect(r.bankPaidSalary).toBe(2_000_000);
     expect(r.employerSocialTax).toBe(240_000);
     expect(r.withholding).toBe(240_000);
@@ -101,7 +121,7 @@ describe('TaxCostsService.forMonth', () => {
           type: 'SALARY_PAYMENT',
           reversedAt: null,
           reversedTransactionId: null,
-          salaryPayment: { periodStart: tashkentMonthRangeUtc('2026-09') },
+          salaryPayment: { periodStart: tashkentMonthRangeUtc('2026-10') },
         }),
       }),
     );
@@ -122,7 +142,7 @@ describe('TaxCostsService.forMonth', () => {
           paymentMethod: 'CARD',
           deletedAt: null,
           settledBySalaryPayment: {
-            periodStart: tashkentMonthRangeUtc('2026-09'),
+            periodStart: tashkentMonthRangeUtc('2026-10'),
           },
         }),
       }),
@@ -130,7 +150,7 @@ describe('TaxCostsService.forMonth', () => {
   });
 
   it('no salary transactions: no movement query, base 0', async () => {
-    const r = await service.forMonth(1, '2026-09', null);
+    const r = await service.forMonth(1, '2026-10', null);
     expect(prisma.cashMovement.aggregate).not.toHaveBeenCalled();
     expect(r.bankPaidSalary).toBe(0);
     expect(r.missingRates).toEqual([]);
@@ -148,7 +168,7 @@ describe('TaxCostsService.forMonth', () => {
     prisma.cashMovement.aggregate.mockResolvedValue({
       _sum: { amount: -1_000 },
     });
-    const r = await service.forMonth(1, '2026-09', null);
+    const r = await service.forMonth(1, '2026-10', null);
     expect(r.employerSocialTax).toBe(0);
     expect(r.missingRates).toEqual([
       'payroll.employeeWithholdingPercent',
@@ -159,7 +179,7 @@ describe('TaxCostsService.forMonth', () => {
   it('a past month with a bank account and no fee row is flagged bank.feesEntered', async () => {
     prisma.cashAccount.findMany.mockResolvedValue([{ id: 'a1' }, { id: 'a2' }]);
     prisma.expense.findMany.mockResolvedValue([{ cashAccountId: 'a1' }]);
-    const r = await service.forMonth(1, '2026-09', null);
+    const r = await service.forMonth(1, '2026-10', null);
     expect(r.missingRates).toContain('bank.feesEntered');
   });
 
@@ -167,7 +187,7 @@ describe('TaxCostsService.forMonth', () => {
     prisma.cashAccount.findMany.mockResolvedValue([{ id: 'a1' }]);
     prisma.expense.findMany.mockResolvedValue([{ cashAccountId: 'a1' }]);
     expect(
-      (await service.forMonth(1, '2026-09', null)).missingRates,
+      (await service.forMonth(1, '2026-10', null)).missingRates,
     ).not.toContain('bank.feesEntered');
   });
 
@@ -179,6 +199,22 @@ describe('TaxCostsService.forMonth', () => {
       'bank.feesEntered',
     );
     expect(prisma.cashAccount.findMany).not.toHaveBeenCalled();
+  });
+
+  it('a month before the start month: no salary base, no fee flag, no queries for them', async () => {
+    prisma.cashAccount.findMany.mockResolvedValue([{ id: 'a1' }]);
+    prisma.transaction.findMany.mockResolvedValue([{ id: 't1' }]);
+    const r = await service.forMonth(1, '2026-09', null);
+    expect(r.bankPaidSalary).toBe(0);
+    expect(r.employerSocialTax).toBe(0);
+    expect(r.missingRates).toEqual([]);
+    expect(prisma.transaction.findMany).not.toHaveBeenCalled();
+    expect(prisma.expense.aggregate).not.toHaveBeenCalled();
+    expect(prisma.cashAccount.findMany).not.toHaveBeenCalled();
+    // 2026-10 — boshlanish oyining o'zi hisoblanadi.
+    await service.forMonth(1, '2026-10', null);
+    expect(prisma.transaction.findMany).toHaveBeenCalled();
+    expect(prisma.cashAccount.findMany).toHaveBeenCalled();
   });
 
   it('an empty scope reads nothing', async () => {

@@ -18,3 +18,10 @@ export function bankFeeWindow(month: string): { gte: Date; lt: Date } {
     lt: utcMidnightFromDateStr(`${addMonthsToMonthKey(month, 1)}-01`),
   };
 }
+
+/**
+ * «Oyni yopish» (bank xarajati, bankdan to'langan oylikka ijtimoiy soliq)
+ * shu oydan boshlanadi: ADR-0130 stavkalari ham 2026-10 dan. May–sentabr
+ * eski qoidalar bilan yopilgan va avvalgidek o'qilishi kerak (ADR-0139).
+ */
+export const MONTH_CLOSE_FIRST_MONTH = '2026-10';

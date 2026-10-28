@@ -77,7 +77,7 @@ const EXPENSE_WRITE_REFUSAL = "Bu xarajatni kiritish huquqingiz yo'q";
 // (spec 2026-10-28); xarajatlar sahifasidan emas.
 const BANK_FEE_ELSEWHERE = 'Bank xizmati «Oyni yopish» sahifasida kiritiladi';
 const BANK_FEE_FROZEN =
-  "Bank xizmatining turkumi, filiali va to'lov turi o'zgarmaydi";
+  "Bank xizmatining turkumi, filiali, sanasi va to'lov turi o'zgarmaydi";
 
 // Human label for the PDF "Davr" line. Handles one-sided ranges.
 function buildDateRangeLabel(start?: string, end?: string): string {
@@ -665,14 +665,18 @@ export class ExpensesService {
       await this.assertMayWrite(userId, dto.category);
     }
 
-    // Bank xizmati qatori: turkum, filial va to'lov turi qotirilgan; boshqa
+    // Bank xizmati qatori: turkum, filial, sana va to'lov turi qotirilgan; boshqa
     // qatorni unga aylantirib ham bo'lmaydi (hisobsiz qolardi).
     if (existing.category === ExpenseCategory.BANK_FEES) {
       if (
         (dto.category !== undefined && dto.category !== existing.category) ||
         (dto.branchId != null && dto.branchId !== existing.branchId) ||
         (dto.paymentMethod !== undefined &&
-          dto.paymentMethod !== existing.paymentMethod)
+          dto.paymentMethod !== existing.paymentMethod) ||
+        // Sana qotirilgan: oydan chiqarib yuborilsa, "hisob+oy = bitta qator" buziladi.
+        (dto.date != null &&
+          tashkentDateStr(new Date(dto.date)) !==
+            tashkentDateStr(existing.date))
       )
         throw new BadRequestException(BANK_FEE_FROZEN);
     } else if (dto.category === ExpenseCategory.BANK_FEES) {

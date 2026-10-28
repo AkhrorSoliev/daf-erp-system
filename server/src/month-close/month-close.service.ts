@@ -24,7 +24,12 @@ import {
   branchIdWhere,
   ReportBranchIds,
 } from '../common/finance/report-branch-scope';
-import { BANK_FEE_LABEL, bankFeeDate, bankFeeWindow } from '../tax/bank-fee';
+import {
+  BANK_FEE_LABEL,
+  bankFeeDate,
+  bankFeeWindow,
+  MONTH_CLOSE_FIRST_MONTH,
+} from '../tax/bank-fee';
 import { BANK_FEES_ENTERED_KEY } from '../tax/tax-costs';
 
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -67,6 +72,8 @@ export class MonthCloseService {
     month: string,
     scope: ReportBranchIds,
   ) {
+    // Boshlanish oyidan oldingi oylar eski qoidalar bilan yopilgan: bank xarajati yo'q.
+    if (month < MONTH_CLOSE_FIRST_MONTH) return Promise.resolve([]);
     return this.prisma.cashAccount.findMany({
       where: {
         companyId,
@@ -166,10 +173,16 @@ export class MonthCloseService {
     scope: ReportBranchIds,
   ) {
     this.assertMonth(month);
+    if (month < MONTH_CLOSE_FIRST_MONTH)
+      throw new BadRequestException(
+        `Bank xarajati ${MONTH_CLOSE_FIRST_MONTH} oyidan boshlab kiritiladi`,
+      );
     if (month >= tashkentMonthKey(new Date()))
       throw new BadRequestException(
         'Joriy oy hali tugamagan — bank xarajati oy tugagach kiritiladi',
       );
+    if (new Set(items.map((i) => i.cashAccountId)).size !== items.length)
+      throw new BadRequestException('Bir hisob ikki marta berilgan');
     const accounts = await this.prisma.cashAccount.findMany({
       where: {
         companyId,
@@ -189,44 +202,48 @@ export class MonthCloseService {
         );
     }
     // ponytail: har hisob o'z tranzaksiyasida (ExpensesService); qisman saqlansa, qayta saqlash xavfsiz.
-    for (const item of items) {
-      const acc = byId.get(item.cashAccountId)!;
-      // Hisob+oy bo'yicha qator — yagona manba (sanasi oydan chiqarib yuborilsa ham shu topiladi).
-      const existing = await this.prisma.expense.findFirst({
-        where: {
-          companyId,
-          category: ExpenseCategory.BANK_FEES,
-          cashAccountId: acc.id,
-          deletedAt: null,
-          date: bankFeeWindow(month),
-        },
-        select: { id: true, amount: true },
-      });
-      if (!existing) {
-        // 0 ham haqiqiy kiritma: qator 0 summa bilan yoziladi.
-        await this.expenses.create(
-          {
+    // Oraliqda xato bo'lsa ham kesh tozalanadi: avvalgi elementlar yozilgan bo'lishi mumkin.
+    try {
+      for (const item of items) {
+        const acc = byId.get(item.cashAccountId)!;
+        // Hisob+oy bo'yicha qator — yagona manba: bank xarajatining sanasi qotirilgan (ExpensesService.update), oydan chiqmaydi.
+        const existing = await this.prisma.expense.findFirst({
+          where: {
+            companyId,
             category: ExpenseCategory.BANK_FEES,
-            paymentMethod: ExpensePaymentMethod.CARD,
-            amount: item.amount,
-            description: `${BANK_FEE_LABEL} — ${acc.name}, ${month}`,
-            date: bankFeeDate(month),
-            branchId: acc.branchId,
+            cashAccountId: acc.id,
+            deletedAt: null,
+            date: bankFeeWindow(month),
           },
-          userId,
-          companyId,
-          { cashAccountId: acc.id },
-        );
-      } else if (existing.amount !== item.amount) {
-        await this.expenses.update(
-          existing.id,
-          { amount: item.amount },
-          userId,
-          companyId,
-        );
+          select: { id: true, amount: true },
+        });
+        if (!existing) {
+          // 0 ham haqiqiy kiritma: qator 0 summa bilan yoziladi.
+          await this.expenses.create(
+            {
+              category: ExpenseCategory.BANK_FEES,
+              paymentMethod: ExpensePaymentMethod.CARD,
+              amount: item.amount,
+              description: `${BANK_FEE_LABEL} — ${acc.name}, ${month}`,
+              date: bankFeeDate(month),
+              branchId: acc.branchId,
+            },
+            userId,
+            companyId,
+            { cashAccountId: acc.id },
+          );
+        } else if (existing.amount !== item.amount) {
+          await this.expenses.update(
+            existing.id,
+            { amount: item.amount },
+            userId,
+            companyId,
+          );
+        }
       }
+    } finally {
+      await invalidateNetProfitCache(this.redis, companyId);
     }
-    await invalidateNetProfitCache(this.redis, companyId);
     return this.read(companyId, month, scope, userId);
   }
 }
