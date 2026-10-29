@@ -5518,6 +5518,28 @@ const en: Dictionary = {
   "Bu seans uchun savol qurilmadi": "No questions could be built for this session",
   "Sinov tugadi": "Preview finished",
   "{togri} / {jami} to'g'ri": "{togri} / {jami} correct",
+  // Media — o'quvchi yo'li, qolgan matnlar (2026-10-29)
+  "Har bir bo'lim va seansni o'quvchi ko'zi bilan ko'rib chiqish.": "Review every section and session as a student sees it.",
+  "Qayta urinib ko'rish": "Try again",
+  "Bu bo'lim yoki seans topilmadi": "Section or session not found",
+  "Birinchi bo'limni ochish": "Open the first section",
+  "{n} ovoz yo'q": "{n} without audio",
+  "{n} rasm yo'q": "{n} without image",
+  "Eshitish uchun karnayni bosing": "Tap a speaker to listen",
+  "Oldingisi": "Previous",
+  "Keyingisi": "Next",
+  "Ovoz yuklanmadi": "Audio didn't load",
+  "Audio joyi": "Audio position",
+  "Ketma-ket": "In sequence",
+  "Har safar shu savollardan {n} tasi tanlanadi": "Each time {n} of these questions are picked",
+  "{n} xil mashq": "{n} exercise types",
+  "O'quvchi kabi o'tib ko'rish": "Try it as a student",
+  "Seans savollari olinmadi": "Couldn't load the session's questions",
+  "Bu seans uchun hali savol yo'q — bo'limda material yetarli emas.": "No questions for this session yet — the section has too little material.",
+  "Bu seansda ko'proq chiqadi": "More frequent in this session",
+  "Bu turdagi savollarda to'plam har safar boshqacha tanlanadi — bu yerda namunasi.": "Questions of this type pick a different set each time — this is a sample.",
+  "Sinov rejimi": "Preview mode",
+  "Sinov rejimi — javoblar saqlanmaydi": "Preview mode — answers aren't saved",
 };
 
 export default en;

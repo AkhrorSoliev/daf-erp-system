@@ -5518,6 +5518,28 @@ const de: Dictionary = {
   "Bu seans uchun savol qurilmadi": "Für diese Sitzung konnten keine Fragen erstellt werden",
   "Sinov tugadi": "Testdurchlauf beendet",
   "{togri} / {jami} to'g'ri": "{togri} / {jami} richtig",
+  // Media — o'quvchi yo'li, qolgan matnlar (2026-10-29)
+  "Har bir bo'lim va seansni o'quvchi ko'zi bilan ko'rib chiqish.": "Jeden Abschnitt und jede Sitzung aus Sicht der Lernenden prüfen.",
+  "Qayta urinib ko'rish": "Erneut versuchen",
+  "Bu bo'lim yoki seans topilmadi": "Abschnitt oder Sitzung nicht gefunden",
+  "Birinchi bo'limni ochish": "Ersten Abschnitt öffnen",
+  "{n} ovoz yo'q": "{n} ohne Audio",
+  "{n} rasm yo'q": "{n} ohne Bild",
+  "Eshitish uchun karnayni bosing": "Zum Anhören auf den Lautsprecher tippen",
+  "Oldingisi": "Vorheriges",
+  "Keyingisi": "Nächstes",
+  "Ovoz yuklanmadi": "Audio wurde nicht geladen",
+  "Audio joyi": "Audioposition",
+  "Ketma-ket": "Nacheinander",
+  "Har safar shu savollardan {n} tasi tanlanadi": "Jedes Mal werden {n} dieser Fragen gewählt",
+  "{n} xil mashq": "{n} Übungsarten",
+  "O'quvchi kabi o'tib ko'rish": "Wie Lernende durchgehen",
+  "Seans savollari olinmadi": "Fragen der Sitzung konnten nicht geladen werden",
+  "Bu seans uchun hali savol yo'q — bo'limda material yetarli emas.": "Für diese Sitzung gibt es noch keine Fragen — im Abschnitt fehlt Material.",
+  "Bu seansda ko'proq chiqadi": "In dieser Sitzung häufiger",
+  "Bu turdagi savollarda to'plam har safar boshqacha tanlanadi — bu yerda namunasi.": "Bei diesem Fragetyp wird die Auswahl jedes Mal neu getroffen — hier ein Beispiel.",
+  "Sinov rejimi": "Testmodus",
+  "Sinov rejimi — javoblar saqlanmaydi": "Testmodus — Antworten werden nicht gespeichert",
 };
 
 export default de;

@@ -5518,6 +5518,28 @@ const ru: Dictionary = {
   "Bu seans uchun savol qurilmadi": "Для этого сеанса не удалось собрать вопросы",
   "Sinov tugadi": "Пробный проход завершён",
   "{togri} / {jami} to'g'ri": "верно: {togri} / {jami}",
+  // Media — o'quvchi yo'li, qolgan matnlar (2026-10-29)
+  "Har bir bo'lim va seansni o'quvchi ko'zi bilan ko'rib chiqish.": "Просмотр каждого раздела и сеанса глазами ученика.",
+  "Qayta urinib ko'rish": "Попробовать снова",
+  "Bu bo'lim yoki seans topilmadi": "Раздел или сеанс не найден",
+  "Birinchi bo'limni ochish": "Открыть первый раздел",
+  "{n} ovoz yo'q": "нет аудио: {n}",
+  "{n} rasm yo'q": "нет картинок: {n}",
+  "Eshitish uchun karnayni bosing": "Нажмите на динамик, чтобы послушать",
+  "Oldingisi": "Предыдущий",
+  "Keyingisi": "Следующий",
+  "Ovoz yuklanmadi": "Аудио не загрузилось",
+  "Audio joyi": "Позиция аудио",
+  "Ketma-ket": "Подряд",
+  "Har safar shu savollardan {n} tasi tanlanadi": "Каждый раз выбирается {n} из этих вопросов",
+  "{n} xil mashq": "типов упражнений: {n}",
+  "O'quvchi kabi o'tib ko'rish": "Пройти как ученик",
+  "Seans savollari olinmadi": "Не удалось загрузить вопросы сеанса",
+  "Bu seans uchun hali savol yo'q — bo'limda material yetarli emas.": "Для этого сеанса пока нет вопросов — в разделе мало материала.",
+  "Bu seansda ko'proq chiqadi": "Чаще в этом сеансе",
+  "Bu turdagi savollarda to'plam har safar boshqacha tanlanadi — bu yerda namunasi.": "В заданиях этого типа набор каждый раз другой — здесь пример.",
+  "Sinov rejimi": "Пробный режим",
+  "Sinov rejimi — javoblar saqlanmaydi": "Пробный режим — ответы не сохраняются",
 };
 
 export default ru;
