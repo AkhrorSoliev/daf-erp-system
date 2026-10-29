@@ -6,6 +6,8 @@
  * server `SectionInhalt`ni qaytadan e'lon qilgani kabi.
  */
 
+import type { MediaLessonKind } from "./media-coverage-types";
+
 export type FrageFormat =
   | "WORT_UZ"
   | "UZ_WORT"
@@ -52,4 +54,19 @@ export interface VorschauFrage {
   bildUrl?: string | null;
   /** `UHR_LESEN` / `UHR_TIPPEN`: the clock shown (`HH:MM`). */
   uhrzeit?: string | null;
+}
+
+/** `GET /daf/media/lessons/:id/fragen` javobi. */
+export interface LessonFragen {
+  kind: MediaLessonKind | null;
+  /** Bitta seansda beriladigan savollar soni. */
+  laenge: number;
+  /** Shu seans turida oldinroq chiqadigan formatlar. */
+  bevorzugt: FrageFormat[];
+  fragen: VorschauFrage[];
+}
+
+/** Ekrandagi savol + player navbatidagi barqaror kaliti. */
+export interface KalitliFrage extends VorschauFrage {
+  kalit: string;
 }
