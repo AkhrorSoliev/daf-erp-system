@@ -45,6 +45,11 @@ describe("media player holati", () => {
     expect(yangi.joriyId).toBeNull();
     expect(yangi.amal.tur).toBe("toxtat");
   });
+  it("ijroda: navbat o'zgarsa va toxtat'da false bo'ladi", () => {
+    const h = { ...qoy(h0, "b"), ijroda: true };
+    expect(navbatniOrnat(h, navbat.slice(0, 1)).ijroda).toBe(false);
+    expect(toxtat(h).ijroda).toBe(false);
+  });
   it("almashtir va toxtat buyruq beradi", () => {
     expect(almashtir(qoy(h0, "a")).amal.tur).toBe("almashtir");
     expect(almashtir(h0)).toBe(h0);

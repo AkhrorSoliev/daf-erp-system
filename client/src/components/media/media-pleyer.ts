@@ -33,7 +33,7 @@ const buyruq = (h: PleyerHolati, tur: PleyerHolati["amal"]["tur"]) => ({ tur, n:
 export function navbatniOrnat(h: PleyerHolati, navbat: PleyerElement[]): PleyerHolati {
   const bir = navbat.length === h.navbat.length && navbat.every((e, i) => e.id === h.navbat[i].id);
   if (bir) return h;
-  return { ...h, navbat, joriyId: null, amal: buyruq(h, "toxtat") };
+  return { ...h, navbat, joriyId: null, ijroda: false, amal: buyruq(h, "toxtat") };
 }
 
 export function qoy(h: PleyerHolati, id: string): PleyerHolati {
@@ -46,7 +46,7 @@ export function almashtir(h: PleyerHolati): PleyerHolati {
 }
 
 export function toxtat(h: PleyerHolati): PleyerHolati {
-  return { ...h, joriyId: null, amal: buyruq(h, "toxtat") };
+  return { ...h, joriyId: null, ijroda: false, amal: buyruq(h, "toxtat") };
 }
 
 export function siljit(h: PleyerHolati, qadam: 1 | -1): PleyerHolati {

@@ -46,21 +46,34 @@ export function MediaPleyerPanel() {
   React.useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
+    // AbortError — yangi src yoki pause() oldingi play()ni uzdi: bu xato emas.
+    const chal = () =>
+      void a.play().catch((e: unknown) => {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        setXato(true);
+        h.setIjroda(false);
+      });
     if (h.amal.tur === "toxtat") {
       a.pause();
       return;
     }
     if (h.amal.tur === "almashtir") {
-      if (a.paused) void a.play().catch(() => setXato(true));
+      if (xato) {
+        // Qayta urinish: manbani qaytadan yuklaymiz.
+        setXato(false);
+        a.load();
+        chal();
+      } else if (a.paused) chal();
       else a.pause();
       return;
     }
     if (!joriy) return;
+    const qayta = xato;
     setXato(false);
-    if (a.src !== new URL(joriy.url, window.location.href).href) a.src = joriy.url;
+    if (qayta || a.src !== new URL(joriy.url, window.location.href).href) a.src = joriy.url;
     a.currentTime = 0;
     a.playbackRate = h.tezlik;
-    void a.play().catch(() => setXato(true));
+    chal();
     document
       .querySelector(`[data-pleyer-id="${CSS.escape(joriy.id)}"]`)
       ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -97,7 +110,10 @@ export function MediaPleyerPanel() {
       <audio
         ref={audioRef}
         preload="auto"
-        onPlay={() => h.setIjroda(true)}
+        onPlay={() => {
+          setXato(false);
+          h.setIjroda(true);
+        }}
         onPause={() => h.setIjroda(false)}
         onEnded={() => {
           h.setIjroda(false);
@@ -105,7 +121,10 @@ export function MediaPleyerPanel() {
         }}
         onTimeUpdate={(e) => setVaqt(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) => setDavomiylik(e.currentTarget.duration)}
-        onError={() => setXato(true)}
+        onError={() => {
+          setXato(true);
+          h.setIjroda(false);
+        }}
       />
       {!joriy ? (
         <p className="py-1.5 text-center text-sm text-muted-foreground">
