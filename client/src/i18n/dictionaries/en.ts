@@ -5534,6 +5534,9 @@ const en: Dictionary = {
   "Xodimning o'z solig'i oyligidan ushlanadi; sof foydadan ayrilmaydi.": "The employee's own tax is withheld from their salary; it is not deducted from the net profit.",
   "Yechib olingan balans": "Withdrawn balance",
   "{oy} surati": "{oy} at a glance",
+  "Bu seans uchun savol qurilmadi": "No questions could be built for this session",
+  "Sinov tugadi": "Preview finished",
+  "{togri} / {jami} to'g'ri": "{togri} / {jami} correct",
 };
 
 export default en;

@@ -9,7 +9,7 @@ import { Books, CheckCircle, X } from "@phosphor-icons/react";
 import { msg } from "@/i18n/msg";
 import { useT } from "@/i18n/use-t";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { Button, EmptyState, LoadingCards } from "../../lumio";
+import { Button, Card, EmptyState, LoadingCards } from "../../lumio";
 import { RadioSessionToggle } from "../../radio/radio-session-toggle";
 import { useSidebar } from "../../lib/sidebar-store";
 import { kamHarakatHozir } from "../harakat/kam-harakat";
@@ -22,6 +22,10 @@ import {
   useAbschluss,
   useErsatz,
   useJuftTekshir,
+  useKorikErsatz,
+  useKorikJuft,
+  useKorikPruefen,
+  useKorikSeans,
   useLernenLesson,
   usePruefen,
   useUebungSeans,
@@ -86,8 +90,15 @@ import { TranskriptBlok } from "./transkript-blok";
 // A `msg()` text, so the coverage test sees it; drawn with `t` where it is toasted.
 const NATIJA_SAQLANMADI = msg("Natija saqlanmadi. Internetni tekshiring");
 
+/**
+ * `manba: "korik"` — admin /media «O'quvchi kabi o'tib ko'rish»: xodim
+ * o'quvchi ekranini ko'radi, lekin so'rovlar `/daf/media/...`ga boradi
+ * (hech narsa yozilmaydi) va `/student-portal/...` UMUMAN chaqirilmaydi.
+ */
 export type SeansEkraniProps =
-  { manba?: "dars"; lessonId: number } | { manba: "takrorlash" };
+  | { manba?: "dars"; lessonId: number }
+  | { manba: "takrorlash" }
+  | { manba: "korik"; lessonId: number; onChiqish: () => void };
 
 /**
  * Bitta dars UCHUN HAM, takrorlash UCHUN HAM ishlatiladigan to'liq mashq
@@ -111,8 +122,10 @@ export function SeansEkrani(props: SeansEkraniProps) {
   // to'g'ri toraytiradi — pastda `lessonId`ni yana ajratish yoki uni
   // "as number" bilan majburlashning hojati yo'q, faqat ushbu ikki
   // o'zgaruvchi ishlatiladi.
-  const darsMi = props.manba !== "takrorlash";
+  const korikMi = props.manba === "korik";
+  const darsMi = props.manba !== "takrorlash" && !korikMi;
   const lessonId = props.manba === "takrorlash" ? null : props.lessonId;
+  const onChiqish = props.manba === "korik" ? props.onChiqish : null;
   // `darsMi` bo'lganda `lessonId` HAR DOIM `number` — yuqoridagi ikki
   // tayinlashning o'zi buni ta'minlaydi (union boshqa holatni bermaydi).
   // Pastda uni har safar qayta isbotlash yoki "as number" sepishning
@@ -124,14 +137,22 @@ export function SeansEkrani(props: SeansEkraniProps) {
   // `manba`ga mos kelmagani `enabled: false`/`NaN` bilan o'chiriladi.
   // `lessonId` faqat `!darsMi` bo'lganda `null` — `?? NaN` shu holatni
   // to'g'ridan-to'g'ri o'chirishga aylantiradi, qo'shimcha shart shart emas.
-  const darsSeans = useUebungSeans(lessonId ?? NaN);
-  const takrorlashSeans = useWiederholung(!darsMi);
-  const seans = darsMi ? darsSeans : takrorlashSeans;
+  const darsSeans = useUebungSeans(darsMi ? (lessonId ?? NaN) : NaN);
+  const korikSeans = useKorikSeans(korikMi ? (lessonId ?? NaN) : NaN);
+  const takrorlashSeans = useWiederholung(!darsMi && !korikMi);
+  const seans = korikMi ? korikSeans : darsMi ? darsSeans : takrorlashSeans;
 
-  const lesson = useLernenLesson(lessonId ?? NaN);
-  const pruefen = usePruefen();
-  const juftTekshir = useJuftTekshir();
-  const ersatzSorov = useErsatz();
+  // Korikda o'quvchi endpointi chaqirilmaydi: xodimga 403 → global toast.
+  const lesson = useLernenLesson(darsMi ? (lessonId ?? NaN) : NaN);
+  const darsPruefen = usePruefen();
+  const korikPruefen = useKorikPruefen();
+  const pruefen = korikMi ? korikPruefen : darsPruefen;
+  const darsJuft = useJuftTekshir();
+  const korikJuft = useKorikJuft();
+  const juftTekshir = korikMi ? korikJuft : darsJuft;
+  const darsErsatz = useErsatz();
+  const korikErsatz = useKorikErsatz();
+  const ersatzSorov = korikMi ? korikErsatz : darsErsatz;
   const abschluss = useAbschluss();
   const wiederholungAbschluss = useWiederholungAbschluss();
   // The verdict's sound and Dafi's reaction (ADR-0128). Fired from the
@@ -264,7 +285,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
         sessionId: holat?.seansId,
         questionIndex: frage.index,
         attemptNo: holat ? urinishRaqami(holat, frage) : 1,
-        lessonId: darsMi ? darsLessonId : undefined,
+        lessonId: lessonId ?? undefined,
       },
       {
         onSuccess: (javob) => {
@@ -330,7 +351,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
         sessionId: holat?.seansId,
         questionIndex: frage.index,
         attemptNo: holat ? urinishRaqami(holat, frage) : 1,
-        lessonId: darsMi ? darsLessonId : undefined,
+        lessonId: lessonId ?? undefined,
       })
       .then(
         (javob) => {
@@ -434,13 +455,14 @@ export function SeansEkrani(props: SeansEkraniProps) {
 
     let keyingiHolat = yangi;
     if (ersatzSoralsinmi) {
-      if (darsMi) {
+      // Dars ham, korik ham darsga tegishli (`lessonId` bor); faqat takrorlashda yo'q.
+      if (lessonId != null) {
         // So'rov yiqilsa `null` deb qaraladi: savol tugatilgan hisoblanadi
         // va seans tugaydi. Aks holda `tugatilgan` hech qachon `jami` ga
         // yetmay, o'quvchi natija ekranini ko'rmay qolardi.
         const ersatz = await ersatzSorov
           .mutateAsync({
-            lessonId: darsLessonId,
+            lessonId,
             itemType: frage.itemType,
             itemId: frage.itemId,
             nichtFormat: frage.format,
@@ -492,6 +514,8 @@ export function SeansEkrani(props: SeansEkraniProps) {
       return;
     yozildi.current = true;
     tugashDavomiyligi.current = Date.now() - seansBoshi;
+    // Korik: natija hech qayerga yuborilmaydi — faqat ekranda.
+    if (korikMi) return;
 
     // Takrorlash so'rovi (`useWiederholung`) `staleTime: Infinity` bilan
     // abadiy keshda turadi va `abschluss` UMUMAN yubormaydi (pastda),
@@ -562,7 +586,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
     // - `tugadimi` — sof, modul darajasidagi import, hech qachon o'zgarmaydi.
     // - `t` — only the error toast's fallback text; a language switch must
     //   never re-run this effect (it would send `abschluss` again).
-    // - `darsLessonId`, `darsMi` — shu ekran o'rnatilgan davomida
+    // - `darsLessonId`, `darsMi`, `korikMi` — shu ekran o'rnatilgan davomida
     //   o'zgarmaydigan propslardan hisoblanadi (marshrut/chaqiruvchi
     //   belgilaydi, hayot davomida barqaror).
     // - `seansBoshi` — holat, lekin bu effekt HECH QACHON "eski" chaqiruv
@@ -734,9 +758,19 @@ export function SeansEkrani(props: SeansEkraniProps) {
           icon={<Books size={28} weight="bold" />}
           title={t("Mashqni ochib bo'lmadi")}
           action={
-            <Button variant="secondary" onClick={() => void seans.refetch()}>
-              {t("Qayta urinish")}
-            </Button>
+            onChiqish ? (
+              // Korik qatlamida sarlavha (X) bu holatda chizilmaydi — chiqish yo'li shu.
+              <div className="flex gap-2">
+                <Button variant="secondary" onClick={() => void seans.refetch()}>
+                  {t("Qayta urinish")}
+                </Button>
+                <Button onClick={onChiqish}>{t("Yopish")}</Button>
+              </div>
+            ) : (
+              <Button variant="secondary" onClick={() => void seans.refetch()}>
+                {t("Qayta urinish")}
+              </Button>
+            )
           }
         />
       </div>
@@ -749,6 +783,21 @@ export function SeansEkrani(props: SeansEkraniProps) {
       // darsi) — Faza 2 ning eski sahifasiga tushiladi, u lug'at + mavjud
       // mashqlarni ko'rsatadi.
       return <LernenLessonPage lessonId={darsLessonId} />;
+    }
+    if (korikMi) {
+      return (
+        <div className="mx-auto w-full max-w-2xl px-4 pt-10">
+          <EmptyState
+            icon={<Books size={28} weight="bold" />}
+            title={t("Bu seans uchun savol qurilmadi")}
+            action={
+              <Button variant="secondary" onClick={() => onChiqish?.()}>
+                {t("Yopish")}
+              </Button>
+            }
+          />
+        </div>
+      );
     }
     // Takrorlashda bo'sh natija ODATIY holat — hech kimning so'zi
     // muddati kelmagan bo'lishi mumkin. Xato ko'rinishi ISHLATILMAYDI,
@@ -811,6 +860,28 @@ export function SeansEkrani(props: SeansEkraniProps) {
   // qaytaradi — agar tartib teskari bo'lsa, natija ekrani hech qachon
   // ko'rinmay, o'quvchi abadiy yuklanish holatida qolib ketardi.
   if (tugadimi(holat)) {
+    // Korik: `NatijaEkrani` `useLernenTema` → `useStudentProfile` orqali
+    // o'quvchi profilini so'raydi (xodimga 403), shuning uchun o'z kartasi.
+    if (korikMi) {
+      return (
+        <div className="mx-auto w-full max-w-md px-4 pt-16">
+          <Card className="space-y-4 p-6 text-center">
+            <p className="text-lg font-bold">{t("Sinov tugadi")}</p>
+            <p className="text-3xl font-bold tabular-nums">
+              {t("{togri} / {jami} to'g'ri", { togri: holat.togri, jami: holat.jami })}
+            </p>
+            <div className="flex gap-2">
+              <Button variant="secondary" className="flex-1" onClick={() => void qaytaOtish()}>
+                {t("Qayta o'tish")}
+              </Button>
+              <Button className="flex-1" onClick={() => onChiqish?.()}>
+                {t("Yopish")}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      );
+    }
     return (
       <NatijaEkrani
         // Yakuniy sinovda server hisobi ko'rsatiladi — sinov kartasi bilan
@@ -872,7 +943,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
         <button
           type="button"
           aria-label={t("Seansdan chiqish")}
-          onClick={() => router.push(chiqishHref)}
+          onClick={() => (onChiqish ? onChiqish() : router.push(chiqishHref))}
           className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-ink-500 hover:bg-tint"
         >
           <X size={22} />
@@ -889,7 +960,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
         </span>
         {/* Radio dock bu yo'lda chizilmaydi (pastki panel seansniki), shu
             sabab radio boshqaruvi shu yerda — faqat stansiya yoqilgan bo'lsa. */}
-        <RadioSessionToggle />
+        {!korikMi && <RadioSessionToggle />}
       </header>
 
       {/* O'rta: ko'rsatma, savol, yordam, javob */}
@@ -1025,7 +1096,7 @@ export function SeansEkrani(props: SeansEkraniProps) {
 
       {/* Pastdagi yopishqoq panel — natija ham, tugma ham shu yerda. */}
       <PastkiPanel
-        sidebarMode={sidebarMode}
+        sidebarMode={korikMi ? null : sidebarMode}
         ohang={panelOhangi(natija, juftlashRejimi)}
       >
         <div className="mx-auto w-full max-w-2xl space-y-2.5">

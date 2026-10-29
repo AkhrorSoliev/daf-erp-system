@@ -5534,6 +5534,9 @@ const ru: Dictionary = {
   "Xodimning o'z solig'i oyligidan ushlanadi; sof foydadan ayrilmaydi.": "Налог сотрудника удерживается из его зарплаты; из чистой прибыли он не вычитается.",
   "Yechib olingan balans": "Снятый баланс",
   "{oy} surati": "Картина за {oy}",
+  "Bu seans uchun savol qurilmadi": "Для этого сеанса не удалось собрать вопросы",
+  "Sinov tugadi": "Пробный проход завершён",
+  "{togri} / {jami} to'g'ri": "верно: {togri} / {jami}",
 };
 
 export default ru;

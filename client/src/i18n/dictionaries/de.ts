@@ -5534,6 +5534,9 @@ const de: Dictionary = {
   "Xodimning o'z solig'i oyligidan ushlanadi; sof foydadan ayrilmaydi.": "Die Steuer des Mitarbeiters wird von seinem Gehalt einbehalten; vom Reingewinn wird sie nicht abgezogen.",
   "Yechib olingan balans": "Abgehobenes Guthaben",
   "{oy} surati": "Bild für {oy}",
+  "Bu seans uchun savol qurilmadi": "Für diese Sitzung konnten keine Fragen erstellt werden",
+  "Sinov tugadi": "Testdurchlauf beendet",
+  "{togri} / {jami} to'g'ri": "{togri} / {jami} richtig",
 };
 
 export default de;
