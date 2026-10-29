@@ -83,10 +83,10 @@ export function juftlarniAjrat(
  * birinchi uchragan format bo'yicha saqlaydi, ya'ni server javobidagi
  * ketma-ketlik (`VORSCHAU_BAUER` e'lon tartibi) buzilmaydi.
  */
-export function formatlarBoyichaGuruhla(
-  fragen: VorschauFrage[],
-): Map<FrageFormat, VorschauFrage[]> {
-  const guruhlar = new Map<FrageFormat, VorschauFrage[]>();
+export function formatlarBoyichaGuruhla<T extends VorschauFrage>(
+  fragen: T[],
+): Map<FrageFormat, T[]> {
+  const guruhlar = new Map<FrageFormat, T[]>();
   for (const f of fragen) {
     const royxat = guruhlar.get(f.format);
     if (royxat) {
