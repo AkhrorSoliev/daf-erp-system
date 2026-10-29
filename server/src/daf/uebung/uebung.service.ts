@@ -453,6 +453,8 @@ export class UebungService {
    * /media seans sahifasi uchun: shu darsdan dvigatel quradigan BARCHA
    * nomzodlar, o'quvchi tarixisiz. `seans()` aynan shu ro'yxatdan
    * tanlaydi — ro'yxatning alohida nusxa qoidasi yo'q.
+   * PAAR, ZUORDNEN va DIALOG_LUECKE savollarida savol ichidagi to'plam
+   * tasodifiy tanlanadi, shuning uchun ko'rinish shulardan bitta namunani beradi.
    */
   async vorschauKandidaten(
     lessonId: number,

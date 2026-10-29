@@ -5537,6 +5537,7 @@ const de: Dictionary = {
   "Seans savollari olinmadi": "Fragen der Sitzung konnten nicht geladen werden",
   "Bu seans uchun hali savol yo'q — bo'limda material yetarli emas.": "Für diese Sitzung gibt es noch keine Fragen — im Abschnitt fehlt Material.",
   "Bu seansda ko'proq chiqadi": "In dieser Sitzung häufiger",
+  "{nom} — bu seansda ko'proq chiqadi": "{nom} — in dieser Sitzung häufiger",
   "Bu turdagi savollarda to'plam har safar boshqacha tanlanadi — bu yerda namunasi.": "Bei diesem Fragetyp wird die Auswahl jedes Mal neu getroffen — hier ein Beispiel.",
   "Sinov rejimi": "Testmodus",
   "Sinov rejimi — javoblar saqlanmaydi": "Testmodus — Antworten werden nicht gespeichert",

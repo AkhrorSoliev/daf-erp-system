@@ -6,7 +6,7 @@ import { interpolate, type Params } from "@/i18n/translate";
  * Format kodi → o'zbekcha nom. Ro'yxat elementlari CEOga tanish bo'lgan
  * ekran-nomlarga emas, formatning O'ZI nima qilishiga qarab yozilgan —
  * bu panel o'quvchi ko'radigan mashqni emas, dvigatelning qurish
- * qoidasini ko'rsatadi (server: `VORSCHAU_BAUER`).
+ * qoidasini ko'rsatadi (server: `server/src/daf/uebung/uebung.service.ts` `baueKandidaten`).
  */
 export const FORMAT_NOMLARI: Record<FrageFormat, string> = {
   WORT_UZ: msg("So'zdan tarjimani topish"),

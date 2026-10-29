@@ -15,6 +15,7 @@ import { useMediaPleyer } from "./media-pleyer";
 export function MediaSinovQatlami({ lessonId, onYop }: { lessonId: number; onYop: () => void }) {
   const t = useT();
   const [ildiz, setIldiz] = React.useState<HTMLElement | null>(null);
+  const ildizRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
     setIldiz(document.body);
@@ -24,7 +25,11 @@ export function MediaSinovQatlami({ lessonId, onYop }: { lessonId: number; onYop
     body.dataset.mediaSinov = "1";
     body.style.overflow = "hidden";
     const esc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onYop();
+      // Yozish maydonida Esc (masalan IME taklifini yopish) qatlamni yopmasin.
+      const el = e.target;
+      const yozish =
+        el instanceof HTMLElement && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName));
+      if (e.key === "Escape" && !yozish) onYop();
     };
     window.addEventListener("keydown", esc);
     return () => {
@@ -34,13 +39,30 @@ export function MediaSinovQatlami({ lessonId, onYop }: { lessonId: number; onYop
     };
   }, [onYop]);
 
+  // aria-modal: fokus qatlamga, orqadagi sahifa `inert`, yopilganda fokus joyiga qaytadi.
+  React.useEffect(() => {
+    if (!ildiz) return;
+    const oldingi = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const inertlangan = [...document.body.children].filter(
+      (el): el is HTMLElement => el instanceof HTMLElement && el !== ildizRef.current && !el.inert,
+    );
+    for (const el of inertlangan) el.inert = true;
+    ildizRef.current?.focus();
+    return () => {
+      for (const el of inertlangan) el.inert = false;
+      oldingi?.focus();
+    };
+  }, [ildiz]);
+
   if (!ildiz) return null;
   return createPortal(
     <div
+      ref={ildizRef}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-label={t("Sinov rejimi")}
-      className="lumio fixed inset-0 z-50 overflow-y-auto bg-background text-foreground antialiased"
+      className="lumio fixed inset-0 z-50 overflow-y-auto bg-background text-foreground antialiased outline-none"
     >
       <div className="sticky top-0 z-30 bg-amber-100 px-4 py-1.5 text-center text-xs font-medium text-amber-900">
         {t("Sinov rejimi — javoblar saqlanmaydi")}

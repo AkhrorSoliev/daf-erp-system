@@ -5537,6 +5537,7 @@ const ru: Dictionary = {
   "Seans savollari olinmadi": "Не удалось загрузить вопросы сеанса",
   "Bu seans uchun hali savol yo'q — bo'limda material yetarli emas.": "Для этого сеанса пока нет вопросов — в разделе мало материала.",
   "Bu seansda ko'proq chiqadi": "Чаще в этом сеансе",
+  "{nom} — bu seansda ko'proq chiqadi": "{nom} — чаще в этом сеансе",
   "Bu turdagi savollarda to'plam har safar boshqacha tanlanadi — bu yerda namunasi.": "В заданиях этого типа набор каждый раз другой — здесь пример.",
   "Sinov rejimi": "Пробный режим",
   "Sinov rejimi — javoblar saqlanmaydi": "Пробный режим — ответы не сохраняются",

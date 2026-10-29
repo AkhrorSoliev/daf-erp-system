@@ -5537,6 +5537,7 @@ const en: Dictionary = {
   "Seans savollari olinmadi": "Couldn't load the session's questions",
   "Bu seans uchun hali savol yo'q — bo'limda material yetarli emas.": "No questions for this session yet — the section has too little material.",
   "Bu seansda ko'proq chiqadi": "More frequent in this session",
+  "{nom} — bu seansda ko'proq chiqadi": "{nom} — more frequent in this session",
   "Bu turdagi savollarda to'plam har safar boshqacha tanlanadi — bu yerda namunasi.": "Questions of this type pick a different set each time — this is a sample.",
   "Sinov rejimi": "Preview mode",
   "Sinov rejimi — javoblar saqlanmaydi": "Preview mode — answers aren't saved",

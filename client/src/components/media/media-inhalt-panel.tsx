@@ -153,7 +153,7 @@ function DialogBlock({
             <div>
               <div className="font-medium">{d.titelDe}</div>
               <div className="text-xs text-muted-foreground">
-                {d.titelUz} · {d.code}
+                {d.titelUz}
               </div>
             </div>
             {/* Butun suhbatning ovozi — CEO namunani shu yerda eshitadi. */}

@@ -90,18 +90,23 @@ export function MediaSeansPanel({
 
       {guruhlar.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {guruhlar.map((g) => (
+          {guruhlar.map((g) => {
+            const nom = formatNomi(g.format, t);
+            return (
             <button
               key={g.format}
               type="button"
+              aria-label={g.afzal ? t("{nom} — bu seansda ko'proq chiqadi", { nom }) : undefined}
               onClick={() =>
                 document.getElementById(`mashq-${g.format}`)?.scrollIntoView({ behavior: "smooth", block: "start" })
               }
-              className="rounded-md border px-2.5 py-1 text-xs hover:bg-muted"
+              className="flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs hover:bg-muted"
             >
-              {formatNomi(g.format, t)} <span className="tabular-nums text-muted-foreground">{g.fragen.length}</span>
+              {g.afzal && <span aria-hidden className="size-1.5 rounded-full bg-primary" />}
+              {nom} <span className="tabular-nums text-muted-foreground">{g.fragen.length}</span>
             </button>
-          ))}
+            );
+          })}
         </div>
       )}
 

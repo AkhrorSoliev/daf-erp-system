@@ -62,6 +62,7 @@ export function MediaPleyerPanel() {
         // Qayta urinish: manbani qaytadan yuklaymiz.
         setXato(false);
         a.load();
+        a.playbackRate = h.tezlik;
         chal();
       } else if (a.paused) chal();
       else a.pause();
@@ -90,6 +91,7 @@ export function MediaPleyerPanel() {
     const bos = (e: KeyboardEvent) => {
       const a = audioRef.current;
       if (!a || !useMediaPleyer.getState().joriyId) return;
+      if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
       if (yozuvMaydonimi(e.target) || document.body.dataset.mediaSinov === "1") return;
       if (e.key === " ") {
         e.preventDefault();

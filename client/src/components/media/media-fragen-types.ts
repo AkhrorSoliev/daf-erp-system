@@ -1,6 +1,7 @@
 /**
- * `GET /daf/media/sections/:id/fragen` javobi — server:
- * `daf-media-fragen.service.ts` (`VorschauFrage`). Mijoz serverning
+ * `GET /daf/media/lessons/:id/fragen` javobi — server:
+ * `DafMediaFragenService.lessonFragen` / `UebungService.vorschauKandidaten`
+ * (`VorschauFrage`). Mijoz serverning
  * `frage.types.ts`ni import qila olmaydi, shuning uchun shakl shu yerda
  * bir xil nomlar bilan qaytadan e'lon qilinadi — xuddi `media-inhalt-types.ts`
  * server `SectionInhalt`ni qaytadan e'lon qilgani kabi.

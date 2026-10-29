@@ -11,8 +11,7 @@ export type VorschauShakli = "OVOZ" | "JUFT" | "DIALOG" | "MATN" | "HOEREN" | "R
 
 /**
  * `Record<FrageFormat, ...>` ATAYLAB, `switch`+`default` EMAS — server
- * tomonidagi `VORSCHAU_BAUER` bilan bir xil sabab (qarang
- * `daf-media-fragen.service.ts`dagi izoh): `default` bo'lgan `switch`
+ * tomonidagi dvigatel (`uebung.service.ts` `baueKandidaten`) bilan bir xil sabab: `default` bo'lgan `switch`
  * o'n uchinchi format qo'shilganda uni jimgina "MATN" deb hisoblab
  * qo'yardi — kompilyator susinmasdi, test ham bunga tayanmaydi (kod
  * ko'rigi: "testga ishonib bo'lmaydi, uni ham hech kim yangilamaydi").
@@ -81,7 +80,7 @@ export function juftlarniAjrat(
  * Savollarni format bo'yicha guruhlaydi — CEO «`AUDIO_WORT` qanday
  * chiqadi?» degan savolga tez javob topsin (brief). `Map` tartibni
  * birinchi uchragan format bo'yicha saqlaydi, ya'ni server javobidagi
- * ketma-ketlik (`VORSCHAU_BAUER` e'lon tartibi) buzilmaydi.
+ * ketma-ketlik (dvigatel `baueKandidaten` tartibi) buzilmaydi.
  */
 export function formatlarBoyichaGuruhla<T extends VorschauFrage>(
   fragen: T[],
