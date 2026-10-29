@@ -4683,7 +4683,6 @@ const ru: Dictionary = {
   "Dialoglar": "Диалоги",
   "So'zlovchi": "Говорящий",
   "Ko'lam:": "Область:",
-  "faqat shu bo'limning materiali. Oldingi bo'limlarga tegishli so'z, gap yoki ibora bu ro'yxatda ko'rinmaydi — «Savollar» yorlig'i esa ularni ham hisobga oladi.": "только материал этого раздела. Слова, предложения или фразы предыдущих разделов в этом списке не видны — а вкладка «Вопросы» учитывает и их.",
   "Bo'lim materiali olinmadi": "Не удалось получить материал раздела",
   "Bu bo'limda hali material yo'q — kontentni bazaga yozadigan seed skriptini ({scripts}) ishga tushiring.": "В этом разделе ещё нет материала — запустите seed-скрипт, который записывает контент в базу ({scripts}).",
   "Gaplar": "Предложения",

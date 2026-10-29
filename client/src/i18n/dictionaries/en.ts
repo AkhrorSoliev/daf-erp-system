@@ -4683,7 +4683,6 @@ const en: Dictionary = {
   "Dialoglar": "Dialogues",
   "So'zlovchi": "Speaker",
   "Ko'lam:": "Scope:",
-  "faqat shu bo'limning materiali. Oldingi bo'limlarga tegishli so'z, gap yoki ibora bu ro'yxatda ko'rinmaydi — «Savollar» yorlig'i esa ularni ham hisobga oladi.": "only this section's material. Words, sentences or phrases of earlier sections are not shown in this list — the “Questions” tab counts them too.",
   "Bo'lim materiali olinmadi": "Could not load the section's material",
   "Bu bo'limda hali material yo'q — kontentni bazaga yozadigan seed skriptini ({scripts}) ishga tushiring.": "This section has no material yet — run the seed script that writes the content to the database ({scripts}).",
   "Gaplar": "Sentences",
