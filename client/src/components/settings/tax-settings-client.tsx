@@ -14,19 +14,19 @@ import { tashkentNow } from "@/lib/tashkent-time";
 import { useT } from "@/i18n/context";
 import { msg } from "@/i18n/msg";
 import { SettingsPageHeader } from "./settings-page-header";
-import { TaxBankTiers } from "./tax-bank-tiers";
 import { TaxRateRow } from "./tax-rate-row";
-import type { DatedRate, DatedTiers } from "./tax-settings-draft";
+import type { DatedRate } from "./tax-settings-draft";
 
 const KEY = ["settings", "tax"] as const;
 const TITLE = msg("Soliq va komissiyalar");
-const DESCRIPTION = msg("To'lov komissiyasi, oylik, aylanma solig'i va bank xarajati stavkalari");
+const DESCRIPTION = msg("To'lov komissiyasi, oylik va aylanma solig'i stavkalari");
 const LOAD_FAILED = msg("Sozlamalarni yuklab bo'lmadi.");
+const PAYROLL_NOTE = msg("Korxona solig'i oylikning bank hisobidan berilgan qismidan hisoblanadi. Bank xizmati «Oyni yopish» sahifasida kiritiladi.");
 const NOTICE = msg("Avtomatik hisoblanadigan soliqlarni xarajatga qo'lda yozmang — ular sof foydadan o'zi ayriladi.");
 
-type TaxValues = Record<string, DatedRate[] | DatedTiers[]>;
+type TaxValues = Record<string, DatedRate[]>;
 type TaxView = { values: TaxValues; filled: number; total: number };
-type SaveVars = { key: string; list: DatedRate[] | DatedTiers[] };
+type SaveVars = { key: string; list: DatedRate[] };
 
 const FEE_ROWS = [
   { key: "fees.app.payme", label: msg("Payme ilovasi orqali") },
@@ -127,22 +127,12 @@ export function TaxSettingsClient() {
       </Alert>
 
       <Section title={t("To'lov komissiyasi")}>{rows(FEE_ROWS)}</Section>
-      <Section title={t("Oylik")}>{rows(PAYROLL_ROWS)}</Section>
+      <Section title={t("Oylik")}>
+        {rows(PAYROLL_ROWS)}
+        <p className="pt-3 text-xs text-muted-foreground">{t(PAYROLL_NOTE)}</p>
+      </Section>
       <Section title={t("Aylanma solig'i")}>{rows(TURNOVER_ROWS)}</Section>
 
-      <section className="max-w-2xl space-y-3 rounded-lg border p-4 sm:p-6">
-        <div>
-          <h3 className="text-sm font-semibold">{t("Bank xarajati")}</h3>
-          <p className="text-xs text-muted-foreground">{t("Hisob raqamga tushgan puldan")}</p>
-        </div>
-        <TaxBankTiers
-          list={(data.values["bank.turnoverTiers"] ?? []) as DatedTiers[]}
-          thisMonth={thisMonth}
-          saving={savingKey === "bank.turnoverTiers"}
-          busy={save.isPending}
-          onSave={(list) => save.mutateAsync({ key: "bank.turnoverTiers", list })}
-        />
-      </section>
     </div>
   );
 }

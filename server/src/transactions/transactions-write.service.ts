@@ -951,6 +951,8 @@ export class TransactionsWriteService {
       description?: string;
       // CASH → kassa, CARD → bank. Defaults to CASH when omitted.
       paymentMethod?: ExpensePaymentMethod;
+      // Aniq hisob (masalan «Bank xizmati» — bank yechgan hisob).
+      cashAccountId?: string;
     },
     tx?: Prisma.TransactionClient,
   ) {
@@ -979,6 +981,7 @@ export class TransactionsWriteService {
           preferType: cashTypeForExpenseMethod(
             params.paymentMethod ?? ExpensePaymentMethod.CASH,
           ),
+          cashAccountId: params.cashAccountId,
           transactionId: transaction.id,
           description: params.description ?? 'Xarajat',
           performedById: params.performedById,

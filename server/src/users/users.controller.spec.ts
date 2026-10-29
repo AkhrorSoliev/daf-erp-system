@@ -65,14 +65,13 @@ describe('UsersController — route access', () => {
   });
 
   describe('create() log', () => {
-    it('redacts the password and the official salary', async () => {
+    it('redacts the password', async () => {
       const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
       await controller.create(
         {
           firstName: 'Ali',
           lastName: 'Valiyev',
           password: 'sirli-parol',
-          officialSalary: 2_345_678,
         } as any,
         1001,
         2,
@@ -81,11 +80,6 @@ describe('UsersController — route access', () => {
       log.mockRestore();
       expect(logged).toContain('Creating user');
       expect(logged).not.toContain('sirli-parol');
-      expect(logged).not.toContain('2345678');
-      expect(mockService.create).toHaveBeenLastCalledWith(
-        expect.objectContaining({ officialSalary: 2_345_678 }),
-        expect.anything(),
-      );
     });
   });
 

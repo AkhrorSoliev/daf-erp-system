@@ -109,4 +109,16 @@ export const hisobotlar: QollanmaSahifa[] = [
     kalitSozlar: ["telegram", "kunlik hisobot", "shaxsiy hisobot", "bot", "hisobot vaqti", "filial", "jadval"],
     yangilangan: "2026-10-18",
   },
+  {
+    bolim: "hisobotlar",
+    sahifa: "oyni-yopish",
+    sarlavha: "Oyni yopish",
+    qisqacha:
+      "Oy suratini ko'rish, har bank hisobi uchun oy oxirida bank xarajatini kiritish va oy hisobi to'liqligini tekshirish.",
+    rollar: [1],
+    adr: ["0139", "0130"],
+    yollar: ["/reports/oyni-yopish"],
+    kalitSozlar: ["oyni yopish", "bank xarajati", "bank xizmati", "bank ko'chirmasi", "ijtimoiy soliq", "oy surati", "tekshiruv", "hisob to'liq emas"],
+    yangilangan: "2026-10-28",
+  },
 ];

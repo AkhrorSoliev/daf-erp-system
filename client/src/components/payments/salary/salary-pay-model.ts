@@ -50,24 +50,21 @@ export function buildPayBody(i: {
   return { paidAt: i.paidAt, cashSlices, ...(note ? { note } : {}) };
 }
 
-/**
- * The «Rasmiy qism» lines of the pay dialog (spec 2026-10-25). The numbers are
- * the server's; the payout itself stays one cash + card sum.
- */
-export function officialLines(
-  o: NonNullable<SalaryDetail["official"]>,
+/** The line under a bank amount (spec 2026-10-28 §4): the numbers are rounded like the server's. */
+export function bankPayLine(
+  amount: number,
+  rates: SalaryDetail["bankTax"],
   t: Translate = interpolate,
-): { split: string; social: string } {
-  return {
-    split: t("Rasmiy qism: {official} so'm · Budjetga: {withholding} so'm · Xodim qo'liga: {toHand} so'm", {
-      official: formatPrice(o.official),
-      withholding: formatPrice(o.withholding),
-      toHand: formatPrice(o.toHand),
-    }),
-    social: t("Korxona ijtimoiy solig'i: {employerSocial} so'm (alohida to'lanadi)", {
-      employerSocial: formatPrice(o.employerSocial),
-    }),
-  };
+): string | null {
+  const w = rates?.withholdingPercent;
+  const s = rates?.employerSocialPercent;
+  if (amount <= 0 || w == null || s == null) return null;
+  const withheld = Math.round((amount * w) / 100);
+  return t("Kartaga tushadi: {toCard} so'm · Ushlanadi: {withheld} so'm · Korxona solig'i: {social} so'm (alohida)", {
+    toCard: formatPrice(amount - withheld),
+    withheld: formatPrice(withheld),
+    social: formatPrice(Math.round((amount * s) / 100)),
+  });
 }
 
 /** «Naqd» takes the CASH accounts; «Karta» takes BANK and CARD. */

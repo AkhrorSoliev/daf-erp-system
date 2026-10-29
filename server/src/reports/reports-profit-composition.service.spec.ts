@@ -268,7 +268,6 @@ describe('ReportsProfitCompositionService', () => {
       providerFees: 10,
       employerSocialTax: 0,
       turnoverTax: 0,
-      bankFees: 0,
       total: 10,
       missingRates: ['fees.qr'],
       manualTaxExpenses: 0,

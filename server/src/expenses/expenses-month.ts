@@ -21,7 +21,7 @@ import { capitalizeUz, uzMonthName } from '../telegram-digest/uzbek-calendar';
 /** The page starts in May 2026 (spec B6 §4.1). */
 export const EXPENSE_FIRST_MONTH = '2026-05';
 
-/** The eight categories the page shows, in the CEO's fixed order; the advance is never one (spec B6 §2.3). */
+/** The nine categories the page shows, in the CEO's fixed order; the advance is never one (spec B6 §2.3). */
 export const PAGE_CATEGORIES = [
   'RENT',
   'UTILITIES',
@@ -30,6 +30,7 @@ export const PAGE_CATEGORIES = [
   'EQUIPMENT',
   'MAINTENANCE',
   'TAXES',
+  'BANK_FEES',
   'OTHER',
 ] as const satisfies readonly ExpenseCategory[];
 export type PageCategory = (typeof PAGE_CATEGORIES)[number];

@@ -26,7 +26,7 @@ import {
 import { useT } from "@/i18n/context";
 import api from "@/lib/api";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { categoryLabel, EXPENSE_CATEGORIES, EXPENSE_METHOD_LABELS } from "./expenses-labels";
+import { categoryLabel, CREATABLE_EXPENSE_CATEGORIES, EXPENSE_METHOD_LABELS } from "./expenses-labels";
 import { ExpenseSourceField, NO_SOURCE } from "./expense-source-field";
 import type { ExpensePreset, ExpenseRow } from "./expenses-types";
 
@@ -51,6 +51,8 @@ export function ExpenseFormDialog({
 }: ExpenseFormDialogProps) {
   const t = useT();
   const isEdit = !!expense;
+  // A bank fee row is made on «Oyni yopish»: the server freezes its category, branch and method.
+  const bankFee = expense?.category === "BANK_FEES";
 
   const [category, setCategory] = useState<string>("OTHER");
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD">("CASH");
@@ -141,18 +143,22 @@ export function ExpenseFormDialog({
         <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
           <div className="space-y-2">
             <Label>{t("Turkum")}</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {EXPENSE_CATEGORIES.map((k) => (
-                  <SelectItem key={k} value={k}>
-                    {categoryLabel(k, t)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {bankFee ? (
+              <p className="text-sm">{categoryLabel("BANK_FEES", t)}</p>
+            ) : (
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CREATABLE_EXPENSE_CATEGORIES.map((k) => (
+                    <SelectItem key={k} value={k}>
+                      {categoryLabel(k, t)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           {category === "MARKETING" && (
             <ExpenseSourceField value={sourceId} onChange={setSourceId} current={expense?.leadSource} />
@@ -162,6 +168,7 @@ export function ExpenseFormDialog({
             <Select
               value={paymentMethod}
               onValueChange={(v) => setPaymentMethod(v as "CASH" | "CARD")}
+              disabled={bankFee}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -205,6 +212,7 @@ export function ExpenseFormDialog({
               value={date}
               onChange={(d) => setDate(d ?? null)}
               placeholder={t("Sanani tanlang")}
+              disabled={bankFee}
             />
           </div>
         </div>

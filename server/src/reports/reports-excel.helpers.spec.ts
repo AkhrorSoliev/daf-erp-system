@@ -212,7 +212,7 @@ describe('buildNetProfit with taxes', () => {
       providerFees: 30,
       turnoverTax: 40,
       total: 70,
-      missingRates: ['bank.turnoverTiers' as const],
+      missingRates: ['bank.feesEntered' as const],
     };
     const np = buildNetProfit(
       pl,

@@ -37,6 +37,7 @@ import {
   expenseMonthWindow,
   parseExpenseMonth,
 } from './expenses-month';
+import { BANK_FEE_LABEL } from '../tax/bank-fee';
 
 const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   RENT: 'Ijara',
@@ -47,6 +48,7 @@ const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   EQUIPMENT: 'Jihozlar',
   MAINTENANCE: "Ta'mirlash",
   TAXES: 'Soliqlar',
+  BANK_FEES: BANK_FEE_LABEL,
   OTHER: 'Boshqa',
 };
 
@@ -70,6 +72,12 @@ const RECIPIENT_OTHER_BRANCH =
 // (`salary.pay`) alone; every other category with «Xarajat kiritish»
 // (`expenses.manage`).
 const EXPENSE_WRITE_REFUSAL = "Bu xarajatni kiritish huquqingiz yo'q";
+
+// «Bank xizmati» faqat «Oyni yopish» sahifasidan, aniq bank hisobi bilan yoziladi
+// (spec 2026-10-28); xarajatlar sahifasidan emas.
+const BANK_FEE_ELSEWHERE = 'Bank xizmati «Oyni yopish» sahifasida kiritiladi';
+const BANK_FEE_FROZEN =
+  "Bank xizmatining turkumi, filiali, sanasi va to'lov turi o'zgarmaydi";
 
 // Human label for the PDF "Davr" line. Handles one-sided ranges.
 function buildDateRangeLabel(start?: string, end?: string): string {
@@ -102,7 +110,9 @@ export class ExpensesService {
     const key: PermissionKey =
       category === ExpenseCategory.TEACHER_ADVANCE
         ? 'salary.pay'
-        : 'expenses.manage';
+        : category === ExpenseCategory.BANK_FEES
+          ? 'settings.tax'
+          : 'expenses.manage';
     if (!(await this.permissions.has(userId, key))) {
       throw new ForbiddenException(EXPENSE_WRITE_REFUSAL);
     }
@@ -243,8 +253,17 @@ export class ExpensesService {
     if (!source) throw new BadRequestException('Manba topilmadi');
   }
 
-  async create(dto: CreateExpenseDto, userId: number, companyId: number) {
+  async create(
+    dto: CreateExpenseDto,
+    userId: number,
+    companyId: number,
+    opts: { cashAccountId?: string } = {},
+  ) {
     await this.assertMayWrite(userId, dto.category);
+    // BANK_FEES va hisob bir-biriga bog'liq: biri bo'lsa ikkinchisi ham shart.
+    if ((dto.category === ExpenseCategory.BANK_FEES) !== !!opts.cashAccountId) {
+      throw new BadRequestException(BANK_FEE_ELSEWHERE);
+    }
     await this.assertBranchWritable(dto.branchId, companyId, userId);
     await this.assertLeadSource(dto.leadSourceId, dto.category, companyId);
 
@@ -271,6 +290,7 @@ export class ExpensesService {
             receiptUrl: dto.receiptUrl,
             relatedUserId: dto.relatedUserId,
             leadSourceId: dto.leadSourceId ?? null,
+            cashAccountId: opts.cashAccountId ?? null,
             createdById: userId,
             companyId,
           },
@@ -286,6 +306,7 @@ export class ExpensesService {
             relatedUserId: dto.relatedUserId,
             description: dto.description,
             paymentMethod: dto.paymentMethod,
+            cashAccountId: opts.cashAccountId,
           },
           tx,
         );
@@ -644,6 +665,24 @@ export class ExpensesService {
       await this.assertMayWrite(userId, dto.category);
     }
 
+    // Bank xizmati qatori: turkum, filial, sana va to'lov turi qotirilgan; boshqa
+    // qatorni unga aylantirib ham bo'lmaydi (hisobsiz qolardi).
+    if (existing.category === ExpenseCategory.BANK_FEES) {
+      if (
+        (dto.category !== undefined && dto.category !== existing.category) ||
+        (dto.branchId != null && dto.branchId !== existing.branchId) ||
+        (dto.paymentMethod !== undefined &&
+          dto.paymentMethod !== existing.paymentMethod) ||
+        // Sana qotirilgan: oydan chiqarib yuborilsa, "hisob+oy = bitta qator" buziladi.
+        (dto.date != null &&
+          tashkentDateStr(new Date(dto.date)) !==
+            tashkentDateStr(existing.date))
+      )
+        throw new BadRequestException(BANK_FEE_FROZEN);
+    } else if (dto.category === ExpenseCategory.BANK_FEES) {
+      throw new BadRequestException(BANK_FEE_ELSEWHERE);
+    }
+
     // Both sides: the caller must own the branch the row is IN, and the branch
     // they are moving it TO. Checking only the target would let someone reach
     // into the other branch's books to move a cost out of them.
@@ -773,6 +812,7 @@ export class ExpensesService {
               relatedUserId: updated.relatedUserId ?? undefined,
               description: updated.description,
               paymentMethod: updated.paymentMethod,
+              cashAccountId: updated.cashAccountId ?? undefined,
             },
             tx,
           );

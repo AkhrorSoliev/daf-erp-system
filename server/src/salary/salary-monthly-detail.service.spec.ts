@@ -119,7 +119,6 @@ describe('SalaryMonthlyDetailService', () => {
             { fromMonth: '2026-01', value: 12 },
           ],
         },
-        bankTiers: [],
       }),
     };
     service = new SalaryMonthlyDetailService(
@@ -317,72 +316,32 @@ describe('SalaryMonthlyDetailService', () => {
     });
   });
 
-  describe('official split (spec 2026-10-25)', () => {
-    const withOfficial = (officialSalary: number | null) =>
-      prisma.user.findFirst.mockResolvedValue({
-        mainBranch: 3,
-        officialSalary,
-      });
-
-    it('returns the split for a teacher with an official salary', async () => {
-      withOfficial(2_000_000);
-      answer(
-        teacherRow({
-          fullDeserved: 2_500_000,
-          covered: 1_000_000,
-          advances: 0,
-          netToPay: 2_500_000,
-        }),
-      );
+  describe('bankTax — «Berildi» oynasidagi bank qatori uchun stavkalar (spec 2026-10-28)', () => {
+    it("oyning stavkalarini qaytaradi, official maydoni yo'q", async () => {
+      answer(teacherRow());
 
       const res = await detail();
 
-      expect(res.official).toEqual({
-        official: 2_000_000,
-        withholding: 240_000,
-        employerSocial: 240_000,
-        toHand: 2_260_000,
+      expect(res.bankTax).toEqual({
+        withholdingPercent: 12,
+        employerSocialPercent: 12,
       });
+      expect(res).not.toHaveProperty('official');
     });
 
-    it('a staff row splits what the month paid, and toHand follows netToPay (advances)', async () => {
-      withOfficial(1_000_000);
+    it("stavka kiritilmagan bo'lsa ikkalasi ham null", async () => {
+      tax.loadRates.mockResolvedValue({
+        rates: {
+          'payroll.employeeWithholdingPercent': [],
+          'payroll.employerSocialPercent': [],
+        },
+      });
       answer(staffRow());
 
-      const res = await detail();
-
-      expect(res.official).toEqual({
-        official: 1_000_000,
-        withholding: 120_000,
-        employerSocial: 120_000,
-        toHand: 2_380_000,
+      expect((await detail()).bankTax).toEqual({
+        withholdingPercent: null,
+        employerSocialPercent: null,
       });
-    });
-
-    it('official part is capped by what was earned', async () => {
-      withOfficial(5_000_000);
-      answer(
-        teacherRow({
-          fullDeserved: 1_000_000,
-          advances: 0,
-          netToPay: 1_000_000,
-        }),
-      );
-
-      expect((await detail()).official).toMatchObject({
-        official: 1_000_000,
-        withholding: 120_000,
-      });
-    });
-
-    it('is null, and the rates are not read, without an official salary', async () => {
-      withOfficial(null);
-      answer(teacherRow());
-      expect((await detail()).official).toBeNull();
-
-      withOfficial(0);
-      expect((await detail()).official).toBeNull();
-      expect(tax.loadRates).not.toHaveBeenCalled();
     });
   });
 });

@@ -42,7 +42,7 @@ describe("ExpensesMonthCard (spec B6 §3.4)", () => {
     expect(t).toContain(norm(`2 ta · naqd ${formatBalance(5_000_000)} · karta ${formatBalance(70_000)}`));
     expect(t).toContain(SAME_AS_PROFIT);
   });
-  it("eight categories in the fixed order, this month against last, «Jami», the hint line", () => {
+  it("nine categories in the fixed order, this month against last, «Jami», the hint line", () => {
     const t = text(card());
     expect(t).toContain("Turkum Oktabr Sentabr");
     // From the table header on: the green line above it already says «Boshqa».
@@ -59,7 +59,7 @@ describe("ExpensesMonthCard (spec B6 §3.4)", () => {
   it("the picked category is marked; rows are buttons", () => {
     const html = raw(card({}, ["RENT"]));
     expect(html.match(/aria-pressed="true"/g)?.length).toBe(1);
-    expect(html.match(/<button/g)?.length).toBe(8);
+    expect(html.match(/<button/g)?.length).toBe(9);
   });
   it("a month with no expense says so", () => {
     expect(text(card({ count: 0, total: 0, cashTotal: 0, cardTotal: 0 }))).toContain("Bu oyda xarajat yozilmagan");

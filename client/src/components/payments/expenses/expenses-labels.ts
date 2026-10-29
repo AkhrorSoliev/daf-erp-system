@@ -3,8 +3,8 @@ import { interpolate } from "@/i18n/translate";
 import type { Translate } from "@/components/payments/record-payment-admission";
 import type { ExpenseHint, RecurringKey } from "./expenses-types";
 
-/** The eight categories the page shows, in the CEO's order (spec B6 §2.3); the advance is never one. */
-export const EXPENSE_CATEGORIES = ["RENT", "UTILITIES", "SUPPLIES", "MARKETING", "EQUIPMENT", "MAINTENANCE", "TAXES", "OTHER"] as const;
+/** The nine categories the page shows, in the CEO's order (spec B6 §2.3); the advance is never one. */
+export const EXPENSE_CATEGORIES = ["RENT", "UTILITIES", "SUPPLIES", "MARKETING", "EQUIPMENT", "MAINTENANCE", "TAXES", "BANK_FEES", "OTHER"] as const;
 export type ExpenseCategoryKey = (typeof EXPENSE_CATEGORIES)[number];
 
 // The labels are `msg()` texts: the components draw them with `t()`.
@@ -16,6 +16,7 @@ export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategoryKey, string> = {
   EQUIPMENT: msg("Jihozlar"),
   MAINTENANCE: msg("Ta'mirlash"),
   TAXES: msg("Soliqlar"),
+  BANK_FEES: msg("Bank xizmati"),
   OTHER: msg("Boshqa"),
 };
 
@@ -55,3 +56,6 @@ export function recurringLabel(key: RecurringKey, t: Translate = interpolate): s
 }
 
 export const isExpenseCategory = (v: string): v is ExpenseCategoryKey => (EXPENSE_CATEGORIES as readonly string[]).includes(v);
+
+/** What «Xarajat qo'shish» offers: a bank fee is entered on «Oyni yopish» (spec 2026-10-28). */
+export const CREATABLE_EXPENSE_CATEGORIES = EXPENSE_CATEGORIES.filter((c) => c !== "BANK_FEES");

@@ -696,9 +696,8 @@ describe('ReportsExcelService', () => {
       providerFees: 10_000,
       employerSocialTax: 15_000,
       turnoverTax: 20_000,
-      bankFees: 5_000,
       total: 50_000,
-      missingRates: ['bank.turnoverTiers' as const],
+      missingRates: ['bank.feesEntered' as const],
     };
 
     it('subtracts them in «Xulosa» and the Tekshiruv footing', async () => {
@@ -737,20 +736,15 @@ describe('ReportsExcelService', () => {
       ).toBeNull();
     });
 
-    it('single month: asks for the month with the export salaries', async () => {
+    it('single month: asks for the month', async () => {
       await buildWorkbook(
         {},
         { startDate: '2026-06-01', endDate: '2026-06-30' },
       );
-      expect(taxCosts.forMonth).toHaveBeenCalledWith(
-        1,
-        '2026-06',
-        null,
-        salaryMonthly,
-      );
+      expect(taxCosts.forMonth).toHaveBeenCalledWith(1, '2026-06', null);
     });
 
-    it('multi-month: one window for every leg, each month on its own salaries', async () => {
+    it('multi-month: one window for every leg, one forMonth call per month', async () => {
       taxCosts.forMonth.mockImplementation((_c, month) =>
         Promise.resolve({
           ...emptyTaxCosts(),

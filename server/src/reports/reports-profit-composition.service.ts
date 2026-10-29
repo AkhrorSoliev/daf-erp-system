@@ -66,7 +66,6 @@ export interface ProfitComposition {
     providerFees: number;
     employerSocialTax: number;
     turnoverTax: number;
-    bankFees: number;
     total: number;
     missingRates: string[];
     /**
@@ -341,7 +340,6 @@ export class ReportsProfitCompositionService {
         providerFees: np.taxes.providerFees,
         employerSocialTax: np.taxes.employerSocialTax,
         turnoverTax: np.taxes.turnoverTax,
-        bankFees: np.taxes.bankFees,
         total: np.taxes.total,
         missingRates: np.taxes.missingRates,
         manualTaxExpenses: expenses
@@ -455,7 +453,6 @@ function emptyComposition(
       providerFees: 0,
       employerSocialTax: 0,
       turnoverTax: 0,
-      bankFees: 0,
       total: 0,
       missingRates: [],
       manualTaxExpenses: 0,

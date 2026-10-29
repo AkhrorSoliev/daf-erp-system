@@ -1039,7 +1039,7 @@ describe('TelegramGroupDailyReportService — canonical Sof foyda', () => {
     const { message } = await svc.build(1, null);
 
     expect(message).toMatch(
-      /• Sof foyda: <b>[^\n]*<\/b>\n⚠️ Hisob to'liq emas: soliq stavkasi kiritilmagan\n/,
+      /• Sof foyda: <b>[^\n]*<\/b>\n⚠️ Hisob to'liq emas: soliq stavkasi yoki bank xarajati kiritilmagan\n/,
     );
   });
 

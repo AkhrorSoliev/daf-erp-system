@@ -3,6 +3,7 @@ import {
   clampMonth,
   dayMonth,
   isMonthlyBillingMonth,
+  missingRatesNote,
   monthRange,
   paymentMethodLabel,
   profitLines,
@@ -61,7 +62,7 @@ describe("profitLines", () => {
     staff: { total: 13_410_000 },
     expenses: { total: 12_420_000 },
     refunds: 450_000,
-    taxes: { providerFees: 0, employerSocialTax: 0, turnoverTax: 0, bankFees: 0, total: 0, missingRates: [] },
+    taxes: { providerFees: 0, employerSocialTax: 0, turnoverTax: 0, total: 0, missingRates: [] },
   };
 
   it("adds up to the net profit, in the dialog's order", () => {
@@ -87,16 +88,15 @@ describe("profitLines", () => {
     );
   });
 
-  it("adds the four tax lines after refunds, each only when it is not 0", () => {
-    const taxes = { providerFees: 100, employerSocialTax: 200, turnoverTax: 300, bankFees: 40, total: 640, missingRates: [] };
+  it("adds the three tax lines after refunds, each only when it is not 0", () => {
+    const taxes = { providerFees: 100, employerSocialTax: 200, turnoverTax: 300, total: 600, missingRates: [] };
     const lines = profitLines({ ...composition, taxes });
-    expect(lines.slice(-4)).toEqual([
+    expect(lines.slice(-3)).toEqual([
       { label: "To'lov komissiyasi", amount: -100 },
       { label: "Ijtimoiy soliq", amount: -200 },
       { label: "Aylanma solig'i", amount: -300 },
-      { label: "Bank xarajati", amount: -40 },
     ]);
-    const some = profitLines({ ...composition, taxes: { ...taxes, providerFees: 0, bankFees: 0, total: 500 } });
+    const some = profitLines({ ...composition, taxes: { ...taxes, providerFees: 0, total: 500 } });
     expect(some.map((l) => l.label)).not.toContain("To'lov komissiyasi");
     expect(some.map((l) => l.label)).toContain("Aylanma solig'i");
   });
@@ -131,5 +131,31 @@ describe("paymentMethodLabel", () => {
   it("names a QR payment, and prints an unknown code as it is", () => {
     expect(paymentMethodLabel("QR")).toBe("QR-kod");
     expect(paymentMethodLabel("QRX")).toBe("QRX");
+  });
+});
+
+describe("missingRatesNote", () => {
+  it("says nothing when nothing is missing", () => {
+    expect(missingRatesNote([])).toBeNull();
+  });
+
+  it("names the rates and opens the rates page", () => {
+    expect(missingRatesNote(["fees.qr", "tax.turnoverPercent"])).toEqual({
+      text: "Hisob to'liq emas: 2 ta stavka kiritilmagan",
+      links: [{ href: "/settings/tax", label: "Stavkalarni kiritish →" }],
+    });
+  });
+
+  it("says «Bank xarajati kiritilmagan» with a link to «Oyni yopish» when only the bank fee is missing", () => {
+    expect(missingRatesNote(["bank.feesEntered"])).toEqual({
+      text: "Bank xarajati kiritilmagan",
+      links: [{ href: "/reports/oyni-yopish", label: "Oyni yopish →" }],
+    });
+  });
+
+  it("counts only real rates when both are missing and links both pages", () => {
+    const note = missingRatesNote(["fees.qr", "bank.feesEntered"]);
+    expect(note?.text).toBe("Hisob to'liq emas: 1 ta stavka va bank xarajati kiritilmagan");
+    expect(note?.links.map((l) => l.href)).toEqual(["/settings/tax", "/reports/oyni-yopish"]);
   });
 });

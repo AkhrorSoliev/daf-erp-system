@@ -99,7 +99,6 @@ export interface ProfitComposition {
     providerFees: number;
     employerSocialTax: number;
     turnoverTax: number;
-    bankFees: number;
     total: number;
     missingRates: string[];
     /** Shu oyda qo'lda yozilgan «Soliqlar» xarajati (avtomatik soliq bilan ikki marta sanalmasin). Eski serverda yo'q. */

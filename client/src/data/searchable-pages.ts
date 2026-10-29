@@ -20,6 +20,7 @@ export const searchablePages: SearchablePage[] = [
   { label: msg("Xarajatlar"), url: "/payments/expenses", keywords: ["xarajat", "ijara", "kommunal", "soliq", "chiqim"] },
   { label: msg("Hisobotlar"), url: "/reports", keywords: ["report", "hisobot", "statistika"] },
   { label: msg("Guruhlar bo'yicha to'lov"), url: "/reports/payment-reports", keywords: ["guruh to'lovi", "qarzdor guruh", "ustoz bo'yicha to'lov", "to'lov hisoboti"] },
+  { label: msg("Oyni yopish"), url: "/reports/oyni-yopish", keywords: ["oyni yopish", "bank xizmati", "bank xarajati", "oy hisobi"] },
   { label: msg("Sozlamalar"), url: "/settings", keywords: ["setting", "sozlama", "config"] },
   // Sozlamalarning ichki sahifalari bu yerda yo'q: ular `settings-nav.ts` dan
   // olinadi va faqat foydalanuvchi ochishi mumkinlari qidiruvga kiradi

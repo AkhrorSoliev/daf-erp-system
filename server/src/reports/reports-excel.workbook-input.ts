@@ -102,12 +102,7 @@ export async function periodNetProfit(
   if (months.length <= 1) {
     // Single-month export keeps the original single-call path exactly.
     const month = months[0] ?? args.monthStr;
-    const taxes = await taxCosts.forMonth(
-      companyId,
-      month,
-      args.branchIds,
-      args.salaries,
-    );
+    const taxes = await taxCosts.forMonth(companyId, month, args.branchIds);
     return {
       recognizedRevenue,
       np: buildNetProfit(
@@ -136,13 +131,10 @@ export async function periodNetProfit(
       ),
     })),
   );
-  // Tax and fee costs over the SAME months as every other leg, each month on
-  // its own salaries (the payroll-tax leg is a share of that month's official pay).
+  // Tax and fee costs over the SAME months as every other leg.
   const taxes = sumTaxCosts(
     await Promise.all(
-      perMonth.map((p) =>
-        taxCosts.forMonth(companyId, p.month, args.branchIds, p.salaries),
-      ),
+      months.map((m) => taxCosts.forMonth(companyId, m, args.branchIds)),
     ),
   );
   // No `month` argument: top-up gating is already applied per month inside

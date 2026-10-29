@@ -12,7 +12,7 @@ import { buildMonthChargesLines } from './utils/month-charges-lines.util';
 
 /** «Sof foyda» ostidagi ogohlantirish — 21:00 hisobot va rm:cfin kartasi bitta matn ishlatadi. */
 export const MISSING_RATES_WARNING =
-  "⚠️ Hisob to'liq emas: soliq stavkasi kiritilmagan";
+  "⚠️ Hisob to'liq emas: soliq stavkasi yoki bank xarajati kiritilmagan";
 
 const WEEKDAYS_UZ = [
   'Yakshanba',

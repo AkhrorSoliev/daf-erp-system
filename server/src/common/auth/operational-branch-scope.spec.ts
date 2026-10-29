@@ -172,7 +172,6 @@ describe('operational reads are branch-confined', () => {
         {} as any,
         {} as any,
         {} as any,
-        {} as any,
       );
       await service.findAll({ search: 'Ali' } as any, 1001, NAMANGAN);
       expect(mentionsBranches(captured, NAMANGAN)).toBe(true);

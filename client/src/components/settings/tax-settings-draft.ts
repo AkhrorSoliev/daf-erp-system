@@ -5,10 +5,7 @@ import { msg } from "@/i18n/msg";
 // xatoni joyida ko'rsatish uchun.
 
 export type RateRow = { fromMonth: string; value: string };
-export type TierRow = { fromAmount: string; toAmount: string; percent: string };
 export type DatedRate = { fromMonth: string; value: number };
-export type BankTier = { fromAmount: number; toAmount: number | null; percent: number };
-export type DatedTiers = { fromMonth: string; tiers: BankTier[] };
 
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
@@ -25,34 +22,8 @@ export function rowError(row: RateRow): string | null {
   return percentError(row.value);
 }
 
-export function tiersError(rows: TierRow[]): string | null {
-  if (rows.length === 0) return msg("Kamida bitta oraliq kiriting");
-  if (rows.some((r) => !/^\d*$/.test(r.fromAmount) || !/^\d*$/.test(r.toAmount))) return msg("Faqat butun so'm kiriting");
-  if (Number(rows[0].fromAmount) !== 0) return msg("1-oraliq 0 dan boshlanadi");
-  if (rows[rows.length - 1].toAmount.trim() !== "") return msg("Oxirgi oraliqning yuqori chegarasi bo'sh qoladi");
-  for (let i = 0; i < rows.length; i++) {
-    const err = percentError(rows[i].percent);
-    if (err) return err;
-    if (i < rows.length - 1) {
-      const to = Number(rows[i].toAmount);
-      if (!(to > Number(rows[i].fromAmount))) return msg("Oraliq chegarasi noto'g'ri");
-      if (Number(rows[i + 1].fromAmount) !== to) return msg("Oraliqlar orasida bo'shliq bor");
-    }
-  }
-  return null;
-}
-
 export const toRatePayload = (rows: RateRow[]): DatedRate[] =>
   rows.map((r) => ({ fromMonth: r.fromMonth, value: Number(r.value) }));
-
-export const toTierPayload = (fromMonth: string, rows: TierRow[]): DatedTiers => ({
-  fromMonth,
-  tiers: rows.map((r) => ({
-    fromAmount: Number(r.fromAmount),
-    toAmount: r.toAmount.trim() === "" ? null : Number(r.toAmount),
-    percent: Number(r.percent),
-  })),
-});
 
 /** Serverning `rateForMonth` ko'zgusi: shu oyda amalda turgan oxirgi qator. */
 export function currentRate(list: DatedRate[], month: string): number | null {

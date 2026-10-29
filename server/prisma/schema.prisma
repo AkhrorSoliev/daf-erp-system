@@ -332,6 +332,7 @@ enum ExpenseCategory {
   EQUIPMENT
   MAINTENANCE
   TAXES
+  BANK_FEES
   OTHER
 }
 
@@ -395,8 +396,6 @@ model User {
   companyId      Int
   company        Company    @relation(fields: [companyId], references: [id])
   mainBranch     Int?
-  /// Rasmiy (bank orqali) oylik summasi, so'm. Qolgani naqd. Soliq faqat shu qismdan (spec 2026-10-25).
-  officialSalary Int?
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
@@ -3404,6 +3403,10 @@ model Expense {
   leadSourceId String?
   leadSource   LeadSource? @relation(fields: [leadSourceId], references: [id])
 
+  // «Bank xizmati» (spec 2026-10-28): bank yechgan hisob. Faqat BANK_FEES yozadi.
+  cashAccountId String?
+  cashAccount   CashAccount? @relation(fields: [cashAccountId], references: [id])
+
   companyId Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3421,6 +3424,7 @@ model Expense {
   @@index([relatedUserId])
   @@index([branchId])
   @@index([leadSourceId])
+  @@index([cashAccountId])
 }
 
 // ===== PAYMENT GATEWAY EVENT LOG =====
@@ -3571,6 +3575,7 @@ model CashAccount {
 
   movements CashMovement[]
   refunds   Refund[]
+  expenses  Expense[]
 
   @@index([companyId])
   @@index([branchId])

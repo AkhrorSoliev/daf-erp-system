@@ -74,6 +74,7 @@ export const EXPENSE_LABELS: Record<string, string> = {
   EQUIPMENT: 'Jihozlar',
   MAINTENANCE: "Ta'mirlash",
   TAXES: 'Soliqlar',
+  BANK_FEES: 'Bank xizmati',
   TEACHER_ADVANCE: 'Ustozga avans',
   OTHER: 'Boshqa',
 };

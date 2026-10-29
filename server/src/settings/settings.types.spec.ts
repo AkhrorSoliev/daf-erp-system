@@ -48,7 +48,6 @@ describe('SETTING_DEFINITIONS registry', () => {
         'payroll.employeeWithholdingPercent',
         'payroll.employerSocialPercent',
         'tax.turnoverPercent',
-        'bank.turnoverTiers',
       ].sort(),
     );
   });

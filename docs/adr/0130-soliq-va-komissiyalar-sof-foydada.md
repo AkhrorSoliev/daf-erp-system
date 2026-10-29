@@ -1,6 +1,6 @@
 # ADR-0130 — Soliq va komissiyalar sof foydadan ayriladi: stavkalar sozlamada oydan kuchga kiradigan ro'yxat, hisob bitta joyda (`TaxCostsService`)
 
-**Holati:** Qabul qilindi
+**Holati:** Qisman almashtirildi — ADR-0139
 **Sana:** 2026-10-25
 **Bog'liq:** ADR-0038, ADR-0055, ADR-0058, ADR-0079, ADR-0094, `server/src/tax/` (`tax-rates.ts`, `fee-channel.ts`, `tax-costs.ts`, `tax-costs.service.ts`, `tax-settings.service.ts`), `server/src/reports/reports-excel.helpers.ts` (`buildNetProfit`), `server/src/reports/own-month-profit.ts`, `server/src/reports/net-profit-cache.ts`, `server/src/salary/salary-monthly-detail.service.ts`, `client/src/components/settings/tax-settings-client.tsx`, `docs/superpowers/specs/2026-10-25-soliq-va-komissiyalar-design.md`, `docs/superpowers/plans/2026-10-25-soliq-va-komissiyalar.md`
 
