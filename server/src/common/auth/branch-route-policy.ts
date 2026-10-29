@@ -842,12 +842,17 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
       'way this content is identical per branch and carries no `companyId`. ' +
       'Scoping these reads by branch would answer a ' +
       'question nobody asks and imply the catalogue differs per branch, which it ' +
-      'does not.',
+      'does not. ' +
+      "The «o'tib ko'rish» routes build and check a session with no student: nothing is read from or written to any student or branch.",
     routes: [
       'GET /daf/media/coverage',
       'GET /daf/media/jang',
       'GET /daf/media/overview',
-      'GET /daf/media/sections/:id/fragen',
+      'GET /daf/media/lessons/:id/fragen',
+      'GET /daf/media/lessons/:id/sinov',
+      'GET /daf/media/lessons/:id/sinov/ersatz',
+      'POST /daf/media/sinov/check',
+      'POST /daf/media/sinov/juft',
       'GET /daf/media/sections/:id/inhalt',
       'GET /student-portal/lernen/grammar',
       'GET /student-portal/lernen/lessons/:id',

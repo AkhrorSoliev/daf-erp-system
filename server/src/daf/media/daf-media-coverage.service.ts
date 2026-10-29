@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DafLevel } from '@prisma/client';
+import { DafLessonKind, DafLevel } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 /** So'z: audio VA rasm ikkalasi ham bo'lishi mumkin. */
@@ -17,6 +17,13 @@ export interface AudioOnlyMediaCounts {
   withAudio: number;
 }
 
+/** Seans — o'quvchi yo'lidagi bitta dars (Tanishuv, Ishlatish, …). */
+export interface MediaLesson {
+  id: number;
+  kind: DafLessonKind;
+  order: number;
+}
+
 export interface MediaSectionCoverage {
   sectionId: number;
   code: string;
@@ -26,6 +33,7 @@ export interface MediaSectionCoverage {
   sentences: AudioOnlyMediaCounts;
   phrases: AudioOnlyMediaCounts;
   dialogLines: AudioOnlyMediaCounts;
+  lessons: MediaLesson[];
 }
 
 export interface MediaUnitCoverage {
@@ -34,6 +42,8 @@ export interface MediaUnitCoverage {
   order: number;
   titleUz: string;
   sections: MediaSectionCoverage[];
+  /** Bo'limga tegishli bo'lmagan darslar (masalan, unit testi). */
+  unitLessons: MediaLesson[];
 }
 
 export interface MediaLevelCoverage {
@@ -87,6 +97,7 @@ export class DafMediaCoverageService {
       sentenceRows,
       phraseRows,
       dialogLineRows,
+      lessons,
     ] = await Promise.all([
       // Nafaqaga chiqqan bo'lim (retiredAt) joriy kursda ko'rsatilmaydi —
       // xuddi portal o'quvchiga ko'rsatmagani kabi (daf-portal-read.service.ts).
@@ -180,6 +191,17 @@ export class DafMediaCoverageService {
           JOIN "DafDialog" d ON d.id = dl."dialogId"
           GROUP BY d."sectionId"
         `,
+      this.prisma.dafLesson.findMany({
+        where: { kind: { not: null } },
+        orderBy: { order: 'asc' },
+        select: {
+          id: true,
+          unitId: true,
+          sectionId: true,
+          kind: true,
+          order: true,
+        },
+      }),
     ]);
 
     const wordsBySection = new Map<number, WordMediaCounts>();
@@ -207,6 +229,16 @@ export class DafMediaCoverageService {
     const phrasesBySection = toAudioOnlyMap(phraseRows);
     const dialogLinesBySection = toAudioOnlyMap(dialogLineRows);
 
+    const lessonsBySection = new Map<number, MediaLesson[]>();
+    const lessonsByUnit = new Map<number, MediaLesson[]>();
+    for (const l of lessons) {
+      if (l.kind === null) continue;
+      const row: MediaLesson = { id: l.id, kind: l.kind, order: l.order };
+      const map = l.sectionId === null ? lessonsByUnit : lessonsBySection;
+      const key = l.sectionId ?? l.unitId;
+      map.set(key, [...(map.get(key) ?? []), row]);
+    }
+
     const sectionsByUnit = new Map<number, MediaSectionCoverage[]>();
     for (const s of sections) {
       const row: MediaSectionCoverage = {
@@ -218,6 +250,7 @@ export class DafMediaCoverageService {
         sentences: sentencesBySection.get(s.id) ?? zeroAudioOnly(),
         phrases: phrasesBySection.get(s.id) ?? zeroAudioOnly(),
         dialogLines: dialogLinesBySection.get(s.id) ?? zeroAudioOnly(),
+        lessons: lessonsBySection.get(s.id) ?? [],
       };
       const list = sectionsByUnit.get(s.unitId) ?? [];
       list.push(row);
@@ -234,6 +267,7 @@ export class DafMediaCoverageService {
         order: u.order,
         titleUz: u.titleUz,
         sections: sectionsByUnit.get(u.id) ?? [],
+        unitLessons: lessonsByUnit.get(u.id) ?? [],
       };
       const list = levelsByKey.get(u.level) ?? [];
       list.push(row);

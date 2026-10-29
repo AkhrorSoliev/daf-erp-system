@@ -5,6 +5,7 @@ import { DafMediaCoverageService } from './media/daf-media-coverage.service';
 import { DafMediaInhaltService } from './media/daf-media-inhalt.service';
 import { DafMediaFragenService } from './media/daf-media-fragen.service';
 import { DafMediaJangService } from './media/daf-media-jang.service';
+import { UebungService } from './uebung/uebung.service';
 import { defaultRolesOf, routeAccess } from '../common/permissions/testing';
 
 /**
@@ -30,7 +31,15 @@ describe('DafMediaController — route access', () => {
     }),
   };
   const fragenService = {
-    fragen: jest.fn().mockResolvedValue([]),
+    lessonFragen: jest
+      .fn()
+      .mockResolvedValue({ kind: null, laenge: 12, bevorzugt: [], fragen: [] }),
+  };
+  const uebungService = {
+    seans: jest.fn().mockResolvedValue([]),
+    ersatz: jest.fn().mockResolvedValue(null),
+    pruefen: jest.fn().mockResolvedValue({ isCorrect: true, richtig: 'x' }),
+    juft: jest.fn().mockResolvedValue({ isCorrect: true }),
   };
   const jangService = {
     jang: jest.fn().mockResolvedValue({ units: [] }),
@@ -45,6 +54,7 @@ describe('DafMediaController — route access', () => {
         { provide: DafMediaInhaltService, useValue: inhaltService },
         { provide: DafMediaFragenService, useValue: fragenService },
         { provide: DafMediaJangService, useValue: jangService },
+        { provide: UebungService, useValue: uebungService },
       ],
     }).compile();
 
@@ -52,7 +62,17 @@ describe('DafMediaController — route access', () => {
   });
 
   it('every route is gated by the media view capability', () => {
-    for (const method of ['coverage', 'overview', 'fragen', 'inhalt', 'jang']) {
+    for (const method of [
+      'coverage',
+      'overview',
+      'inhalt',
+      'jang',
+      'lessonFragen',
+      'sinov',
+      'sinovErsatz',
+      'sinovCheck',
+      'sinovJuft',
+    ]) {
       expect(routeAccess(DafMediaController, method)).toEqual({
         kind: 'can',
         keys: ['media.view'],
@@ -97,9 +117,46 @@ describe('DafMediaController — route access', () => {
     expect(result).toEqual({ units: [] });
   });
 
-  it('fragen() DafMediaFragenService.fragen()ga delegatsiya qiladi', async () => {
-    const result = await controller.fragen(7);
-    expect(fragenService.fragen).toHaveBeenCalledWith(7);
-    expect(result).toEqual([]);
+  it("sinov endpointlari o'quvchisiz (null) chaqiradi", async () => {
+    await controller.sinov(100);
+    expect(uebungService.seans).toHaveBeenCalledWith(100, null);
+    await controller.sinovErsatz(100, {
+      itemType: 'WORT',
+      itemId: 1,
+      nichtFormat: 'WORT_UZ',
+    } as any);
+    expect(uebungService.ersatz).toHaveBeenCalledWith(
+      100,
+      null,
+      'WORT',
+      1,
+      'WORT_UZ',
+    );
+    await controller.sinovCheck({
+      itemType: 'WORT',
+      itemId: 1,
+      format: 'WORT_UZ',
+      given: 'a',
+    } as any);
+    expect(uebungService.pruefen).toHaveBeenCalledWith(
+      expect.objectContaining({ given: 'a' }),
+      null,
+    );
+    await controller.sinovJuft({
+      itemType: 'WORT',
+      itemId: 1,
+      format: 'PAAR',
+      chap: 'a',
+      ong: 'b',
+    } as any);
+    expect(uebungService.juft).toHaveBeenCalledWith(
+      expect.objectContaining({ chap: 'a' }),
+      null,
+    );
+  });
+
+  it('lessonFragen() DafMediaFragenService.lessonFragen()ga delegatsiya qiladi', async () => {
+    await controller.lessonFragen(100);
+    expect(fragenService.lessonFragen).toHaveBeenCalledWith(100);
   });
 });

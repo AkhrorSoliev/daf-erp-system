@@ -1,4 +1,12 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { Can } from '../common/permissions/access.decorators';
 import {
   DafMediaOverviewService,
@@ -14,8 +22,10 @@ import {
 } from './media/daf-media-inhalt.service';
 import {
   DafMediaFragenService,
-  type VorschauFrage,
+  type LessonFragen,
 } from './media/daf-media-fragen.service';
+import { UebungService } from './uebung/uebung.service';
+import { CheckAntwortDto, ErsatzQueryDto, JuftDto } from './dto/uebung.dto';
 
 import {
   DafMediaJangService,
@@ -35,6 +45,7 @@ export class DafMediaController {
     private readonly inhaltService: DafMediaInhaltService,
     private readonly fragenService: DafMediaFragenService,
     private readonly jangService: DafMediaJangService,
+    private readonly uebung: UebungService,
   ) {}
 
   /**
@@ -72,18 +83,42 @@ export class DafMediaController {
     return this.inhaltService.inhalt(id);
   }
 
+  /** Seansdan chiqishi mumkin bo'lgan BARCHA savollar — to'g'ri javobi bilan. */
+  @Get('lessons/:id/fragen')
+  lessonFragen(@Param('id', ParseIntPipe) id: number): Promise<LessonFragen> {
+    return this.fragenService.lessonFragen(id);
+  }
+
   /**
-   * Bo'lim materialidan quriladigan BARCHA savollar — javobi bilan.
-   *
-   * Savollar bazada saqlanmaydi (dizayn D7, `frage.types.ts`): dvigatel
-   * ularni har so'rovda materialdan qayta quradi, shuning uchun bu yo'l
-   * ham xuddi shu 12 quruvchini ishlatadi (`DafMediaFragenService`), o'z
-   * nusxasini yozmaydi. Studentga bog'liq emas — `studentId` yo'q, chunki
-   * bitta seansga tegadigan o'n ikkitasi emas, qurilishi mumkin bo'lgan
-   * HAMMASI qaytadi.
+   * «O'quvchi kabi o'tib ko'rish»: o'quvchi seansining o'zi, lekin
+   * o'quvchisiz — `null` bilan hech narsa o'qilmaydi va yozilmaydi.
    */
-  @Get('sections/:id/fragen')
-  fragen(@Param('id', ParseIntPipe) id: number): Promise<VorschauFrage[]> {
-    return this.fragenService.fragen(id);
+  @Get('lessons/:id/sinov')
+  sinov(@Param('id', ParseIntPipe) id: number) {
+    return this.uebung.seans(id, null);
+  }
+
+  @Get('lessons/:id/sinov/ersatz')
+  sinovErsatz(
+    @Param('id', ParseIntPipe) id: number,
+    @Query() query: ErsatzQueryDto,
+  ) {
+    return this.uebung.ersatz(
+      id,
+      null,
+      query.itemType,
+      query.itemId,
+      query.nichtFormat,
+    );
+  }
+
+  @Post('sinov/check')
+  sinovCheck(@Body() dto: CheckAntwortDto) {
+    return this.uebung.pruefen(dto, null);
+  }
+
+  @Post('sinov/juft')
+  sinovJuft(@Body() dto: JuftDto) {
+    return this.uebung.juft(dto, null);
   }
 }

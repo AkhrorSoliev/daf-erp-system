@@ -13,6 +13,7 @@ function buildPrismaMock(opts: {
   sentenceRows?: unknown[];
   phraseRows?: unknown[];
   dialogLineRows?: unknown[];
+  lessons?: unknown[];
 }) {
   const {
     units = [],
@@ -21,11 +22,13 @@ function buildPrismaMock(opts: {
     sentenceRows = [],
     phraseRows = [],
     dialogLineRows = [],
+    lessons = [],
   } = opts;
 
   return {
     dafUnit: { findMany: jest.fn().mockResolvedValue(units) },
     dafSection: { findMany: jest.fn().mockResolvedValue(sections) },
+    dafLesson: { findMany: jest.fn().mockResolvedValue(lessons) },
     $queryRaw: jest.fn().mockImplementation((strings: TemplateStringsArray) => {
       const sql = Array.isArray(strings) ? strings.join(' ') : String(strings);
       if (sql.includes('"DafLexeme"')) return Promise.resolve(wordRows);
@@ -289,5 +292,38 @@ describe('DafMediaCoverageService', () => {
     const sql = strings.join(' ');
     expect(sql).toContain('dl."audioKey" IS NOT NULL');
     expect(sql).toContain('d."audioKey" IS NOT NULL');
+  });
+});
+
+describe('DafMediaCoverageService — darslar', () => {
+  it("darslarni bo'limga, bo'limsizini unitga bog'laydi", async () => {
+    const prisma = buildPrismaMock({
+      units: [
+        { id: 1, level: 'A1', order: 1, code: 'u01', titleUz: 'Tanishuv' },
+      ],
+      sections: [
+        {
+          id: 10,
+          unitId: 1,
+          order: 1,
+          code: 'u01-s1',
+          titleUz: 'Salomlashish',
+        },
+      ],
+      lessons: [
+        { id: 101, unitId: 1, sectionId: 10, kind: 'SECTION_A', order: 1 },
+        { id: 102, unitId: 1, sectionId: 10, kind: 'SECTION_B', order: 2 },
+        { id: 199, unitId: 1, sectionId: null, kind: 'UNIT_TEST', order: 9 },
+      ],
+    });
+    const { levels } = await new DafMediaCoverageService(prisma).coverage();
+    const unit = levels[0].units[0];
+    expect(unit.sections[0].lessons).toEqual([
+      { id: 101, kind: 'SECTION_A', order: 1 },
+      { id: 102, kind: 'SECTION_B', order: 2 },
+    ]);
+    expect(unit.unitLessons).toEqual([
+      { id: 199, kind: 'UNIT_TEST', order: 9 },
+    ]);
   });
 });
