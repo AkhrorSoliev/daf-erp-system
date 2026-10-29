@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bankFeeBody, checklistRows, closeMonth, pictureRows } from "./month-close-model";
+import { bankFeeBody, checklistRows, closeMonth, monthLinks, pictureRows } from "./month-close-model";
 import type { MonthCloseView } from "./month-close-types";
 
 const view: MonthCloseView = {
@@ -36,8 +36,8 @@ describe("checklistRows", () => {
   it("says what is missing", () => {
     expect(checklistRows(view)).toEqual([
       { ok: false, text: "Bank xarajati: 1 ta hisobdan 0 tasi kiritilgan" },
-      { ok: false, text: "Oyliklar: 4 tadan 3 tasi berilgan" },
-      { ok: true, text: "Stavkalar to'liq" },
+      { ok: false, text: "Oyliklar: 4 tadan 3 tasi berilgan", href: "/payments/salary?month=2026-09" },
+      { ok: true, text: "Stavkalar to'liq", href: "/settings/tax" },
     ]);
   });
 
@@ -48,6 +48,13 @@ describe("checklistRows", () => {
       "Oyliklar: 4 tadan 3 tasi berilgan",
       "Stavkalar to'liq emas — Sozlamalar → Soliq va komissiyalar",
     ]);
+  });
+});
+
+describe("monthLinks", () => {
+  it("opens the owning page on the same month", () => {
+    expect(monthLinks("2026-10")).toMatchObject({ salary: "/payments/salary?month=2026-10", expenses: "/payments/expenses?oy=2026-10" });
+    expect(pictureRows(view).find((r) => r.label === "Sof foyda")?.href).toBeUndefined();
   });
 });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { CircleAlert, CircleCheck, Info, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -43,6 +44,16 @@ function Hint({ text }: { text: string }) {
   );
 }
 
+/** A link to the page that owns a figure: this page only reads it. */
+function ChangeLink({ href }: { href: string }) {
+  const t = useT();
+  return (
+    <Link href={href} className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline">
+      {t("O'zgartirish")} →
+    </Link>
+  );
+}
+
 /** «{Oy} surati»: the server's figures as one list, then the two figures that are only information. */
 function PictureCard({ view, month }: { view: MonthCloseView; month: string }) {
   const t = useT();
@@ -59,7 +70,10 @@ function PictureCard({ view, month }: { view: MonthCloseView; month: string }) {
             return (
               <li key={row.label} className={cn("flex justify-between gap-3 py-2", last && "font-semibold")}>
                 <span className={last ? undefined : "text-muted-foreground"}>{row.label}</span>
-                <span className="tabular-nums">{som(row.amount, t)}</span>
+                <span className="flex items-center gap-3">
+                  <span className="tabular-nums">{som(row.amount, t)}</span>
+                  {row.href && <ChangeLink href={row.href} />}
+                </span>
               </li>
             );
           })}
@@ -163,6 +177,7 @@ function ChecklistCard({ view }: { view: MonthCloseView }) {
                 <CircleAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
               )}
               <span>{r.text}</span>
+              {r.href && !r.ok && <ChangeLink href={r.href} />}
             </li>
           ))}
         </ul>

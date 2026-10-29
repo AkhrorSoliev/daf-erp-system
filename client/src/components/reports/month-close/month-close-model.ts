@@ -7,23 +7,36 @@ import type { BankFeesBody, MonthCloseView } from "./month-close-types";
 export interface PictureRow {
   label: string;
   amount: number;
+  /** Where the figure is changed; the profit row has none. */
+  href?: string;
+}
+
+/** The pages that own the figures of a month: this page only reads them (spec §5). */
+export function monthLinks(month: string) {
+  return {
+    salary: `/payments/salary?month=${month}`,
+    expenses: `/payments/expenses?oy=${month}`,
+    payments: "/payments/list",
+    tax: "/settings/tax",
+  };
 }
 
 /** «{Oy} surati»: the server's figures as one list, money going out is negative. */
 export function pictureRows(v: MonthCloseView, t: Translate = interpolate): PictureRow[] {
   const n = v.netProfit;
-  const rows: PictureRow[] = [{ label: t("Tushum"), amount: n.revenue }];
+  const to = monthLinks(v.month);
+  const rows: PictureRow[] = [{ label: t("Tushum"), amount: n.revenue, href: to.payments }];
   if (n.balanceWithdrawals > 0) rows.push({ label: t("Yechib olingan balans"), amount: n.balanceWithdrawals });
   rows.push(
-    { label: t("O'qituvchilar oyligi"), amount: -n.teacherSalary },
-    { label: t("Xodimlar oyligi"), amount: -n.adminSalary },
-    { label: t("Xarajatlar (bank xizmati bilan)"), amount: -n.operatingExpenses },
+    { label: t("O'qituvchilar oyligi"), amount: -n.teacherSalary, href: to.salary },
+    { label: t("Xodimlar oyligi"), amount: -n.adminSalary, href: to.salary },
+    { label: t("Xarajatlar (bank xizmati bilan)"), amount: -n.operatingExpenses, href: to.expenses },
   );
   if (n.refunds > 0) rows.push({ label: t("Qaytarilgan pul"), amount: -n.refunds });
   rows.push(
-    { label: t("To'lov komissiyasi"), amount: -n.taxes.providerFees },
-    { label: t("Aylanma solig'i"), amount: -n.taxes.turnoverTax },
-    { label: t("Korxona ijtimoiy solig'i"), amount: -n.taxes.employerSocialTax },
+    { label: t("To'lov komissiyasi"), amount: -n.taxes.providerFees, href: to.tax },
+    { label: t("Aylanma solig'i"), amount: -n.taxes.turnoverTax, href: to.tax },
+    { label: t("Korxona ijtimoiy solig'i"), amount: -n.taxes.employerSocialTax, href: to.salary },
     { label: t("Sof foyda"), amount: n.netProfit },
   );
   return rows;
@@ -32,11 +45,14 @@ export function pictureRows(v: MonthCloseView, t: Translate = interpolate): Pict
 export interface ChecklistRow {
   ok: boolean;
   text: string;
+  /** The page where the open item is finished; the bank fee is entered on this page. */
+  href?: string;
 }
 
 /** «Tekshiruv»: one line per thing a person must finish before the month is closed. */
 export function checklistRows(v: MonthCloseView, t: Translate = interpolate): ChecklistRow[] {
   const entered = v.bankAccounts.filter((a) => a.amount !== null).length;
+  const to = monthLinks(v.month);
   return [
     {
       ok: v.checklist.bankFeesEntered,
@@ -48,10 +64,12 @@ export function checklistRows(v: MonthCloseView, t: Translate = interpolate): Ch
     {
       ok: v.checklist.salariesPaid,
       text: t("Oyliklar: {total} tadan {paid} tasi berilgan", { total: v.salaries.total, paid: v.salaries.paid }),
+      href: to.salary,
     },
     {
       ok: v.checklist.ratesComplete,
       text: v.checklist.ratesComplete ? t("Stavkalar to'liq") : t("Stavkalar to'liq emas — Sozlamalar → Soliq va komissiyalar"),
+      href: to.tax,
     },
   ];
 }
