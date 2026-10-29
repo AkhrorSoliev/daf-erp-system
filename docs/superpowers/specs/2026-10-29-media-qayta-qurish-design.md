@@ -47,8 +47,8 @@ Bitta sahifa `/media`, ikki ustun:
 - **Chapda daraxt** (doim ko'rinadi): daraja → unit → bo'lim → seanslar; unit
   oxirida O'tish sinovi va Yakuniy sinov. Bo'lim yonida kamchilik sariq matnda
   («4 ovoz yo'q», «2 rasm yo'q») — qamrov raqamlari endi shu yerda, alohida
-  jadval yo'q. Daraxt pastida «Obrazlar va fayllar» havolasi (`/media/assets`,
-  o'zgarmaydi).
+  jadval yo'q. Daraxt pastida ikki havola: «Jang savollari» (`/media/jang`) va «Obrazlar va
+  fayllar» (`/media/assets`) — ikkala sahifa o'zgarmaydi.
 - **O'ngda mazmun:**
   - bo'lim tanlansa — **bo'lim materiali**: so'zlar (rasm bilan), gaplar,
     iboralar, dialoglar (qatorlari, savollari, to'liq audiosi);
@@ -87,7 +87,7 @@ Bitta sahifa `/media`, ikki ustun:
   chizig'i (`<input type="range">`) · tezlik 1× / 0,8× (`SuhbatPleyer` bilan bir
   xil ikki qiymat) · «Ketma-ket» rejimi.
 - **Navbat** = joriy mazmundagi ovozli elementlar, ekrandagi tartibda (bo'limda:
-  so'zlar → gaplar → iboralar → dialog qatorlari → to'liq dialog; seansda:
+  so'zlar → gaplar → iboralar → har dialog: to'liq audiosi, keyin qatorlari; seansda:
   savollar tartibida). Mazmun almashsa navbat ham almashadi, chalayotgan audio
   to'xtaydi.
 - «Ketma-ket» yoqilganda audio tugashi bilan keyingisi boshlanadi — butun
@@ -106,7 +106,10 @@ Bitta sahifa `/media`, ikki ustun:
 ### 3.4 «O'quvchi kabi o'tib ko'rish»
 
 - O'quvchi ilovasining seans ekrani (`seans-ekrani.tsx`) ochiladi — xuddi
-  o'quvchi ko'radigan ko'rinish, `.lumio` uslubi bilan, dialog/sahifa ichida.
+  o'quvchi ko'radigan ko'rinish, `.lumio` uslubi bilan. Radix `Dialog` EMAS:
+  uning `transform`i seans ekranining `fixed` pastki panelini dialog ichiga
+  qamab qo'yadi. O'rniga butun ekranni yopadigan oddiy qatlam
+  (`fixed inset-0 z-50`), `Esc` va «×» bilan yopiladi.
 - Savollar **yangi o'quvchiga** tanlangandek: hech qanday o'tgan urinish yo'q.
 - **Hech narsa yozilmaydi:** `DafAttempt`, `DafSession`, `DafLessonProgress`,
   `DafLexemeState`, ball, reyting, faollik — hech biri. Bu talab testda
@@ -130,7 +133,7 @@ Bitta sahifa `/media`, ikki ustun:
 ### 3.5 Ma'lumot (server)
 
 - **Daraxt:** `GET /daf/media/coverage` kengaytiriladi — har bo'limga
-  `lessons: { id, kind, order }[]`, har unitga `bridge` / `unitTest` seans id'lari.
+  `lessons: { id, kind, order }[]`, bo'limsiz seanslar (yakuniy sinov) unitning `unitLessons` ro'yxatida.
   Bitta so'rov daraxtni ham, kamchilik belgilarini ham beradi.
 - **Bo'lim materiali:** `GET /daf/media/sections/:id/inhalt` — o'zgarishsiz.
 - **Seans savollari:** yangi `GET /daf/media/lessons/:id/fragen` — seans turidan
@@ -142,6 +145,15 @@ Bitta sahifa `/media`, ikki ustun:
   chiqishi mumkin» degan savolga javob, shuning uchun manba bitta bo'lishi shart.
 - `GET /daf/media/sections/:id/fragen` endi chaqiruvchisiz qolsa — o'chiriladi
   (servis bilan birga).
+
+### 3.6 Tillar
+
+/media sahifalari `main`da allaqachon 5 tilga tarjima qilingan (ADR-0102,
+`client/CLAUDE.md` «Languages»). Yangi sahifa ham shunday: har matn `t("…")` /
+`msg("…")` orqali, yangi fayllar `i18n-coverage.test.ts`dagi `STRICT_FILES`ga
+qo'shiladi, o'chirilgan fayllar undan olinadi, ru/de/en lug'atlariga tarjima
+yoziladi. Kontent (nemischa so'z, o'zbekcha tarjima, bo'lim nomi) — ma'lumot,
+`t()`dan o'tmaydi.
 
 ## 4. Olib tashlanadi
 
@@ -157,7 +169,6 @@ Bitta sahifa `/media`, ikki ustun:
 - Kontentni tahrirlash, audio qayta yaratish, «xato» belgisini qo'yish.
 - O'quvchi ilovasi playerlari.
 - Obrazlar sahifasini qayta qurish.
-- Tarjima (i18n) — sahifa hozir ham faqat o'zbekcha.
 
 ## 6. Sinash
 
