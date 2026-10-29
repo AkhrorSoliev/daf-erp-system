@@ -215,8 +215,8 @@ function DialogBlock({
  * Bitta bo'limning to'liq materiali — bo'lim tanlanganda /media'ning o'ng
  * panelida ochiladi. Har bir so'z/gap/ibora/dialog qatorini ko'rsatadi;
  * ovozlar umumiy playerda chaladi, navbat ekrandagi tartibda quriladi.
- * So'rov kaliti (`["media-inhalt", sectionId]`) `section-detail-client.tsx`
- * bilan bir xil — ikkalasi bitta keshdan ta'minlanadi.
+ * So'rov kaliti (`["media-inhalt", sectionId]`) umumiy keshda turadi:
+ * bo'lim va seans panellari bir xil ma'lumotni qayta yuklamaydi.
  */
 export function MediaInhaltPanel({ sectionId }: { sectionId: number }) {
   const t = useT();
