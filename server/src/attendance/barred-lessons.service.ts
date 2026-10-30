@@ -22,7 +22,13 @@ import {
   admissionKey,
 } from '../billing/lesson-admission.service';
 import { streakWindowStart } from './streak-window';
-import { barredLessonDays, barredStreak } from './barred-lessons';
+import { SettingsService } from '../settings/settings.service';
+import {
+  barredLessonDays,
+  barredStreak,
+  effectiveBarredFlags,
+  type BarredFlags,
+} from './barred-lessons';
 
 export interface EnrollmentBarred {
   enrollmentId: string;
@@ -57,7 +63,29 @@ export class BarredLessonsService {
   constructor(
     private prisma: PrismaService,
     private admission: LessonAdmissionService,
+    private settings: SettingsService,
   ) {}
+
+  /** CEO katakchalari, talablari hisobga olingan holda (`effectiveBarredFlags`). */
+  async flags(companyId: number): Promise<BarredFlags> {
+    const keys = [
+      'mark',
+      'nudge',
+      'warn',
+      'autoPause',
+      'pauseNotice',
+      'restoreDialog',
+      'logOnly',
+    ] as const;
+    const values = await Promise.all(
+      keys.map((k) => this.settings.get(companyId, `absence.barred.${k}`)),
+    );
+    return effectiveBarredFlags(
+      Object.fromEntries(
+        keys.map((k, i) => [k, values[i]]),
+      ) as unknown as BarredFlags,
+    );
+  }
 
   async forEnrollments(
     enrollmentIds: string[],

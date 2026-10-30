@@ -1,4 +1,9 @@
-import { barredLessonDays, barredStreak } from './barred-lessons';
+import {
+  barredLessonDays,
+  barredStreak,
+  effectiveBarredFlags,
+  type BarredFlags,
+} from './barred-lessons';
 
 const base = {
   coveredDates: ['2026-10-05', '2026-10-07', '2026-10-09', '2026-10-12'],
@@ -73,5 +78,46 @@ describe('barredStreak', () => {
       ['2026-10-12', 'MARKED'],
     ]);
     expect(barredStreak(held, rows, new Set(['2026-10-09']))).toBe(0);
+  });
+});
+
+describe('effectiveBarredFlags', () => {
+  const all: BarredFlags = {
+    mark: true,
+    nudge: true,
+    warn: true,
+    autoPause: true,
+    pauseNotice: true,
+    restoreDialog: true,
+    logOnly: false,
+  };
+
+  it('keeps everything when the requirements hold', () => {
+    expect(effectiveBarredFlags(all)).toEqual(all);
+  });
+
+  it('turns the dependents off when mark is off', () => {
+    expect(effectiveBarredFlags({ ...all, mark: false })).toEqual({
+      mark: false,
+      nudge: false,
+      warn: false,
+      autoPause: false,
+      pauseNotice: false,
+      restoreDialog: false,
+      logOnly: false,
+    });
+  });
+
+  it('turns the pause notice off without auto-pause, nothing else', () => {
+    const out = effectiveBarredFlags({ ...all, autoPause: false });
+    expect(out.pauseNotice).toBe(false);
+    expect(out.nudge).toBe(true);
+    expect(out.restoreDialog).toBe(true);
+  });
+
+  it('log-only stands on its own', () => {
+    expect(
+      effectiveBarredFlags({ ...all, mark: false, logOnly: true }).logOnly,
+    ).toBe(true);
   });
 });

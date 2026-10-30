@@ -8,6 +8,8 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { AUTO_PAUSE_REASON_PREFIX } from '../absence-pause/absence-pause.constants';
 import { AbsencePauseSettingService } from '../absence-pause/absence-pause-setting.service';
+import { BarredLessonsService } from '../attendance/barred-lessons.service';
+import { SettingsService } from '../settings/settings.service';
 import {
   tashkentDateStr,
   utcMidnightFromDateStr,
@@ -110,6 +112,14 @@ describe('OutreachService', () => {
         AbsenceStreakService,
         { provide: PrismaService, useValue: prisma },
         { provide: AbsencePauseSettingService, useValue: pauseSettings },
+        {
+          provide: BarredLessonsService,
+          useValue: { forEnrollments: jest.fn() },
+        },
+        {
+          provide: SettingsService,
+          useValue: { get: jest.fn().mockResolvedValue(false) },
+        },
       ],
     }).compile();
 

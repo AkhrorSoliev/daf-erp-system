@@ -120,3 +120,122 @@ describe('AbsencePauseNotifyService — what the messages claim', () => {
     );
   });
 });
+
+describe('AbsencePauseNotifyService — barred lessons: soft, no sums (ADR-0142)', () => {
+  const STUDENT_CHAT = '123';
+  const STAFF_CHAT = '777';
+  const base: PauseTarget = {
+    enrollmentId: 'e-10001',
+    studentId: 10001,
+    streak: 1,
+    companyId: 1001,
+    student: {
+      id: 10001,
+      firstName: 'Ali',
+      lastName: 'Valiyev',
+      telegramChatId: STUDENT_CHAT,
+    },
+    group: {
+      id: 'g-1',
+      name: '#001',
+      branchId: 1,
+      branchPhone: '905351099',
+      teachers: [{ teacherId: 500 }],
+    },
+  };
+  const LESSON_DAY = new Date('2026-10-23T00:00:00.000Z');
+  const SAME_EVENING = new Date('2026-10-23T15:30:00.000Z');
+
+  function make() {
+    const sendMessage = jest.fn().mockResolvedValue({});
+    const prisma = {
+      user: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([{ id: 20001, telegramChatId: STAFF_CHAT }]),
+      },
+    };
+    const service = new AbsencePauseNotifyService(
+      prisma as never,
+      { create: jest.fn().mockResolvedValue({ id: 1 }) } as never,
+      { sendToUser: jest.fn() } as never,
+      { sendToUser: jest.fn().mockResolvedValue(undefined) } as never,
+      { getBot: () => ({ telegram: { sendMessage } }) } as never,
+    );
+    return { service, sendMessage };
+  }
+
+  const textsTo = (sendMessage: jest.Mock, chat: string) =>
+    sendMessage.mock.calls
+      .filter(([to]) => to === chat)
+      .map(([, text]) => text as string);
+
+  const live = { ...base, barred: { live: true } };
+
+  it('stage 1 greets by name, names the reason and the group, and asks for no money', async () => {
+    const { service, sendMessage } = make();
+    await service.nudgeStudent(live, LESSON_DAY, SAME_EVENING);
+    const [text] = textsTo(sendMessage, STUDENT_CHAT);
+    expect(text).toContain('Salom, Ali!');
+    expect(text).toContain("to'lov hali ko'rinmayapti");
+    expect(text).toContain('#001');
+    expect(text).toContain('+998 90 535 10 99');
+    expect(text).not.toMatch(/so'm/);
+    expect(text).not.toMatch(/\d{4,}/);
+    expect(text).not.toMatch(/qo'yilmadingiz/);
+  });
+
+  it('stage 1 names the date when sent after the lesson day', async () => {
+    const { service, sendMessage } = make();
+    await service.nudgeStudent(
+      live,
+      LESSON_DAY,
+      new Date('2026-10-24T02:30:00.000Z'),
+    );
+    const [text] = textsTo(sendMessage, STUDENT_CHAT);
+    expect(text).toContain('23.10.2026');
+    expect(text).not.toMatch(/\bbugun/i);
+  });
+
+  it('stage 2 says the seat is kept and how many lessons are left', async () => {
+    const { service, sendMessage } = make();
+    await service.warnStudent({ ...live, streak: 2 }, 1);
+    const [text] = textsTo(sendMessage, STUDENT_CHAT);
+    expect(text).toContain('Ketma-ket 2 ta darsda');
+    expect(text).toContain('Yana bir dars');
+    expect(text).not.toMatch(/so'm/);
+    // staff are told too
+    expect(textsTo(sendMessage, STAFF_CHAT)).toHaveLength(1);
+  });
+
+  it('stage 3 tells the seat is paused, the attended lesson stays, no amounts', async () => {
+    const { service, sendMessage } = make();
+    await service.announcePause({ ...live, streak: 3 });
+    const [text] = textsTo(sendMessage, STUDENT_CHAT);
+    expect(text).toContain('vaqtincha to');
+    expect(text).toContain('Kelgan darsingiz hisobingizda qoladi');
+    expect(text).not.toMatch(/so'm/);
+    expect(textsTo(sendMessage, STAFF_CHAT)).toHaveLength(1);
+  });
+
+  it('a test run (live: false) sends nothing to the student, and no stage 1/2 staff copy', async () => {
+    const { service, sendMessage } = make();
+    const dry = { ...base, barred: { live: false } };
+    expect(await service.nudgeStudent(dry, LESSON_DAY, SAME_EVENING)).toBe(
+      false,
+    );
+    expect(await service.warnStudent({ ...dry, streak: 2 }, 1)).toBe(false);
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('a test run still tells staff about a real pause, and not the student', async () => {
+    const { service, sendMessage } = make();
+    await service.announcePause({
+      ...base,
+      streak: 3,
+      barred: { live: false },
+    });
+    expect(textsTo(sendMessage, STUDENT_CHAT)).toHaveLength(0);
+    expect(textsTo(sendMessage, STAFF_CHAT)).toHaveLength(1);
+  });
+});

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BillingModule } from '../billing/billing.module';
+import { SettingsModule } from '../settings/settings.module';
 import { BarredLessonsService } from './barred-lessons.service';
 
 /**
@@ -8,7 +9,7 @@ import { BarredLessonsService } from './barred-lessons.service';
  * tayanadi. Alohida modul sikl yaratmasdan hammasiga ulanish imkonini beradi.
  */
 @Module({
-  imports: [BillingModule],
+  imports: [BillingModule, SettingsModule],
   providers: [BarredLessonsService],
   exports: [BarredLessonsService],
 })

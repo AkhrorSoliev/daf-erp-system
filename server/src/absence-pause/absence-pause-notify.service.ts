@@ -33,6 +33,13 @@ export interface PauseTarget {
     branchPhone: string | null;
     teachers: { teacherId: number }[];
   };
+  /**
+   * Bor bo'lsa, ketma-ketlik to'lov yo'qligi uchun davomat olib bo'lmagan
+   * kunlardan iborat (ADR-0142) va xabarlar yumshoq to'lov formatida: sabab
+   * aytiladi, SUMMA aytilmaydi. `live: false` — sinov: matn faqat logga
+   * yoziladi, o'quvchiga ham, xodimlarga ham ketmaydi.
+   */
+  barred?: { live: boolean };
 }
 
 /**
@@ -83,6 +90,19 @@ export class AbsencePauseNotifyService {
       tashkentDateStr(absenceDate) === tashkentDateStr(now)
         ? 'Bugun darsda'
         : `${formatTashkentDate(absenceDate)} dagi darsda`;
+    if (target.barred) {
+      const first = target.student.firstName;
+      const about =
+        tashkentDateStr(absenceDate) === tashkentDateStr(now)
+          ? 'Bugungi darsda'
+          : `${formatTashkentDate(absenceDate)} dagi darsda`;
+      return this.sendBarred(
+        target,
+        `👋 <b>Salom, ${first}!</b>\n\n` +
+          `${about} davomatingizni belgilay olmadik: ${target.group.name} guruhi uchun to'lov hali ko'rinmayapti. ` +
+          `Sizni darsda ko'rishni xohlaymiz. Qulay payt qo'ng'iroq qiling, birga hal qilamiz.`,
+      );
+    }
     const text =
       `👋 <b>${lesson} ko'rinmadingiz</b>\n\n` +
       `${target.group.name} guruhidagi darsingizga kelmadingiz. Hammasi joyidami?\n\n` +
@@ -100,6 +120,27 @@ export class AbsencePauseNotifyService {
     target: PauseTarget,
     remainingLessons: number,
   ): Promise<boolean> {
+    if (target.barred) {
+      const more =
+        remainingLessons === 1
+          ? 'Yana bir dars'
+          : `Yana ${remainingLessons} ta dars`;
+      const sent = await this.sendBarred(
+        target,
+        `🤝 <b>Sizni kutyapmiz</b>\n\n` +
+          `Ketma-ket ${target.streak} ta darsda davomatingizni belgilay olmadik: ${target.group.name} guruhi uchun to'lov hali ko'rinmayapti. ` +
+          `Joyingiz hozircha saqlanib turibdi. ${more} o'tsa, joyingizni vaqtincha to'xtatishga to'g'ri keladi. Qo'ng'iroq qilsangiz, yordam beramiz.`,
+      );
+      if (target.barred.live) {
+        await this.notifyStaff(
+          target,
+          NotificationType.ABSENCE_WARNING,
+          "Darsga qo'yilmaslik ogohlantirishi",
+          `${target.student.firstName} ${target.student.lastName} — ${target.group.name}: ketma-ket ${target.streak} ta darsda to'lov yo'qligi uchun davomat olib bo'lmadi. Pauzagacha ${remainingLessons} ta.`,
+        );
+      }
+      return sent;
+    }
     const text =
       `😕 <b>Ketma-ket ${target.streak} ta darsni qoldirdingiz</b>\n\n` +
       `${target.group.name} guruhida ketma-ket <b>${target.streak} ta</b> darsga kelmadingiz.\n\n` +
@@ -121,6 +162,23 @@ export class AbsencePauseNotifyService {
 
   /** 3-bosqich — pauza bo'lgandan keyin. O'quvchiga, filial adminlariga va ustozga. */
   async announcePause(target: PauseTarget): Promise<void> {
+    if (target.barred) {
+      await this.sendBarred(
+        target,
+        `⏸️ <b>Joyingiz vaqtincha to'xtatildi</b>\n\n` +
+          `Ketma-ket ${target.streak} ta darsda to'lov yo'qligi sababli davomatingizni belgilay olmadik, shuning uchun joyingizni vaqtincha bo'shatdik. ` +
+          `Kelgan darsingiz hisobingizda qoladi, qolgan darslar hisobdan chiqarildi. Qaytmoqchi bo'lsangiz, qo'ng'iroq qiling, birga hal qilamiz.`,
+      );
+      // Pauza haqiqatan bo'ldi: xodimlar `live` dan qat'i nazar xabar oladi
+      // (xabarlarni sinash pauzani yashirmaydi).
+      await this.notifyStaff(
+        target,
+        NotificationType.ENROLLMENT_AUTO_PAUSED,
+        'Avtomatik pauza',
+        `${target.student.firstName} ${target.student.lastName} — ${target.group.name}: ketma-ket ${target.streak} ta darsda to'lov yo'qligi uchun davomat olib bo'lmadi, pauzaga o'tkazildi.`,
+      );
+      return;
+    }
     const text =
       `⏸️ <b>Vaqtincha to'xtatib turdik</b>\n\n` +
       `${target.group.name} guruhida ketma-ket <b>${target.streak} ta</b> darsga kelmadingiz, ` +
@@ -208,6 +266,26 @@ export class AbsencePauseNotifyService {
         relatedEntityId: String(target.studentId),
       });
     }
+  }
+
+  /**
+   * To'lov formatidagi xabar: `live` bo'lmasa (sinov) faqat logga yoziladi.
+   * Qaytaradi: o'quvchiga haqiqatan yetib bordimi.
+   */
+  private async sendBarred(
+    target: PauseTarget,
+    text: string,
+  ): Promise<boolean> {
+    if (!target.barred?.live) {
+      this.logger.log(
+        `[sinov] #${target.studentId} uchun xabar yuborilmadi: ${text.replace(/\n+/g, ' ')}`,
+      );
+      return false;
+    }
+    return this.sendToStudent(
+      target.student.telegramChatId,
+      text + phoneLine(target.group.branchPhone),
+    );
   }
 
   private async sendToStudent(

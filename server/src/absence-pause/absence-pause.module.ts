@@ -4,6 +4,7 @@ import { AbsencePauseSettingModule } from './absence-pause-setting.module';
 import { AbsencePauseNotifyService } from './absence-pause-notify.service';
 import { AbsenceAutoPauseCronService } from './absence-auto-pause.cron.service';
 import { OutreachModule } from '../outreach/outreach.module';
+import { BarredLessonsModule } from '../attendance/barred-lessons.module';
 import { StudentsModule } from '../students/students.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { TelegramModule } from '../telegram/telegram.module';
@@ -12,6 +13,7 @@ import { TelegramModule } from '../telegram/telegram.module';
   imports: [
     AbsencePauseSettingModule,
     OutreachModule,
+    BarredLessonsModule,
     StudentsModule,
     NotificationsModule,
     TelegramModule,

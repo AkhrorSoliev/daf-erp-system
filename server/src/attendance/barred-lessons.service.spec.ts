@@ -21,7 +21,12 @@ describe('BarredLessonsService', () => {
     plannedAbsence: { findMany: jest.fn() },
   };
   const admission = { forLessons: jest.fn() };
-  const service = new BarredLessonsService(prisma as never, admission as never);
+  const settings = { get: jest.fn() };
+  const service = new BarredLessonsService(
+    prisma as never,
+    admission as never,
+    settings as never,
+  );
 
   const OCT = ['2026-10-02', '2026-10-05', '2026-10-07', '2026-10-09'];
 
@@ -126,6 +131,16 @@ describe('BarredLessonsService', () => {
     const out = await service.forEnrollments(['e1'], { today: TODAY });
     expect(admission.forLessons).toHaveBeenCalledWith([]);
     expect(out.size).toBe(0);
+  });
+
+  it('reads the seven switches and applies their requirements', async () => {
+    settings.get.mockImplementation((_c: number, key: string) =>
+      Promise.resolve(key !== 'absence.barred.mark'),
+    );
+    const flags = await service.flags(1001);
+    expect(flags.mark).toBe(false);
+    expect(flags.nudge).toBe(false);
+    expect(flags.logOnly).toBe(true);
   });
 
   it('reads nothing for an empty list', async () => {
