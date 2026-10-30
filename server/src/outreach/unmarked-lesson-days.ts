@@ -1,3 +1,5 @@
+import { barredLessonDays } from '../attendance/barred-lessons';
+
 /**
  * «Darsga qo'yilmayotganlar» tabi: o'quvchi uchun hisoblangan, o'tib ketgan va
  * ustoz davomat olgan, lekin o'quvchining o'ziga hech qanday belgi
@@ -26,14 +28,5 @@ export interface UnmarkedLessonDaysInput {
 }
 
 export function unmarkedLessonDays(input: UnmarkedLessonDaysInput): string[] {
-  const frozen = new Set(input.frozenOutDates);
-  const days = new Set<string>();
-  for (const d of input.coveredDates) {
-    if (d < input.from || d >= input.to) continue;
-    if (frozen.has(d)) continue;
-    if (!input.heldDays.has(d)) continue;
-    if (input.markedDays.has(d)) continue;
-    days.add(d);
-  }
-  return [...days].sort();
+  return barredLessonDays({ ...input, includeFrozenOut: false });
 }
