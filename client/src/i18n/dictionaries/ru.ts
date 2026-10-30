@@ -5549,6 +5549,10 @@ const ru: Dictionary = {
   "{days} kun oldin": "{days} дн. назад",
   "{count} ta dars": "{count} ур.",
   "Bog'lanilmagan": "Не связывались",
+  "Shartnoma {no}": "Договор, п. {no}",
+  "Shartnoma {no}-band": "Договор, пункт {no}",
+  "Shartnomaning aynan shu matni imzolanadi.": "Именно этот текст договора подписывает клиент.",
+  "Matnni yuklab bo'lmadi. Keyinroq urinib ko'ring.": "Не удалось загрузить текст. Попробуйте позже.",
 };
 
 export default ru;

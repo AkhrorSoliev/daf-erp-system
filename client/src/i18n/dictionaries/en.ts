@@ -5549,6 +5549,10 @@ const en: Dictionary = {
   "{days} kun oldin": "{days} days ago",
   "{count} ta dars": "{count} lessons",
   "Bog'lanilmagan": "Not contacted",
+  "Shartnoma {no}": "Contract clause {no}",
+  "Shartnoma {no}-band": "Contract clause {no}",
+  "Shartnomaning aynan shu matni imzolanadi.": "This exact contract text is what the customer signs.",
+  "Matnni yuklab bo'lmadi. Keyinroq urinib ko'ring.": "Could not load the text. Please try again later.",
 };
 
 export default en;
