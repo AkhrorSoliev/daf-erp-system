@@ -29,7 +29,9 @@ Guruhning o'tgan kuni shu o'quvchi uchun «darsga qo'yilmagan dars» deyiladi, a
 
 ### 2.2 Profil → «Darslar» tabi
 
-Har darsga qo'yilmagan kun **binafsha** nuqta bilan chiqadi, nomi «To'lov uchun qo'yilmadi». Nuqta ustiga bossa: sana va sabab («To'lov qilinmagani uchun darsga qo'yilmadi»). Pauzada qaytarilgan kun uchun qo'shimcha: «Puli qaytarilgan». Belgilar qatoriga binafsha nuqta qo'shiladi. Hisob «N/M keldi» ga ta'sir qilmaydi (kelmagan, lekin «kelmadi» ham emas).
+Davomat olib bo'lmagan har kun **binafsha** nuqta bilan chiqadi, belgilar qatorida nomi «To'lov yo'q». Nuqta ustiga bossa: sana, yumshoq sabab «To'lov yo'qligi uchun davomat olib bo'lmadi» va «Shartnoma 3.2» havolasi. Pauzada hisobdan chiqarilgan kun uchun qo'shimcha: «Hisobdan chiqarilgan» (halqali nuqta). «Qaytarilgan» so'zi ishlatilmaydi: u o'quvchini qaytarish bilan adashtiradi. Hisob «N/M keldi» ga ta'sir qilmaydi (kelmagan, lekin «kelmadi» ham emas).
+
+Til qoidasi (CEO, 30.10): «darsga qo'yilmadi» deyilmaydi. Ekranda va xabarda: «to'lov yo'qligi uchun davomat olib bo'lmadi» / «ketma-ket 3 ta darsda davomatni belgilab bo'lmadi».
 
 ### 2.3 Ketma-ket sanash va xabarlar
 
@@ -41,13 +43,13 @@ Xabarlar mavjud 3 bosqichda, mavjud vaqtlarda (kechki 20:30 va ertalabki 07:30) 
 2. Ikkinchi: ogohlantirish, «yana 1 ta dars qolsa joyingiz vaqtincha to'xtatiladi».
 3. Uchinchi: pauza xabari.
 
-Format davomat «Kelmadi» xabaridan farq qiladi: sabab (to'lov), darsga qo'yilishi uchun kerakli eng kam summa (`shortfall`) va filial raqami aytiladi. Matnlar artifactda.
+Format davomat «Kelmadi» xabaridan farq qiladi: ohang yumshoq, sabab (to'lov hali ko'rinmayapti) aytiladi, filial raqami beriladi. **Xabarda summa yo'q**: o'quvchi summani administratordan so'raydi. Matnlar artifactda.
 
 ### 2.4 3-darsda: pauza va pul
 
 3 ta ketma-ket dars bo'lsa, ertalabki 07:30 yurishida:
 
-1. O'quvchi pauzaga tushadi: mavjud `pauseForAbsence` (student-level `FROZEN`, tizim aktori). Joyi guruhdan bo'shaydi. Sabab matni: «Avtomatik pauza: 3 ta ketma-ket dars to'lov qilinmagani uchun qo'yilmadi».
+1. O'quvchi pauzaga tushadi: mavjud `pauseForAbsence` (student-level `FROZEN`, tizim aktori). Joyi guruhdan bo'shaydi. Sabab matni: «Avtomatik pauza: 3 ta ketma-ket darsda to'lov yo'qligi uchun davomat olib bo'lmadi».
 2. Darsga qo'yilmagan kunlarning puli bo'shatiladi (`releaseBarredLessons`, yangi). Kelgan (davomat qatori bor) darslar puli qoladi — bu o'quvchining haqiqiy qarzi. Qolgan oyning o'tmagan darslari pulini odatdagidek qaytaradi (`CENTER_INITIATIVE`).
 3. 6.2 va 3.5 qoidalari bu yo'lda ishlamaydi: markaz o'quvchini darsga qo'ymagan, shuning uchun kalendar ulushi va sinov darsi emas, faktik kelgan darslar hisoblanadi. #10918 shu qoida bilan hisoblangan (1 dars = 34 615).
 4. Hech kelmagan bo'lsa qarz 0 bo'ladi.
@@ -63,7 +65,7 @@ Pauzadagi o'quvchi bilan telefonda bog'langach admin ikki yo'ldan birini tanlayd
 
 ### 2.6 Qaytishda darslarni belgilash
 
-O'quvchi qaytganda («Faol» qilish yoki «Guruhga qo'shish») va unda bo'shatilgan darsga qo'yilmagan kunlar bo'lsa, oyna ochiladi: «Bu kunlarda o'quvchi darsga keldimi?» — kunlar ro'yxati, har biriga katak.
+O'quvchi qaytganda («Faol» qilish yoki «Guruhga qo'shish») va unda pauzada hisobdan chiqarilgan kunlar bo'lsa, oyna ochiladi: «O'quvchi qaysi darslarga kelgan edi?». Matn: «Pauza paytida N ta dars hisobdan chiqarilgan edi, chunki o'sha kunlarda to'lov yo'qligi uchun davomat olib bo'lmagan. Kelgan kunlarni belgilang: ular qarzga qaytadan qo'shiladi.» Kunlar ro'yxati, har biriga katak (belgilanmagan kun: «hisobda yo'q», belgilangan: «+narx qarzga»).
 
 - Belgilangan kun: puli qayta yoziladi (dars narxi, chegirma bilan), kun `frozenOutDates` dan chiqadi, o'quvchiga shu kun uchun «Keldi» davomat qatori yoziladi (ustoz haqi shundan hisoblanadi, "Bo'ldi" yo'li kabi), tarixga yoziladi.
 - Belgilanmagan kun: bo'shatilgan holda qoladi.
@@ -76,7 +78,28 @@ Bir martalik skript (`dry-run` standart): 2.1–2.3 qoidasiga mos kelgan o'quvch
 
 ### 2.8 Yoqish
 
-CEO sozlamasi `absence.barredLessonsEnabled` (standart o'chiq), uch bosqichli: 1) faqat tab rangi va hisobot, 2) xabarlar (avval `log` rejimi: faqat yoziladi), 3) avto-pauza. Mavjud `AbsencePauseSetting.enabled` ham yoqilgan bo'lishi kerak. Pauza hozir prodda o'chiq, shuning uchun yangi qoida o'z-o'zidan yoqilmaydi.
+CEO sozlamasi: bitta tanlov (radio) emas, **mustaqil katakchalar** (checkbox), chunki qismlar alohida yoqiladi. Hammasi standart o'chiq, faqat «Profilda belgi va hisobot» va «Xabarlarni faqat logga yozish (sinov)» yoqilgan holda boshlanadi.
+
+| Katak | Nima qiladi | Talab qiladi |
+|---|---|---|
+| `mark` Profilda belgi va hisobot | binafsha nuqta, «Darsga qo'yilmayotganlar» tabi, eski holatlar hisoboti | — |
+| `nudge` 1-dars xabari | birinchi yumshoq eslatma | `mark` |
+| `warn` 2-dars xabari | ikkinchi eslatma | `mark` |
+| `autoPause` Avto-pauza | 3 ta ketma-ket darsdan keyin pauza va pul | `mark` |
+| `pauseNotice` 3-dars xabari | pauza haqida xabar | `autoPause` |
+| `restoreDialog` Qaytishda kunlarni so'rash | qaytish oynasi | `mark` |
+| `logOnly` Xabarlarni faqat logga yozish | xabar tayyorlanadi, yuborilmaydi | — |
+
+Talab qilinadigan katak o'chsa, unga tayanganlar ham o'chadi; talab bajarilmaguncha katak bosilmaydi va nima kerakligi yoziladi. Sonlar (3 ta dars, ogohlantirish, kunlik chegara) mavjud «Avtomatik pauza» sozlamasidan olinadi. Umumiy `AbsencePauseSetting.enabled` ham yoqilgan bo'lishi kerak; u hozir prodda o'chiq, shuning uchun yangi qoida o'z-o'zidan yoqilmaydi.
+
+### 2.9 Shartnoma bandi doim havola
+
+Tizimda shartnomaning biror bandi tilga olingan har joyda (tab belgisi, pauza sababi, pul hisobi, qaytish oynasi, sozlama) band raqami **havola** bo'ladi: «Shartnoma 3.2». Admin bossa, bandning to'liq matni oynada ochiladi va u butun qoidani o'qib chiqadi.
+
+- Bitta umumiy komponent `ContractClauseLink` va bitta matn manbasi `client/src/lib/contract-clauses.ts` (band raqami, sarlavha, to'liq matn). Havola qo'lda yozilmaydi.
+- Bandlar: 3.2 (darsga kirish), 3.5 (sinov darsi), 6.2 (chiqarish va pul), 5.1 va 3.7 (agar tilga olinsa).
+- Matn manbasi: **ochiq masala**. Repodagi docx eskirgan; yakuniy matnni CEO beradi, shundan keyin fayl to'ldiriladi.
+- Havola faqat admin ekranlarida. O'quvchiga boradigan xabarda band raqami yo'q (yumshoq ohang).
 
 ## 3. Texnik reja (qisqa)
 
