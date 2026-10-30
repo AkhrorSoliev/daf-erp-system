@@ -96,9 +96,10 @@ Talab qilinadigan katak o'chsa, unga tayanganlar ham o'chadi; talab bajarilmagun
 
 Tizimda shartnomaning biror bandi tilga olingan har joyda (tab belgisi, pauza sababi, pul hisobi, qaytish oynasi, sozlama) band raqami **havola** bo'ladi: «Shartnoma 3.2». Admin bossa, bandning to'liq matni oynada ochiladi va u butun qoidani o'qib chiqadi.
 
-- Bitta umumiy komponent `ContractClauseLink` va bitta matn manbasi `client/src/lib/contract-clauses.ts` (band raqami, sarlavha, to'liq matn). Havola qo'lda yozilmaydi.
+- Bitta umumiy komponent `ContractClauseLink`. Havola qo'lda yozilmaydi.
+- **Matn manbasi — tizimdagi eng so'nggi shartnoma:** `server/src/contract-documents/pdf/contract-template-v1.ts` (`BODY_SECTIONS`, ADR-0075). Tizim shartnomani aynan shundan tuzadi, shuning uchun havola ko'rsatgan matn va o'quvchi imzolagan matn bir xil bo'ladi. Ikkinchi nusxa yozilmaydi: server `GET /contract-documents/clauses?nos=3.2,6.2` shu massivdan «3.2.» kabi boshlanishi bo'yicha bandni ajratib beradi (`@Can` — admin ekranlari qaysi capability bilan ochilsa shu, o'qish).
 - Bandlar: 3.2 (darsga kirish), 3.5 (sinov darsi), 6.2 (chiqarish va pul), 5.1 va 3.7 (agar tilga olinsa).
-- Matn manbasi: **ochiq masala**. Repodagi docx eskirgan; yakuniy matnni CEO beradi, shundan keyin fayl to'ldiriladi.
+- Bandlar: 3.2, 3.5, 3.7, 5.1, 6.2, 6.3. Repodagi eski docx emas, yuqoridagi manba ishlatiladi.
 - Havola faqat admin ekranlarida. O'quvchiga boradigan xabarda band raqami yo'q (yumshoq ohang).
 
 ## 3. Texnik reja (qisqa)
@@ -114,6 +115,12 @@ Tizimda shartnomaning biror bandi tilga olingan har joyda (tab belgisi, pauza sa
 - ADR-0142 shu ish bilan bir PR'da.
 
 ## 4. Xavflar va ochiq joylar
+
+- **Shartnoma bilan ziddiyat (CEO qarori kerak).** Eng so'nggi shartnoma matni (`contract-template-v1.ts`) bu holatni o'zi tartibga soladi, va 2.4/2.6 dagi pul qoidasidan farq qiladi:
+  - **3.2:** to'lov bo'lmagani uchun qatnashilmagan darslar «Buyurtmachi aybi bilan qoldirilgan» hisoblanadi, **qayta tiklanmaydi, oylik to'lov qayta hisoblanmaydi, qarz bekor qilinmaydi**.
+  - **6.3:** 3.2 bo'yicha darsga qo'yilmagan o'quvchi shundan keyin **14 kalendar kun** ichida qaytmasa, shartnoma xizmat to'xtagan kundan bekor qilingan hisoblanadi va 6.2 shu sana bo'yicha qo'llanadi.
+  - Spec esa pauza paytidayoq (3-darsdan keyin) belgilab bo'lmagan kunlarni hisobdan chiqaradi va qaytganda faqat admin belgilagan kunlarni qarzga qo'shadi. Shartnomaga ko'ra: pauzada pul 14 kun turadi; qaytsa, belgilab bo'lmagan kunlar ham to'lanadi; qaytmasa, 14-kuni to'xtagan sana bo'yicha 6.2 qo'llanib, o'sha sanadan keyingi kunlar puli chiqadi (#10918 natijasi bilan bir xil).
+  - Variantlar: (A) shartnomaga moslash: 14 kunlik kutish, avto-bekor; (B) spec bo'yicha davom etish va shartnoma 3.2/6.3 ni o'zgartirish (CEO va yurist); (C) pauzada darhol chiqarish, lekin qaytganda admin tanlovi faqat CEO ruxsati bilan.
 
 - **Hukm tarixi.** `forLesson` o'tgan kunni hozirgi balans bilan baholaydi. To'lov keyin kelgan bo'lsa o'quvchi "qo'yilgan" ko'rinadi. Tavsiya: kunlar hisobi pauza paytida bir marta qotiriladi (bo'shatish metadata'siga yoziladi).
 - **Hisob-kitob va 6.2.** Bu yo'l 6.2 va 3.5 ni chetlab o'tadi (2.4-band). Aloqa markazidan qo'lda chiqarish hali 6.2 bilan ishlaydi; ular o'rtasidagi farq ADR'da yoziladi.

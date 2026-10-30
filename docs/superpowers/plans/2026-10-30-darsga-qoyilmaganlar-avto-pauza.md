@@ -211,15 +211,16 @@ git commit -m "feat(attendance): add pure barred-lesson rule and streak"
 ### Task 2A: `ContractClauseLink` (shartnoma bandi doim havola)
 
 **Files:**
-- Create: `client/src/lib/contract-clauses.ts`, `client/src/components/shared/contract-clause-link.tsx`, `client/src/components/shared/contract-clause-link.test.ts`
+- Create: `server/src/contract-documents/contract-clauses.ts` (+spec), `client/src/components/shared/contract-clause-link.tsx`, `client/src/components/shared/contract-clause-link.test.ts`
+- Modify: `server/src/contract-documents/contract-documents.controller.ts` (`GET /contract-documents/clauses`), `server/src/common/permissions/route-access.snapshot.json`
 - Modify: dictionaries ru/de/en, `i18n-coverage.test.ts` (STRICT_FILES)
 
 **Interfaces:**
-- Produces: `CONTRACT_CLAUSES: Record<ClauseNo, { no: ClauseNo; title: string; text: string }>` bilan `type ClauseNo = '3.2' | '3.5' | '3.7' | '5.1' | '6.2'`; `<ContractClauseLink no="3.2" />` ko'k tagiga chizilgan «Shartnoma 3.2» havolasi, bosilganda `Dialog` bandning sarlavhasi va to'liq matnini ko'rsatadi (ichki aylantirish, tepa/past qotirilgan).
+- Produces: server `clausesFromTemplate(nos: string[]): { no: string; text: string }[]` (`BODY_SECTIONS` elementlarini «3.2.» boshlanishi bo'yicha ajratadi; topilmasa `NotFoundException`), `GET /contract-documents/clauses?nos=3.2,6.2` → shu massiv; client `type ClauseNo = '3.2' | '3.5' | '3.7' | '5.1' | '6.2' | '6.3'` va React Query hook `useContractClauses(nos)`; `<ContractClauseLink no="3.2" />` ko'k tagiga chizilgan «Shartnoma 3.2» havolasi, bosilganda `Dialog` bandning sarlavhasi va to'liq matnini ko'rsatadi (ichki aylantirish, tepa/past qotirilgan).
 
-- [ ] **Step 1: Failing test** — `CONTRACT_CLAUSES` har kalit uchun `title` va `text` bo'sh emas; `clauseLabel('3.2')` → `"Shartnoma 3.2"` (`msg` bilan).
+- [ ] **Step 1: Failing test** — server: `clausesFromTemplate(['3.2','6.3'])` ikki bandni qaytaradi, matni `BODY_SECTIONS` dagi bilan bir xil va «3.2.» bilan boshlanadi; noma'lum `'9.9'` → `NotFoundException`. Client: `clauseLabel('3.2')` → `"Shartnoma 3.2"` (`msg` bilan).
 - [ ] **Step 2:** run (FAIL) → implement → run (PASS).
-- [ ] **Step 3:** Matn manbasi: CEO bergan yakuniy matn. Berilmaguncha fayl bo'sh qoldirilmaydi, test `text` bo'sh bo'lsa yiqiladi, shu sababli bu vazifa matn kelmaguncha boshlanmaydi.
+- [ ] **Step 3:** Matn manbasi tayyor: `contract-template-v1.ts` (tizim shartnomani shundan tuzadi). Yangi matn nusxasi yozilmaydi. Marshrut `@Can(...)` + `route-access.snapshot.json` qatori; dialog matnni yuklanguncha skeleton bilan ko'rsatadi.
 - [ ] **Step 4:** Barcha admin ekranlarda (Task 3, 5-pauza kartasi, 7, 8) band raqami faqat shu komponent orqali yoziladi. `rg "Shartnoma [0-9]"` bilan qo'lda yozilganini tekshirish.
 - [ ] **Step 5: Commit** — `feat(shared): add ContractClauseLink with full clause text`.
 
