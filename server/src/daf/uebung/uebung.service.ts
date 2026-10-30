@@ -345,7 +345,7 @@ export class UebungService {
    */
   async seans(
     lessonId: number,
-    studentId: number,
+    studentId: number | null,
     rnd: () => number = Math.random,
   ): Promise<PublicFrage[]> {
     const natija = await this.baueKandidaten(lessonId, studentId, rnd);
@@ -426,7 +426,7 @@ export class UebungService {
    */
   async ersatz(
     lessonId: number,
-    studentId: number,
+    studentId: number | null,
     itemType: ItemType,
     itemId: number,
     nichtFormat: FrageFormat,
@@ -447,6 +447,25 @@ export class UebungService {
     );
 
     return nomzod ? toPublic(nomzod, 0) : null;
+  }
+
+  /**
+   * /media seans sahifasi uchun: shu darsdan dvigatel quradigan BARCHA
+   * nomzodlar, o'quvchi tarixisiz. `seans()` aynan shu ro'yxatdan
+   * tanlaydi — ro'yxatning alohida nusxa qoidasi yo'q.
+   * PAAR, ZUORDNEN va DIALOG_LUECKE savollarida savol ichidagi to'plam
+   * tasodifiy tanlanadi, shuning uchun ko'rinish shulardan bitta namunani beradi.
+   */
+  async vorschauKandidaten(
+    lessonId: number,
+  ): Promise<{ kind: string | null; laenge: number; fragen: Frage[] }> {
+    const natija = await this.baueKandidaten(lessonId, null, Math.random);
+    if (!natija) return { kind: null, laenge: SEANS_UZUNLIGI, fragen: [] };
+    return {
+      kind: natija.kind,
+      laenge: natija.kind === 'UNIT_TEST' ? UNIT_TEST_SAVOLLAR : SEANS_UZUNLIGI,
+      fragen: natija.kandidaten,
+    };
   }
 
   /**
@@ -834,7 +853,7 @@ export class UebungService {
    */
   private async baueKandidaten(
     lessonId: number,
-    studentId: number,
+    studentId: number | null,
     rnd: () => number,
   ): Promise<{
     pflicht: Frage[];
@@ -1071,13 +1090,16 @@ export class UebungService {
     // qurilishidan OLDIN chaqiriladi, chunki pastdagi `letzterFormatByWort`
     // so'rovi ham `dafLexemeState`ga boradi va ikkalasining tartibi
     // testlarda kuzatilgan (birinchi chaqiruv — DUE so'rovi).
-    const pflicht = await this.baueWiederholung(
-      studentId,
-      coreWords,
-      rnd,
-      undefined,
-      lessonUnit,
-    );
+    const pflicht =
+      studentId == null
+        ? []
+        : await this.baueWiederholung(
+            studentId,
+            coreWords,
+            rnd,
+            undefined,
+            lessonUnit,
+          );
 
     // Qoida 5 (dizayn 4.3): ketma-ket ikki SEANSDA bir xil (so'z+format)
     // juftligi takrorlanmaydi. `DafLexemeState.lastFormat` shu so'z oxirgi
@@ -1086,11 +1108,12 @@ export class UebungService {
     // xaritani so'raymiz, chunki har qanday so'z (nafaqat qaytariladigan)
     // shu qoidaga bo'ysunishi kerak.
     const coreWordIds = coreWords.map((w) => w.id);
-    const letzteZustaende = coreWordIds.length
-      ? ((await this.prisma.dafLexemeState.findMany({
-          where: { studentId, lexemeId: { in: coreWordIds } },
-        } as any)) as Array<{ lexemeId: number; lastFormat: string | null }>)
-      : [];
+    const letzteZustaende =
+      studentId != null && coreWordIds.length
+        ? ((await this.prisma.dafLexemeState.findMany({
+            where: { studentId, lexemeId: { in: coreWordIds } },
+          } as any)) as Array<{ lexemeId: number; lastFormat: string | null }>)
+        : [];
     const letzterFormatByWort = new Map(
       letzteZustaende.map((z) => [z.lexemeId, z.lastFormat]),
     );
@@ -1429,7 +1452,7 @@ export class UebungService {
 
   async pruefen(
     input: PruefenInput,
-    ctx: PruefenContext,
+    ctx: PruefenContext | null,
   ): Promise<PruefenErgebnis> {
     const { itemType, itemId, format, given, durationMs } = input;
 
@@ -1540,63 +1563,67 @@ export class UebungService {
       if (format === 'BILD_TIPPEN') loesungWort = richtig;
     }
 
-    // Bu javob qaysi so'z(lar)ga tegishli — PAAR uchun deduplikatsiya
-    // qilingan ro'yxat, oddiy WORT savoli uchun bitta so'z, gap/ibora
-    // uchun bo'sh.
-    const betroffeneWoerter = paarNatijalari
-      ? paarNatijalari.map((p) => ({ lexemeId: p.lexemeId, richtig: p.ok }))
-      : itemType === 'WORT'
-        ? [{ lexemeId: itemId, richtig: isCorrect }]
-        : [];
-    const punkteEingabe = await this.punkteEingabeFuer(
-      ctx.studentId,
-      betroffeneWoerter,
-    );
-    const points = punkteFuer(punkteEingabe);
+    // `ctx` yo'q — /media sinov rejimi: javob tekshiriladi, hech narsa
+    // yozilmaydi (urinish, seans, Leitner holati, ball).
+    if (ctx) {
+      // Bu javob qaysi so'z(lar)ga tegishli — PAAR uchun deduplikatsiya
+      // qilingan ro'yxat, oddiy WORT savoli uchun bitta so'z, gap/ibora
+      // uchun bo'sh.
+      const betroffeneWoerter = paarNatijalari
+        ? paarNatijalari.map((p) => ({ lexemeId: p.lexemeId, richtig: p.ok }))
+        : itemType === 'WORT'
+          ? [{ lexemeId: itemId, richtig: isCorrect }]
+          : [];
+      const punkteEingabe = await this.punkteEingabeFuer(
+        ctx.studentId,
+        betroffeneWoerter,
+      );
+      const points = punkteFuer(punkteEingabe);
 
-    const branchId = await tryResolveStudentBranchId(
-      this.prisma,
-      ctx.studentId,
-      ctx.companyId,
-    );
-    const groupId = await currentGroupId(this.prisma, ctx.studentId);
+      const branchId = await tryResolveStudentBranchId(
+        this.prisma,
+        ctx.studentId,
+        ctx.companyId,
+      );
+      const groupId = await currentGroupId(this.prisma, ctx.studentId);
 
-    await this.sicherSeans(input, ctx, branchId, groupId);
+      await this.sicherSeans(input, ctx, branchId, groupId);
 
-    await recordAttempt(this.prisma, {
-      studentId: ctx.studentId,
-      companyId: ctx.companyId,
-      branchId,
-      groupId,
-      lexemeId: itemType === 'WORT' ? itemId : null,
-      isCorrect,
-      given,
-      durationMs: durationMs ?? null,
-      points,
-      ...this.seansMaydonlari(input, itemType, itemId, format, isCorrect),
-    });
+      await recordAttempt(this.prisma, {
+        studentId: ctx.studentId,
+        companyId: ctx.companyId,
+        branchId,
+        groupId,
+        lexemeId: itemType === 'WORT' ? itemId : null,
+        isCorrect,
+        given,
+        durationMs: durationMs ?? null,
+        points,
+        ...this.seansMaydonlari(input, itemType, itemId, format, isCorrect),
+      });
 
-    if (paarNatijalari) {
-      // Har so'z FAQAT O'Z juftining natijasi bilan yangilanadi. Umumiy
-      // `isCorrect` (to'rttasining AND'i) faqat urinish yozuviga ketadi —
-      // bitta xato juft qolgan uchtasini "unutmagan" so'zlarni jazolamasin.
-      for (const p of paarNatijalari) {
+      if (paarNatijalari) {
+        // Har so'z FAQAT O'Z juftining natijasi bilan yangilanadi. Umumiy
+        // `isCorrect` (to'rttasining AND'i) faqat urinish yozuviga ketadi —
+        // bitta xato juft qolgan uchtasini "unutmagan" so'zlarni jazolamasin.
+        for (const p of paarNatijalari) {
+          await this.aktualisiereZustand(
+            ctx.studentId,
+            ctx.companyId,
+            p.lexemeId,
+            p.ok,
+            format,
+          );
+        }
+      } else if (itemType === 'WORT') {
         await this.aktualisiereZustand(
           ctx.studentId,
           ctx.companyId,
-          p.lexemeId,
-          p.ok,
+          itemId,
+          isCorrect,
           format,
         );
       }
-    } else if (itemType === 'WORT') {
-      await this.aktualisiereZustand(
-        ctx.studentId,
-        ctx.companyId,
-        itemId,
-        isCorrect,
-        format,
-      );
     }
 
     if (
@@ -1660,7 +1687,7 @@ export class UebungService {
    */
   async juft(
     input: JuftInput,
-    ctx: PruefenContext,
+    ctx: PruefenContext | null,
   ): Promise<{ isCorrect: boolean }> {
     const { itemType, itemId, format, chap, ong, durationMs } = input;
 
@@ -1744,61 +1771,64 @@ export class UebungService {
       iboraId = ibora?.id ?? null;
     }
 
-    // Ball FAQAT `PAAR` uchun va FAQAT so'z topilgan bo'lsa — muddat
-    // holati bu yerda, Leitner yangilanishidan OLDIN o'qiladi (yuqoridagi
-    // izohga qarang).
-    let points = 0;
-    if (format === 'PAAR' && lexemeId != null) {
-      const punkteEingabe = await this.punkteEingabeFuer(ctx.studentId, [
-        { lexemeId, richtig: isCorrect },
-      ]);
-      points = punkteFuer(punkteEingabe);
-    }
+    // `ctx` yo'q — /media sinov rejimi: hech narsa yozilmaydi.
+    if (ctx) {
+      // Ball FAQAT `PAAR` uchun va FAQAT so'z topilgan bo'lsa — muddat
+      // holati bu yerda, Leitner yangilanishidan OLDIN o'qiladi (yuqoridagi
+      // izohga qarang).
+      let points = 0;
+      if (format === 'PAAR' && lexemeId != null) {
+        const punkteEingabe = await this.punkteEingabeFuer(ctx.studentId, [
+          { lexemeId, richtig: isCorrect },
+        ]);
+        points = punkteFuer(punkteEingabe);
+      }
 
-    const branchId = await tryResolveStudentBranchId(
-      this.prisma,
-      ctx.studentId,
-      ctx.companyId,
-    );
-    const groupId = await currentGroupId(this.prisma, ctx.studentId);
-
-    await this.sicherSeans(input, ctx, branchId, groupId);
-
-    await recordAttempt(this.prisma, {
-      studentId: ctx.studentId,
-      companyId: ctx.companyId,
-      branchId,
-      groupId,
-      lexemeId: format === 'PAAR' ? lexemeId : null,
-      isCorrect,
-      given: `${chap}=${ong}`,
-      // `pruefen` buni yozadi, `juft()` avval YO'Q edi — har juftlashuv
-      // urinishi hech qachon davomiylik saqlamasdi. Mijoz allaqachon
-      // shu juftga ketgan vaqtni kuzatadi (`seans-ekrani.tsx`), shuni
-      // qabul qilib yozamiz.
-      durationMs: durationMs ?? null,
-      points,
-      // Har juft qatoriga shu juftning O'Z materiali (dizayn 5.5):
-      // `PAAR` — bosilgan so'z, `ZUORDNEN` — bosilgan ibora. `input.itemId`
-      // to'rtlik/oltilikning BIRINCHISI, bosilgan juft esa boshqasi.
-      ...this.seansMaydonlari(
-        input,
-        itemType,
-        format === 'PAAR' ? (lexemeId ?? itemId) : (iboraId ?? itemId),
-        format,
-        isCorrect,
-      ),
-    });
-
-    // Leitner FAQAT `PAAR` uchun — ibora bu jadvalga kirmaydi.
-    if (format === 'PAAR' && lexemeId != null) {
-      await this.aktualisiereZustand(
+      const branchId = await tryResolveStudentBranchId(
+        this.prisma,
         ctx.studentId,
         ctx.companyId,
-        lexemeId,
-        isCorrect,
-        format,
       );
+      const groupId = await currentGroupId(this.prisma, ctx.studentId);
+
+      await this.sicherSeans(input, ctx, branchId, groupId);
+
+      await recordAttempt(this.prisma, {
+        studentId: ctx.studentId,
+        companyId: ctx.companyId,
+        branchId,
+        groupId,
+        lexemeId: format === 'PAAR' ? lexemeId : null,
+        isCorrect,
+        given: `${chap}=${ong}`,
+        // `pruefen` buni yozadi, `juft()` avval YO'Q edi — har juftlashuv
+        // urinishi hech qachon davomiylik saqlamasdi. Mijoz allaqachon
+        // shu juftga ketgan vaqtni kuzatadi (`seans-ekrani.tsx`), shuni
+        // qabul qilib yozamiz.
+        durationMs: durationMs ?? null,
+        points,
+        // Har juft qatoriga shu juftning O'Z materiali (dizayn 5.5):
+        // `PAAR` — bosilgan so'z, `ZUORDNEN` — bosilgan ibora. `input.itemId`
+        // to'rtlik/oltilikning BIRINCHISI, bosilgan juft esa boshqasi.
+        ...this.seansMaydonlari(
+          input,
+          itemType,
+          format === 'PAAR' ? (lexemeId ?? itemId) : (iboraId ?? itemId),
+          format,
+          isCorrect,
+        ),
+      });
+
+      // Leitner FAQAT `PAAR` uchun — ibora bu jadvalga kirmaydi.
+      if (format === 'PAAR' && lexemeId != null) {
+        await this.aktualisiereZustand(
+          ctx.studentId,
+          ctx.companyId,
+          lexemeId,
+          isCorrect,
+          format,
+        );
+      }
     }
 
     return { isCorrect };

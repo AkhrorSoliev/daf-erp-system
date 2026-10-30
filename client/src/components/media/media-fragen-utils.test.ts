@@ -97,7 +97,7 @@ describe("formatlarBoyichaGuruhla", () => {
   });
 
   it("guruh tartibini BIRINCHI uchragan format bo`yicha saqlaydi", () => {
-    // `VORSCHAU_BAUER` e'lon tartibiga mos kelishi kerak — CEO
+    // dvigatel (`baueKandidaten`) tartibiga mos kelishi kerak — CEO
     // ro'yxatni har safar boshqa tartibda ko'rmasin.
     const guruhlar = formatlarBoyichaGuruhla([
       f("ZUORDNEN", 1),

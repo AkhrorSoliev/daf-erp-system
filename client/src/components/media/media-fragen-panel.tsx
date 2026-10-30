@@ -1,25 +1,14 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, RotateCcw } from "lucide-react";
-import api from "@/lib/api";
-import { formatNomi } from "@/lib/daf-format-nomlari";
+import { CheckCircle2 } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { OvozTugmasi } from "@/components/student-portal/lernen/uebung/ovoz-tugmasi";
 import { Uhr } from "@/components/student-portal/lernen/uebung/uhr";
 import { cn } from "@/lib/utils";
-import {
-  formatlarBoyichaGuruhla,
-  juftlarniAjrat,
-  vorschauShakli,
-} from "./media-fragen-utils";
-import { boshlangichFormat } from "./section-detail-utils";
-import type { FrageFormat, VorschauFrage } from "./media-fragen-types";
+import { juftlarniAjrat, vorschauShakli } from "./media-fragen-utils";
+import { MediaOvozTugmasi } from "./media-ovoz-tugmasi";
+import { useJoriyMi } from "./media-pleyer";
+import type { KalitliFrage } from "./media-fragen-types";
 
 /**
  * Picture options as thumbnails, the right one framed green — a URL list
@@ -158,17 +147,15 @@ function VariantlarRoyxati({
  * juftlar ro'yxati — ikkalasi ham `richtig`dan TO'G'RIDAN-TO'G'RI
  * o'qiladi, variantlar bilan solishtirib emas).
  */
-function SavolQatori({ f }: { f: VorschauFrage }) {
+export function SavolQatori({ f }: { f: KalitliFrage }) {
   const t = useT();
   const shakl = vorschauShakli(f.format);
+  const joriy = useJoriyMi(f.kalit);
 
   return (
-    <div className="space-y-2 rounded-lg border p-3">
+    <div className={cn("space-y-2 rounded-lg border p-3", joriy && "border-primary bg-primary/5")}>
       {shakl === "OVOZ" && f.audioUrl && (
-        // `autoPlay={false}` — bu ro'yxat, mashq ekrani emas: bir vaqtda
-        // o'nlab so'z yangramasligi kerak (`OvozTugmasi` bilan bir xil
-        // sabab, `media-inhalt-panel.tsx`dagi `OvozHujayrasi`).
-        <OvozTugmasi url={f.audioUrl} autoPlay={false} compact />
+        <MediaOvozTugmasi id={f.kalit} />
       )}
 
       {shakl === "DIALOG" && (
@@ -193,7 +180,7 @@ function SavolQatori({ f }: { f: VorschauFrage }) {
               {f.titel}
             </div>
           )}
-          <OvozTugmasi url={f.audioUrl} autoPlay={false} compact />
+          <MediaOvozTugmasi id={f.kalit} />
           <div className="text-sm">{f.prompt}</div>
         </div>
       )}
@@ -202,7 +189,7 @@ function SavolQatori({ f }: { f: VorschauFrage }) {
 
       {shakl === "RASM" && (
         <div className="space-y-1.5">
-          {f.audioUrl && <OvozTugmasi url={f.audioUrl} autoPlay={false} compact />}
+          {f.audioUrl && <MediaOvozTugmasi id={f.kalit} />}
           {f.prompt && <div className="text-sm">{f.prompt}</div>}
           {f.bildUrl && (
             // eslint-disable-next-line @next/next/no-img-element -- R2 URL, fixed small size
@@ -213,7 +200,7 @@ function SavolQatori({ f }: { f: VorschauFrage }) {
 
       {shakl === "UHR" && (
         <div className="space-y-1.5">
-          {f.audioUrl && <OvozTugmasi url={f.audioUrl} autoPlay={false} compact />}
+          {f.audioUrl && <MediaOvozTugmasi id={f.kalit} />}
           {f.uhrzeit && <Uhr zeit={f.uhrzeit} className="size-24 text-foreground" />}
         </div>
       )}
@@ -252,274 +239,6 @@ function SavolQatori({ f }: { f: VorschauFrage }) {
 
       {f.hilfe && (
         <div className="text-xs text-muted-foreground">{t("Yordam: {text}", { text: f.hilfe })}</div>
-      )}
-    </div>
-  );
-}
-
-/** Bitta format — nomi + nechta savol qurilishi mumkinligi + ro'yxat. */
-function FormatGuruhi({
-  format,
-  fragen,
-}: {
-  format: FrageFormat;
-  fragen: VorschauFrage[];
-}) {
-  const t = useT();
-  return (
-    <div className="space-y-2">
-      <h3 className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-        {formatNomi(format, t)}
-        <Badge variant="secondary" className="font-mono text-[11px] font-normal">
-          {format}
-        </Badge>
-        <span className="text-xs font-normal text-muted-foreground">
-          {t("{n} ta savol", { n: fragen.length })}
-        </span>
-      </h3>
-      <div className="space-y-2">
-        {/* Indeks HAM kalitga kiradi: `LUECKE`da `itemId` gap emas, gapdan
-            bo'shatilgan SO'Z (`satz-fragen.ts`dagi `luecke()`) — bir nechta
-            gap bir xil so'zni bo'shatishi mumkin (masalan "wie", "ich",
-            "wer" haqiqiy kontentda uch-ikki marta uchraydi), shuning uchun
-            `format:itemType:itemId` yolg'iz TAKRORLANADI. Indeks bu holatda
-            ham kalitni noyob qiladi — ro'yxat statik (bir marta yuklanadi,
-            qayta tartiblanmaydi), shuning uchun indeksga tayanish xavfsiz. */}
-        {fragen.map((f, i) => (
-          <SavolQatori key={`${f.format}:${f.itemType}:${f.itemId}:${i}`} f={f} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/**
- * Bitta format tugmasi — nomi va soni, tanlangani ajratilgan
- * (`aria-current` + to'q fon). Format o'zi navigatsiya birligi bo'lgani
- * uchun (brief: "340 ta savolni bitta ro'yxatda ko'rsatmaslik — format
- * NAVIGATSIYAGA aylanadi"), bu ro'yxat oddiy `<Badge>` emas — bosiladigan
- * `<button>`.
- */
-function FormatTugmasi({
-  format,
-  soni,
-  tanlangan,
-  onSelect,
-}: {
-  format: FrageFormat;
-  soni: number;
-  tanlangan: boolean;
-  onSelect: (format: FrageFormat) => void;
-}) {
-  const t = useT();
-  return (
-    <button
-      type="button"
-      aria-current={tanlangan}
-      onClick={() => onSelect(format)}
-      className={cn(
-        "flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors",
-        tanlangan
-          ? "bg-primary text-primary-foreground"
-          : "text-foreground hover:bg-muted",
-      )}
-    >
-      <span className="truncate">{formatNomi(format, t)}</span>
-      <Badge
-        variant={tanlangan ? "secondary" : "outline"}
-        className={cn(
-          "shrink-0 font-mono text-[11px] font-normal",
-          !tanlangan && "text-muted-foreground",
-        )}
-      >
-        {soni}
-      </Badge>
-    </button>
-  );
-}
-
-/**
- * Formatlar yon ro'yxati — sahifaning butun "navigatsiya" g'oyasi shu
- * yerda. Bitta bo'limdan 340 tagacha savol chiqishi mumkin; ularni ketma-
- * ket qo'yish o'sha uyumni kichikroq qutida qaytaradi. O'quvchi "hamma
- * savolni" o'qimaydi — "bu FORMAT yaxshimi?" deb keladi (brief).
- */
-function FormatYonRoyxati({
-  formatlar,
-  tanlangan,
-  onSelect,
-}: {
-  formatlar: { format: FrageFormat; soni: number }[];
-  tanlangan: FrageFormat | null;
-  onSelect: (format: FrageFormat) => void;
-}) {
-  const t = useT();
-  return (
-    <nav aria-label={t("Savol formatlari")} className="flex flex-col gap-1">
-      {formatlar.map(({ format, soni }) => (
-        <FormatTugmasi
-          key={format}
-          format={format}
-          soni={soni}
-          tanlangan={format === tanlangan}
-          onSelect={onSelect}
-        />
-      ))}
-    </nav>
-  );
-}
-
-/**
- * Bo'limdan qurilishi mumkin bo'lgan savollar — javobi bilan.
- *
- * `MediaInhaltPanel` "nima bor" deydi (so'z/gap/ibora/dialogning o'zi);
- * bu panel dvigatel o'sha materialdan NIMA SAVOL QURISHINI ko'rsatadi.
- * Ikkalasi ham bo'lim ochilganda, alohida so'rov bilan yuklanadi (brief:
- * "bo'lim ochilganda").
- *
- * Navigatsiya rejimi — bu vazifaning o'zagi: 340 ta savolni bitta ustunda
- * emas, formatlar yon ro'yxati + faqat BITTA tanlangan formatning savoli
- * qilib ko'rsatish (brief). `selectedFormat` `null` bo'lishi mumkin
- * ("manzilda hali format yo'q") — bo'lim navigatsiyasiz eski rejimi olib
- * tashlangan (`media-coverage-section.tsx`dagi oldindan ko'rish qatori
- * bilan birga), shuning uchun bu yerga har doim `/media/sections/[id]`dan
- * keladi.
- */
-export function MediaFragenPanel({
-  sectionId,
-  selectedFormat,
-  onSelectFormat,
-  onFormatsLoaded,
-}: {
-  sectionId: number;
-  /**
-   * Manzildan kelgan, HALI TEKSHIRILMAGAN qiymat
-   * (`searchParams.get("format")`ning o'zi); tekshiruv (bu bo'limda
-   * bormi, yo'qmi) `boshlangichFormat` ichida bo'ladi — chaqiruvchi buni
-   * oldindan bilishi shart emas.
-   */
-  selectedFormat: string | null;
-  /** Foydalanuvchi yon ro'yxatdan boshqa formatni bossa chaqiriladi. */
-  onSelectFormat: (format: FrageFormat) => void;
-  /**
-   * Savollar yuklanib formatlarga guruhlangach BIR MARTA chaqiriladi —
-   * `section-detail-client.tsx` shundan "sukut format qaysi edi" (URL'ga
-   * yozish/yozmaslikni hal qilish uchun) va sarlavhadagi umumiy sonni
-   * biladi.
-   */
-  onFormatsLoaded: (formatlar: { format: FrageFormat; soni: number }[]) => void;
-}) {
-  // `useQuery` — oddiy `useState`+`useEffect` emas, xuddi `MediaInhaltPanel`
-  // dagi bilan bir xil sababga ko'ra: bu panel "Savollar" YORLIG'I ichida,
-  // Radix `<Tabs>` esa faol bo'lmagan `<TabsContent>`ni DOM'dan olib
-  // tashlaydi — "Material"ga o'tib qaytganda bu 340 tagacha savolni QAYTA
-  // so'raydi va qayta skeleton ko'rsatardi (ko'rik: Minor topilma). Global
-  // `staleTime` (`QueryProvider`, 5 daqiqa) shu `sectionId` bilan qayta
-  // mount bo'lganda keshdan darhol o'qiydi.
-  const t = useT();
-  const {
-    data,
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
-    queryKey: ["media-fragen", sectionId],
-    queryFn: () =>
-      api
-        .get<VorschauFrage[]>(`/daf/media/sections/${sectionId}/fragen`)
-        .then((r) => r.data),
-  });
-
-  // Yon ro'yxat + tanlangan formatning savoli shu guruhlashdan chiziladi.
-  const guruhlar = useMemo(() => formatlarBoyichaGuruhla(data ?? []), [data]);
-
-  // Ota komponent (`section-detail-client.tsx`) shu orqali "qaysi format
-  // sukut" (URL'ga yozish/yozmaslikni hal qilish uchun `engKopSavolliFormat`
-  // bilan bir xil hisobni ishlatadi) va formatlar sonini biladi — ikkinchi
-  // marta `/fragen`ga so'rov yubormasdan.
-  useEffect(() => {
-    if (!data) return;
-    onFormatsLoaded(
-      Array.from(guruhlar, ([format, fragen]) => ({
-        format,
-        soni: fragen.length,
-      })),
-    );
-  }, [data, guruhlar, onFormatsLoaded]);
-
-  // Ko'rsatiladigan format — manzildagi qiymat shu bo'limda haqiqatan
-  // bormi tekshiriladi, bo'lmasa eng ko'p savollisiga tushiladi
-  // (`boshlangichFormat`, `section-detail-utils.ts`).
-  const effectiveFormat = boshlangichFormat(data ?? [], selectedFormat);
-
-  return (
-    <div className="space-y-6 p-4">
-      {/* Ko'lam yorlig'i — `MediaInhaltPanel`dagi bilan JUFT: bu panel
-          `daf-media-fragen.service.ts`dagi qoida bo'yicha shu bo'lim VA shu
-          unitdagi undan oldingi BARCHA bo'limlar materialidan pul yig'adi
-          (chalg'ituvchilar ham shu yerdan), "Material" yorlig'i esa FAQAT
-          shu bo'limni ko'rsatadi. Ikkalasi bo'lim sahifasida ikkita
-          alohida YORLIQ — stacked emas, shuning uchun "yuqorida/pastda"
-          emas, boshqa yorliqning nomi bilan aytiladi. Yorliqsiz ikkalasi
-          bir xil to'plam deb o'qilardi — masalan `ZUORDNEN` olti ibora
-          ko'rsatadi-yu, uchtasi "Material" yorlig'ida yo'q bo'lishi
-          mumkin, chunki ular oldingi bo'limdan kelgan. */}
-      <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">{t("Ko'lam:")}</span>{" "}
-        {t("shu bo'lim + shu unitdagi undan oldingi barcha bo'limlar materiali birlashtirilgan (dvigatel chalg'ituvchilarni ham shu puldan oladi). Shuning uchun boshqa yorliqdagi «Material» ro'yxatida (faqat shu bo'lim) yo'q so'z, gap yoki ibora bu yerda ko'rinishi mumkin — bu xato emas.")}
-      </div>
-
-      {isLoading && (
-        <div className="space-y-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full rounded-lg" />
-          ))}
-        </div>
-      )}
-
-      {!isLoading && isError && (
-        <Card>
-          <CardContent className="flex items-center justify-between gap-3 p-4 text-sm text-muted-foreground">
-            <span>{t("Savollar olinmadi")}</span>
-            <Button variant="outline" size="sm" onClick={() => refetch()}>
-              <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-              {t("Qayta urinish")}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {!isLoading && !isError && data && data.length === 0 && (
-        <Card>
-          <CardContent className="p-4 text-sm text-muted-foreground">
-            {t("Bu bo'limdan hali bironta savol qurib bo'lmaydi — shu bo'lim va undan oldingi bo'limlar materiali (so'z, gap, ibora yoki dialog) birgalikda yetarli emas.")}{" "}
-            {t("Diqqat: boshqa yorliqdagi «Material» ro'yxati faqat shu bo'limni ko'rsatadi (yuqoridagi «Ko'lam» yorlig'iga qarang) — kamchilik shu unitning oldingi bo'limida bo'lishi ham mumkin, uni ko'rish uchun «Media» ro'yxatidan o'sha bo'lim sahifasiga o'ting.")}
-          </CardContent>
-        </Card>
-      )}
-
-      {!isLoading && !isError && data && data.length > 0 && (
-        // Bu vazifaning o'zagi: 340 ta savolni bitta ustunda emas,
-        // formatlar ro'yxati + BITTA formatning savoli qilib ko'rsatish
-        // (brief).
-        <div className="grid gap-4 md:grid-cols-[220px_1fr]">
-          <FormatYonRoyxati
-            formatlar={Array.from(guruhlar, ([format, fragen]) => ({
-              format,
-              soni: fragen.length,
-            }))}
-            tanlangan={effectiveFormat}
-            onSelect={onSelectFormat}
-          />
-          <div className="min-w-0">
-            {effectiveFormat && (
-              <FormatGuruhi
-                format={effectiveFormat}
-                fragen={guruhlar.get(effectiveFormat) ?? []}
-              />
-            )}
-          </div>
-        </div>
       )}
     </div>
   );
