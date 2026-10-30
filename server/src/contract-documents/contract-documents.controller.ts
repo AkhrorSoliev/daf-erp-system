@@ -11,11 +11,13 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { CurrentUser } from '../common/decorators';
-import { Can } from '../common/permissions/access.decorators';
+import { AnyStaff, Can } from '../common/permissions/access.decorators';
+import { clausesFromTemplate } from './contract-clauses';
 import { ContractDocumentsService } from './contract-documents.service';
 import { ContractLifecycleService } from './contract-lifecycle.service';
 import {
   CancelContractDocumentDto,
+  ClausesQueryDto,
   CreateContractDocumentDto,
   StudentContractsQueryDto,
   UpdateContractDocumentDto,
@@ -34,6 +36,18 @@ export class ContractDocumentsController {
     private readonly documents: ContractDocumentsService,
     private readonly lifecycle: ContractLifecycleService,
   ) {}
+
+  /**
+   * Shartnoma bandlarining to'liq matni (ADR-0142): admin ekranlaridagi
+   * «Shartnoma 3.2» havolasi uchun. Matn shartnoma shablonining o'zi, har
+   * mijoz imzolaydigan umumiy matn, shuning uchun hamma xodimga ochiq.
+   * `:id` marshrutlaridan oldin turishi shart.
+   */
+  @Get('clauses')
+  @AnyStaff()
+  clauses(@Query() query: ClausesQueryDto) {
+    return clausesFromTemplate(query.nos);
+  }
 
   @Get()
   @Can('students.details')

@@ -321,6 +321,13 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /contract-documents/clauses": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
   "GET /contract-documents/prefill": [
     "Administrator",
     "Branch Director",

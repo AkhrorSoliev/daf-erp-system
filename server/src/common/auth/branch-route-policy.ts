@@ -333,6 +333,14 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     ],
   },
   {
+    policy: 'COMPANY_WIDE',
+    reason:
+      'Contract clause text for the «Shartnoma 3.2» links (ADR-0142): the ' +
+      'template text every customer signs, the same for every branch. It ' +
+      'reads no student or branch data.',
+    routes: ['GET /contract-documents/clauses'],
+  },
+  {
     policy: 'BRANCH_SCOPED_BY_ENTITY',
     reason:
       'Join requests (ADR-0080). Every route loads the request — by its task ' +
