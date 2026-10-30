@@ -5541,6 +5541,14 @@ const en: Dictionary = {
   "Bu turdagi savollarda to'plam har safar boshqacha tanlanadi — bu yerda namunasi.": "Questions of this type pick a different set each time — this is a sample.",
   "Sinov rejimi": "Preview mode",
   "Sinov rejimi — javoblar saqlanmaydi": "Preview mode — answers aren't saved",
+  "Darsga qo'yilmayotganlar": "Not admitted to lessons",
+  "Qarzi sababli darsga qo'yilmayotgan, lekin hali guruhda turgan o'quvchilar.": "Students who are not admitted to lessons because of their debt, but are still in the group.",
+  "Ustoz ularni davomatda belgilay olmaydi, shuning uchun boshqa ro'yxatlarda ko'rinmaydi. To'lov oling yoki guruhdan chiqaring — chiqarilmasa, keyingi oy ham hisoblanadi.": "The teacher cannot mark them in attendance, so they do not appear in the other lists. Collect the payment or remove them from the group — if they stay, next month is charged too.",
+  "Darsga qo'yilmayotgan o'quvchi yo'q.": "No students are being kept out of lessons.",
+  "Qo'yilmagan darslar": "Lessons missed",
+  "{days} kun oldin": "{days} days ago",
+  "{count} ta dars": "{count} lessons",
+  "Bog'lanilmagan": "Not contacted",
 };
 
 export default en;

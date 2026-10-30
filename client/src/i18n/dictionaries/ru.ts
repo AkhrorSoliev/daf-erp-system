@@ -5541,6 +5541,14 @@ const ru: Dictionary = {
   "Bu turdagi savollarda to'plam har safar boshqacha tanlanadi — bu yerda namunasi.": "В заданиях этого типа набор каждый раз другой — здесь пример.",
   "Sinov rejimi": "Пробный режим",
   "Sinov rejimi — javoblar saqlanmaydi": "Пробный режим — ответы не сохраняются",
+  "Darsga qo'yilmayotganlar": "Не допущены к урокам",
+  "Qarzi sababli darsga qo'yilmayotgan, lekin hali guruhda turgan o'quvchilar.": "Ученики, которых из-за долга не допускают к урокам, но они всё ещё числятся в группе.",
+  "Ustoz ularni davomatda belgilay olmaydi, shuning uchun boshqa ro'yxatlarda ko'rinmaydi. To'lov oling yoki guruhdan chiqaring — chiqarilmasa, keyingi oy ham hisoblanadi.": "Учитель не может отметить их в посещаемости, поэтому в других списках их нет. Получите оплату или исключите из группы — если оставить, следующий месяц тоже будет начислен.",
+  "Darsga qo'yilmayotgan o'quvchi yo'q.": "Нет учеников, не допущенных к урокам.",
+  "Qo'yilmagan darslar": "Пропущено уроков",
+  "{days} kun oldin": "{days} дн. назад",
+  "{count} ta dars": "{count} ур.",
+  "Bog'lanilmagan": "Не связывались",
 };
 
 export default ru;
