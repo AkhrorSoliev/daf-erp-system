@@ -10,6 +10,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { SettingsService } from '../settings/settings.service';
+import { BarredLessonsService } from '../attendance/barred-lessons.service';
 import { StatusHistoryService } from '../common/status';
 import {
   StudentQueryDto,
@@ -83,6 +84,7 @@ export class StudentsReadService {
     private statusHistoryService: StatusHistoryService,
     private monthlyChargeService: MonthlyChargeService,
     private settings: SettingsService,
+    private barredLessons: BarredLessonsService,
   ) {}
 
   async findAll(
@@ -727,6 +729,18 @@ export class StudentsReadService {
     // tepada qoladi — bo'sh kalit bilan u eng pastga tushib ketardi.
     const sortKey = new Map<string, string>();
 
+    // To'lov yo'qligi uchun davomat olib bo'lmagan kunlar (ADR-0142): qatori
+    // yo'q, shuning uchun alohida qo'shiladi. Faqat FAOL yozilishlar uchun;
+    // sozlama o'chiq bo'lsa tab avvalgidek.
+    const barredOn = await this.settings.get(companyId, 'absence.barred.mark');
+    const barred = barredOn
+      ? await this.barredLessons.forEnrollments(
+          enrollments
+            .filter((e) => e.status === EnrollmentStatus.ACTIVE)
+            .map((e) => e.id),
+        )
+      : new Map<string, { days: string[] }>();
+
     const groups = enrollments.map((e) => {
       // lpc = kurs darslari soni (NEVER hardcoded 12) — sikl blok o'lchami.
       const lpc = e.group.course?.lessonPaymentCount || 12;
@@ -770,7 +784,17 @@ export class StudentsReadService {
         }
       }
 
-      const isAttended = (status: AttendanceStatus) =>
+      for (const day of barred.get(e.id)?.days ?? []) {
+        lessons.push({
+          date: day,
+          status: 'BARRED',
+          cycleSequenceNumber: null,
+          month: day.slice(0, 7),
+        });
+      }
+      lessons.sort((a, b) => a.date.localeCompare(b.date));
+
+      const isAttended = (status: OverviewLesson['status']) =>
         status === AttendanceStatus.PRESENT || status === AttendanceStatus.LATE;
       const attended = lessons.filter((l) => isAttended(l.status)).length;
 
@@ -842,7 +866,8 @@ export class StudentsReadService {
 /** One lesson on the «Darslar» tab. */
 export interface OverviewLesson {
   date: string;
-  status: AttendanceStatus;
+  /** 'BARRED': davomat qatori yo'q, to'lov yo'qligi uchun belgilab bo'lmagan (ADR-0142). */
+  status: AttendanceStatus | 'BARRED';
   /** Pack era: the lessonPaymentCount block; null in the monthly era. */
   cycleSequenceNumber: number | null;
   /** Monthly era (ADR-0062): 'YYYY-MM'; null in the pack era. */

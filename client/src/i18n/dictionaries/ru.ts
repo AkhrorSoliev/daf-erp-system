@@ -5553,6 +5553,9 @@ const ru: Dictionary = {
   "Shartnoma {no}-band": "Договор, пункт {no}",
   "Shartnomaning aynan shu matni imzolanadi.": "Именно этот текст договора подписывает клиент.",
   "Matnni yuklab bo'lmadi. Keyinroq urinib ko'ring.": "Не удалось загрузить текст. Попробуйте позже.",
+  "To'lov yo'qligi uchun davomat olib bo'lmadi": "Из-за отсутствия оплаты посещаемость отметить не удалось",
+  "To'lov yo'q": "Нет оплаты",
+  "Binafsha nuqta: ustoz davomat oldi, lekin to'lov yo'qligi uchun o'quvchini belgilab bo'lmadi.": "Фиолетовая точка: учитель отметил посещаемость, но ученика отметить не удалось из-за отсутствия оплаты.",
 };
 
 export default ru;

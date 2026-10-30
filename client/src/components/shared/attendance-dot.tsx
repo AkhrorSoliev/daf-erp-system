@@ -15,13 +15,21 @@ import {
 // profilidagi "Darslar" tab'i (lesson-trail-tab) o'rtasida ulashilgan
 // primitivlar. Bitta manba: ranglar/yorliqlar ikki joyda dublikat bo'lmasin.
 
-export type DotStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED" | null;
+// "BARRED" (ADR-0142): ustoz davomat oldi, lekin to'lov yo'qligi uchun o'quvchini belgilab bo'lmadi, qatori yo'q.
+export type DotStatus =
+  | "PRESENT"
+  | "ABSENT"
+  | "LATE"
+  | "EXCUSED"
+  | "BARRED"
+  | null;
 
 export const STATUS_LABEL: Record<Exclude<DotStatus, null>, string> = {
   PRESENT: msg("Keldi"),
   LATE: msg("Kech"),
   EXCUSED: msg("Sababli"),
   ABSENT: msg("Kelmadi"),
+  BARRED: msg("To'lov yo'qligi uchun davomat olib bo'lmadi"),
 };
 
 export function getDotClass(status: DotStatus): string {
@@ -34,6 +42,8 @@ export function getDotClass(status: DotStatus): string {
       return "bg-sky-400 border-sky-400";
     case "ABSENT":
       return "bg-red-500 border-red-500";
+    case "BARRED":
+      return "bg-violet-500 border-violet-500";
     default:
       return "border-dashed border-muted-foreground/50";
   }

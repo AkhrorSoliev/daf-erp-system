@@ -5553,6 +5553,9 @@ const en: Dictionary = {
   "Shartnoma {no}-band": "Contract clause {no}",
   "Shartnomaning aynan shu matni imzolanadi.": "This exact contract text is what the customer signs.",
   "Matnni yuklab bo'lmadi. Keyinroq urinib ko'ring.": "Could not load the text. Please try again later.",
+  "To'lov yo'qligi uchun davomat olib bo'lmadi": "Attendance could not be recorded because there is no payment",
+  "To'lov yo'q": "No payment",
+  "Binafsha nuqta: ustoz davomat oldi, lekin to'lov yo'qligi uchun o'quvchini belgilab bo'lmadi.": "Purple dot: the teacher took attendance, but the student could not be marked because there is no payment.",
 };
 
 export default en;
