@@ -22,6 +22,13 @@ describe('SETTING_DEFINITIONS registry', () => {
         'payment.attendanceOpensMinutesBefore',
         'payment.admissionMinPaidPercent',
         'payment.paidThroughReminderDays',
+        'absence.barred.mark',
+        'absence.barred.nudge',
+        'absence.barred.warn',
+        'absence.barred.autoPause',
+        'absence.barred.pauseNotice',
+        'absence.barred.restoreDialog',
+        'absence.barred.logOnly',
         'lessonRating.enabled',
         'leads.maxUntouched',
         'leads.firstActionHours',
@@ -77,6 +84,26 @@ describe('SETTING_DEFINITIONS registry', () => {
       expect(() => def.parse(61)).toThrow();
       expect(() => def.parse(-1)).toThrow();
       expect(() => def.parse(5.5)).toThrow();
+    });
+  });
+
+  describe('ADR-0142 barred-lesson switches', () => {
+    it('start with only the read-only parts on, company-level only', () => {
+      for (const [name, value] of [
+        ['absence.barred.mark', true],
+        ['absence.barred.nudge', false],
+        ['absence.barred.warn', false],
+        ['absence.barred.autoPause', false],
+        ['absence.barred.pauseNotice', false],
+        ['absence.barred.restoreDialog', false],
+        ['absence.barred.logOnly', true],
+      ] as const) {
+        const def = getSettingDefinition(name);
+        expect(def.defaultValue).toBe(value);
+        expect(def.companyLevelOnly).toBe(true);
+        expect(def.parse(true)).toBe(true);
+        expect(() => def.parse('yes')).toThrow();
+      }
     });
   });
 
