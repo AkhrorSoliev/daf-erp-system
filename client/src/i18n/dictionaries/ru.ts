@@ -5556,6 +5556,7 @@ const ru: Dictionary = {
   "To'lov yo'qligi uchun davomat olib bo'lmadi": "Из-за отсутствия оплаты посещаемость отметить не удалось",
   "To'lov yo'q": "Нет оплаты",
   "Binafsha nuqta: ustoz davomat oldi, lekin to'lov yo'qligi uchun o'quvchini belgilab bo'lmadi.": "Фиолетовая точка: учитель отметил посещаемость, но ученика отметить не удалось из-за отсутствия оплаты.",
+  "Hisobdan chiqarilgan": "Снято с начисления",
 };
 
 export default ru;

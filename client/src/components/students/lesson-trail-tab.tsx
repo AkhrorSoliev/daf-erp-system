@@ -41,6 +41,8 @@ interface Lesson {
   status: DotStatus;
   cycleSequenceNumber: number | null;
   month?: string | null;
+  /** BARRED: kun pauzada hisobdan chiqarilgan (ADR-0142). */
+  released?: boolean;
 }
 
 interface GroupOverview {
@@ -126,6 +128,7 @@ function LessonTimeline({
         key={`${l.date}-${i}`}
         status={l.status}
         date={l.date}
+        released={l.released}
         cycleLabel={title}
       />,
     );

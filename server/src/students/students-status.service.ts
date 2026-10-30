@@ -27,7 +27,10 @@ import {
 import { studentSelect, formatStudent } from './shared/student-select';
 import { assertCallerMayTouchStudent } from '../common/auth/student-branch-scope';
 import { resolvePickedExitReason } from './shared/picked-exit-reason';
-import { buildAutoPauseReason } from '../absence-pause/absence-pause.constants';
+import {
+  buildAutoPauseReason,
+  buildBarredPauseReason,
+} from '../absence-pause/absence-pause.constants';
 import { assertMayChooseDeparturePolicy } from './shared/departure-policy-access';
 
 /**
@@ -123,6 +126,8 @@ export class StudentsStatusService {
     companyId: number;
     streak: number;
     lastAbsenceDate: Date;
+    /** To'lov yo'qligi uchun davomat olib bo'lmagan ketma-ketlik (ADR-0142): sabab matni boshqacha. */
+    barred?: boolean;
   }): Promise<void> {
     const student = await this.prisma.student.findFirst({
       where: {
@@ -138,7 +143,9 @@ export class StudentsStatusService {
       params.studentId,
       {
         status: StudentStatus.FROZEN,
-        reason: buildAutoPauseReason(params.streak, params.lastAbsenceDate),
+        reason: params.barred
+          ? buildBarredPauseReason(params.streak, params.lastAbsenceDate)
+          : buildAutoPauseReason(params.streak, params.lastAbsenceDate),
       } as ChangeStudentStatusDto,
       { kind: 'system' },
       params.companyId,

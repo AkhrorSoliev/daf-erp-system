@@ -5556,6 +5556,7 @@ const en: Dictionary = {
   "To'lov yo'qligi uchun davomat olib bo'lmadi": "Attendance could not be recorded because there is no payment",
   "To'lov yo'q": "No payment",
   "Binafsha nuqta: ustoz davomat oldi, lekin to'lov yo'qligi uchun o'quvchini belgilab bo'lmadi.": "Purple dot: the teacher took attendance, but the student could not be marked because there is no payment.",
+  "Hisobdan chiqarilgan": "Taken off the charge",
 };
 
 export default en;

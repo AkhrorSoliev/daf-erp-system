@@ -28,6 +28,14 @@ export function formatTashkentDate(d: Date): string {
  * ko'rinadi, ya'ni uni o'qigan odamda «nega?» degan savol qolmasligi
  * kerak.
  */
+/**
+ * Davomat olib bo'lmagan ketma-ketlik uchun sabab (ADR-0142). Prefiks bir xil:
+ * «Pauzadagilar» tabi shu bo'yicha ajratadi.
+ */
+export function buildBarredPauseReason(streak: number, lastDay: Date): string {
+  return `${AUTO_PAUSE_REASON_PREFIX} ${streak} ta ketma-ket darsda to'lov yo'qligi uchun davomat olib bo'lmadi (oxirgisi ${formatTashkentDate(lastDay)})`;
+}
+
 export function buildAutoPauseReason(
   streak: number,
   lastAbsence: Date,

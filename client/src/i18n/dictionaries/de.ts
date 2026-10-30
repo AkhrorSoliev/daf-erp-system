@@ -5556,6 +5556,7 @@ const de: Dictionary = {
   "To'lov yo'qligi uchun davomat olib bo'lmadi": "Anwesenheit konnte mangels Zahlung nicht erfasst werden",
   "To'lov yo'q": "Keine Zahlung",
   "Binafsha nuqta: ustoz davomat oldi, lekin to'lov yo'qligi uchun o'quvchini belgilab bo'lmadi.": "Violetter Punkt: Die Lehrkraft hat die Anwesenheit erfasst, den Lernenden konnte sie mangels Zahlung aber nicht markieren.",
+  "Hisobdan chiqarilgan": "Aus der Abrechnung genommen",
 };
 
 export default de;

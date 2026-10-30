@@ -74,6 +74,8 @@ interface AttendanceDotProps {
   enrolled?: boolean;
   /** Recorded minutes late on a LATE lesson (ADR-0048). */
   lateMinutes?: number | null;
+  /** BARRED: kun pauzada hisobdan chiqarilgan (ADR-0142) — halqali nuqta. */
+  released?: boolean;
 }
 
 export function AttendanceDot({
@@ -83,6 +85,7 @@ export function AttendanceDot({
   cycleLabel,
   enrolled = true,
   lateMinutes,
+  released = false,
 }: AttendanceDotProps) {
   const t = useT();
   const late = status === "LATE" ? lateMinutesText(lateMinutes, t) : null;
@@ -107,6 +110,8 @@ export function AttendanceDot({
               : getDotClass(status),
             hasOverride &&
               "ring-2 ring-blue-500/70 ring-offset-1 ring-offset-background",
+            released &&
+              "ring-2 ring-violet-300 ring-offset-1 ring-offset-background",
           )}
           aria-label={`${formatted} — ${late ?? statusLabel}${
             hasOverride ? ` — ${substitute}` : ""
@@ -117,6 +122,9 @@ export function AttendanceDot({
         <span className="font-medium">{formatted}</span>
         {" — "}
         {late ?? statusLabel}
+        {released && (
+          <span className="text-violet-300">{` • ${t("Hisobdan chiqarilgan")}`}</span>
+        )}
         {hasOverride && (
           <span className="text-blue-600 dark:text-blue-400">
             {` • ${substitute}`}

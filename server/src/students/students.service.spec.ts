@@ -3,6 +3,7 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { StudentsService } from './students.service';
 import { StudentsReadService } from './students-read.service';
 import { BarredLessonsService } from '../attendance/barred-lessons.service';
+import { BarredLessonsChargeService } from '../billing/barred-lessons-charge.service';
 import { StudentsWriteService } from './students-write.service';
 import { StudentLeadOriginService } from '../common/student-origin/student-lead-origin.service';
 import { StudentsStatusService } from './students-status.service';
@@ -141,6 +142,7 @@ describe('StudentsService — status methods', () => {
         StudentsService,
         StudentsReadService,
         { provide: BarredLessonsService, useValue: {} },
+        { provide: BarredLessonsChargeService, useValue: {} },
         StudentsWriteService,
         { provide: RedisService, useValue: { set: jest.fn() } },
         StudentsStatusService,

@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { SettingsService } from '../settings/settings.service';
 import { BarredLessonsService } from '../attendance/barred-lessons.service';
+import { BarredLessonsChargeService } from '../billing/barred-lessons-charge.service';
 import { StatusHistoryService } from '../common/status';
 import {
   StudentQueryDto,
@@ -85,6 +86,7 @@ export class StudentsReadService {
     private monthlyChargeService: MonthlyChargeService,
     private settings: SettingsService,
     private barredLessons: BarredLessonsService,
+    private barredCharge: BarredLessonsChargeService,
   ) {}
 
   async findAll(
@@ -740,6 +742,18 @@ export class StudentsReadService {
             .map((e) => e.id),
         )
       : new Map<string, { days: string[] }>();
+    // Pauzada hisobdan chiqarilgan kunlar (yozilish endi FAOL emas): hisob
+    // yozuvlaridan o'qiladi va halqali nuqta bo'lib chiqadi.
+    const released = new Map<string, Set<string>>();
+    if (barredOn) {
+      for (const e of enrollments) {
+        if (e.status === EnrollmentStatus.ACTIVE) continue;
+        const days = (await this.barredCharge.releasedDays(e.id)).flatMap(
+          (r) => r.days,
+        );
+        if (days.length > 0) released.set(e.id, new Set(days));
+      }
+    }
 
     const groups = enrollments.map((e) => {
       // lpc = kurs darslari soni (NEVER hardcoded 12) — sikl blok o'lchami.
@@ -788,6 +802,15 @@ export class StudentsReadService {
         lessons.push({
           date: day,
           status: 'BARRED',
+          cycleSequenceNumber: null,
+          month: day.slice(0, 7),
+        });
+      }
+      for (const day of released.get(e.id) ?? []) {
+        lessons.push({
+          date: day,
+          status: 'BARRED',
+          released: true,
           cycleSequenceNumber: null,
           month: day.slice(0, 7),
         });
@@ -868,6 +891,8 @@ export interface OverviewLesson {
   date: string;
   /** 'BARRED': davomat qatori yo'q, to'lov yo'qligi uchun belgilab bo'lmagan (ADR-0142). */
   status: AttendanceStatus | 'BARRED';
+  /** BARRED only: the day was taken off the charge when the student was paused. */
+  released?: boolean;
   /** Pack era: the lessonPaymentCount block; null in the monthly era. */
   cycleSequenceNumber: number | null;
   /** Monthly era (ADR-0062): 'YYYY-MM'; null in the pack era. */
