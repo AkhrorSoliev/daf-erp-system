@@ -18,6 +18,15 @@ import {
 
 type Reader = Prisma.TransactionClient | PrismaService;
 
+/** Key of one verdict in `LessonAdmissionService.forLessons`' map. */
+export function admissionKey(
+  studentId: number,
+  groupId: string,
+  lessonDay: string,
+): string {
+  return `${studentId}:${groupId}:${lessonDay}`;
+}
+
 /**
  * Loads what `lessonAdmission` / `paymentReach` judge (ADR-0047): the
  * student's balance and their CHARGED month charges on ACTIVE enrollments —
@@ -124,6 +133,63 @@ export class LessonAdmissionService {
           closedThisMonth: closed.get(student.id),
         }),
       );
+    }
+    return result;
+  }
+
+  /**
+   * Contract 3.2 for many (student, group, day) triples at once (ADR-0142):
+   * the same verdict as `forLesson`, with one read of balances and one read
+   * of charges per month instead of three reads per lesson. A triple missing
+   * from the map is admitted. Key: `admissionKey`.
+   */
+  async forLessons(
+    items: { studentId: number; groupId: string; lessonDay: string }[],
+    client: Reader = this.prisma,
+  ): Promise<Map<string, LessonAdmission>> {
+    const result = new Map<string, LessonAdmission>();
+    const due = items.filter((i) => i.lessonDay >= ADMISSION_START_DAY);
+    if (due.length === 0) return result;
+
+    const students = await client.student.findMany({
+      where: { id: { in: [...new Set(due.map((i) => i.studentId))] } },
+      select: { id: true, balance: true, companyId: true },
+    });
+    if (students.length === 0) return result;
+    if (!(await this.ruleEnabled(students[0].companyId))) return result;
+    const minPaidPercent = await this.minPaidPercent(students[0].companyId);
+    const balanceOf = new Map(students.map((s) => [s.id, s.balance]));
+
+    for (const month of new Set(due.map((i) => i.lessonDay.slice(0, 7)))) {
+      const [year, mon] = month.split('-').map(Number);
+      const inMonth = due.filter((i) => i.lessonDay.startsWith(month));
+      const ids = [...new Set(inMonth.map((i) => i.studentId))];
+      const charges = await this.loadCharges(client, ids, year, mon, true);
+      // The least share starts on a month's 1st (11.2026), so the month's
+      // first day settles it for all its days.
+      const closed = await this.closedThisMonth(
+        client,
+        ids,
+        `${month}-01`,
+        minPaidPercent,
+      );
+      const thisMonth = (c: { periodYear: number; periodMonth: number }) =>
+        c.periodYear === year && c.periodMonth === mon;
+      for (const item of inMonth) {
+        const own = charges.filter((c) => c.studentId === item.studentId);
+        result.set(
+          admissionKey(item.studentId, item.groupId, item.lessonDay),
+          lessonAdmission({
+            lessonDay: item.lessonDay,
+            groupId: item.groupId,
+            balance: balanceOf.get(item.studentId) ?? 0,
+            charges: own.filter(thisMonth),
+            laterCharges: own.filter((c) => !thisMonth(c)),
+            minPaidPercent,
+            closedThisMonth: closed.get(item.studentId),
+          }),
+        );
+      }
     }
     return result;
   }

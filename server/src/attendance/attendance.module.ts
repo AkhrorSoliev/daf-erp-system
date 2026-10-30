@@ -21,6 +21,7 @@ import { HolidaysModule } from '../holidays/holidays.module';
 import { LessonCancellationsModule } from '../lesson-cancellations/lesson-cancellations.module';
 import { LessonReschedulesModule } from '../lesson-reschedules/lesson-reschedules.module';
 import { UnmarkedLessonsService } from './unmarked-lessons.service';
+import { BarredLessonsService } from './barred-lessons.service';
 
 @Module({
   imports: [
@@ -48,8 +49,10 @@ import { UnmarkedLessonsService } from './unmarked-lessons.service';
     StudentAttendanceNotificationListener,
     UnmarkedLessonEventsListener,
     UnmarkedLessonsService,
+    BarredLessonsService,
   ],
   exports: [
+    BarredLessonsService,
     AttendanceService,
     QrAttendanceService,
     // Exported so PlannedAbsencesModule can reuse the exact same lesson-date
