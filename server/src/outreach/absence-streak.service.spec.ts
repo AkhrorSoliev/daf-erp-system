@@ -51,6 +51,9 @@ describe('consecutiveAbsentCount', () => {
  * Shuning uchun servis sanani matn ko'rinishida o'qib, o'zi UTC ga o'giradi —
  * quyidagi testlar aynan shu o'girishni va guruhlashni tekshiradi.
  */
+const noBarred = { forEnrollments: jest.fn().mockResolvedValue(new Map()) };
+const settingsOff = { get: jest.fn().mockResolvedValue(false) };
+
 describe("AbsenceStreakService.computeStreaks — bitta so'rovli yo'l", () => {
   const companyId = 1001;
 
@@ -82,7 +85,11 @@ describe("AbsenceStreakService.computeStreaks — bitta so'rovli yo'l", () => {
       $queryRaw: queryRaw,
     };
     return {
-      service: new AbsenceStreakService(prisma as never),
+      service: new AbsenceStreakService(
+        prisma as never,
+        noBarred as never,
+        settingsOff as never,
+      ),
       prisma,
       queryRaw,
     };
@@ -275,7 +282,11 @@ describe("AbsenceStreakService — sanoq oynasi so'rovga uzatiladi", () => {
       $queryRaw: queryRaw,
     };
     return {
-      service: new AbsenceStreakService(prisma as never),
+      service: new AbsenceStreakService(
+        prisma as never,
+        noBarred as never,
+        settingsOff as never,
+      ),
       prisma,
       queryRaw,
     };
@@ -386,7 +397,11 @@ describe("AbsenceStreakService — so'rovdagi uchta qoida", () => {
       attendance: { findFirst: jest.fn().mockResolvedValue(null) },
       $queryRaw: queryRaw,
     };
-    const service = new AbsenceStreakService(prisma as never);
+    const service = new AbsenceStreakService(
+      prisma as never,
+      noBarred as never,
+      settingsOff as never,
+    );
     await service.computeStreaks({ companyId });
     return (queryRaw.mock.calls[0][0] as string[]).join('?');
   }
@@ -413,5 +428,114 @@ describe("AbsenceStreakService — so'rovdagi uchta qoida", () => {
     expect(inner).toContain('"cancellationId" IS NULL');
     expect(inner).toContain('a."date" >= w."since"');
     expect(inner).toContain('PlannedAbsence');
+  });
+});
+
+describe('AbsenceStreakService — davomat olib bo`lmagan kunlar (ADR-0142)', () => {
+  const companyId = 1001;
+  const enrollment = {
+    id: 'e1',
+    studentId: 11001,
+    groupId: 'g031',
+    startDate: null,
+    createdAt: new Date('2026-09-01T06:00:00.000Z'),
+    statusChangedAt: null,
+  };
+
+  function make(opts: {
+    barred: Map<string, unknown>;
+    sqlRows?: unknown[];
+    on?: boolean;
+  }) {
+    const prisma = {
+      enrollment: { findMany: jest.fn().mockResolvedValue([enrollment]) },
+      attendance: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        groupBy: jest.fn().mockResolvedValue([]),
+      },
+      $queryRaw: jest.fn().mockResolvedValue(opts.sqlRows ?? []),
+    };
+    const barredLessons = {
+      forEnrollments: jest.fn().mockResolvedValue(opts.barred),
+    };
+    const settings = {
+      get: jest.fn().mockResolvedValue(opts.on ?? true),
+    };
+    return {
+      service: new AbsenceStreakService(
+        prisma as never,
+        barredLessons as never,
+        settings as never,
+      ),
+      barredLessons,
+      settings,
+    };
+  }
+
+  const barredFor = (days: string[], streak = days.length) =>
+    new Map([
+      [
+        'e1',
+        {
+          enrollmentId: 'e1',
+          studentId: 11001,
+          groupId: 'g031',
+          days,
+          streak,
+          lastDay: days[days.length - 1] ?? null,
+        },
+      ],
+    ]);
+
+  it('counts a run of barred days as a streak when a barred-lesson action is on', async () => {
+    const { service } = make({
+      barred: barredFor(['2026-10-05', '2026-10-07', '2026-10-09']),
+    });
+    const rows = await service.computeStreaks({ companyId, threshold: 3 });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      enrollmentId: 'e1',
+      consecutiveAbsentCount: 3,
+      reason: 'BARRED',
+    });
+    expect(rows[0].lastAbsenceDate.toISOString().slice(0, 10)).toBe(
+      '2026-10-09',
+    );
+  });
+
+  it('joins "Kelmadi" marks and barred days into one MIXED streak', async () => {
+    const { service } = make({
+      barred: barredFor(['2026-10-07', '2026-10-09'], 3),
+      sqlRows: [
+        {
+          studentId: 11001,
+          groupId: 'g031',
+          dateStr: '2026-10-05',
+          status: 'ABSENT',
+        },
+      ],
+    });
+    // SQL streak is 1 (below 3), the combined streak is 3.
+    const rows = await service.computeStreaks({ companyId, threshold: 3 });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].consecutiveAbsentCount).toBe(3);
+  });
+
+  it('leaves the old behaviour when no barred-lesson action is on', async () => {
+    const { service, barredLessons } = make({
+      barred: barredFor(['2026-10-05', '2026-10-07', '2026-10-09']),
+      on: false,
+    });
+    const rows = await service.computeStreaks({ companyId, threshold: 3 });
+    expect(rows).toEqual([]);
+    expect(barredLessons.forEnrollments).not.toHaveBeenCalled();
+  });
+
+  it('keeps a streak below the threshold out', async () => {
+    const { service } = make({
+      barred: barredFor(['2026-10-05', '2026-10-07']),
+    });
+    const rows = await service.computeStreaks({ companyId, threshold: 3 });
+    expect(rows).toEqual([]);
   });
 });

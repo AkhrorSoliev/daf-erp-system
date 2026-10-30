@@ -16,6 +16,7 @@ import {
   getPercentageColor,
   type DotStatus,
 } from "@/components/shared/attendance-dot";
+import { ContractClauseLink } from "@/components/shared/contract-clause-link";
 import { useT } from "@/i18n/context";
 import { msg } from "@/i18n/msg";
 import type { Params } from "@/i18n/translate";
@@ -40,6 +41,8 @@ interface Lesson {
   status: DotStatus;
   cycleSequenceNumber: number | null;
   month?: string | null;
+  /** BARRED: kun pauzada hisobdan chiqarilgan (ADR-0142). */
+  released?: boolean;
 }
 
 interface GroupOverview {
@@ -125,6 +128,7 @@ function LessonTimeline({
         key={`${l.date}-${i}`}
         status={l.status}
         date={l.date}
+        released={l.released}
         cycleLabel={title}
       />,
     );
@@ -203,6 +207,10 @@ export function LessonTrailTab({ studentId }: { studentId: number }) {
         .then((r) => r.data),
   });
 
+  const hasBarred = (data?.groups ?? []).some((g) =>
+    g.lessons.some((l) => l.status === "BARRED"),
+  );
+
   return (
     <TooltipProvider>
       <div className="space-y-4">
@@ -226,6 +234,10 @@ export function LessonTrailTab({ studentId }: { studentId: number }) {
               <span className="inline-block size-3 rounded-full bg-red-500" />
               {t("Kelmadi")}
             </span>
+            <span className="flex items-center gap-1.5 rounded-full bg-violet-100 py-0.5 pl-1.5 pr-2.5 font-semibold text-violet-800 dark:bg-violet-950 dark:text-violet-200">
+              <span className="inline-block size-3 rounded-full bg-violet-500" />
+              {t("To'lov yo'q")}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <Switch
@@ -241,6 +253,15 @@ export function LessonTrailTab({ studentId }: { studentId: number }) {
             </Label>
           </div>
         </div>
+
+        {hasBarred && (
+          <p className="text-xs text-muted-foreground">
+            {t(
+              "Binafsha nuqta: ustoz davomat oldi, lekin to'lov yo'qligi uchun o'quvchini belgilab bo'lmadi.",
+            )}{" "}
+            <ContractClauseLink no="3.2" />
+          </p>
+        )}
 
         {isLoading ? (
           <div className="space-y-3">

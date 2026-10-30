@@ -511,6 +511,20 @@ describe('StudentsStatusService.pauseForAbsence', () => {
     lastAbsenceDate: new Date('2026-09-12T00:00:00.000Z'),
   };
 
+  it('a barred-lesson pause writes the payment reason with the same prefix', async () => {
+    const { service, statusHistoryService } = makeService(activeStudent);
+
+    await service.pauseForAbsence({ ...params, barred: true });
+
+    const reason = statusHistoryService.changeStatus.mock.calls[0][0]
+      .reason as string;
+    // Same prefix: the «Pauzadagilar» tab finds it by it.
+    expect(reason).toContain('Avtomatik pauza:');
+    expect(reason).toContain("to'lov yo'qligi uchun davomat olib bo'lmadi");
+    expect(reason).toContain('3 ta');
+    expect(reason).toContain('12.09.2026');
+  });
+
   it("tizim aktori filial tekshiruvisiz muzlatadi va sababni o'zi yozadi", async () => {
     const { service, prisma, statusHistoryService, statusCascadeService } =
       makeService(activeStudent);

@@ -130,6 +130,28 @@ export class SettingsController {
       ]);
     }
 
+    if (dto.barredMark !== undefined) {
+      edits.push(['absence.barred.mark', dto.barredMark]);
+    }
+    if (dto.barredNudge !== undefined) {
+      edits.push(['absence.barred.nudge', dto.barredNudge]);
+    }
+    if (dto.barredWarn !== undefined) {
+      edits.push(['absence.barred.warn', dto.barredWarn]);
+    }
+    if (dto.barredAutoPause !== undefined) {
+      edits.push(['absence.barred.autoPause', dto.barredAutoPause]);
+    }
+    if (dto.barredPauseNotice !== undefined) {
+      edits.push(['absence.barred.pauseNotice', dto.barredPauseNotice]);
+    }
+    if (dto.barredRestoreDialog !== undefined) {
+      edits.push(['absence.barred.restoreDialog', dto.barredRestoreDialog]);
+    }
+    if (dto.barredLogOnly !== undefined) {
+      edits.push(['absence.barred.logOnly', dto.barredLogOnly]);
+    }
+
     if (edits.length === 0) {
       throw new BadRequestException('Kamida bitta sozlama yuborilishi kerak');
     }

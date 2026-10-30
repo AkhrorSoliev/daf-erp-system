@@ -1,4 +1,7 @@
-import { LessonAdmissionService } from './lesson-admission.service';
+import {
+  LessonAdmissionService,
+  admissionKey,
+} from './lesson-admission.service';
 
 const OCT = ['2026-10-02', '2026-10-05', '2026-10-07'];
 const chargeRow = (studentId: number) => ({
@@ -58,6 +61,49 @@ describe('LessonAdmissionService', () => {
         today: '2026-10-05',
       }),
     ).resolves.toBeNull();
+  });
+
+  it('forLessons judges many (student, group, day) triples with one read per month', async () => {
+    prisma.student.findMany.mockResolvedValue([
+      { id: 1, balance: -300000, companyId: 5 },
+      { id: 2, balance: -100000, companyId: 5 },
+    ]);
+    prisma.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+      chargeRow(1),
+      chargeRow(2),
+    ]);
+
+    const result = await service.forLessons([
+      { studentId: 1, groupId: 'g005', lessonDay: '2026-10-05' },
+      { studentId: 1, groupId: 'g005', lessonDay: '2026-10-07' },
+      { studentId: 2, groupId: 'g005', lessonDay: '2026-10-05' },
+      { studentId: 2, groupId: 'g005', lessonDay: '2026-09-30' },
+    ]);
+
+    expect(result.get(admissionKey(1, 'g005', '2026-10-05'))).toMatchObject({
+      admitted: false,
+    });
+    expect(result.get(admissionKey(1, 'g005', '2026-10-07'))).toMatchObject({
+      admitted: false,
+    });
+    expect(result.get(admissionKey(2, 'g005', '2026-10-05'))).toMatchObject({
+      admitted: true,
+    });
+    // Before the rule's start day nothing is judged.
+    expect(result.has(admissionKey(2, 'g005', '2026-09-30'))).toBe(false);
+    expect(prisma.enrollmentMonthlyCharge.findMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('forLessons admits everyone when contract 3.2 is switched off', async () => {
+    prisma.student.findMany.mockResolvedValue([
+      { id: 1, balance: -300000, companyId: 5 },
+    ]);
+    settings.get.mockResolvedValue(false);
+    const result = await service.forLessons([
+      { studentId: 1, groupId: 'g005', lessonDay: '2026-10-05' },
+    ]);
+    expect(result.size).toBe(0);
+    expect(prisma.enrollmentMonthlyCharge.findMany).not.toHaveBeenCalled();
   });
 
   it('judges every student of a lesson from their balance and month charges', async () => {

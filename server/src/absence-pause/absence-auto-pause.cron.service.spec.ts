@@ -25,6 +25,7 @@ describe('AbsenceAutoPauseCronService', () => {
     overrides: {
       pauseForAbsence?: jest.Mock;
       warnedAlready?: string[];
+      flags?: Record<string, boolean>;
     } = {},
   ) {
     const settingService = { get: jest.fn().mockResolvedValue(settings) };
@@ -101,15 +102,36 @@ describe('AbsenceAutoPauseCronService', () => {
       },
       company: { findMany: jest.fn().mockResolvedValue([{ id: companyId }]) },
     };
+    // Barred-lesson switches all off: the old behaviour stays as it was.
+    const barredLessons = {
+      flags: jest.fn().mockResolvedValue({
+        mark: true,
+        nudge: false,
+        warn: false,
+        autoPause: false,
+        pauseNotice: false,
+        restoreDialog: false,
+        logOnly: true,
+        ...(overrides.flags ?? {}),
+      }),
+      forEnrollments: jest.fn().mockResolvedValue(new Map()),
+    };
+    const barredCharge = {
+      release: jest.fn().mockResolvedValue({ refunded: 0, lessons: 0 }),
+    };
     const service = new AbsenceAutoPauseCronService(
       prisma as never,
       settingService as never,
       streakService as never,
       statusService as never,
       notify as never,
+      barredLessons as never,
+      barredCharge as never,
     );
     return {
       service,
+      barredLessons,
+      barredCharge,
       settingService,
       streakService,
       statusService,
@@ -259,6 +281,100 @@ describe('AbsenceAutoPauseCronService', () => {
       expect.objectContaining({ streak: 3 }),
       2,
     );
+  });
+
+  describe('barred lessons (ADR-0142)', () => {
+    const barredRow = (id: number, count: number) => ({
+      ...streak(id, count),
+      reason: 'BARRED' as const,
+    });
+
+    it('sends nothing for a barred streak while the stage switches are off', async () => {
+      const { service, notify, statusService } = makeService(on, [
+        barredRow(1, 1),
+        barredRow(2, 2),
+        barredRow(3, 3),
+      ]);
+      await service.runForCompany(companyId);
+      expect(notify.nudgeStudent).not.toHaveBeenCalled();
+      expect(notify.warnStudent).not.toHaveBeenCalled();
+      expect(statusService.pauseForAbsence).not.toHaveBeenCalled();
+    });
+
+    it('stage 1 and 2 go out per switch, as a test run while log-only is on', async () => {
+      const { service, notify, prisma } = makeService(
+        on,
+        [barredRow(1, 1), barredRow(2, 2)],
+        { flags: { nudge: true, warn: true, logOnly: true } },
+      );
+      await service.runForCompany(companyId);
+      expect(notify.nudgeStudent).toHaveBeenCalledWith(
+        expect.objectContaining({ barred: { live: false } }),
+        expect.anything(),
+      );
+      expect(notify.warnStudent).toHaveBeenCalledWith(
+        expect.objectContaining({ barred: { live: false } }),
+        1,
+      );
+      // A test run must not mark the lesson as messaged.
+      expect(prisma.absenceWarningLog.create).not.toHaveBeenCalled();
+    });
+
+    it('goes live once log-only is off and records the message', async () => {
+      const { service, notify, prisma } = makeService(on, [barredRow(1, 1)], {
+        flags: { nudge: true, logOnly: false },
+      });
+      await service.runForCompany(companyId);
+      expect(notify.nudgeStudent).toHaveBeenCalledWith(
+        expect.objectContaining({ barred: { live: true } }),
+        expect.anything(),
+      );
+      expect(prisma.absenceWarningLog.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('pauses a barred streak only with the auto-pause switch', async () => {
+      const off = makeService(on, [barredRow(1, 3)], {
+        flags: { autoPause: false },
+      });
+      await off.service.runForCompany(companyId);
+      expect(off.statusService.pauseForAbsence).not.toHaveBeenCalled();
+
+      const onFlags = makeService(on, [barredRow(1, 3)], {
+        flags: { autoPause: true, pauseNotice: true, logOnly: false },
+      });
+      onFlags.barredLessons.forEnrollments.mockResolvedValue(
+        new Map([
+          ['e-1', { days: ['2026-10-05', '2026-10-07', '2026-10-09'] }],
+        ]),
+      );
+      await onFlags.service.runForCompany(companyId);
+      expect(onFlags.statusService.pauseForAbsence).toHaveBeenCalledWith(
+        expect.objectContaining({ barred: true }),
+      );
+      // The money of the days it could not mark comes off the charge.
+      expect(onFlags.barredCharge.release).toHaveBeenCalledWith(
+        expect.objectContaining({
+          enrollmentId: 'e-1',
+          barredDays: ['2026-10-05', '2026-10-07', '2026-10-09'],
+        }),
+      );
+      expect(onFlags.statusService.pauseForAbsence).toHaveBeenCalledTimes(1);
+      expect(onFlags.notify.announcePause).toHaveBeenCalledWith(
+        expect.objectContaining({ barred: { live: true } }),
+      );
+    });
+
+    it('an ordinary absence streak ignores the barred switches', async () => {
+      const { service, statusService, notify, barredCharge } = makeService(on, [
+        streak(1, 3),
+      ]);
+      await service.runForCompany(companyId);
+      expect(barredCharge.release).not.toHaveBeenCalled();
+      expect(statusService.pauseForAbsence).toHaveBeenCalledTimes(1);
+      expect(notify.announcePause).toHaveBeenCalledWith(
+        expect.not.objectContaining({ barred: expect.anything() }),
+      );
+    });
   });
 
   describe('remindForCompany (evening run)', () => {

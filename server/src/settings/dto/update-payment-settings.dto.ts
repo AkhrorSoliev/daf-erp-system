@@ -88,6 +88,34 @@ export class UpdatePaymentSettingsDto {
   @Type(() => Number)
   paidThroughReminderDays?: number;
 
+  @IsOptional()
+  @IsBoolean()
+  barredMark?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  barredNudge?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  barredWarn?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  barredAutoPause?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  barredPauseNotice?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  barredRestoreDialog?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  barredLogOnly?: boolean;
+
   // Faqat CEO uchun ma'noli — qaysi filialga yozish. Branch Director bu
   // maydondan qat'i nazar faqat o'z filialiga yoza oladi (kontrollerda
   // majburlanadi); CEO uchun berilmasa — kompaniya darajasida yoziladi.

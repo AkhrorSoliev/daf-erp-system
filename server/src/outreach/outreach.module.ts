@@ -3,12 +3,14 @@ import { OutreachController } from './outreach.controller';
 import { OutreachService } from './outreach.service';
 import { AbsenceStreakService } from './absence-streak.service';
 import { AbsencePauseSettingModule } from '../absence-pause/absence-pause-setting.module';
+import { BarredLessonsModule } from '../attendance/barred-lessons.module';
+import { SettingsModule } from '../settings/settings.module';
 
 @Module({
   // Chegara sozlamasi — o'z kichik modulidan. `AbsencePauseModule` ning
   // o'zini import qilish aylanma bog'liqlik hosil qilardi (u cron uchun
   // shu moduldan `AbsenceStreakService` ni oladi).
-  imports: [AbsencePauseSettingModule],
+  imports: [AbsencePauseSettingModule, BarredLessonsModule, SettingsModule],
   controllers: [OutreachController],
   providers: [OutreachService, AbsenceStreakService],
   // Bosh sahifaning boshqaruv paneli (`DashboardSummaryService`) «e'tibor»

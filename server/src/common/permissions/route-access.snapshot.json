@@ -321,6 +321,13 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /contract-documents/clauses": [
+    "Administrator",
+    "Branch Director",
+    "CEO",
+    "Cashier",
+    "Teacher"
+  ],
   "GET /contract-documents/prefill": [
     "Administrator",
     "Branch Director",
@@ -1357,6 +1364,11 @@
     "CEO",
     "Cashier"
   ],
+  "GET /students/:id/barred-lessons": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "GET /students/:id/closed-enrollments": [
     "Administrator",
     "Branch Director",
@@ -2343,6 +2355,11 @@
     "CEO"
   ],
   "POST /students/:id/balance-notices": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /students/:id/barred-lessons/restore": [
     "Administrator",
     "Branch Director",
     "CEO"

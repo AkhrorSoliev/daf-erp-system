@@ -35,6 +35,13 @@ export type SettingKey =
   | 'payment.attendanceOpensMinutesBefore'
   | 'payment.admissionMinPaidPercent'
   | 'payment.paidThroughReminderDays'
+  | 'absence.barred.mark'
+  | 'absence.barred.nudge'
+  | 'absence.barred.warn'
+  | 'absence.barred.autoPause'
+  | 'absence.barred.pauseNotice'
+  | 'absence.barred.restoreDialog'
+  | 'absence.barred.logOnly'
   | 'lessonRating.enabled'
   | 'leads.maxUntouched'
   | 'leads.firstActionHours'
@@ -75,6 +82,13 @@ export interface SettingValueMap {
   'payment.attendanceOpensMinutesBefore': number;
   'payment.admissionMinPaidPercent': number;
   'payment.paidThroughReminderDays': number;
+  'absence.barred.mark': boolean;
+  'absence.barred.nudge': boolean;
+  'absence.barred.warn': boolean;
+  'absence.barred.autoPause': boolean;
+  'absence.barred.pauseNotice': boolean;
+  'absence.barred.restoreDialog': boolean;
+  'absence.barred.logOnly': boolean;
   'lessonRating.enabled': boolean;
   'leads.maxUntouched': number;
   'leads.firstActionHours': number;
@@ -366,6 +380,55 @@ export const SETTING_DEFINITIONS: {
     // 0: no such reminder. Read by `MonthlyPaymentNoticeCronService`.
     defaultValue: 3,
     parse: parseReminderDays,
+    companyLevelOnly: true,
+  },
+  'absence.barred.mark': {
+    key: 'absence.barred.mark',
+    // Profilda binafsha nuqta, «Darsga qo'yilmayotganlar» tabi va eski holatlar hisoboti (ADR-0142). Faqat o'qiydi, shuning uchun yoqilgan holda boshlanadi.
+    defaultValue: true,
+    parse: (raw) => parseBoolean('absence.barred.mark', raw),
+    companyLevelOnly: true,
+  },
+  'absence.barred.nudge': {
+    key: 'absence.barred.nudge',
+    // 1-dars xabari: davomat olib bo'lmagan birinchi darsdan keyin yumshoq eslatma.
+    defaultValue: false,
+    parse: (raw) => parseBoolean('absence.barred.nudge', raw),
+    companyLevelOnly: true,
+  },
+  'absence.barred.warn': {
+    key: 'absence.barred.warn',
+    // 2-dars xabari: ketma-ket ikkinchi darsda ogohlantirish.
+    defaultValue: false,
+    parse: (raw) => parseBoolean('absence.barred.warn', raw),
+    companyLevelOnly: true,
+  },
+  'absence.barred.autoPause': {
+    key: 'absence.barred.autoPause',
+    // Avto-pauza: ketma-ket darslardan keyin o'quvchi pauzaga tushadi, belgilab bo'lmagan kunlar hisobdan chiqadi. Umumiy `AbsencePauseSetting.enabled` ham yoqilgan bo'lishi kerak.
+    defaultValue: false,
+    parse: (raw) => parseBoolean('absence.barred.autoPause', raw),
+    companyLevelOnly: true,
+  },
+  'absence.barred.pauseNotice': {
+    key: 'absence.barred.pauseNotice',
+    // 3-dars xabari: pauza haqida o'quvchiga xabar. `autoPause` ga tayanadi.
+    defaultValue: false,
+    parse: (raw) => parseBoolean('absence.barred.pauseNotice', raw),
+    companyLevelOnly: true,
+  },
+  'absence.barred.restoreDialog': {
+    key: 'absence.barred.restoreDialog',
+    // Qaytishda admin kelgan kunlarni belgilaydi (o'quvchini faollashtirish yoki guruhga qo'shish).
+    defaultValue: false,
+    parse: (raw) => parseBoolean('absence.barred.restoreDialog', raw),
+    companyLevelOnly: true,
+  },
+  'absence.barred.logOnly': {
+    key: 'absence.barred.logOnly',
+    // Yoqilgan bo'lsa, xabar matni tayyorlanadi va logga yoziladi, o'quvchiga yuborilmaydi (sinov).
+    defaultValue: true,
+    parse: (raw) => parseBoolean('absence.barred.logOnly', raw),
     companyLevelOnly: true,
   },
   'lessonRating.enabled': {

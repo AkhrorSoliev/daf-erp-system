@@ -1,4 +1,5 @@
 import { Transform, Type } from 'class-transformer';
+import { toStringArray } from '../../common/dto/to-array';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -36,6 +37,16 @@ export class StudentContractsQueryDto {
   @IsInt()
   @Min(1)
   studentId: number;
+}
+
+/** `GET /contract-documents/clauses?nos=3.2,6.3` (ADR-0142). */
+export class ClausesQueryDto {
+  @Transform(({ value }) => toStringArray(value))
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(10)
+  @Matches(/^\d{1,2}\.\d{1,2}$/, { each: true })
+  nos: string[];
 }
 
 export class ContractCustomerDto {

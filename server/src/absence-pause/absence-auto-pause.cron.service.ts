@@ -7,6 +7,10 @@ import {
   type StreakRow,
 } from '../outreach/absence-streak.service';
 import { StudentsStatusService } from '../students/students-status.service';
+import { BarredLessonsService } from '../attendance/barred-lessons.service';
+import { BarredLessonsChargeService } from '../billing/barred-lessons-charge.service';
+import { buildBarredPauseReason } from './absence-pause.constants';
+import type { BarredFlags } from '../attendance/barred-lessons';
 import {
   AbsencePauseNotifyService,
   type PauseTarget,
@@ -53,6 +57,8 @@ export class AbsenceAutoPauseCronService {
     private streaks: AbsenceStreakService,
     private studentsStatus: StudentsStatusService,
     private notify: AbsencePauseNotifyService,
+    private barredLessons: BarredLessonsService,
+    private barredCharge: BarredLessonsChargeService,
   ) {}
 
   @Cron('0 30 7 * * *', { timeZone: 'Asia/Tashkent' })
@@ -119,6 +125,7 @@ export class AbsenceAutoPauseCronService {
       targets,
       settings.warnThreshold,
       settings.pauseThreshold,
+      await this.barredLessons.flags(companyId),
     );
   }
 
@@ -139,8 +146,13 @@ export class AbsenceAutoPauseCronService {
       threshold: 1,
     });
 
+    const flags = await this.barredLessons.flags(companyId);
+    // To'lov yo'qligi uchun davomat olib bo'lmagan ketma-ketlik faqat
+    // "Avto-pauza" katagi yoqilgan bo'lsa pauzaga olib boradi (ADR-0142).
     const toPause = rows.filter(
-      (r) => r.consecutiveAbsentCount >= settings.pauseThreshold,
+      (r) =>
+        r.consecutiveAbsentCount >= settings.pauseThreshold &&
+        (isAbsentOnly(r) || flags.autoPause),
     );
     const toRemind = rows.filter(
       (r) => r.consecutiveAbsentCount < settings.pauseThreshold,
@@ -166,6 +178,17 @@ export class AbsenceAutoPauseCronService {
       );
     }
 
+    // Davomat olib bo'lmagan kunlar pauza paytida hisobdan chiqariladi: bu
+    // kunlarni pauzadan OLDIN bir marta o'qiymiz (pauzadan keyin yozilish
+    // FAOL emas, hukm chiqmaydi).
+    const barredRows = toPause.filter((r) => !isAbsentOnly(r));
+    const barredDays =
+      !blockedByCap && barredRows.length > 0
+        ? await this.barredLessons.forEnrollments(
+            barredRows.map((r) => r.enrollmentId),
+          )
+        : new Map();
+
     const failures: string[] = [];
     let paused = 0;
 
@@ -185,11 +208,29 @@ export class AbsenceAutoPauseCronService {
             companyId,
             streak: row.consecutiveAbsentCount,
             lastAbsenceDate: row.lastAbsenceDate,
+            barred: !isAbsentOnly(row),
           });
           paused++;
+          const days = barredDays.get(row.enrollmentId)?.days ?? [];
+          if (!isAbsentOnly(row) && days.length > 0) {
+            await this.barredCharge.release({
+              enrollmentId: row.enrollmentId,
+              barredDays: days,
+              companyId,
+              reason: buildBarredPauseReason(
+                row.consecutiveAbsentCount,
+                row.lastAbsenceDate,
+              ),
+            });
+          }
           await this.notify.announcePause({
             ...target,
             streak: row.consecutiveAbsentCount,
+            ...(isAbsentOnly(row)
+              ? {}
+              : {
+                  barred: { live: flags.pauseNotice && !flags.logOnly },
+                }),
           });
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
@@ -205,6 +246,7 @@ export class AbsenceAutoPauseCronService {
       targets,
       settings.warnThreshold,
       settings.pauseThreshold,
+      flags,
     );
 
     // Yiqilgan holat jim qolmasin — aks holda o'quvchi pauzada deb
@@ -238,6 +280,7 @@ export class AbsenceAutoPauseCronService {
     targets: Map<string, PauseTarget>,
     warnThreshold: number,
     pauseThreshold: number,
+    flags: BarredFlags,
   ): Promise<number> {
     if (rows.length === 0) return 0;
 
@@ -260,16 +303,26 @@ export class AbsenceAutoPauseCronService {
       if (!target) continue;
 
       const isWarnTier = row.consecutiveAbsentCount >= warnThreshold;
+      // To'lov yo'qligi uchun davomat olib bo'lmagan ketma-ketlik (ADR-0142):
+      // har bosqich o'z katagi bilan yoqiladi; `logOnly` da matn faqat logga
+      // yoziladi va "yuborildi" belgisi (AbsenceWarningLog) QO'YILMAYDI, aks
+      // holda keyin haqiqiy yoqilganda bu dars uchun xabar ketmay qolardi.
+      const barredRow = !isAbsentOnly(row);
+      if (barredRow && !(isWarnTier ? flags.warn : flags.nudge)) continue;
+      const live = !flags.logOnly;
+      const sendTarget = {
+        ...target,
+        streak: row.consecutiveAbsentCount,
+        ...(barredRow ? { barred: { live } } : {}),
+      };
       try {
         const sentToStudent = isWarnTier
           ? await this.notify.warnStudent(
-              { ...target, streak: row.consecutiveAbsentCount },
+              sendTarget,
               pauseThreshold - row.consecutiveAbsentCount,
             )
-          : await this.notify.nudgeStudent(
-              { ...target, streak: row.consecutiveAbsentCount },
-              row.lastAbsenceDate,
-            );
+          : await this.notify.nudgeStudent(sendTarget, row.lastAbsenceDate);
+        if (barredRow && !live) continue;
         await this.prisma.absenceWarningLog.create({
           data: {
             enrollmentId: row.enrollmentId,
@@ -343,4 +396,9 @@ export class AbsenceAutoPauseCronService {
       ]),
     );
   }
+}
+
+/** "Kelmadi" belgilaridangina iborat ketma-ketlikmi (eski, o'zgarmagan yo'l). */
+function isAbsentOnly(row: StreakRow): boolean {
+  return !row.reason || row.reason === 'ABSENT';
 }

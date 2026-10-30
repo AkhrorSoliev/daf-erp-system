@@ -59,6 +59,8 @@ describe('operational reads are branch-confined', () => {
           {} as any,
           {} as any,
           {} as any,
+          {} as any,
+          {} as any,
         ),
         calls,
       };

@@ -15,13 +15,21 @@ import {
 // profilidagi "Darslar" tab'i (lesson-trail-tab) o'rtasida ulashilgan
 // primitivlar. Bitta manba: ranglar/yorliqlar ikki joyda dublikat bo'lmasin.
 
-export type DotStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED" | null;
+// "BARRED" (ADR-0142): ustoz davomat oldi, lekin to'lov yo'qligi uchun o'quvchini belgilab bo'lmadi, qatori yo'q.
+export type DotStatus =
+  | "PRESENT"
+  | "ABSENT"
+  | "LATE"
+  | "EXCUSED"
+  | "BARRED"
+  | null;
 
 export const STATUS_LABEL: Record<Exclude<DotStatus, null>, string> = {
   PRESENT: msg("Keldi"),
   LATE: msg("Kech"),
   EXCUSED: msg("Sababli"),
   ABSENT: msg("Kelmadi"),
+  BARRED: msg("To'lov yo'qligi uchun davomat olib bo'lmadi"),
 };
 
 export function getDotClass(status: DotStatus): string {
@@ -34,6 +42,8 @@ export function getDotClass(status: DotStatus): string {
       return "bg-sky-400 border-sky-400";
     case "ABSENT":
       return "bg-red-500 border-red-500";
+    case "BARRED":
+      return "bg-violet-500 border-violet-500";
     default:
       return "border-dashed border-muted-foreground/50";
   }
@@ -64,6 +74,8 @@ interface AttendanceDotProps {
   enrolled?: boolean;
   /** Recorded minutes late on a LATE lesson (ADR-0048). */
   lateMinutes?: number | null;
+  /** BARRED: kun pauzada hisobdan chiqarilgan (ADR-0142) — halqali nuqta. */
+  released?: boolean;
 }
 
 export function AttendanceDot({
@@ -73,6 +85,7 @@ export function AttendanceDot({
   cycleLabel,
   enrolled = true,
   lateMinutes,
+  released = false,
 }: AttendanceDotProps) {
   const t = useT();
   const late = status === "LATE" ? lateMinutesText(lateMinutes, t) : null;
@@ -97,6 +110,8 @@ export function AttendanceDot({
               : getDotClass(status),
             hasOverride &&
               "ring-2 ring-blue-500/70 ring-offset-1 ring-offset-background",
+            released &&
+              "ring-2 ring-violet-300 ring-offset-1 ring-offset-background",
           )}
           aria-label={`${formatted} — ${late ?? statusLabel}${
             hasOverride ? ` — ${substitute}` : ""
@@ -107,6 +122,9 @@ export function AttendanceDot({
         <span className="font-medium">{formatted}</span>
         {" — "}
         {late ?? statusLabel}
+        {released && (
+          <span className="text-violet-300">{` • ${t("Hisobdan chiqarilgan")}`}</span>
+        )}
         {hasOverride && (
           <span className="text-blue-600 dark:text-blue-400">
             {` • ${substitute}`}
