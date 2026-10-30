@@ -11,7 +11,8 @@
  */
 import { Telegram } from 'telegraf';
 import { sendTelegramText } from '../src/telegram-digest/telegram-send';
-import { printHeader, run } from './lib/check-cli';
+import type { Prisma } from '@prisma/client';
+import { makePrisma, printHeader, run } from './lib/check-cli';
 import { UsageError } from './lib/apply-expect-args';
 import { parseProfileRequestArgs } from './lib/profile-request-plan';
 import {
@@ -25,6 +26,28 @@ import {
 /** Telegram umumiy ~30 xabar/s; 20/s xavfsiz. */
 const GAP_MS = 50;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Har yozuv o'z ulanishida: uzun tsiklda bitta ulanish uzilsa (29.10: 603 chatdan
+ * 6 tasidan keyin) qolganlar yuborilmay qolardi. 3 urinish, so'ng false.
+ */
+async function record(
+  data: Prisma.SmsMessageCreateManyInput[],
+): Promise<boolean> {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const db = makePrisma();
+    try {
+      await db.smsMessage.createMany({ data });
+      return true;
+    } catch (e) {
+      console.warn(`yozuv urinishi ${attempt}: ${(e as Error).message}`);
+    } finally {
+      await db.$disconnect().catch(() => undefined);
+    }
+    await sleep(500 * attempt);
+  }
+  return false;
+}
 
 function env(name: string): string {
   const v = process.env[name];
@@ -121,14 +144,16 @@ void run(async (prisma) => {
 
   let sent = 0;
   let failed = 0;
+  const unrecorded: string[] = [];
   for (const t of targets) {
     const text = buildPhoneVerifyText(greetingName(t));
     const out = await sendTelegramText(bot, t.chatId, text, {
       parse_mode: 'HTML',
       reply_markup: keyboard,
     });
-    await prisma.smsMessage.createMany({
-      data: t.students.map((s) => ({
+    // Yuborilgan xabar qaytmaydi: yozuv yiqilsa tsikl to'xtamaydi, chat ro'yxatga olinadi.
+    const recorded = await record(
+      t.students.map((s) => ({
         studentId: s.id,
         content: text,
         type: 'AUTO' as const,
@@ -137,7 +162,8 @@ void run(async (prisma) => {
         errorMessage: out.ok ? null : out.description,
         companyId: s.companyId,
       })),
-    });
+    );
+    if (!recorded) unrecorded.push(`${t.chatId}${out.ok ? '' : ' (xato)'}`);
     if (out.ok) sent += 1;
     else {
       failed += 1;
@@ -146,5 +172,10 @@ void run(async (prisma) => {
     await sleep(GAP_MS);
   }
   console.log(`Tayyor: yuborildi ${sent}, xato ${failed}`);
-  if (failed) process.exitCode = 1;
+  if (unrecorded.length) {
+    console.warn(
+      `Bazaga yozilmadi (qayta yuborilsa takror boradi): ${unrecorded.join(', ')}`,
+    );
+  }
+  if (failed || unrecorded.length) process.exitCode = 1;
 });
