@@ -43,6 +43,7 @@ describe('BarredLessonsChargeService', () => {
   const prisma = {
     $transaction: jest.fn((fn: (t: typeof tx) => unknown) => fn(tx)),
     transaction: tx.transaction,
+    enrollment: { findMany: jest.fn() },
   };
   const transactionsWrite = { createAdjustment: jest.fn() };
   const lessonBilling = { processAttendanceBilling: jest.fn() };
@@ -166,6 +167,56 @@ describe('BarredLessonsChargeService', () => {
         row('monthly-restore', ['2026-10-05']),
       ]);
       expect(await service.releasedDays('e1')).toEqual([]);
+    });
+  });
+
+  describe('outstandingForStudent', () => {
+    it('lists the released days of each enrollment with that month\u2019s per-lesson price', async () => {
+      prisma.enrollment.findMany.mockResolvedValue([
+        {
+          id: 'e1',
+          groupId: 'g031',
+          group: { name: '#031' },
+          monthlyCharges: [
+            {
+              periodYear: 2026,
+              periodMonth: 10,
+              monthlyPrice: 450000,
+              plannedLessons: 13,
+              discountPercent: 0,
+            },
+          ],
+        },
+        {
+          id: 'e2',
+          groupId: 'g010',
+          group: { name: '#010' },
+          monthlyCharges: [],
+        },
+      ]);
+      tx.transaction.findMany
+        .mockResolvedValueOnce([
+          {
+            metadata: {
+              kind: 'monthly-release',
+              period: '2026-10',
+              dates: ['2026-10-05', '2026-10-07'],
+            },
+          },
+        ])
+        .mockResolvedValueOnce([]);
+
+      expect(await service.outstandingForStudent(11001, 1001)).toEqual([
+        {
+          enrollmentId: 'e1',
+          groupId: 'g031',
+          groupName: '#031',
+          days: [
+            { date: '2026-10-05', price: 34615 },
+            { date: '2026-10-07', price: 34615 },
+          ],
+        },
+      ]);
     });
   });
 

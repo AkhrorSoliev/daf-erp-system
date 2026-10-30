@@ -22,6 +22,19 @@ export interface ReleasedBarredDays {
   days: string[];
 }
 
+/** A released day with the price it would be charged again at. */
+export interface OutstandingBarredDay {
+  date: string;
+  price: number;
+}
+
+export interface OutstandingBarredLessons {
+  enrollmentId: string;
+  groupId: string;
+  groupName: string;
+  days: OutstandingBarredDay[];
+}
+
 const TX_OPTIONS = {
   isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
   maxWait: 10000,
@@ -174,6 +187,58 @@ export class BarredLessonsChargeService {
       .map(([period, set]) => ({ period, days: [...set].sort() }))
       .filter((r) => r.days.length > 0)
       .sort((a, b) => a.period.localeCompare(b.period));
+  }
+
+  /**
+   * Everything a student's pauses released and nobody restored, by enrollment,
+   * with the per-lesson price of each day's month: the return dialog's list.
+   */
+  async outstandingForStudent(
+    studentId: number,
+    companyId: number,
+  ): Promise<OutstandingBarredLessons[]> {
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: { studentId, deletedAt: null, group: { companyId } },
+      select: {
+        id: true,
+        groupId: true,
+        group: { select: { name: true } },
+        monthlyCharges: {
+          where: { status: MonthlyChargeStatus.CHARGED },
+          select: {
+            periodYear: true,
+            periodMonth: true,
+            monthlyPrice: true,
+            plannedLessons: true,
+            discountPercent: true,
+          },
+        },
+      },
+    });
+    const out: OutstandingBarredLessons[] = [];
+    for (const e of enrollments) {
+      const priceOf = new Map(
+        e.monthlyCharges.map((c) => [
+          periodOf(c),
+          applyDiscount(
+            proratedMonthlyAmount(c.monthlyPrice, c.plannedLessons, 1),
+            clampDiscount(c.discountPercent ?? 0),
+          ),
+        ]),
+      );
+      const days = (await this.releasedDays(e.id)).flatMap((r) =>
+        r.days.map((date) => ({ date, price: priceOf.get(r.period) ?? 0 })),
+      );
+      if (days.length > 0) {
+        out.push({
+          enrollmentId: e.id,
+          groupId: e.groupId,
+          groupName: e.group.name,
+          days,
+        });
+      }
+    }
+    return out;
   }
 
   /**

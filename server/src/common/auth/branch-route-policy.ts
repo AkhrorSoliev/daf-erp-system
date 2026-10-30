@@ -333,6 +333,18 @@ export const ROUTE_POLICIES: PolicyBlock[] = [
     ],
   },
   {
+    policy: 'BRANCH_SCOPED_BY_ENTITY',
+    reason:
+      'Return dialog for the days a pause took off the charge (ADR-0142). Both ' +
+      'routes name the student in the path and check the caller against that ' +
+      'student branch with `assertCallerMayTouchStudent`; the header branch is ' +
+      'never read.',
+    routes: [
+      'GET /students/:id/barred-lessons',
+      'POST /students/:id/barred-lessons/restore',
+    ],
+  },
+  {
     policy: 'COMPANY_WIDE',
     reason:
       'Contract clause text for the «Shartnoma 3.2» links (ADR-0142): the ' +
