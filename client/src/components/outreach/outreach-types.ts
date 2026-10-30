@@ -169,9 +169,35 @@ export interface ActivePromisesResponse {
   items: ActivePromiseItem[];
 }
 
+export interface BlockedFromLessonsItem {
+  enrollmentId: string;
+  // Ustoz davomat olgan, lekin o'ziga belgi qo'yilmagan darslar soni.
+  missedLessons: number;
+  // Oxirgi belgisiz qolgan dars kuni ('YYYY-MM-DD').
+  lastMissedDate: string;
+  // Oxirgi marta PRESENT/LATE bo'lgan kun (null = hech qachon kelmagan).
+  lastCameDate: string | null;
+  // Musbat son: o'quvchining qarzi (so'm).
+  debt: number;
+  calledToday: boolean;
+  // Eng oxirgi qo'ng'iroq (sabab qanday bo'lmasin).
+  lastCall: { at: string; outcome: CallOutcome } | null;
+  // Ochiq yoki buzilgan to'lov va'dasi.
+  promise: { date: string; status: "OPEN" | "BROKEN" } | null;
+  student: OutreachStudentWithParent & { balance: number };
+  group: OutreachGroupSummary;
+  teacher: OutreachTeacher | null;
+}
+
+export interface BlockedFromLessonsResponse {
+  total: number;
+  items: BlockedFromLessonsItem[];
+}
+
 export interface OutreachStats {
   todayAbsentees: number;
   removalQueue: number;
+  blockedFromLessons: number;
   activePromises: number;
   callsToday: number;
 }

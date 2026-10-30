@@ -366,6 +366,9 @@ describe('OutreachService', () => {
       prisma.attendance.count = jest.fn().mockResolvedValue(7);
       prisma.paymentPromise.count = jest.fn().mockResolvedValue(2); // activePromises
       prisma.callLog.count = jest.fn().mockResolvedValue(5); // callsToday
+      jest
+        .spyOn(service, 'getBlockedFromLessons')
+        .mockResolvedValue({ total: 3, items: [] } as never);
       jest.spyOn(streak, 'computeStreaks').mockResolvedValue([
         {
           enrollmentId: 'e1',
@@ -387,6 +390,7 @@ describe('OutreachService', () => {
       expect(res).toEqual({
         todayAbsentees: 7,
         removalQueue: 1,
+        blockedFromLessons: 3,
         activePromises: 2,
         callsToday: 5,
       });
@@ -402,9 +406,106 @@ describe('OutreachService', () => {
       expect(res).toEqual({
         todayAbsentees: 0,
         removalQueue: 0,
+        blockedFromLessons: 0,
         activePromises: 0,
         callsToday: 0,
       });
+    });
+  });
+
+  describe('getBlockedFromLessons', () => {
+    const ctx = {
+      userId: 10001,
+      companyId: 1,
+      roles: ['CEO'],
+      branchScope: null,
+    };
+    const student = (id: number, balance: number) => ({
+      id,
+      firstName: 'S' + id,
+      lastName: 'L',
+      phone: '900000000',
+      parentPhone: null,
+      photo: null,
+      balance,
+    });
+    const enrollment = (id: string, studentId: number, balance: number) => ({
+      id,
+      studentId,
+      groupId: 'g1',
+      student: student(studentId, balance),
+      group: {
+        id: 'g1',
+        name: '#001',
+        course: { id: 'c1', name: 'A1' },
+        branch: { id: 1, name: 'Main' },
+        teachers: [],
+      },
+    });
+
+    beforeEach(() => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-30T07:00:00Z'));
+      prisma.enrollmentMonthlyCharge = { findMany: jest.fn() };
+      prisma.attendance.groupBy = jest.fn();
+      prisma.paymentPromise.findMany = jest.fn().mockResolvedValue([]);
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it('ustoz davomat olgan, lekin o‘ziga belgi qo‘yilmagan kunlarni sanaydi', async () => {
+      prisma.enrollment.findMany.mockResolvedValue([
+        enrollment('e1', 1, -450000), // belgisiz — ro'yxatga tushadi
+        enrollment('e2', 2, -100000), // hamma kun belgilangan — tushmaydi
+        enrollment('e3', 3, -50000), // oylik hisob yo'q — tushmaydi
+      ]);
+      const covered = ['2026-10-05', '2026-10-07', '2026-10-09'];
+      prisma.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+        { enrollmentId: 'e1', coveredDates: covered, frozenOutDates: [] },
+        { enrollmentId: 'e2', coveredDates: covered, frozenOutDates: [] },
+      ]);
+      const day = (d: string) => new Date(d + 'T00:00:00Z');
+      prisma.attendance.groupBy
+        .mockResolvedValueOnce([
+          // ustoz davomat olgan kunlar: 09.10 hech kimga belgilanmagan
+          { groupId: 'g1', date: day('2026-10-05') },
+          { groupId: 'g1', date: day('2026-10-07') },
+        ])
+        .mockResolvedValueOnce([
+          { studentId: 1, groupId: 'g1', _max: { date: day('2026-10-02') } },
+        ]);
+      prisma.attendance.findMany.mockResolvedValue([
+        { studentId: 2, groupId: 'g1', date: day('2026-10-05') },
+        { studentId: 2, groupId: 'g1', date: day('2026-10-07') },
+      ]);
+      prisma.callLog.findMany.mockResolvedValue([
+        {
+          studentId: 1,
+          createdAt: new Date('2026-10-29T08:00:00Z'),
+          outcome: 'NO_ANSWER',
+        },
+      ]);
+
+      const res = await service.getBlockedFromLessons(ctx);
+
+      expect(res.total).toBe(1);
+      expect(res.items[0]).toMatchObject({
+        enrollmentId: 'e1',
+        missedLessons: 2,
+        lastMissedDate: '2026-10-07',
+        lastCameDate: '2026-10-02',
+        debt: 450000,
+        calledToday: false,
+        lastCall: { outcome: 'NO_ANSWER' },
+        promise: null,
+      });
+    });
+
+    it('bo‘sh filial doirasida hech narsa qaytarmaydi va bazaga murojaat qilmaydi', async () => {
+      const res = await service.getBlockedFromLessons({
+        ...ctx,
+        branchScope: [],
+      });
+      expect(res).toEqual({ total: 0, items: [] });
+      expect(prisma.enrollment.findMany).not.toHaveBeenCalled();
     });
   });
 });

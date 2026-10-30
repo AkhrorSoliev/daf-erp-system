@@ -720,6 +720,11 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /outreach/blocked-from-lessons": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "GET /outreach/promises": [
     "Administrator",
     "Branch Director",

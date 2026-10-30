@@ -5541,6 +5541,14 @@ const de: Dictionary = {
   "Bu turdagi savollarda to'plam har safar boshqacha tanlanadi — bu yerda namunasi.": "Bei diesem Fragetyp wird die Auswahl jedes Mal neu getroffen — hier ein Beispiel.",
   "Sinov rejimi": "Testmodus",
   "Sinov rejimi — javoblar saqlanmaydi": "Testmodus — Antworten werden nicht gespeichert",
+  "Darsga qo'yilmayotganlar": "Vom Unterricht ausgeschlossen",
+  "Qarzi sababli darsga qo'yilmayotgan, lekin hali guruhda turgan o'quvchilar.": "Lernende, die wegen offener Schulden nicht zum Unterricht zugelassen werden, aber noch in der Gruppe sind.",
+  "Ustoz ularni davomatda belgilay olmaydi, shuning uchun boshqa ro'yxatlarda ko'rinmaydi. To'lov oling yoki guruhdan chiqaring — chiqarilmasa, keyingi oy ham hisoblanadi.": "Die Lehrkraft kann sie in der Anwesenheit nicht markieren, deshalb erscheinen sie in keiner anderen Liste. Zahlung einholen oder aus der Gruppe entfernen — bleiben sie, wird auch der nächste Monat berechnet.",
+  "Darsga qo'yilmayotgan o'quvchi yo'q.": "Keine Lernenden vom Unterricht ausgeschlossen.",
+  "Qo'yilmagan darslar": "Verpasste Stunden",
+  "{days} kun oldin": "vor {days} Tagen",
+  "{count} ta dars": "{count} Stunden",
+  "Bog'lanilmagan": "Nicht kontaktiert",
 };
 
 export default de;

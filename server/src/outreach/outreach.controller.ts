@@ -53,6 +53,21 @@ export class OutreachController {
     });
   }
 
+  @Get('blocked-from-lessons')
+  getBlockedFromLessons(
+    @CurrentUser('id') userId: number,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('roles') roles: string[],
+    @BranchScope() branchScope: ReportBranchIds,
+  ) {
+    return this.outreach.getBlockedFromLessons({
+      userId,
+      companyId,
+      roles,
+      branchScope,
+    });
+  }
+
   @Get('auto-paused')
   getAutoPaused(
     @CurrentUser('id') userId: number,

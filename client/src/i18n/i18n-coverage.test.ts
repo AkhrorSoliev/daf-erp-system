@@ -278,6 +278,7 @@ export const STRICT_FILES: string[] = [
   "components/outreach/log-call-dialog.tsx",
   "components/outreach/removal-queue-tab.tsx",
   "components/outreach/paused-tab.tsx",
+  "components/outreach/blocked-from-lessons-tab.tsx",
   // Mock exams, part one — list, create/edit, detail shell, overview, form builder
   "hooks/use-mock-exams-board.ts",
   "lib/schemas/mock-exam-form-schema.ts",
