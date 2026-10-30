@@ -375,12 +375,22 @@
     "Branch Director",
     "CEO"
   ],
-  "GET /daf/media/overview": [
+  "GET /daf/media/lessons/:id/fragen": [
     "Administrator",
     "Branch Director",
     "CEO"
   ],
-  "GET /daf/media/sections/:id/fragen": [
+  "GET /daf/media/lessons/:id/sinov": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /daf/media/lessons/:id/sinov/ersatz": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /daf/media/overview": [
     "Administrator",
     "Branch Director",
     "CEO"
@@ -706,6 +716,11 @@
   "GET /notifications/unread-count": "ANY",
   "GET /notifications/vapid-public-key": "PUBLIC",
   "GET /outreach/auto-paused": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "GET /outreach/blocked-from-lessons": [
     "Administrator",
     "Branch Director",
     "CEO"
@@ -2002,6 +2017,16 @@
     "CEO"
   ],
   "POST /custom-forms": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /daf/media/sinov/check": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /daf/media/sinov/juft": [
     "Administrator",
     "Branch Director",
     "CEO"

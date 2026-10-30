@@ -20,6 +20,15 @@ export interface AudioOnlyMediaCounts {
   withAudio: number;
 }
 
+/** Seans — o'quvchi yo'lidagi bitta dars. */
+export type MediaLessonKind = "SECTION_A" | "SECTION_B" | "BRIDGE" | "UNIT_TEST";
+
+export interface MediaLesson {
+  id: number;
+  kind: MediaLessonKind;
+  order: number;
+}
+
 export interface MediaSectionCoverage {
   sectionId: number;
   code: string;
@@ -29,6 +38,7 @@ export interface MediaSectionCoverage {
   sentences: AudioOnlyMediaCounts;
   phrases: AudioOnlyMediaCounts;
   dialogLines: AudioOnlyMediaCounts;
+  lessons: MediaLesson[];
 }
 
 export interface MediaUnitCoverage {
@@ -37,6 +47,7 @@ export interface MediaUnitCoverage {
   order: number;
   titleUz: string;
   sections: MediaSectionCoverage[];
+  unitLessons: MediaLesson[];
 }
 
 export interface MediaLevelCoverage {

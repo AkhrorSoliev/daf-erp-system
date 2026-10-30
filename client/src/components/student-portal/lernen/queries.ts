@@ -488,3 +488,45 @@ export function useJangYakun() {
     },
   });
 }
+
+/**
+ * /media «O'quvchi kabi o'tib ko'rish» — xodim uchun. O'quvchi hooklarining
+ * egizaklari, lekin `/daf/media/...`ga boradi: server seansni o'quvchisiz
+ * quradi va javobni HECH NARSA yozmasdan tekshiradi.
+ */
+const KORIK = "/daf/media";
+
+export function useKorikSeans(lessonId: number) {
+  return useQuery(
+    queryOptions<PublicFrage[]>({
+      queryKey: ["media-korik", lessonId],
+      queryFn: () => api.get(`${KORIK}/lessons/${lessonId}/sinov`).then((r) => r.data),
+      enabled: Number.isFinite(lessonId),
+      refetchOnWindowFocus: false,
+      staleTime: Infinity,
+      gcTime: 0,
+    }),
+  );
+}
+
+export function useKorikPruefen() {
+  return useMutation<PruefErgebnis, unknown, Parameters<ReturnType<typeof usePruefen>["mutate"]>[0]>({
+    mutationFn: (body) => api.post(`${KORIK}/sinov/check`, body).then((r) => r.data),
+  });
+}
+
+export function useKorikJuft() {
+  return useMutation<JuftNatija, unknown, Parameters<ReturnType<typeof useJuftTekshir>["mutate"]>[0]>({
+    mutationFn: (body) => api.post(`${KORIK}/sinov/juft`, body).then((r) => r.data),
+  });
+}
+
+export function useKorikErsatz() {
+  return useMutation<PublicFrage | null, unknown, Parameters<ReturnType<typeof useErsatz>["mutate"]>[0]>({
+    mutationFn: ({ lessonId, itemType, itemId, nichtFormat }) =>
+      api
+        .get(`${KORIK}/lessons/${lessonId}/sinov/ersatz`, { params: { itemType, itemId, nichtFormat } })
+        // `||`: bo'sh tana `""` bo'lib keladi (`useErsatz`dagi izohga qarang).
+        .then((r) => r.data || null),
+  });
+}

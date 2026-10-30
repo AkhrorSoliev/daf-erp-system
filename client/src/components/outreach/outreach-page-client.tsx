@@ -2,9 +2,13 @@
 
 import { useCallback, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/api";
+import type { OutreachStats } from "./outreach-types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TodayAbsenteesTab } from "./today-absentees-tab";
 import { RemovalQueueTab } from "./removal-queue-tab";
+import { BlockedFromLessonsTab } from "./blocked-from-lessons-tab";
 import { PausedTab } from "./paused-tab";
 import { CallHistoryTab } from "./call-history-tab";
 import { LogCallDialog, type LogCallPrefill } from "./log-call-dialog";
@@ -18,6 +22,7 @@ const DEFAULT_TAB = "absentees";
 const TABS = [
   { value: "absentees", label: msg("Bugungi kelmaganlar") },
   { value: "removals", label: msg("Ko'p dars qoldirganlar") },
+  { value: "blocked", label: msg("Darsga qo'yilmayotganlar") },
   { value: "paused", label: msg("Pauzadagilar") },
   { value: "history", label: msg("Qo'ng'iroq tarixi") },
 ];
@@ -33,6 +38,16 @@ export function OutreachPageClient() {
   const activeTab = VALID_TABS.has(tabFromUrl) ? tabFromUrl : DEFAULT_TAB;
 
   const [callPrefill, setCallPrefill] = useState<LogCallPrefill | null>(null);
+
+  // Statistika vidjeti bilan bir xil so'rov (bitta kesh kaliti) — tab yonidagi
+  // son shundan olinadi, ikkinchi so'rov ketmaydi.
+  const { data: stats } = useQuery({
+    queryKey: ["outreach", "stats"],
+    queryFn: () =>
+      api.get<OutreachStats>("/outreach/stats").then((r) => r.data),
+    staleTime: 0,
+  });
+  const blockedCount = stats?.blockedFromLessons ?? 0;
 
   const setActiveTab = useCallback(
     (tab: string) => {
@@ -71,6 +86,11 @@ export function OutreachPageClient() {
           {TABS.map((tab) => (
             <TabsTrigger key={tab.value} value={tab.value}>
               {t(tab.label)}
+              {tab.value === "blocked" && blockedCount > 0 && (
+                <span className="ml-2 rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-semibold leading-none text-white">
+                  {blockedCount}
+                </span>
+              )}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -87,6 +107,12 @@ export function OutreachPageClient() {
         <TabsContent value="removals" className="mt-4">
           <RemovalQueueTab
             isActive={activeTab === "removals"}
+            onLogCall={openLogCall}
+          />
+        </TabsContent>
+        <TabsContent value="blocked" className="mt-4">
+          <BlockedFromLessonsTab
+            isActive={activeTab === "blocked"}
             onLogCall={openLogCall}
           />
         </TabsContent>

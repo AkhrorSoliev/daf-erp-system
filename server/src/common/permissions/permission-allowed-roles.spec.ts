@@ -17,11 +17,17 @@ import {
  * unless the write is reviewed below. Each reason starts with the route key
  * and a colon, and says why the route stays safe.
  */
-const REVIEWED_COMPANY_WIDE_WRITES: Partial<Record<PermissionKey, string>> = {
+const REVIEWED_COMPANY_WIDE_WRITES: Partial<
+  Record<PermissionKey, string | string[]>
+> = {
   'settings.branches':
     'POST /branches: BranchesService.create refuses every caller but the CEO',
   'settings.tax':
     'PATCH /settings/tax: every tax key is companyLevelOnly; widened only so the CEO can hand the page to an accountant account',
+  'media.view': [
+    'POST /daf/media/sinov/check: only checks one answer of the /media preview against the shared catalogue; it reads and writes nothing of any student',
+    'POST /daf/media/sinov/juft: only checks one pair of the /media preview against the shared catalogue; it reads and writes nothing of any student',
+  ],
 };
 
 const SERVER_ROOT = join(__dirname, '..', '..', '..');
@@ -63,25 +69,30 @@ describe('a widened capability opens only reviewed routes', () => {
   });
 
   it.each(widened)('%s opens no unreviewed COMPANY_WIDE write', (key) => {
-    const reason = REVIEWED_COMPANY_WIDE_WRITES[key];
+    const reasons = [REVIEWED_COMPANY_WIDE_WRITES[key] ?? []].flat();
     expect(
       companyWideWrites(key)
-        .filter((r) => !reason?.startsWith(`${r.key}:`))
+        .filter(
+          (r) => !reasons.some((reason) => reason.startsWith(`${r.key}:`)),
+        )
         .map((r) => r.key),
     ).toEqual([]);
   });
 
   it('reviews only widened capabilities and routes that exist', () => {
-    for (const [key, reason] of Object.entries(REVIEWED_COMPANY_WIDE_WRITES)) {
+    for (const [key, value] of Object.entries(REVIEWED_COMPANY_WIDE_WRITES)) {
       const capability = key as PermissionKey;
+      const reasons = [value].flat();
       expect({ key, widened: widened.includes(capability) }).toEqual({
         key,
         widened: true,
       });
       expect({
         key,
-        named: companyWideWrites(capability).some((r) =>
-          reason.startsWith(`${r.key}:`),
+        named: reasons.every((reason) =>
+          companyWideWrites(capability).some((r) =>
+            reason.startsWith(`${r.key}:`),
+          ),
         ),
       }).toEqual({ key, named: true });
     }

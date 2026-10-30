@@ -15,7 +15,7 @@ function pxByBreakpoint(classes: string, utility: "w" | "pl"): Record<string, nu
 }
 
 /** Classes of the bar's outermost (the `fixed`) element. */
-function barClasses(sidebarMode: SidebarMode): string {
+function barClasses(sidebarMode: SidebarMode | null): string {
   const html = renderToStaticMarkup(
     createElement(PastkiPanel, { sidebarMode }, "Tekshirish"),
   );
@@ -42,6 +42,10 @@ describe("lesson bottom bar beside the side rail", () => {
     expect(classes.filter((c) => /^(pl|left|ml|inset)-/.test(c))).toEqual([
       "inset-x-0",
     ]);
+  });
+
+  it("null rejimida chekinish klassi yo'q", () => {
+    expect(barClasses(null)).not.toMatch(/:pl-/);
   });
 });
 

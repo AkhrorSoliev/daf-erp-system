@@ -1,73 +1,136 @@
 "use client";
 
-import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, FolderArchive, Swords } from "lucide-react";
-import api from "@/lib/api";
+import * as React from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ListTree, RotateCcw } from "lucide-react";
 import { useT } from "@/i18n/context";
-import { MediaCoverageSection } from "./media-coverage-section";
-import { jamiSonlar } from "./media-jang-utils";
-import type { JangOverview } from "./media-jang-types";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
+import { MediaDaraxt } from "./media-daraxt-view";
+import { bolimJoyi, boshlangichTanlov, seansJoyi, tanlovParamlari, tanlovniOqi, type Tanlov } from "./media-daraxt";
+import { MediaInhaltPanel } from "./media-inhalt-panel";
+import { MediaPleyerPanel } from "./media-pleyer-panel";
+import { useMediaCoverage } from "./media-queries";
+import { MediaSeansPanel } from "./media-seans-panel";
+import { MediaSinovQatlami } from "./media-sinov-qatlami";
 
-/**
- * «Jang savollari» sahifasiga havola. Savollar soni `/media/jang` bilan BIR
- * XIL so'rovdan keladi (bir xil kalit), shuning uchun sahifaga o'tganda
- * qayta yuklanmaydi.
- */
-function JangLink() {
-  const t = useT();
-  const { data } = useQuery({
-    queryKey: ["media-jang"],
-    queryFn: () => api.get<JangOverview>("/daf/media/jang").then((r) => r.data),
-  });
-  const jami = data ? jamiSonlar(data.units).jami : null;
-  return (
-    <Link
-      href="/media/jang"
-      className="flex items-center gap-3 rounded-xl border bg-card p-4 transition hover:bg-muted/50"
-    >
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-        <Swords className="size-5" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block font-semibold">{t("Jang savollari")}</span>
-        <span className="block text-xs text-muted-foreground">
-          {jami === null
-            ? t("Barcha jang savollarini unit bo'yicha o'qib chiqish")
-            : t("{n} ta savol — unit bo'yicha o'qib chiqish", { n: jami })}
-        </span>
-      </span>
-      <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
-    </Link>
-  );
-}
-
+/** /media — kursni o'quvchi yo'li bo'yicha ko'rib chiqish. */
 export function MediaClient() {
   const t = useT();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { data, isLoading, isError, refetch } = useMediaCoverage();
+  const [sheet, setSheet] = React.useState(false);
+  const [sinov, setSinov] = React.useState<number | null>(null);
+  // Barqaror bo'lishi shart: qatlam effekti shunga bog'liq.
+  const sinovniYop = React.useCallback(() => setSinov(null), []);
+
+  const levels = data?.levels ?? [];
+  const tanlov = tanlovniOqi((k) => searchParams.get(k)) ?? boshlangichTanlov(levels);
+
+  const tanla = React.useCallback(
+    (yangi: Tanlov) => {
+      setSheet(false);
+      router.replace(`${pathname}?${tanlovParamlari(yangi)}`, { scroll: false });
+    },
+    [pathname, router],
+  );
+
+  const daraxt = <MediaDaraxt levels={levels} tanlov={tanlov} onTanla={tanla} />;
+  const bolim = tanlov?.tur === "bolim" ? bolimJoyi(levels, tanlov.id) : null;
+  const seans = tanlov?.tur === "seans" ? seansJoyi(levels, tanlov.id) : null;
+  const birinchi = boshlangichTanlov(levels);
+
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{t("Media")}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t("Kurs qamrovi — nima tayyor, nima yo'q va qayerda.")}
-          </p>
-        </div>
-        {/* Obrazlar va 47 fayl kurs kontenti emas — eski quvurning
-            natijasi. Qamrov jadvali ustida turishi diqqatni chalg'itardi,
-            shuning uchun alohida sahifada, bu yerdan bitta havola bilan. */}
-        <Link
-          href="/media/assets"
-          className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition hover:bg-muted/50"
-        >
-          <FolderArchive className="h-4 w-4 text-muted-foreground" />
-          {t("Media fayllari")}
-        </Link>
+    <div className="flex min-h-[calc(100dvh-4rem)] flex-col">
+      <div className="flex flex-1 flex-col gap-4 p-4 md:flex-row md:p-6">
+        <aside className="hidden w-64 shrink-0 md:block">
+          <div className="sticky top-4 max-h-[calc(100dvh-8rem)] overflow-y-auto pr-1">{!isLoading && daraxt}</div>
+        </aside>
+
+        <main className="min-w-0 flex-1 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">{t("Media")}</h1>
+              <p className="text-sm text-muted-foreground">
+                {t("Har bir bo'lim va seansni o'quvchi ko'zi bilan ko'rib chiqish.")}
+              </p>
+            </div>
+            <Button variant="outline" size="sm" className="md:hidden" onClick={() => setSheet(true)}>
+              <ListTree className="mr-1.5 size-4" />
+              {t("Bo'limlar")}
+            </Button>
+          </div>
+
+          {isLoading && <Skeleton className="h-64 w-full rounded-lg" />}
+
+          {!isLoading && isError && (
+            <Card>
+              <CardContent className="flex items-center justify-between gap-3 p-4 text-sm text-muted-foreground">
+                <span>{t("Qamrov ma'lumoti olinmadi")}</span>
+                <Button variant="outline" size="sm" onClick={() => refetch()}>
+                  <RotateCcw className="mr-1.5 size-3.5" />
+                  {t("Qayta urinib ko'rish")}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {data && levels.length === 0 && (
+            <Card>
+              <CardContent className="p-4 text-sm text-muted-foreground">
+                {t("Hali hech qanday unit yaratilmagan — kontentni bazaga yozadigan seed skriptini ({scripts}) ishga tushiring.", { scripts: "`daf:seed`/`daf:inhalt-seed`" })}
+              </CardContent>
+            </Card>
+          )}
+
+          {bolim && (
+            <div className="space-y-1">
+              <div className="text-xs text-muted-foreground">{bolim.unit.titleUz}</div>
+              <h2 className="text-lg font-semibold">{bolim.section.titleUz}</h2>
+              <MediaInhaltPanel key={bolim.section.sectionId} sectionId={bolim.section.sectionId} />
+            </div>
+          )}
+
+          {seans && (
+            <MediaSeansPanel
+              key={seans.lesson.id}
+              lessonId={seans.lesson.id}
+              joy={seans}
+              onSinov={() => setSinov(seans.lesson.id)}
+            />
+          )}
+
+          {data && levels.length > 0 && tanlov && !bolim && !seans && (
+            <Card>
+              <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm text-muted-foreground">
+                <span>{t("Bu bo'lim yoki seans topilmadi")}</span>
+                {birinchi && (
+                  <Button size="sm" onClick={() => tanla(birinchi)}>
+                    {t("Birinchi bo'limni ochish")}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </main>
       </div>
 
-      <JangLink />
+      <MediaPleyerPanel />
 
-      <MediaCoverageSection />
+      <Sheet open={sheet} onOpenChange={setSheet}>
+        <SheetContent side="left" className="flex w-80 flex-col p-0">
+          <SheetHeader className="border-b px-4 py-3">
+            <SheetTitle>{t("Bo'limlar")}</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto p-3">{daraxt}</div>
+        </SheetContent>
+      </Sheet>
+
+      {sinov !== null && <MediaSinovQatlami lessonId={sinov} onYop={sinovniYop} />}
     </div>
   );
 }

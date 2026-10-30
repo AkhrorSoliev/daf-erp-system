@@ -3,6 +3,7 @@ import {
   AttendanceStatus,
   CallOutcome,
   EnrollmentStatus,
+  GroupStatus,
   StudentStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -12,6 +13,13 @@ import {
   tashkentDayRangeUtc,
   utcMidnightFromDateStr,
 } from '../attendance/shared/date-utils';
+import {
+  addDaysToDateStr,
+  addMonthsToMonthKey,
+  tashkentMonthKey,
+} from '../common/date/tashkent';
+import { ADMISSION_START_DAY } from '../billing/lesson-admission';
+import { unmarkedLessonDays } from './unmarked-lesson-days';
 import { AbsenceStreakService } from './absence-streak.service';
 import { AbsencePauseSettingService } from '../absence-pause/absence-pause-setting.service';
 import { AUTO_PAUSE_REASON_PREFIX } from '../absence-pause/absence-pause.constants';
@@ -156,6 +164,7 @@ export class OutreachService {
       return {
         todayAbsentees: 0,
         removalQueue: 0,
+        blockedFromLessons: 0,
         activePromises: 0,
         callsToday: 0,
       };
@@ -169,7 +178,7 @@ export class OutreachService {
     // `/outreach` ro'yxati bir xil qoidadan oziqlansin.
     const settings = await this.pauseSettings.get(ctx.companyId);
 
-    const [todayAbsentees, streaks, activePromises, callsToday] =
+    const [todayAbsentees, streaks, activePromises, callsToday, blocked] =
       await Promise.all([
         this.prisma.attendance.count({
           where: {
@@ -204,6 +213,7 @@ export class OutreachService {
             ...(branchIds ? { branchId: { in: branchIds } } : {}),
           },
         }),
+        this.getBlockedFromLessons(ctx),
       ]);
 
     return {
@@ -213,6 +223,9 @@ export class OutreachService {
       removalQueue: streaks.filter(
         (s) => s.consecutiveAbsentCount >= settings.pauseThreshold,
       ).length,
+      // «Darsga qo'yilmayotganlar» tabining soni. «e'tibor» raqamiga
+      // QO'SHILMAGAN: u hali faqat pauza yoqasidagilarni sanaydi.
+      blockedFromLessons: blocked.total,
       activePromises,
       callsToday,
     };
@@ -481,6 +494,247 @@ export class OutreachService {
       },
       group: s.enrollments[0]?.group ?? null,
     }));
+
+    return { total: items.length, items };
+  }
+
+  /**
+   * «Darsga qo'yilmayotganlar» tabi (ADR-0141): guruhda turgan, qarzdor va
+   * ustoz davomat olgan darslarda o'ziga hech qanday belgi qo'yilmagan
+   * o'quvchilar.
+   *
+   * 2-darsdan keyin to'lamagan o'quvchiga «Keldi» ham, «Kelmadi» ham qo'yib
+   * bo'lmaydi (ADR-0047), shuning uchun u davomat qatori qoldirmaydi va
+   * «Kelmaganlar» / «Ko'p dars qoldirganlar» ro'yxatlariga tushmaydi. Shu
+   * ro'yxat o'sha bo'shliqni yopadi: qator YO'QLIGI — belgi.
+   *
+   * Oynasi: oxirgi 31 kun, lekin ADMISSION_START_DAY dan oldin emas (qoida
+   * shundan beri bor). Hisob — oylik hisobning muzlatilgan sanalari
+   * (`coveredDates` minus `frozenOutDates`), shuning uchun bekor qilingan
+   * va qaytarilgan kunlar sanalmaydi.
+   */
+  async getBlockedFromLessons(ctx: UserContext) {
+    const branchIds = this.toBranchIds(ctx.branchScope);
+    if (branchIds && branchIds.length === 0) return { total: 0, items: [] };
+
+    const now = new Date();
+    const today = tashkentDateStr(now);
+    const windowStart = addDaysToDateStr(today, -31);
+    const from =
+      windowStart > ADMISSION_START_DAY ? windowStart : ADMISSION_START_DAY;
+    const thisMonth = tashkentMonthKey(now);
+    const periods = [addMonthsToMonthKey(thisMonth, -1), thisMonth].map((k) => {
+      const [y, m] = k.split('-').map(Number);
+      return { periodYear: y, periodMonth: m };
+    });
+
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: {
+        status: EnrollmentStatus.ACTIVE,
+        deletedAt: null,
+        student: {
+          deletedAt: null,
+          companyId: ctx.companyId,
+          balance: { lt: 0 },
+        },
+        group: {
+          deletedAt: null,
+          statusEnum: GroupStatus.ACTIVE,
+          companyId: ctx.companyId,
+          ...(branchIds ? { branchId: { in: branchIds } } : {}),
+        },
+      },
+      select: {
+        id: true,
+        studentId: true,
+        groupId: true,
+        student: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            parentPhone: true,
+            photo: true,
+            balance: true,
+          },
+        },
+        group: {
+          select: {
+            id: true,
+            name: true,
+            course: { select: { id: true, name: true } },
+            branch: { select: { id: true, name: true } },
+            teachers: {
+              select: {
+                teacher: {
+                  select: { id: true, firstName: true, lastName: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (enrollments.length === 0) return { total: 0, items: [] };
+
+    const enrollmentIds = enrollments.map((e) => e.id);
+    const studentIds = [...new Set(enrollments.map((e) => e.studentId))];
+    const groupIds = [...new Set(enrollments.map((e) => e.groupId))];
+    const range = {
+      gte: utcMidnightFromDateStr(from),
+      lt: utcMidnightFromDateStr(today),
+    };
+    const dayStr = (d: Date) => d.toISOString().slice(0, 10);
+
+    const [charges, heldRows, markedRows, lastCame, calls, promises] =
+      await Promise.all([
+        this.prisma.enrollmentMonthlyCharge.findMany({
+          where: {
+            enrollmentId: { in: enrollmentIds },
+            status: 'CHARGED',
+            OR: periods,
+          },
+          select: {
+            enrollmentId: true,
+            coveredDates: true,
+            frozenOutDates: true,
+          },
+        }),
+        // Ustoz davomat olgan kunlar (bekor qilingan dars qatorlari sanalmaydi).
+        this.prisma.attendance.groupBy({
+          by: ['groupId', 'date'],
+          where: {
+            groupId: { in: groupIds },
+            date: range,
+            cancellationId: null,
+          },
+        }),
+        this.prisma.attendance.findMany({
+          where: {
+            studentId: { in: studentIds },
+            groupId: { in: groupIds },
+            date: range,
+          },
+          select: { studentId: true, groupId: true, date: true },
+        }),
+        this.prisma.attendance.groupBy({
+          by: ['studentId', 'groupId'],
+          where: {
+            studentId: { in: studentIds },
+            groupId: { in: groupIds },
+            status: {
+              in: [AttendanceStatus.PRESENT, AttendanceStatus.LATE],
+            },
+          },
+          _max: { date: true },
+        }),
+        this.prisma.callLog.findMany({
+          where: { companyId: ctx.companyId, studentId: { in: studentIds } },
+          orderBy: { createdAt: 'desc' },
+          distinct: ['studentId'],
+          select: { studentId: true, createdAt: true, outcome: true },
+        }),
+        this.prisma.paymentPromise.findMany({
+          where: {
+            companyId: ctx.companyId,
+            studentId: { in: studentIds },
+            status: { in: ['OPEN', 'BROKEN'] },
+          },
+          orderBy: { promiseDate: 'desc' },
+          distinct: ['studentId'],
+          select: { studentId: true, promiseDate: true, status: true },
+        }),
+      ]);
+
+    const chargesByEnrollment = new Map<
+      string,
+      { covered: string[]; frozen: string[] }
+    >();
+    for (const c of charges) {
+      const acc = chargesByEnrollment.get(c.enrollmentId) ?? {
+        covered: [],
+        frozen: [],
+      };
+      acc.covered.push(...(c.coveredDates ?? []));
+      acc.frozen.push(...(c.frozenOutDates ?? []));
+      chargesByEnrollment.set(c.enrollmentId, acc);
+    }
+    const heldByGroup = new Map<string, Set<string>>();
+    for (const r of heldRows) {
+      const set = heldByGroup.get(r.groupId) ?? new Set<string>();
+      set.add(dayStr(r.date));
+      heldByGroup.set(r.groupId, set);
+    }
+    const markedByPair = new Map<string, Set<string>>();
+    for (const r of markedRows) {
+      const key = `${r.studentId}:${r.groupId}`;
+      const set = markedByPair.get(key) ?? new Set<string>();
+      set.add(dayStr(r.date));
+      markedByPair.set(key, set);
+    }
+    const lastCameByPair = new Map(
+      lastCame.map(
+        (r) => [`${r.studentId}:${r.groupId}`, r._max.date] as const,
+      ),
+    );
+    const lastCallByStudent = new Map(calls.map((c) => [c.studentId, c]));
+    const promiseByStudent = new Map(promises.map((p) => [p.studentId, p]));
+
+    const empty = new Set<string>();
+    const items = enrollments
+      .map((e) => {
+        const ch = chargesByEnrollment.get(e.id);
+        if (!ch) return null;
+        const missed = unmarkedLessonDays({
+          coveredDates: ch.covered,
+          frozenOutDates: ch.frozen,
+          heldDays: heldByGroup.get(e.groupId) ?? empty,
+          markedDays: markedByPair.get(`${e.studentId}:${e.groupId}`) ?? empty,
+          from,
+          to: today,
+        });
+        if (missed.length === 0) return null;
+        const lastDate = lastCameByPair.get(`${e.studentId}:${e.groupId}`);
+        const call = lastCallByStudent.get(e.studentId);
+        const promise = promiseByStudent.get(e.studentId);
+        return {
+          enrollmentId: e.id,
+          missedLessons: missed.length,
+          lastMissedDate: missed[missed.length - 1],
+          lastCameDate: lastDate ? dayStr(lastDate) : null,
+          debt: -e.student.balance,
+          calledToday: !!call && tashkentDateStr(call.createdAt) === today,
+          lastCall: call
+            ? {
+                at: call.createdAt.toISOString(),
+                outcome: call.outcome,
+              }
+            : null,
+          promise: promise
+            ? {
+                date: promise.promiseDate.toISOString(),
+                status: promise.status,
+              }
+            : null,
+          student: e.student,
+          group: {
+            id: e.group.id,
+            name: e.group.name,
+            course: e.group.course,
+            branch: e.group.branch,
+          },
+          teacher: e.group.teachers[0]
+            ? {
+                id: e.group.teachers[0].teacher.id,
+                firstName: e.group.teachers[0].teacher.firstName,
+                lastName: e.group.teachers[0].teacher.lastName,
+              }
+            : null,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null)
+      .sort((a, b) => b.missedLessons - a.missedLessons || b.debt - a.debt);
 
     return { total: items.length, items };
   }

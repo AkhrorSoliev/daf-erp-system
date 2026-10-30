@@ -3591,3 +3591,83 @@ describe('SATZ_HOEREN', () => {
     expect(r.richtig).toBe('Ich wohne in Deutschland.');
   });
 });
+
+describe("UebungService — /media ko'rigi (o'quvchisiz)", () => {
+  it("seans(lessonId, null) o'quvchi holatini o'qimaydi", async () => {
+    const prisma = fakePrisma();
+    const fragen = await new UebungService(prisma as any).seans(
+      100,
+      null,
+      mulberry32(1),
+    );
+    expect(fragen.length).toBeGreaterThan(0);
+    expect(prisma.dafLexemeState.findMany).not.toHaveBeenCalled();
+  });
+
+  it("vorschauKandidaten seans tanlay oladigan har savolni o'z ichiga oladi", async () => {
+    const prisma = fakePrisma();
+    const service = new UebungService(prisma as any);
+    const { kind, laenge, fragen } = await service.vorschauKandidaten(100);
+    expect(kind).toBe('SECTION_A');
+    expect(laenge).toBe(12);
+    // PAAR/ZUORDNEN to'rtlik/oltilikni, DIALOG_LUECKE esa bo'sh qoldiriladigan
+    // qatorni tasodifiy tanlaydi — `itemId` ularda har chaqiruvda boshqa,
+    // shuning uchun solishtirilmaydi.
+    const juftsiz = (f: { format: string }) =>
+      f.format !== 'PAAR' &&
+      f.format !== 'ZUORDNEN' &&
+      f.format !== 'DIALOG_LUECKE';
+    const kalitlar = new Set(
+      fragen
+        .filter(juftsiz)
+        .map((f) => `${f.format}:${f.itemType}:${f.itemId}`),
+    );
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const seans = await service.seans(100, null, mulberry32(seed));
+      for (const f of seans.filter(juftsiz)) {
+        expect(kalitlar).toContain(`${f.format}:${f.itemType}:${f.itemId}`);
+      }
+    }
+  });
+
+  it('pruefen(input, null) javobni tekshiradi, hech narsa yozmaydi', async () => {
+    const prisma = fakePrisma();
+    const r = await new UebungService(prisma as any).pruefen(
+      { itemType: 'WORT', itemId: 1, format: 'WORT_UZ', given: 'salom' },
+      null,
+    );
+    expect(r.isCorrect).toBe(true);
+    expect(prisma.dafAttempt.create).not.toHaveBeenCalled();
+    expect(prisma.dafLexemeState.upsert).not.toHaveBeenCalled();
+    expect(prisma.dafSession.create).not.toHaveBeenCalled();
+    expect(prisma.$executeRaw).not.toHaveBeenCalled();
+  });
+
+  it('juft(input, null) juftni tekshiradi, hech narsa yozmaydi', async () => {
+    const prisma = fakePrisma();
+    prisma.dafLexeme.findUnique = jest.fn(async () => ({
+      id: 5,
+      de: 'das Haus',
+      uz: 'uy',
+      artikel: 'das',
+      unitId: 1,
+    })) as any;
+    prisma.dafLexeme.findMany = jest.fn(async () => [
+      { id: 5, de: 'das Haus', uz: 'uy' },
+    ]) as any;
+    const r = await new UebungService(prisma as any).juft(
+      {
+        itemType: 'WORT',
+        itemId: 5,
+        format: 'PAAR',
+        chap: 'das Haus',
+        ong: 'uy',
+      },
+      null,
+    );
+    expect(r).toEqual({ isCorrect: true });
+    expect(prisma.dafAttempt.create).not.toHaveBeenCalled();
+    expect(prisma.dafLexemeState.upsert).not.toHaveBeenCalled();
+    expect(prisma.dafSession.create).not.toHaveBeenCalled();
+  });
+});

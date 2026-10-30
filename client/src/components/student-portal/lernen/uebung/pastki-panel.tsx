@@ -28,20 +28,22 @@ const FON = {
  * The mode is a prop, not read from `useSidebar` here, so a test can render the
  * wiring for every mode (a server render only ever sees the store's `auto`).
  * `ohang` is the verdict's tint (`panelOhangi`), `null` before the check.
+ *
+ * `null` — chap rels yo'q (admin /media sinov qatlami): panel butun kenglikda.
  */
 export function PastkiPanel({
   sidebarMode,
   ohang = null,
   children,
 }: React.PropsWithChildren<{
-  sidebarMode: SidebarMode;
+  sidebarMode: SidebarMode | null;
   ohang?: "togri" | "xato" | null;
 }>) {
   return (
     <div
       className={cn(
         "fixed inset-x-0 bottom-0 z-20 transition-[padding] duration-200 ease-out",
-        CONTENT_INSET[sidebarMode],
+        sidebarMode && CONTENT_INSET[sidebarMode],
       )}
     >
       <div
