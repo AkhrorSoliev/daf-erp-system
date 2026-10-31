@@ -705,6 +705,7 @@ export class StudentsReadService {
         date: true,
         status: true,
         cancellationId: true,
+        teacherPayWaived: true,
       },
       orderBy: { date: 'asc' },
     });
@@ -769,6 +770,7 @@ export class StudentsReadService {
           lessons.push({
             date,
             status: a.status,
+            ...(a.teacherPayWaived ? { paidLater: true } : {}),
             cycleSequenceNumber: null,
             month,
           });
@@ -867,6 +869,8 @@ export interface OverviewLesson {
   date: string;
   /** 'BARRED': davomat qatori yo'q, to'lov yo'qligi uchun belgilab bo'lmagan (ADR-0142). */
   status: AttendanceStatus | 'BARRED';
+  /** ADR-0143: «Keldi» written by a payment that came after the lesson; earns the teacher nothing. */
+  paidLater?: boolean;
   /** Pack era: the lessonPaymentCount block; null in the monthly era. */
   cycleSequenceNumber: number | null;
   /** Monthly era (ADR-0062): 'YYYY-MM'; null in the pack era. */

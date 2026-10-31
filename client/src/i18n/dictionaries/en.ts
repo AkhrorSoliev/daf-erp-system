@@ -5555,6 +5555,8 @@ const en: Dictionary = {
   "Matnni yuklab bo'lmadi. Keyinroq urinib ko'ring.": "Could not load the text. Please try again later.",
   "To'lov yo'qligi uchun davomat olib bo'lmadi": "Attendance could not be recorded because there is no payment",
   "To'lov yo'q": "No payment",
+  "To'lov keyin keldi, ustozga haq yo'q": "Paid later, no pay for the teacher",
+  "To'lov keyin keldi": "Paid later",
   "Binafsha nuqta: ustoz davomat oldi, lekin to'lov yo'qligi uchun o'quvchini belgilab bo'lmadi.": "Purple dot: the teacher took attendance, but the student could not be marked because there is no payment.",
   "To'lov yo'qligi uchun davomat olib bo'lmagan darslar": "Lessons where attendance could not be recorded for lack of payment",
   "Faqat CEO o'zgartiradi. Har qism alohida yoqiladi.": "Only the CEO changes this. Each part is switched on separately.",

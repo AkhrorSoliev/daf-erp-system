@@ -5555,6 +5555,8 @@ const de: Dictionary = {
   "Matnni yuklab bo'lmadi. Keyinroq urinib ko'ring.": "Der Text konnte nicht geladen werden. Bitte später erneut versuchen.",
   "To'lov yo'qligi uchun davomat olib bo'lmadi": "Anwesenheit konnte mangels Zahlung nicht erfasst werden",
   "To'lov yo'q": "Keine Zahlung",
+  "To'lov keyin keldi, ustozga haq yo'q": "Zahlung kam später, kein Gehalt für die Lehrkraft",
+  "To'lov keyin keldi": "Zahlung kam später",
   "Binafsha nuqta: ustoz davomat oldi, lekin to'lov yo'qligi uchun o'quvchini belgilab bo'lmadi.": "Violetter Punkt: Die Lehrkraft hat die Anwesenheit erfasst, den Lernenden konnte sie mangels Zahlung aber nicht markieren.",
   "To'lov yo'qligi uchun davomat olib bo'lmagan darslar": "Stunden ohne erfassbare Anwesenheit wegen fehlender Zahlung",
   "Faqat CEO o'zgartiradi. Har qism alohida yoqiladi.": "Nur der CEO ändert das. Jeder Teil wird einzeln eingeschaltet.",

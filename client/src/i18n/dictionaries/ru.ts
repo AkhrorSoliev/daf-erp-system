@@ -5555,6 +5555,8 @@ const ru: Dictionary = {
   "Matnni yuklab bo'lmadi. Keyinroq urinib ko'ring.": "Не удалось загрузить текст. Попробуйте позже.",
   "To'lov yo'qligi uchun davomat olib bo'lmadi": "Из-за отсутствия оплаты посещаемость отметить не удалось",
   "To'lov yo'q": "Нет оплаты",
+  "To'lov keyin keldi, ustozga haq yo'q": "Оплата пришла позже, преподавателю не начисляется",
+  "To'lov keyin keldi": "Оплата пришла позже",
   "Binafsha nuqta: ustoz davomat oldi, lekin to'lov yo'qligi uchun o'quvchini belgilab bo'lmadi.": "Фиолетовая точка: учитель отметил посещаемость, но ученика отметить не удалось из-за отсутствия оплаты.",
   "To'lov yo'qligi uchun davomat olib bo'lmagan darslar": "Уроки, на которых из-за отсутствия оплаты не удалось отметить посещаемость",
   "Faqat CEO o'zgartiradi. Har qism alohida yoqiladi.": "Меняет только CEO. Каждая часть включается отдельно.",

@@ -74,6 +74,8 @@ interface AttendanceDotProps {
   enrolled?: boolean;
   /** Recorded minutes late on a LATE lesson (ADR-0048). */
   lateMinutes?: number | null;
+  /** «Keldi» written by a payment that came after the lesson (ADR-0143): violet ring. */
+  paidLater?: boolean;
 }
 
 export function AttendanceDot({
@@ -83,8 +85,10 @@ export function AttendanceDot({
   cycleLabel,
   enrolled = true,
   lateMinutes,
+  paidLater = false,
 }: AttendanceDotProps) {
   const t = useT();
+  const paidLaterText = t("To'lov keyin keldi, ustozga haq yo'q");
   const late = status === "LATE" ? lateMinutesText(lateMinutes, t) : null;
   // Bo'sh nuqta + a'zo emas → "Guruhda bo'lmagan" (Belgilanmagan'dan farqli).
   const notEnrolled = status === null && !enrolled;
@@ -107,8 +111,13 @@ export function AttendanceDot({
               : getDotClass(status),
             hasOverride &&
               "ring-2 ring-blue-500/70 ring-offset-1 ring-offset-background",
+            paidLater &&
+              !hasOverride &&
+              "ring-2 ring-violet-500 ring-offset-1 ring-offset-background",
           )}
           aria-label={`${formatted} — ${late ?? statusLabel}${
+            paidLater ? ` — ${paidLaterText}` : ""
+          }${
             hasOverride ? ` — ${substitute}` : ""
           }${cycleLabel ? ` — ${cycleLabel}` : ""}`}
         />
@@ -117,6 +126,11 @@ export function AttendanceDot({
         <span className="font-medium">{formatted}</span>
         {" — "}
         {late ?? statusLabel}
+        {paidLater && (
+          <span className="text-violet-600 dark:text-violet-300">
+            {` • ${paidLaterText}`}
+          </span>
+        )}
         {hasOverride && (
           <span className="text-blue-600 dark:text-blue-400">
             {` • ${substitute}`}

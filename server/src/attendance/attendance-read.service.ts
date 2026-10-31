@@ -916,19 +916,25 @@ export class AttendanceReadService {
               date: true,
               status: true,
               lateMinutes: true,
+              teacherPayWaived: true,
             },
           })
         : [];
 
     const attendanceMap = new Map<
       string,
-      { status: AttendanceStatus; lateMinutes: number | null }
+      {
+        status: AttendanceStatus;
+        lateMinutes: number | null;
+        paidLater: boolean;
+      }
     >();
     for (const rec of attendanceRecords) {
       const key = `${rec.studentId}:${tashkentDateStr(rec.date)}`;
       attendanceMap.set(key, {
         status: rec.status,
         lateMinutes: rec.lateMinutes,
+        paidLater: rec.teacherPayWaived,
       });
     }
 
@@ -1039,6 +1045,8 @@ export class AttendanceReadService {
           status,
           lateMinutes: rec?.lateMinutes ?? null,
           enrolled,
+          // ADR-0143: marked «Keldi» by a payment that came after the lesson.
+          ...(rec?.paidLater ? { paidLater: true } : {}),
         };
       });
       const attended = dots.filter(
