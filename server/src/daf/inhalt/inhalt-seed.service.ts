@@ -13,6 +13,11 @@ import type { AudioManifest } from '../media/audio-keys';
 import { audioSchluesselFuer } from '../media/audio-keys';
 import type { DialogAudioManifest } from './dialog-audio';
 import { satzAudioSchluessel, type SatzAudioManifest } from './satz-audio';
+import {
+  phraseAudioSchluessel,
+  phraseCodesOf,
+  type PhraseAudioManifest,
+} from './phrase-audio';
 import type { BildManifest } from '../media/bild-keys';
 import { bildSchluesselFuer } from '../media/bild-keys';
 import type { BildPlan } from './bild-plan';
@@ -53,6 +58,12 @@ export interface InhaltFiles {
   dialogAudio?: DialogAudioManifest;
   /** `content/daf/a1/satz-audio.json` — sentence audio; optional like `audio`. */
   satzAudio?: SatzAudioManifest;
+  /**
+   * `content/daf/a1/phrase-audio.json` — phrase audio; optional like `audio`.
+   * `DafPhrase.audioKey` is written from it on EVERY upsert (the manifest is
+   * the one source, the database the environment); no entry → `null`.
+   */
+  phraseAudio?: PhraseAudioManifest;
   /** `content/daf/a1/bilder.json` — picture keys; optional like `audio`. */
   bilder?: BildManifest;
   /** `content/daf/a1/bild-plan.json` — the `tippen` flag per word. */
@@ -467,19 +478,13 @@ export class InhaltSeedService {
     }
 
     let phrasen = 0;
-    // Bo'lim+funksiya ichida hisoblanadi — butun massiv indeksi EMAS,
-    // aks holda bir funksiyaga ibora qo'shish/o'chirish undan KEYINGI
-    // hamma iboraning kodini siljitardi (masalan `begruessen`dan keyin
-    // kelgan `vorstellen-1` ham qayta nomlanardi), eskisi orfan bo'lib
-    // qolardi.
-    const sectionFunktionSeq = new Map<string, number>();
-    const phraseCodes: string[] = [];
-    for (const p of files.redemittel.phrasen) {
-      const key = `${p.section}::${p.funktion}`;
-      const n = (sectionFunktionSeq.get(key) ?? 0) + 1;
-      sectionFunktionSeq.set(key, n);
-      const code = `${p.section}-${p.funktion}-${n}`;
-      phraseCodes.push(code);
+    // Kod bo'lim+funksiya ichida hisoblanadi (`phraseCodesOf`) — butun
+    // massiv indeksi EMAS, aks holda bir funksiyaga ibora qo'shish/o'chirish
+    // undan KEYINGI hamma iboraning kodini siljitardi, eskisi orfan bo'lib
+    // qolardi. Audio yasovchi ham xuddi shu kodni ishlatadi.
+    const phraseCodes = phraseCodesOf(files.redemittel.phrasen);
+    for (const [i, p] of files.redemittel.phrasen.entries()) {
+      const code = phraseCodes[i];
       const data = {
         unitId: unit.id,
         sectionId: sectionId.get(p.section) as number,
@@ -488,6 +493,7 @@ export class InhaltSeedService {
         de: p.de,
         tts: p.tts ?? null,
         uz: p.uz,
+        audioKey: phraseAudioSchluessel(files.phraseAudio ?? {}, code, p),
       };
       await this.prisma.dafPhrase.upsert({
         where: { code },
