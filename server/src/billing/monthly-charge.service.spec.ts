@@ -2496,6 +2496,157 @@ describe('MonthlyChargeService', () => {
     });
   });
 
+  // #11323 (30.10.2026): a student left a group and was put back the same
+  // month. The new enrollment got NO charge row (its dates were still paid by
+  // the first enrollment's charge), so a departure looked the charge up by the
+  // new enrollment id, found nothing and refunded nothing — silently.
+  describe('departure of a re-joined enrollment (charge held by an earlier one)', () => {
+    const holder = {
+      id: 'chg-held',
+      enrollmentId: 'enr-0',
+      groupId: 'grp-1',
+      studentId: 10453,
+      plannedLessons: 3,
+      coveredLessons: 3,
+      coveredDates: ['2026-10-27', '2026-10-29', '2026-10-31'],
+      frozenOutDates: [],
+      perLessonCost: 32_143,
+      chargedAmount: 96_429,
+      transactionId: 'tx-0',
+      status: 'CHARGED',
+    };
+    const departure = {
+      enrollmentId: 'enr-2',
+      departureDate: new Date('2026-10-29T00:00:00Z'),
+      companyId: 1,
+      reason: 'Guruh almashtirildi',
+      today: '2026-10-29',
+    };
+
+    beforeEach(() => {
+      // enr-2 has no charge of its own.
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue(null);
+      prismaMock.enrollmentMonthlyCharge.findMany.mockResolvedValue([holder]);
+      prismaMock.enrollment.findUnique.mockResolvedValue({
+        studentId: 10453,
+        groupId: 'grp-1',
+        createdAt: new Date('2026-10-28T08:00:00Z'),
+        startDate: new Date('2026-10-28T00:00:00Z'),
+        group: {
+          branchId: 1,
+          exactDays: ['saturday', 'thursday', 'tuesday'],
+        },
+      });
+    });
+
+    it("refunds the days after departure from the earlier enrollment's charge", async () => {
+      const res = await service.reverseChargeForDeparture(tx, departure);
+
+      expect(res?.refunded).toBe(32_143); // 31.10 only; 29.10 is the departure day
+      expect(txWriteMock.createAdjustment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          studentId: 10453,
+          amount: 32_143,
+          metadata: expect.objectContaining({
+            kind: 'monthly-release',
+            enrollmentId: 'enr-2',
+            chargeEnrollmentId: 'enr-0',
+            dates: ['2026-10-31'],
+          }),
+        }),
+        tx,
+      );
+      expect(prismaMock.enrollmentMonthlyCharge.update).toHaveBeenCalledWith({
+        where: { id: 'chg-held' },
+        data: expect.objectContaining({
+          frozenOutDates: ['2026-10-31'],
+          chargedAmount: 64_286,
+        }),
+      });
+    });
+
+    it('looks only at earlier enrollments of the same student, group and month', async () => {
+      await service.reverseChargeForDeparture(tx, departure);
+
+      expect(prismaMock.enrollmentMonthlyCharge.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            studentId: 10453,
+            groupId: 'grp-1',
+            periodYear: 2026,
+            periodMonth: 10,
+            status: 'CHARGED',
+            enrollmentId: { not: 'enr-2' },
+            enrollment: {
+              createdAt: { lt: new Date('2026-10-28T08:00:00Z') },
+            },
+          }),
+        }),
+      );
+    });
+
+    it('does nothing when the earlier charge holds no day after departure', async () => {
+      prismaMock.enrollmentMonthlyCharge.findMany.mockResolvedValue([
+        { ...holder, frozenOutDates: ['2026-10-31'] },
+      ]);
+
+      const res = await service.reverseChargeForDeparture(tx, departure);
+
+      expect(res).toBeNull();
+      expect(txWriteMock.createAdjustment).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when no earlier enrollment holds a charge', async () => {
+      prismaMock.enrollmentMonthlyCharge.findMany.mockResolvedValue([]);
+
+      const res = await service.reverseChargeForDeparture(tx, departure);
+
+      expect(res).toBeNull();
+      expect(txWriteMock.createAdjustment).not.toHaveBeenCalled();
+    });
+
+    it('uses its own charge when it has one and never looks further', async () => {
+      prismaMock.enrollmentMonthlyCharge.findUnique.mockResolvedValue({
+        ...holder,
+        id: 'chg-own',
+        enrollmentId: 'enr-2',
+      });
+
+      const res = await service.reverseChargeForDeparture(tx, departure);
+
+      expect(res?.refunded).toBe(32_143);
+      expect(
+        prismaMock.enrollmentMonthlyCharge.findMany,
+      ).not.toHaveBeenCalled();
+      const metadata = txWriteMock.createAdjustment.mock.calls[0][0].metadata;
+      expect(metadata).not.toHaveProperty('chargeEnrollmentId');
+    });
+
+    it('shows the same amount in the transfer dialog preview', async () => {
+      const preview = await service.previewReleaseForDeparture(tx, {
+        enrollmentId: 'enr-2',
+        departureDate: departure.departureDate,
+      });
+
+      expect(preview).toEqual({
+        lessons: 1,
+        amount: 32_143,
+        period: '2026-10',
+      });
+    });
+
+    it('shows the held share in the removal dialog preview', async () => {
+      const preview = await service.previewDepartureOutcomes(tx, {
+        enrollmentId: 'enr-2',
+        departureDate: departure.departureDate,
+        companyId: 1,
+      });
+
+      expect(preview?.chargedAmount).toBe(96_429);
+      expect(preview?.outcomes.CENTER_INITIATIVE.amount).toBe(32_143);
+    });
+  });
+
   describe('contract 6.2 departure policy (ADR-0043)', () => {
     /** A Mon/Wed/Fri group's October 2026: 13 lessons. */
     const OCTOBER = [
