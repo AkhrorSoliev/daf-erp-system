@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { StudentStatusBadge } from "./student-status-badge";
+import { UnusedDepartureLessonsDialog } from "./unused-departure-lessons-dialog";
 import { StudentDebtOrigin } from "./student-debt-origin";
 import { ChangeStatusDialog } from "@/components/shared/change-status-dialog";
 import {
@@ -71,15 +72,18 @@ interface StudentProfileCardProps {
   onWithdrawalClick?: () => void;
   onInitialBalanceClick?: () => void;
   onStatusChanged?: () => void;
+  onUnusedLessonsWrittenOff?: () => void;
 }
 
-export function StudentProfileCard({ student, commentKey, onEnrollClick, onHistoryClick, onPaymentClick, onPaymentHistoryClick, onRefundClick, onWithdrawalClick, onInitialBalanceClick, onStatusChanged }: StudentProfileCardProps) {
+export function StudentProfileCard({ student, commentKey, onEnrollClick, onHistoryClick, onPaymentClick, onPaymentHistoryClick, onRefundClick, onWithdrawalClick, onInitialBalanceClick, onStatusChanged, onUnusedLessonsWrittenOff }: StudentProfileCardProps) {
   const t = useT();
   const { openDrawer } = useEditStudent();
   const router = useRouter();
   const canSeeDetails = useCan("students.details");
   const canManageStudent = useCan("students.manage");
   const canSetInitialBalance = useCan("students.initial-balance");
+  const canWriteOffUnused = useCan("debt.write-off");
+  const [showUnusedDialog, setShowUnusedDialog] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [showStatus, setShowStatus] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -274,6 +278,11 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
                     {t("Boshlang'ich balans")}
                   </DropdownMenuItem>
                 )}
+                {canWriteOffUnused && student.balance < 0 && (
+                  <DropdownMenuItem onClick={() => setShowUnusedDialog(true)}>
+                    {t("Foydalanilmagan darslar qarzini bekor qilish")}
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -419,6 +428,14 @@ export function StudentProfileCard({ student, commentKey, onEnrollClick, onHisto
         onStatusChanged={handleStatusChanged}
       />
 
+      {canWriteOffUnused && (
+        <UnusedDepartureLessonsDialog
+          studentId={student.id}
+          open={showUnusedDialog}
+          onOpenChange={setShowUnusedDialog}
+          onWrittenOff={onUnusedLessonsWrittenOff}
+        />
+      )}
 
       {canSeeDetails && (
         <>

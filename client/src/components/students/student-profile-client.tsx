@@ -141,6 +141,7 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
             onWithdrawalClick={() => setWithdrawalOpen(true)}
             onInitialBalanceClick={() => setInitialBalanceOpen(true)}
             onStatusChanged={refreshStudent}
+            onUnusedLessonsWrittenOff={refreshStudent}
           />
         </div>
         <div className="min-w-0 flex-1">
