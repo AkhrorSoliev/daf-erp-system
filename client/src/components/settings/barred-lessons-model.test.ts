@@ -14,19 +14,17 @@ const start: BarredFlags = {
   warn: false,
   autoPause: false,
   pauseNotice: false,
-  restoreDialog: false,
   logOnly: true,
 };
 
 describe("barred-lessons-model", () => {
-  it("reads the seven server keys", () => {
+  it("reads the six server keys", () => {
     const flags = flagsFromSettings({
       "absence.barred.mark": true,
       "absence.barred.nudge": false,
       "absence.barred.warn": true,
       "absence.barred.autoPause": false,
       "absence.barred.pauseNotice": false,
-      "absence.barred.restoreDialog": true,
       "absence.barred.logOnly": false,
     });
     expect(flags).toEqual({
@@ -35,7 +33,6 @@ describe("barred-lessons-model", () => {
       warn: true,
       autoPause: false,
       pauseNotice: false,
-      restoreDialog: true,
       logOnly: false,
     });
   });
@@ -47,7 +44,6 @@ describe("barred-lessons-model", () => {
       "warn",
       "autoPause",
       "pauseNotice",
-      "restoreDialog",
       "logOnly",
     ]);
     expect(BARRED_ITEMS.find((i) => i.id === "pauseNotice")?.requires).toBe(
@@ -73,7 +69,6 @@ describe("barred-lessons-model", () => {
       warn: true,
       autoPause: true,
       pauseNotice: true,
-      restoreDialog: true,
     };
     expect(toggled(all, "mark")).toEqual({
       mark: false,
@@ -81,7 +76,6 @@ describe("barred-lessons-model", () => {
       warn: false,
       autoPause: false,
       pauseNotice: false,
-      restoreDialog: false,
       logOnly: true,
     });
     const noPause = toggled(all, "autoPause");

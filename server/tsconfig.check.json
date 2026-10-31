@@ -84,7 +84,8 @@
     "scripts/lib/daf-badges-backfill-plan.spec.ts",
     "scripts/daf-eslatma-sinov.ts",
     "scripts/lib/daf-eslatma-sinov.ts",
-    "scripts/lib/daf-eslatma-sinov.spec.ts"
+    "scripts/lib/daf-eslatma-sinov.spec.ts",
+    "scripts/backfill-late-payer-attendance.ts"
   ],
   "exclude": ["node_modules", "dist", "src/generated"]
 }

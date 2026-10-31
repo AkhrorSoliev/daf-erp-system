@@ -145,9 +145,6 @@ export class SettingsController {
     if (dto.barredPauseNotice !== undefined) {
       edits.push(['absence.barred.pauseNotice', dto.barredPauseNotice]);
     }
-    if (dto.barredRestoreDialog !== undefined) {
-      edits.push(['absence.barred.restoreDialog', dto.barredRestoreDialog]);
-    }
     if (dto.barredLogOnly !== undefined) {
       edits.push(['absence.barred.logOnly', dto.barredLogOnly]);
     }

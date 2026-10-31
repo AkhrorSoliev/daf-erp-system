@@ -273,6 +273,7 @@ export class SalaryMonthlyService {
           groupId: true,
           date: true,
           status: true,
+          teacherPayWaived: true,
         },
       }),
       // perLessonCost basis.

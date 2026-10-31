@@ -88,7 +88,6 @@ describe('effectiveBarredFlags', () => {
     warn: true,
     autoPause: true,
     pauseNotice: true,
-    restoreDialog: true,
     logOnly: false,
   };
 
@@ -103,7 +102,6 @@ describe('effectiveBarredFlags', () => {
       warn: false,
       autoPause: false,
       pauseNotice: false,
-      restoreDialog: false,
       logOnly: false,
     });
   });
@@ -112,7 +110,6 @@ describe('effectiveBarredFlags', () => {
     const out = effectiveBarredFlags({ ...all, autoPause: false });
     expect(out.pauseNotice).toBe(false);
     expect(out.nudge).toBe(true);
-    expect(out.restoreDialog).toBe(true);
   });
 
   it('log-only stands on its own', () => {

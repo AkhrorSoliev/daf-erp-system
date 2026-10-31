@@ -592,6 +592,7 @@ export class SalaryCalculationService {
           groupId: true,
           date: true,
           status: true,
+          teacherPayWaived: true,
         },
       }),
       this.prisma.group.findMany({

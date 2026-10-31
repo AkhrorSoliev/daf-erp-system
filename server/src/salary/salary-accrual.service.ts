@@ -122,6 +122,19 @@ export class SalaryAccrualService {
       return null;
     }
 
+    // ADR-0143: a lesson the student was kept out of and paid for later is
+    // marked PRESENT by the payment, and earns the teacher nothing.
+    const waived = await db.attendance.findUnique({
+      where: { id: params.attendanceId },
+      select: { teacherPayWaived: true },
+    });
+    if (waived?.teacherPayWaived) {
+      this.logger.log(
+        `Accrual skipped for teacher ${params.teacherId}: attendance ${params.attendanceId} was paid after the lesson (ADR-0143).`,
+      );
+      return null;
+    }
+
     // Period-closed policy: if the lesson date falls inside a SalaryPayment
     // period that has ALREADY BEEN SETTLED for this teacher — i.e. the payroll
     // cron has run for it and created a payment (CALCULATED, or later APPROVED/

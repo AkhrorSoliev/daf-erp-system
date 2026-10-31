@@ -22,6 +22,7 @@ import {
 import { MonthlyChargeService } from './monthly-charge.service';
 import { LessonAdmissionService } from './lesson-admission.service';
 import { ADMISSION_START_DAY } from './lesson-admission';
+import { markPaidBarredLessons } from './paid-barred-lessons';
 import { tashkentDateStr } from '../attendance/shared/date-utils';
 import {
   addDaysToDateStr,
@@ -456,6 +457,11 @@ export class LessonBillingService {
       },
       orderBy: { createdAt: 'asc' },
     });
+
+    // Phase 0 (ADR-0143): lessons this payment now reaches, that the student
+    // was kept out of for non-payment, become «Keldi» with no teacher pay.
+    // Moves no money: the month's charge already holds them.
+    await markPaidBarredLessons(tx, this.admission, params);
 
     // NO early return on an empty roster. Phase 1 below needs enrollments and
     // simply does nothing without them, but Phase 2 does not: a student can owe

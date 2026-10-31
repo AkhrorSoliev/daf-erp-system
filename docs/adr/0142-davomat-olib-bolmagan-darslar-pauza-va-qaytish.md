@@ -1,6 +1,6 @@
 # 0142. To'lov yo'qligi uchun davomat olib bo'lmagan darslar: profilda belgi, yumshoq xabarlar, 3 darsdan keyin pauza, qaytishda kunlarni belgilash
 
-- Holati: Qabul qilindi
+- Holati: Qisman almashtirildi ([0143](0143-kech-tolov-keldi-ustozga-haq-yoq.md): 5-bandning pul qismi va 6-band)
 - Sana: 2026-10-30
 - Bog'liq: [0047](0047-davomat-oynasi-va-tolovsiz-oquvchi.md) (darsga qo'yish), [0064](0064-darsga-kirish-uchun-oy-tolovining-eng-kam-qismi.md) (50%), [0062](0062-oylik-yozilish-sikl-emas-oy.md) (oylik hisob), [0023](0023-avtomatik-pauza-chiqarmaydi.md) (avto-pauza), [0141](0141-aloqa-markazi-darsga-qoyilmayotganlar-tabi.md) (Aloqa markazi tabi), [0043](0043-shartnoma-6-2-40-foizdan-keyin-pul-qaytmaydi.md) (6.2), shartnoma 3.2, 3.5, 6.2, 6.3. Spec: `docs/superpowers/specs/2026-10-30-darsga-qoyilmaganlar-avto-pauza-design.md`.
 

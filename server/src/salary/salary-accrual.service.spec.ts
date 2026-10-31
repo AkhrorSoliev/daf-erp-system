@@ -45,6 +45,7 @@ describe('SalaryAccrualService', () => {
       user: { update: jest.fn() },
       $queryRaw: jest.fn().mockResolvedValue([{ id: 1, balance: 0 }]),
       unmarkedLesson: { findUnique: jest.fn().mockResolvedValue(null) },
+      attendance: { findUnique: jest.fn().mockResolvedValue(null) },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -843,6 +844,23 @@ describe('SalaryAccrualService', () => {
       );
       prisma.salaryAccrual.upsert.mockResolvedValue({ id: 'acc-1' });
       expect(await service.createAccrual(baseParams)).toEqual({ id: 'acc-1' });
+    });
+  });
+
+  describe('paid after the lesson (ADR-0143)', () => {
+    it('writes nothing, live or centre-funded', async () => {
+      prisma.attendance.findUnique.mockResolvedValue({
+        teacherPayWaived: true,
+      });
+      expect(await service.createAccrual(baseParams)).toBeNull();
+      expect(
+        await service.createAccrual({
+          ...baseParams,
+          deductionTransactionId: null,
+          centerFunded: true,
+        }),
+      ).toBeNull();
+      expect(prisma.salaryAccrual.upsert).not.toHaveBeenCalled();
     });
   });
 

@@ -13,7 +13,6 @@ import { UploadModule } from '../upload/upload.module';
 import { SmsModule } from '../sms/sms.module';
 import { AttendanceModule } from '../attendance/attendance.module';
 import { BarredLessonsModule } from '../attendance/barred-lessons.module';
-import { StudentBarredLessonsController } from './student-barred-lessons.controller';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { PaymentGatewaysModule } from '../payment-gateways/payment-gateways.module';
 import { BillingModule } from '../billing/billing.module';
@@ -45,7 +44,6 @@ import { StudentEnrollPreviewService } from './student-enroll-preview.service';
     StudentPortalController,
     StudentOnboardingController,
     StudentExtraPhoneController,
-    StudentBarredLessonsController,
   ],
   providers: [
     StudentsService,

@@ -6,7 +6,6 @@ import { Loader2 } from "lucide-react";
 import { EditStudentDrawer } from "./edit-student-drawer";
 import { StudentProfileCard } from "./student-profile-card";
 import { StudentProfileTabs } from "./student-profile-tabs";
-import { StudentBarredLessonsPrompt } from "./student-barred-lessons-prompt";
 import { EnrollToGroupDialog } from "./enroll-to-group-dialog";
 import { InitialBalanceDialog } from "./initial-balance-dialog";
 import { RecordPaymentDialog } from "@/components/payments/record-payment-dialog";
@@ -129,11 +128,6 @@ export function StudentProfileClient({ studentId }: { studentId: string }) {
 
   return (
     <>
-      <StudentBarredLessonsPrompt
-        studentId={student.id}
-        returned={student.status === "ACTIVE" && student.groups.length > 0}
-        onDone={refreshStudent}
-      />
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div className="w-full lg:w-85 lg:shrink-0">
           <StudentProfileCard

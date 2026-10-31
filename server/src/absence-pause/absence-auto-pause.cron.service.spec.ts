@@ -110,14 +110,10 @@ describe('AbsenceAutoPauseCronService', () => {
         warn: false,
         autoPause: false,
         pauseNotice: false,
-        restoreDialog: false,
         logOnly: true,
         ...(overrides.flags ?? {}),
       }),
       forEnrollments: jest.fn().mockResolvedValue(new Map()),
-    };
-    const barredCharge = {
-      release: jest.fn().mockResolvedValue({ refunded: 0, lessons: 0 }),
     };
     const service = new AbsenceAutoPauseCronService(
       prisma as never,
@@ -126,12 +122,10 @@ describe('AbsenceAutoPauseCronService', () => {
       statusService as never,
       notify as never,
       barredLessons as never,
-      barredCharge as never,
     );
     return {
       service,
       barredLessons,
-      barredCharge,
       settingService,
       streakService,
       statusService,
@@ -342,21 +336,9 @@ describe('AbsenceAutoPauseCronService', () => {
       const onFlags = makeService(on, [barredRow(1, 3)], {
         flags: { autoPause: true, pauseNotice: true, logOnly: false },
       });
-      onFlags.barredLessons.forEnrollments.mockResolvedValue(
-        new Map([
-          ['e-1', { days: ['2026-10-05', '2026-10-07', '2026-10-09'] }],
-        ]),
-      );
       await onFlags.service.runForCompany(companyId);
       expect(onFlags.statusService.pauseForAbsence).toHaveBeenCalledWith(
         expect.objectContaining({ barred: true }),
-      );
-      // The money of the days it could not mark comes off the charge.
-      expect(onFlags.barredCharge.release).toHaveBeenCalledWith(
-        expect.objectContaining({
-          enrollmentId: 'e-1',
-          barredDays: ['2026-10-05', '2026-10-07', '2026-10-09'],
-        }),
       );
       expect(onFlags.statusService.pauseForAbsence).toHaveBeenCalledTimes(1);
       expect(onFlags.notify.announcePause).toHaveBeenCalledWith(
@@ -365,11 +347,10 @@ describe('AbsenceAutoPauseCronService', () => {
     });
 
     it('an ordinary absence streak ignores the barred switches', async () => {
-      const { service, statusService, notify, barredCharge } = makeService(on, [
+      const { service, statusService, notify } = makeService(on, [
         streak(1, 3),
       ]);
       await service.runForCompany(companyId);
-      expect(barredCharge.release).not.toHaveBeenCalled();
       expect(statusService.pauseForAbsence).toHaveBeenCalledTimes(1);
       expect(notify.announcePause).toHaveBeenCalledWith(
         expect.not.objectContaining({ barred: expect.anything() }),

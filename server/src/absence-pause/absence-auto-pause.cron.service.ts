@@ -8,8 +8,6 @@ import {
 } from '../outreach/absence-streak.service';
 import { StudentsStatusService } from '../students/students-status.service';
 import { BarredLessonsService } from '../attendance/barred-lessons.service';
-import { BarredLessonsChargeService } from '../billing/barred-lessons-charge.service';
-import { buildBarredPauseReason } from './absence-pause.constants';
 import type { BarredFlags } from '../attendance/barred-lessons';
 import {
   AbsencePauseNotifyService,
@@ -58,7 +56,6 @@ export class AbsenceAutoPauseCronService {
     private studentsStatus: StudentsStatusService,
     private notify: AbsencePauseNotifyService,
     private barredLessons: BarredLessonsService,
-    private barredCharge: BarredLessonsChargeService,
   ) {}
 
   @Cron('0 30 7 * * *', { timeZone: 'Asia/Tashkent' })
@@ -178,17 +175,6 @@ export class AbsenceAutoPauseCronService {
       );
     }
 
-    // Davomat olib bo'lmagan kunlar pauza paytida hisobdan chiqariladi: bu
-    // kunlarni pauzadan OLDIN bir marta o'qiymiz (pauzadan keyin yozilish
-    // FAOL emas, hukm chiqmaydi).
-    const barredRows = toPause.filter((r) => !isAbsentOnly(r));
-    const barredDays =
-      !blockedByCap && barredRows.length > 0
-        ? await this.barredLessons.forEnrollments(
-            barredRows.map((r) => r.enrollmentId),
-          )
-        : new Map();
-
     const failures: string[] = [];
     let paused = 0;
 
@@ -211,18 +197,6 @@ export class AbsenceAutoPauseCronService {
             barred: !isAbsentOnly(row),
           });
           paused++;
-          const days = barredDays.get(row.enrollmentId)?.days ?? [];
-          if (!isAbsentOnly(row) && days.length > 0) {
-            await this.barredCharge.release({
-              enrollmentId: row.enrollmentId,
-              barredDays: days,
-              companyId,
-              reason: buildBarredPauseReason(
-                row.consecutiveAbsentCount,
-                row.lastAbsenceDate,
-              ),
-            });
-          }
           await this.notify.announcePause({
             ...target,
             streak: row.consecutiveAbsentCount,
