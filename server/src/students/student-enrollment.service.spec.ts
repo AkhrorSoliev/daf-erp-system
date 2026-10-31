@@ -13,6 +13,7 @@ import { DebtWriteOffService } from '../billing/debt-write-off.service';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SettingsService } from '../settings/settings.service';
+import { TransactionsWriteService } from '../transactions/transactions-write.service';
 import { DEPARTURE_POLICY_FORBIDDEN } from './shared/departure-policy-access';
 
 describe('StudentEnrollmentService', () => {
@@ -157,6 +158,10 @@ describe('StudentEnrollmentService', () => {
           }),
         },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide: TransactionsWriteService,
+          useValue: { createAdjustment: jest.fn() },
+        },
       ],
     }).compile();
 

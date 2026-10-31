@@ -19,6 +19,7 @@ import { StudentQueryDto } from './dto/student-query.dto';
 import { ChangeStudentStatusDto } from './dto/change-student-status.dto';
 import { RemoveFromGroupDto } from './dto/remove-from-group.dto';
 import { WriteOffCycleDebtDto } from './dto/write-off-cycle-debt.dto';
+import { WriteOffUnusedDepartureLessonsDto } from './dto/write-off-unused-departure-lessons.dto';
 import { EnrollToGroupDto } from './dto/enroll-to-group.dto';
 import { DeleteStudentDto } from './dto/delete-student.dto';
 import { DeparturePreviewQueryDto } from './dto/departure-preview-query.dto';
@@ -321,6 +322,40 @@ export class StudentsController {
       userId,
       groupId,
       startDate,
+    );
+  }
+
+  // CEO's «Foydalanilmagan darslar qarzini bekor qilish» (31.10.2026): a
+  // DROPPED enrollment's past days where the teacher held class and the
+  // student has no row at all — never resolved, and never will be since
+  // they left. Read-only; the CEO picks which days separately.
+  @Get(':id/unused-departure-lessons')
+  @Can('debt.write-off')
+  getUnusedDepartureLessons(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.studentsService.getUnusedDepartureLessons(
+      id,
+      companyId,
+      userId,
+    );
+  }
+
+  @Post(':id/unused-departure-lessons/write-off')
+  @Can('debt.write-off')
+  writeOffUnusedDepartureLessons(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: WriteOffUnusedDepartureLessonsDto,
+    @CurrentUser('companyId') companyId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.studentEnrollmentService.writeOffUnusedDepartureLessons(
+      id,
+      companyId,
+      userId,
+      dto,
     );
   }
 

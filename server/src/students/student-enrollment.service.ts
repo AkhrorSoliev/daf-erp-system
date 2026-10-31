@@ -19,6 +19,11 @@ import { utcMidnightFromDateStr } from '../common/date/tashkent';
 import { loadTodayLessonQuestion, startDayFor } from './enroll-start-day';
 import { rethrowAsConflict } from '../common/transaction-conflict';
 import { EntityHistoryService } from '../common/entity-history';
+import { TransactionsWriteService } from '../transactions/transactions-write.service';
+import {
+  writeOffUnusedDepartureLessons,
+  type WriteOffUnusedDays,
+} from '../billing/unused-departure-write-off';
 
 /**
  * Yopilgan yozilish holatlari — `removeFromGroup` shularni rad etadi.
@@ -69,6 +74,7 @@ export class StudentEnrollmentService {
     private monthlyChargeService: MonthlyChargeService,
     private eventEmitter: EventEmitter2,
     private settingsService: SettingsService,
+    private transactionsWriteService: TransactionsWriteService,
   ) {}
 
   /**
@@ -990,5 +996,36 @@ export class StudentEnrollmentService {
       balanceBefore: result.balanceBefore,
       balanceAfter: result.balanceAfter,
     };
+  }
+
+  /**
+   * CEO's «Foydalanilmagan darslar qarzini bekor qilish» (spec
+   * 2026-10-31): writes off the departed-enrollment days the CEO picked.
+   * Server re-validates and re-prices every day — see
+   * `writeOffUnusedDepartureLessons`.
+   */
+  async writeOffUnusedDepartureLessons(
+    studentId: number,
+    companyId: number,
+    userId: number,
+    input: { dates: WriteOffUnusedDays[]; reason?: string },
+  ) {
+    await assertCallerMayWriteForStudent(
+      this.prisma,
+      userId,
+      studentId,
+      companyId,
+    );
+    return this.prisma.$transaction(
+      (tx) =>
+        writeOffUnusedDepartureLessons(tx, this.transactionsWriteService, {
+          studentId,
+          companyId,
+          requested: input.dates,
+          reason: input.reason?.trim() || undefined,
+          performedById: userId,
+        }),
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 }

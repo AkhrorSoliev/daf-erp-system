@@ -242,6 +242,7 @@ export const STRICT_FILES: string[] = [
   "components/leads/lead-source-picker.tsx",
   "components/students/student-profile-client.tsx",
   "components/students/student-profile-card.tsx",
+  "components/students/unused-departure-lessons-dialog.tsx",
   "components/students/student-profile-tabs.tsx",
   "components/students/student-profile-tabs-utils.ts",
   "components/students/student-group-card.tsx",

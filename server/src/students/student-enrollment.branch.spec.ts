@@ -8,6 +8,7 @@ import { EnrollmentBillingService } from '../billing/enrollment-billing.service'
 import { DebtWriteOffService } from '../billing/debt-write-off.service';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { SettingsService } from '../settings/settings.service';
+import { TransactionsWriteService } from '../transactions/transactions-write.service';
 
 /**
  * Enrollment moves money, and three of its four routes are addressed by an
@@ -118,6 +119,10 @@ describe('StudentEnrollmentService — branch confinement', () => {
           // sababi faqat filial chegarasi bo'lib qolsin.
           provide: SettingsService,
           useValue: { get: jest.fn().mockResolvedValue(true) },
+        },
+        {
+          provide: TransactionsWriteService,
+          useValue: { createAdjustment: jest.fn() },
         },
       ],
     }).compile();

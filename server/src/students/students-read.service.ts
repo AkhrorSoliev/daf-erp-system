@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { SettingsService } from '../settings/settings.service';
 import { BarredLessonsService } from '../attendance/barred-lessons.service';
+import { unusedDepartureLessons } from '../billing/unused-departure-lessons';
 import { StatusHistoryService } from '../common/status';
 import {
   StudentQueryDto,
@@ -861,6 +862,27 @@ export class StudentsReadService {
     });
 
     return { studentId: id, groups };
+  }
+
+  /**
+   * CEO's «Foydalanilmagan darslar qarzini bekor qilish» (31.10.2026): past
+   * days a DROPPED enrollment's monthly charge billed, the teacher held
+   * class, and the student has no row at all — not even a late-payment
+   * «Keldi» (ADR-0143 only resolves those while still ACTIVE). Read-only;
+   * the CEO picks which days and confirms separately.
+   */
+  async getUnusedDepartureLessons(id: number, companyId: number) {
+    const student = await this.prisma.student.findFirst({
+      where: { id, companyId, deletedAt: null },
+      select: { id: true, balance: true },
+    });
+    if (!student) throw new NotFoundException("O'quvchi topilmadi");
+    const days = await unusedDepartureLessons(this.prisma, id);
+    return {
+      studentId: id,
+      balance: student.balance,
+      days,
+    };
   }
 }
 
