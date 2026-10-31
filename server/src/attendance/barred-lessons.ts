@@ -58,20 +58,19 @@ export function barredStreak(
   return count;
 }
 
-/** CEO sozlamasi: yetti mustaqil katak (`absence.barred.*`, ADR-0142). */
+/** CEO sozlamasi: olti mustaqil katak (`absence.barred.*`, ADR-0142). */
 export interface BarredFlags {
   mark: boolean;
   nudge: boolean;
   warn: boolean;
   autoPause: boolean;
   pauseNotice: boolean;
-  restoreDialog: boolean;
   logOnly: boolean;
 }
 
 /**
- * Talabi bajarilmagan katak o'chiq hisoblanadi: 1, 2-dars xabari, avto-pauza
- * va qaytish oynasi `mark` ga tayanadi; 3-dars xabari `autoPause` ga.
+ * Talabi bajarilmagan katak o'chiq hisoblanadi: 1, 2-dars xabari va avto-pauza
+ * `mark` ga tayanadi; 3-dars xabari `autoPause` ga.
  * `logOnly` mustaqil (u qo'shimcha xavfsizlik, shuning uchun hech narsaga
  * bog'lanmagan).
  */
@@ -84,7 +83,6 @@ export function effectiveBarredFlags(raw: BarredFlags): BarredFlags {
     warn: mark && raw.warn,
     autoPause,
     pauseNotice: autoPause && raw.pauseNotice,
-    restoreDialog: mark && raw.restoreDialog,
     logOnly: raw.logOnly,
   };
 }

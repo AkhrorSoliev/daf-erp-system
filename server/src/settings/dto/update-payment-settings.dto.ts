@@ -110,10 +110,6 @@ export class UpdatePaymentSettingsDto {
 
   @IsOptional()
   @IsBoolean()
-  barredRestoreDialog?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
   barredLogOnly?: boolean;
 
   // Faqat CEO uchun ma'noli — qaysi filialga yozish. Branch Director bu

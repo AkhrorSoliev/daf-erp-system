@@ -40,7 +40,6 @@ export type SettingKey =
   | 'absence.barred.warn'
   | 'absence.barred.autoPause'
   | 'absence.barred.pauseNotice'
-  | 'absence.barred.restoreDialog'
   | 'absence.barred.logOnly'
   | 'lessonRating.enabled'
   | 'leads.maxUntouched'
@@ -87,7 +86,6 @@ export interface SettingValueMap {
   'absence.barred.warn': boolean;
   'absence.barred.autoPause': boolean;
   'absence.barred.pauseNotice': boolean;
-  'absence.barred.restoreDialog': boolean;
   'absence.barred.logOnly': boolean;
   'lessonRating.enabled': boolean;
   'leads.maxUntouched': number;
@@ -405,7 +403,7 @@ export const SETTING_DEFINITIONS: {
   },
   'absence.barred.autoPause': {
     key: 'absence.barred.autoPause',
-    // Avto-pauza: ketma-ket darslardan keyin o'quvchi pauzaga tushadi, belgilab bo'lmagan kunlar hisobdan chiqadi. Umumiy `AbsencePauseSetting.enabled` ham yoqilgan bo'lishi kerak.
+    // Avto-pauza: ketma-ket darslardan keyin o'quvchi pauzaga tushadi. Umumiy `AbsencePauseSetting.enabled` ham yoqilgan bo'lishi kerak.
     defaultValue: false,
     parse: (raw) => parseBoolean('absence.barred.autoPause', raw),
     companyLevelOnly: true,
@@ -415,13 +413,6 @@ export const SETTING_DEFINITIONS: {
     // 3-dars xabari: pauza haqida o'quvchiga xabar. `autoPause` ga tayanadi.
     defaultValue: false,
     parse: (raw) => parseBoolean('absence.barred.pauseNotice', raw),
-    companyLevelOnly: true,
-  },
-  'absence.barred.restoreDialog': {
-    key: 'absence.barred.restoreDialog',
-    // Qaytishda admin kelgan kunlarni belgilaydi (o'quvchini faollashtirish yoki guruhga qo'shish).
-    defaultValue: false,
-    parse: (raw) => parseBoolean('absence.barred.restoreDialog', raw),
     companyLevelOnly: true,
   },
   'absence.barred.logOnly': {

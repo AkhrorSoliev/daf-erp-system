@@ -74,7 +74,6 @@ export class BarredLessonsService {
       'warn',
       'autoPause',
       'pauseNotice',
-      'restoreDialog',
       'logOnly',
     ] as const;
     const values = await Promise.all(

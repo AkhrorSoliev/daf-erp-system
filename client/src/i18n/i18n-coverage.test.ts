@@ -280,8 +280,6 @@ export const STRICT_FILES: string[] = [
   "components/outreach/paused-tab.tsx",
   "components/outreach/blocked-from-lessons-tab.tsx",
   "components/shared/contract-clause-link.tsx",
-  "components/students/restore-barred-lessons-dialog.tsx",
-  "components/students/student-barred-lessons-prompt.tsx",
   "components/settings/barred-lessons-model.ts",
   "components/settings/barred-lessons-settings-client.tsx",
   // Mock exams, part one — list, create/edit, detail shell, overview, form builder

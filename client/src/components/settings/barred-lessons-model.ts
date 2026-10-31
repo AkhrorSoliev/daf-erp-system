@@ -11,7 +11,6 @@ export type BarredFlagId =
   | "warn"
   | "autoPause"
   | "pauseNotice"
-  | "restoreDialog"
   | "logOnly";
 
 export type BarredFlags = Record<BarredFlagId, boolean>;
@@ -69,7 +68,7 @@ export const BARRED_ITEMS: BarredItem[] = [
     requires: "mark",
     title: msg("Avto-pauza"),
     text: msg(
-      "Ketma-ket darslardan keyin o'quvchi pauzaga tushadi, belgilab bo'lmagan kunlar hisobdan chiqadi.",
+      "Ketma-ket darslardan keyin o'quvchi pauzaga tushadi.",
     ),
     field: "barredAutoPause",
     key: "absence.barred.autoPause",
@@ -82,17 +81,6 @@ export const BARRED_ITEMS: BarredItem[] = [
     text: msg("Pauza haqida o'quvchiga xabar."),
     field: "barredPauseNotice",
     key: "absence.barred.pauseNotice",
-  },
-  {
-    id: "restoreDialog",
-    level: 1,
-    requires: "mark",
-    title: msg("Qaytishda kunlarni so'rash"),
-    text: msg(
-      "O'quvchi faollashtirilganda yoki guruhga qo'shilganda admin kelgan kunlarni belgilaydi.",
-    ),
-    field: "barredRestoreDialog",
-    key: "absence.barred.restoreDialog",
   },
   {
     id: "logOnly",

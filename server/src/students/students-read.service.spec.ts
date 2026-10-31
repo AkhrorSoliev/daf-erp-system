@@ -7,7 +7,6 @@ import { StudentQueryDto } from './dto/student-query.dto';
 import { MonthlyChargeService } from '../billing/monthly-charge.service';
 import { SettingsService } from '../settings/settings.service';
 import { BarredLessonsService } from '../attendance/barred-lessons.service';
-import { BarredLessonsChargeService } from '../billing/barred-lessons-charge.service';
 
 describe('StudentsReadService', () => {
   let service: StudentsReadService;
@@ -15,7 +14,6 @@ describe('StudentsReadService', () => {
   let monthlyCharge: any;
   let settings: { get: jest.Mock };
   let barred: { forEnrollments: jest.Mock };
-  let barredCharge: { releasedDays: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -40,7 +38,6 @@ describe('StudentsReadService', () => {
     // Debt forgiveness is off by default (CEO, 21.09.2026, answer 9).
     settings = { get: jest.fn().mockResolvedValue(false) };
     barred = { forEnrollments: jest.fn().mockResolvedValue(new Map()) };
-    barredCharge = { releasedDays: jest.fn().mockResolvedValue([]) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -50,7 +47,6 @@ describe('StudentsReadService', () => {
         { provide: MonthlyChargeService, useValue: monthlyCharge },
         { provide: SettingsService, useValue: settings },
         { provide: BarredLessonsService, useValue: barred },
-        { provide: BarredLessonsChargeService, useValue: barredCharge },
       ],
     }).compile();
 
@@ -305,41 +301,6 @@ describe('StudentsReadService', () => {
         expect(g.total).toBe(3);
         expect(g.lessons[1].month).toBe('2026-10');
         expect(barred.forEnrollments).toHaveBeenCalledWith(['enr-1']);
-      });
-
-      it('shows the days a pause took off the charge as released BARRED days', async () => {
-        monthly();
-        prisma.enrollment.findMany.mockResolvedValue([
-          {
-            id: 'enr-1',
-            status: 'FROZEN',
-            startDate: new Date('2026-10-01'),
-            createdAt: new Date('2026-10-01'),
-            group: {
-              id: 'grp-1',
-              name: '#031',
-              course: { name: 'A2', lessonPaymentCount: 12 },
-            },
-          },
-        ]);
-        settings.get.mockImplementation((_c: number, key: string) =>
-          Promise.resolve(key === 'absence.barred.mark'),
-        );
-        barredCharge.releasedDays.mockResolvedValue([
-          { period: '2026-10', days: ['2026-10-05', '2026-10-07'] },
-        ]);
-
-        const res = await service.getLessonsOverview(10001, 1001, true);
-        const lessons = res.groups[0].lessons as any[];
-
-        expect(
-          lessons.map((l) => [l.date, l.status, l.released ?? false]),
-        ).toEqual([
-          ['2026-10-02', 'PRESENT', false],
-          ['2026-10-05', 'BARRED', true],
-          ['2026-10-07', 'BARRED', true],
-        ]);
-        expect(barred.forEnrollments).toHaveBeenCalledWith([]);
       });
 
       it('shows nothing extra and reads nothing when the switch is off', async () => {

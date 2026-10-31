@@ -4,7 +4,6 @@ import { EnrollmentBillingService } from './enrollment-billing.service';
 import { DebtWriteOffService } from './debt-write-off.service';
 import { MonthlyChargeService } from './monthly-charge.service';
 import { LessonAdmissionService } from './lesson-admission.service';
-import { BarredLessonsChargeService } from './barred-lessons-charge.service';
 import { MonthlyBillingCronService } from './monthly-billing-cron.service';
 import { MonthlyBillingWatchdogService } from './monthly-billing-watchdog.service';
 import { MonthlyPaymentNoticeService } from './monthly-payment-notice.service';
@@ -55,7 +54,6 @@ import { SettingsModule } from '../settings/settings.module';
     DebtWriteOffService,
     MonthlyChargeService,
     LessonAdmissionService,
-    BarredLessonsChargeService,
     MonthlyBillingCronService,
     MonthlyBillingWatchdogService,
     MonthlyPaymentNoticeService,
@@ -69,7 +67,6 @@ import { SettingsModule } from '../settings/settings.module';
     DebtWriteOffService,
     MonthlyChargeService,
     LessonAdmissionService,
-    BarredLessonsChargeService,
     MonthlyPaymentNoticeService,
   ],
 })

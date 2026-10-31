@@ -27,7 +27,6 @@ describe('SETTING_DEFINITIONS registry', () => {
         'absence.barred.warn',
         'absence.barred.autoPause',
         'absence.barred.pauseNotice',
-        'absence.barred.restoreDialog',
         'absence.barred.logOnly',
         'lessonRating.enabled',
         'leads.maxUntouched',
@@ -95,7 +94,6 @@ describe('SETTING_DEFINITIONS registry', () => {
         ['absence.barred.warn', false],
         ['absence.barred.autoPause', false],
         ['absence.barred.pauseNotice', false],
-        ['absence.barred.restoreDialog', false],
         ['absence.barred.logOnly', true],
       ] as const) {
         const def = getSettingDefinition(name);
