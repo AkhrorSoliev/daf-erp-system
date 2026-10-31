@@ -85,6 +85,14 @@ export class StudentsService {
     await assertCallerMayTouchStudent(this.prisma, userId, id, companyId);
     return this.read.getLessonsOverview(id, companyId, includeClosed);
   }
+  async getUnusedDepartureLessons(
+    id: number,
+    companyId: number,
+    userId?: number,
+  ) {
+    await assertCallerMayTouchStudent(this.prisma, userId, id, companyId);
+    return this.read.getUnusedDepartureLessons(id, companyId);
+  }
   /**
    * One-shot opening balance for a student migrating from the old system.
    *

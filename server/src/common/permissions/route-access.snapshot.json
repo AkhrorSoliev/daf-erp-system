@@ -804,6 +804,16 @@
     "Branch Director",
     "CEO"
   ],
+  "GET /students/:id/unused-departure-lessons": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
+  "POST /students/:id/unused-departure-lessons/write-off": [
+    "Administrator",
+    "Branch Director",
+    "CEO"
+  ],
   "GET /students/:id/lessons-overview": [
     "Administrator",
     "Branch Director",
