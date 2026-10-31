@@ -26,7 +26,7 @@ describe("admissionCopy", () => {
   it("tells the admin the least payment for THIS lesson (it also serves a past one in «Bo'ldi»)", () => {
     const warning = admissionCopy(blocked, true).warning;
     expect(warning).toBe(
-      `Bu darsga kirishi uchun kamida ${formatPrice(69231)} so'm kerak. Oyni to'liq qoplamasa, qolgan qismi uchun to'lov va'dasi yoziladi.`,
+      `Bu darsga kirishi uchun kamida ${formatPrice(69231)} so'm kerak. Oyni to'liq qoplamasa, qolgan qismi uchun to'lov va'dasi yoziladi. Hozir to'lamasa, keyingi to'lov bu darsni yopadi, lekin ustozga haq yozilmaydi.`,
     );
     expect(warning).not.toContain("Bugungi");
   });
@@ -51,7 +51,7 @@ describe("admissionCopy", () => {
 
     it("tells the admin what brings the student up to the share", () => {
       expect(admissionCopy(belowShare, true).warning).toBe(
-        `Bu darsga kirishi uchun kamida ${formatPrice(125000)} so'm kerak: oy to'lovining 50% i to'lanishi shart. Oyni to'liq qoplamasa, qolgan qismi uchun to'lov va'dasi yoziladi.`,
+        `Bu darsga kirishi uchun kamida ${formatPrice(125000)} so'm kerak: oy to'lovining 50% i to'lanishi shart. Oyni to'liq qoplamasa, qolgan qismi uchun to'lov va'dasi yoziladi. Hozir to'lamasa, keyingi to'lov bu darsni yopadi, lekin ustozga haq yozilmaydi.`,
       );
     });
 

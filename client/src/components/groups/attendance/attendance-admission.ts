@@ -125,7 +125,7 @@ export function admissionCopy(
       label: blockedLabel(admission, t),
       warning: isAdmin
         ? t(
-            "Bu darsga kirishi uchun kamida {amount} so'm kerak: oy to'lovining {percent}% i to'lanishi shart. Oyni to'liq qoplamasa, qolgan qismi uchun to'lov va'dasi yoziladi.",
+            "Bu darsga kirishi uchun kamida {amount} so'm kerak: oy to'lovining {percent}% i to'lanishi shart. Oyni to'liq qoplamasa, qolgan qismi uchun to'lov va'dasi yoziladi. Hozir to'lamasa, keyingi to'lov bu darsni yopadi, lekin ustozga haq yozilmaydi.",
             { amount, percent },
           )
         : t(
@@ -140,7 +140,7 @@ export function admissionCopy(
       label: blockedLabel(admission, t),
       warning: isAdmin
         ? t(
-            "Bu darsga kirishi uchun kamida {amount} so'm kerak. Oyni to'liq qoplamasa, qolgan qismi uchun to'lov va'dasi yoziladi.",
+            "Bu darsga kirishi uchun kamida {amount} so'm kerak. Oyni to'liq qoplamasa, qolgan qismi uchun to'lov va'dasi yoziladi. Hozir to'lamasa, keyingi to'lov bu darsni yopadi, lekin ustozga haq yozilmaydi.",
             { amount: formatPrice(admission.shortfall) },
           )
         : t(
