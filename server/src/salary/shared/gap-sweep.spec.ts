@@ -87,6 +87,7 @@ function buildInput(
         groupId: GROUP,
         date: lessonDate(10),
         status: 'PRESENT',
+        teacherPayWaived: false,
       },
     ],
     groupMap: new Map([[GROUP, { course }]]),
@@ -222,6 +223,7 @@ describe('sweepGapLessons — qarzdorning oydagi birinchi darsi (ADR-0048)', () 
             groupId: GROUP,
             date: october(day),
             status,
+            teacherPayWaived: false,
           },
         ],
         monthlyFrozen,
@@ -261,6 +263,7 @@ describe('sweepGapLessons — qarzdorning oydagi birinchi darsi (ADR-0048)', () 
             groupId: GROUP,
             date: lessonDate(2),
             status: 'ABSENT',
+            teacherPayWaived: false,
           },
         ],
         monthlyFrozen: new Map([
@@ -568,5 +571,21 @@ describe('sweepGapLessons — unmarked lessons (ADR-0054)', () => {
       }),
     );
     expect(forfeited.lessons).toEqual([]);
+  });
+});
+
+describe('sweepGapLessons — paid after the lesson (ADR-0143)', () => {
+  it('never fronts a lesson whose attendance waives teacher pay', () => {
+    const input = buildInput(MONTHLY_COURSE, PERCENTAGE, {
+      monthlyFrozen: frozen(30_769, 13),
+    });
+    const waived = sweepGapLessons({
+      ...input,
+      attendances: input.attendances.map((a) => ({
+        ...a,
+        teacherPayWaived: true,
+      })),
+    });
+    expect(waived.lessons).toEqual([]);
   });
 });

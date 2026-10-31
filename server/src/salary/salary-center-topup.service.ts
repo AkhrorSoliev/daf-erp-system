@@ -100,6 +100,7 @@ export class SalaryCenterTopUpService {
           groupId: true,
           date: true,
           status: true,
+          teacherPayWaived: true,
         },
       }),
       this.prisma.group.findMany({

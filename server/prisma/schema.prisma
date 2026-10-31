@@ -2621,6 +2621,10 @@ model Attendance {
   /// student present, when the lesson already had attendance (ADR-0048).
   /// Only on a LATE row; null otherwise.
   lateMinutes    Int?
+  /// ADR-0143: marked PRESENT by a late payment that reached a lesson the
+  /// student was kept out of (contract 3.2). Never earns the teacher pay:
+  /// `createAccrual` and `sweepGapLessons` skip it.
+  teacherPayWaived Boolean            @default(false)
   // Set when this attendance row exists for a lesson that was later
   // cancelled. The status is forced to EXCUSED so existing biller/stat
   // queries keep working — cancellation is metadata via this link, not a

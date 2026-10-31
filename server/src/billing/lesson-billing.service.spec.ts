@@ -19,6 +19,12 @@ import {
 import { TransactionsWriteService } from '../transactions/transactions-write.service';
 import { SettingsService } from '../settings/settings.service';
 import { LessonAdmissionService } from './lesson-admission.service';
+import { markPaidBarredLessons } from './paid-barred-lessons';
+
+// ADR-0143's phase 0 has its own spec; here it only must be called.
+jest.mock('./paid-barred-lessons', () => ({
+  markPaidBarredLessons: jest.fn().mockResolvedValue([]),
+}));
 
 /**
  * Tests cover the 6-row status transition matrix and the 3 financial
@@ -740,6 +746,20 @@ describe('LessonBillingService', () => {
       });
       expect(result.billedAttendances).toBe(0);
       expect(transactionsService.deductLessonFee).not.toHaveBeenCalled();
+    });
+
+    it('marks the kept-out lessons the payment reaches (ADR-0143)', async () => {
+      tx.enrollment.findMany = jest.fn().mockResolvedValue([]);
+      await service.processRetroactiveBillingForStudent(tx, {
+        studentId,
+        companyId,
+        performedById: 7,
+      });
+      expect(markPaidBarredLessons).toHaveBeenCalledWith(
+        tx,
+        expect.anything(),
+        expect.objectContaining({ studentId, companyId, performedById: 7 }),
+      );
     });
 
     it('still settles deferred salary when the roster is empty', async () => {

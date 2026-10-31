@@ -58,6 +58,11 @@ export interface GapSweepInput {
      * first lesson of a monthly month is never fronted (ADR-0048, R4).
      */
     status: string;
+    /**
+     * ADR-0143: paid after the lesson the student was kept out of. Required
+     * so no caller can drop it: such a lesson is never fronted either.
+     */
+    teacherPayWaived: boolean;
   }>;
   /** groupId → course pricing. Missing group ⇒ the lesson is skipped. */
   groupMap: Map<string, { course: GapCourse }>;
@@ -305,6 +310,7 @@ export function sweepGapLessons(input: GapSweepInput): GapSweepResult {
     const g = input.groupMap.get(att.groupId);
     if (!g) continue;
     if (input.forfeitedLessons.has(lessonKey(att.groupId, att.date))) continue;
+    if (att.teacherPayWaived) continue;
 
     // BR-09: withhold the new-student top-up until they have attended enough
     // lessons in this group — mirrors the cron, so the shown gap equals what
