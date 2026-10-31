@@ -59,14 +59,12 @@ function makeTx(opts: {
   return {
     enrollment: { findMany: jest.fn().mockResolvedValue([enr]) },
     attendance: {
-      groupBy: jest
-        .fn()
-        .mockResolvedValue(
-          heldDates.map((d) => ({
-            groupId: 'grp-1',
-            date: new Date(`${d}T00:00:00.000Z`),
-          })),
-        ),
+      groupBy: jest.fn().mockResolvedValue(
+        heldDates.map((d) => ({
+          groupId: 'grp-1',
+          date: new Date(`${d}T00:00:00.000Z`),
+        })),
+      ),
       findMany: jest.fn().mockResolvedValue(
         [
           '2026-10-02',
