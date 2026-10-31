@@ -280,6 +280,35 @@ describe('StudentsReadService', () => {
         ]);
       };
 
+      it('flags a «Keldi» a late payment wrote (ADR-0143)', async () => {
+        monthly();
+        prisma.attendance.findMany.mockResolvedValue([
+          {
+            id: 'att-1',
+            groupId: 'grp-1',
+            date: new Date('2026-10-02'),
+            status: 'PRESENT',
+            cancellationId: null,
+            teacherPayWaived: false,
+          },
+          {
+            id: 'att-2',
+            groupId: 'grp-1',
+            date: new Date('2026-10-05'),
+            status: 'PRESENT',
+            cancellationId: null,
+            teacherPayWaived: true,
+          },
+        ]);
+        settings.get.mockResolvedValue(false);
+
+        const res = await service.getLessonsOverview(10001, 1001);
+        const lessons = res.groups[0].lessons as any[];
+
+        expect(lessons.map((l) => l.paidLater ?? false)).toEqual([false, true]);
+        expect(res.groups[0].attended).toBe(2);
+      });
+
       it('adds the days the student could not be marked as BARRED, in date order, outside "keldi"', async () => {
         monthly();
         settings.get.mockImplementation((_c: number, key: string) =>

@@ -35,6 +35,7 @@ interface Dot {
   status: DotStatus;
   /** Recorded minutes late on a LATE lesson (ADR-0048). */
   lateMinutes?: number | null;
+  paidLater?: boolean;
   /** O'quvchi shu sanada guruhga a'zo bo'lganmi (backend coverage oynasi). */
   enrolled: boolean;
 }
@@ -81,6 +82,7 @@ function AttendanceDots({
           date={dot.date}
           enrolled={dot.enrolled}
           lateMinutes={dot.lateMinutes}
+          paidLater={dot.paidLater}
           hasOverride={overrideDateSet.has(dot.date)}
         />
       ))}

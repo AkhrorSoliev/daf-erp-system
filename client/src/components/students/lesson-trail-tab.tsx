@@ -39,6 +39,7 @@ interface Cycle {
 interface Lesson {
   date: string;
   status: DotStatus;
+  paidLater?: boolean;
   cycleSequenceNumber: number | null;
   month?: string | null;
 }
@@ -126,6 +127,7 @@ function LessonTimeline({
         key={`${l.date}-${i}`}
         status={l.status}
         date={l.date}
+        paidLater={l.paidLater}
         cycleLabel={title}
       />,
     );
@@ -207,6 +209,9 @@ export function LessonTrailTab({ studentId }: { studentId: number }) {
   const hasBarred = (data?.groups ?? []).some((g) =>
     g.lessons.some((l) => l.status === "BARRED"),
   );
+  const hasPaidLater = (data?.groups ?? []).some((g) =>
+    g.lessons.some((l) => l.paidLater),
+  );
 
   return (
     <TooltipProvider>
@@ -235,6 +240,12 @@ export function LessonTrailTab({ studentId }: { studentId: number }) {
               <span className="inline-block size-3 rounded-full bg-violet-500" />
               {t("To'lov yo'q")}
             </span>
+            {hasPaidLater && (
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block size-3 rounded-full bg-emerald-500 ring-2 ring-violet-500 ring-offset-1 ring-offset-background" />
+                {t("To'lov keyin keldi")}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Switch
