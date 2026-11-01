@@ -11,6 +11,7 @@ import {
   TransactionType,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { loadTeachersOnLesson } from '../groups/shared/teachers-on-date';
 import { assertCallerMayTouchGroup } from '../common/auth/group-branch-scope';
 import { TEACHER_ROLE_ID } from '../groups/shared/group-include';
 import {
@@ -149,7 +150,7 @@ export class LessonTeacherOverridesService {
 
         const oldTeacherIds = existing
           ? [...existing.teacherIds].sort((a, b) => a - b)
-          : await this.defaultTeacherIds(tx, groupId);
+          : await this.defaultTeacherIds(tx, groupId, date);
 
         let row;
         if (existing) {
@@ -256,6 +257,7 @@ export class LessonTeacherOverridesService {
         const newTeacherIds = await this.defaultTeacherIds(
           tx,
           existing.groupId,
+          existing.date,
         );
 
         await tx.lessonTeacherOverride.update({
@@ -501,15 +503,14 @@ export class LessonTeacherOverridesService {
     }
   }
 
+  /** The group's own teachers on that lesson day (ADR-0144). */
   private async defaultTeacherIds(
     tx: Prisma.TransactionClient,
     groupId: string,
+    date: Date,
   ): Promise<number[]> {
-    const teachers = await tx.groupTeacher.findMany({
-      where: { groupId },
-      select: { teacherId: true },
-    });
-    return teachers.map((t) => t.teacherId).sort((a, b) => a - b);
+    const teachers = await loadTeachersOnLesson(tx, groupId, date);
+    return [...teachers].sort((a, b) => a - b);
   }
 
   /**

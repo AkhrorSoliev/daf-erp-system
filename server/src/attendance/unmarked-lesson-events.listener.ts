@@ -7,6 +7,7 @@ import {
   UserStatus,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { loadTeachersOnLesson } from '../groups/shared/teachers-on-date';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { PushService } from '../notifications/push.service';
@@ -44,12 +45,7 @@ export class UnmarkedLessonEventsListener {
       });
       const teacherIds =
         override?.teacherIds ??
-        (
-          await this.prisma.groupTeacher.findMany({
-            where: { groupId: p.groupId },
-            select: { teacherId: true },
-          })
-        ).map((t) => t.teacherId);
+        (await loadTeachersOnLesson(this.prisma, p.groupId, date));
       const teachers = await this.prisma.user.findMany({
         where: {
           id: { in: teacherIds },

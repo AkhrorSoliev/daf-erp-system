@@ -52,6 +52,10 @@ describe('SalaryMonthlyService', () => {
       // Inactive-student list for the top-up cap; default none.
       student: { findMany: jest.fn().mockResolvedValue([]) },
       group: { findMany: jest.fn().mockResolvedValue([]) },
+      groupTeacherHistory: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
       lessonTeacherOverride: { findMany: jest.fn().mockResolvedValue([]) },
       // Oylik kursning MUZLATILGAN dars narxi (`loadFrozenMonthlyCharges`).

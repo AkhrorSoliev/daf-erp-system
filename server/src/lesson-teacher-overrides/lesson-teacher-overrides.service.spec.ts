@@ -39,6 +39,10 @@ describe('LessonTeacherOverridesService', () => {
         findFirst: jest.fn(),
       },
       enrollment: { findFirst: jest.fn() },
+      groupTeacherHistory: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
       // Trial-lesson months (contract 3.5): none by default.
       enrollmentMonthlyCharge: { findMany: jest.fn().mockResolvedValue([]) },

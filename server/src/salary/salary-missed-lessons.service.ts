@@ -18,6 +18,7 @@ import {
 import { resolveMonthPlan } from '../billing/month-plan';
 import { lessonDatesInMonth } from '../billing/planned-lessons';
 import type { RateVersion } from './shared/deserved-math';
+import { buildTeachersOnDate } from '../groups/shared/teachers-on-date';
 import {
   computeMissedLessons,
   MISSED_LESSONS_START_DAY,
@@ -55,10 +56,27 @@ export class SalaryMissedLessonsService {
     const to = yesterday < monthEnd ? yesterday : monthEnd;
     if (from > to) return empty;
 
-    const links = await this.prisma.groupTeacher.findMany({
-      where: { teacherId },
-      select: { groupId: true },
-    });
+    // The groups the teacher teaches now AND the ones they taught before a
+    // roster change: a lesson is theirs when they were its teacher that day
+    // (ADR-0144), not when they teach the group today.
+    const [current, past] = await Promise.all([
+      this.prisma.groupTeacher.findMany({
+        where: { teacherId },
+        select: { groupId: true },
+      }),
+      this.prisma.groupTeacherHistory.findMany({
+        where: {
+          OR: [
+            { previousTeacherIds: { has: teacherId } },
+            { newTeacherIds: { has: teacherId } },
+          ],
+        },
+        select: { groupId: true },
+      }),
+    ]);
+    const links = [...new Set([...current, ...past].map((l) => l.groupId))].map(
+      (groupId) => ({ groupId }),
+    );
     if (links.length === 0) return empty;
 
     const groups = await this.prisma.group.findMany({
@@ -73,6 +91,7 @@ export class SalaryMissedLessonsService {
         name: true,
         branchId: true,
         exactDays: true,
+        lessonStartTime: true,
         lessonEndTime: true,
         startDate: true,
         endDate: true,
@@ -80,6 +99,18 @@ export class SalaryMissedLessonsService {
     });
     if (groups.length === 0) return empty;
     const groupIds = groups.map((g) => g.id);
+
+    const [rosters, rosterChanges] = await Promise.all([
+      this.prisma.groupTeacher.findMany({
+        where: { groupId: { in: groups.map((g) => g.id) } },
+        select: { groupId: true, teacherId: true },
+      }),
+      this.prisma.groupTeacherHistory.findMany({
+        where: { groupId: { in: groups.map((g) => g.id) } },
+        select: { groupId: true, previousTeacherIds: true, createdAt: true },
+      }),
+    ]);
+    const teachersOn = buildTeachersOnDate(rosters, rosterChanges, groups);
 
     const planned: MissedLessonGroup[] = [];
     for (const g of groups) {
@@ -103,7 +134,7 @@ export class SalaryMissedLessonsService {
         addedDates,
         fromDate,
         toDate,
-      });
+      }).filter((d) => teachersOn(g.id, d).includes(teacherId));
       if (plannedDates.length > 0) {
         planned.push({ id: g.id, name: g.name, plannedDates });
       }

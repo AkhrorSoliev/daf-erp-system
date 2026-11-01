@@ -94,6 +94,13 @@ export interface GapSweepInput {
   inScope: (teacherId: number) => boolean;
   /** Attendance ids that already carry an accrual for that teacher. */
   isCovered: (teacherId: number, attendanceId: string) => boolean;
+  /**
+   * Teachers who already hold a live accrual for the attendance, whoever they
+   * are (ADR-0144). Required so no caller can drop it: a lesson already paid
+   * to a teacher the roster read does not name is never fronted again — the
+   * roster read and the pay disagree, and the lesson is paid once.
+   */
+  payeesOf: (attendanceId: string) => readonly number[];
   /** Flat-salary teachers earn no per-lesson gap. */
   isFixedMonthly: (teacherId: number) => boolean;
   /** `studentId::groupId` → attended lessons so far (BR-09 gate). */
@@ -337,7 +344,9 @@ export function sweepGapLessons(input: GapSweepInput): GapSweepResult {
       input.packPrices?.get(att.id),
     );
 
-    for (const teacherId of input.resolveTeachers(att.groupId, dStr)) {
+    const teachers = input.resolveTeachers(att.groupId, dStr);
+    if (input.payeesOf(att.id).some((p) => !teachers.includes(p))) continue;
+    for (const teacherId of teachers) {
       if (!input.inScope(teacherId)) continue;
       if (input.isCovered(teacherId, att.id)) continue;
       if (input.isFixedMonthly(teacherId)) continue;

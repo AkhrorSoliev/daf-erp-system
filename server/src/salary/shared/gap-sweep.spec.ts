@@ -95,6 +95,7 @@ function buildInput(
     resolveRate: () => rate,
     inScope: () => true,
     isCovered: () => false,
+    payeesOf: () => [],
     isFixedMonthly: () => false,
     heldByStudentGroup: new Map([
       [`${STUDENT}::${GROUP}`, NEW_STUDENT_TOPUP_MIN_LESSONS],
@@ -587,5 +588,25 @@ describe('sweepGapLessons — paid after the lesson (ADR-0143)', () => {
       })),
     });
     expect(waived.lessons).toEqual([]);
+  });
+});
+
+describe('sweepGapLessons — a lesson already paid outside the roster (ADR-0144)', () => {
+  it('is not fronted again when another teacher holds its accrual', () => {
+    const res = sweepGapLessons(
+      buildInput(PACK_COURSE, PERCENTAGE, { payeesOf: () => [99_999] }),
+    );
+    expect(res.lessons).toEqual([]);
+  });
+
+  it('still fronts a co-teacher when the paid one is on the roster', () => {
+    const res = sweepGapLessons(
+      buildInput(PACK_COURSE, PERCENTAGE, {
+        resolveTeachers: () => [TEACHER, 99_999],
+        payeesOf: () => [99_999],
+        isCovered: (tid) => tid === 99_999,
+      }),
+    );
+    expect(res.lessons.map((l) => l.teacherId)).toEqual([TEACHER]);
   });
 });

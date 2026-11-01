@@ -19,6 +19,10 @@ import {
 import { loadForfeitedLessonKeys } from '../unmarked-lessons/forfeited-lessons';
 import { pickActiveVersion, type RateVersion } from './shared/deserved-math';
 import {
+  buildTeachersOnDate,
+  loadRosterChanges,
+} from '../groups/shared/teachers-on-date';
+import {
   MonthlyChargeStatus,
   SalaryType,
   TransactionType,
@@ -87,6 +91,7 @@ export class SalaryCenterTopUpService {
       covered,
       heldCounts,
       inactiveStudents,
+      rosterChanges,
     ] = await Promise.all([
       this.prisma.attendance.findMany({
         where: {
@@ -107,6 +112,7 @@ export class SalaryCenterTopUpService {
         where: { companyId },
         select: {
           id: true,
+          lessonStartTime: true,
           course: {
             select: {
               price: true,
@@ -167,17 +173,17 @@ export class SalaryCenterTopUpService {
         },
         select: { id: true, statusChangedAt: true },
       }),
+      loadRosterChanges(this.prisma),
     ]);
 
     const dateStr = (d: Date) => d.toISOString().slice(0, 10);
     const groupMap = new Map(groups.map((g) => [g.id, g]));
-    const rosterMap = new Map<string, number[]>();
-    for (const gt of groupTeachers) {
-      rosterMap.set(gt.groupId, [
-        ...(rosterMap.get(gt.groupId) ?? []),
-        gt.teacherId,
-      ]);
-    }
+    // The roster on the lesson day, not today's (ADR-0144).
+    const teachersOn = buildTeachersOnDate(
+      groupTeachers,
+      rosterChanges,
+      groups,
+    );
     const overrideMap = new Map<string, number[]>();
     for (const o of overrides) {
       overrideMap.set(`${o.groupId}::${dateStr(o.date)}`, o.teacherIds);
@@ -207,6 +213,14 @@ export class SalaryCenterTopUpService {
         .filter((c) => c.attendanceId)
         .map((c) => `${c.userId}::${c.attendanceId}`),
     );
+    const payees = new Map<string, number[]>();
+    for (const c of covered) {
+      if (!c.attendanceId) continue;
+      payees.set(c.attendanceId, [
+        ...(payees.get(c.attendanceId) ?? []),
+        c.userId,
+      ]);
+    }
     const held = new Map<string, number>();
     for (const h of heldCounts) {
       held.set(`${h.studentId}::${h.groupId}`, h._count._all);
@@ -253,12 +267,13 @@ export class SalaryCenterTopUpService {
       packPrices,
       forfeitedLessons,
       resolveTeachers: (groupId, d) =>
-        overrideMap.get(`${groupId}::${d}`) ?? rosterMap.get(groupId) ?? [],
+        overrideMap.get(`${groupId}::${d}`) ?? teachersOn(groupId, d),
       resolveRate: (tid, groupId, at) =>
         pickActiveVersion(versByKey.get(`${tid}::${groupId}`), at) ??
         pickActiveVersion(versByKey.get(`${tid}::GLOBAL`), at),
       inScope: (tid) => inScope.has(tid),
       isCovered: (tid, attId) => coveredByTeacher.has(`${tid}::${attId}`),
+      payeesOf: (attId) => payees.get(attId) ?? [],
       isFixedMonthly: (tid) => fixedMonthly.has(tid),
       heldByStudentGroup: held,
       inactiveSince,

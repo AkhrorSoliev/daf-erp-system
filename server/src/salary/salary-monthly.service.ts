@@ -7,6 +7,10 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { pickActiveVersion, RateVersion } from './shared/deserved-math';
+import {
+  buildTeachersOnDate,
+  loadRosterChanges,
+} from '../groups/shared/teachers-on-date';
 import { isTopUpMonth } from './shared/topup';
 import {
   resolveMonthlyScope,
@@ -225,6 +229,7 @@ export class SalaryMonthlyService {
       carriedOutAgg,
       heldCounts,
       inactiveStudents,
+      rosterChanges,
     ] = await Promise.all([
       // Covered ground-truth — accruals bucketed into this period (carry-over OR).
       // `creditPeriodDate` is selected so a carried-IN accrual (its lessonDate is
@@ -282,6 +287,7 @@ export class SalaryMonthlyService {
         select: {
           id: true,
           name: true,
+          lessonStartTime: true,
           course: {
             select: {
               price: true,
@@ -379,6 +385,7 @@ export class SalaryMonthlyService {
         },
         select: { id: true, statusChangedAt: true },
       }),
+      loadRosterChanges(this.prisma),
     ]);
     const carriedOutMap = new Map(
       carriedOutAgg.map((a) => [a.userId, a._sum.amount ?? 0]),
@@ -409,18 +416,18 @@ export class SalaryMonthlyService {
     // ─── Build in-memory maps ─────────────────────────────────────────────
     const groupMap = new Map(groups.map((g) => [g.id, g]));
 
-    const rosterMap = new Map<string, number[]>();
-    for (const gt of groupTeachers) {
-      const arr = rosterMap.get(gt.groupId) ?? [];
-      arr.push(gt.teacherId);
-      rosterMap.set(gt.groupId, arr);
-    }
+    // The roster on the lesson day, not today's (ADR-0144).
+    const teachersOn = buildTeachersOnDate(
+      groupTeachers,
+      rosterChanges,
+      groups,
+    );
     const overrideMap = new Map<string, number[]>();
     for (const o of overrides) {
       overrideMap.set(`${o.groupId}::${dateStr(o.date)}`, o.teacherIds);
     }
     const resolveTeachers = (groupId: string, dStr: string): number[] =>
-      overrideMap.get(`${groupId}::${dStr}`) ?? rosterMap.get(groupId) ?? [];
+      overrideMap.get(`${groupId}::${dStr}`) ?? teachersOn(groupId, dStr);
 
     const versByKey = new Map<string, RateVersion[]>();
     const fixedMonthlyTeachers = new Set<number>();
@@ -564,6 +571,16 @@ export class SalaryMonthlyService {
         buckets: new Map(),
       });
     }
+    // attendanceId → every teacher already paid for it, in scope or not
+    // (ADR-0144): `agg` holds only the teachers on this page.
+    const payees = new Map<string, number[]>();
+    for (const ac of accruals) {
+      if (!ac.attendanceId) continue;
+      payees.set(ac.attendanceId, [
+        ...(payees.get(ac.attendanceId) ?? []),
+        ac.userId,
+      ]);
+    }
     for (const ac of accruals) {
       const a = agg.get(ac.userId);
       if (!a) continue;
@@ -630,6 +647,7 @@ export class SalaryMonthlyService {
       resolveRate,
       inScope: (tid) => agg.has(tid),
       isCovered: (tid, attId) => agg.get(tid)?.coveredAtt.has(attId) ?? false,
+      payeesOf: (attId) => payees.get(attId) ?? [],
       isFixedMonthly: (tid) => agg.get(tid)?.isFixedMonthly ?? false,
       heldByStudentGroup,
       inactiveSince,

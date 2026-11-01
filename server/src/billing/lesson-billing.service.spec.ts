@@ -114,6 +114,10 @@ describe('LessonBillingService', () => {
       salaryAccrual: { findMany: jest.fn().mockResolvedValue([]) },
       // ADR-0054: no forfeited lesson unless a test says so.
       unmarkedLesson: { findMany: jest.fn().mockResolvedValue([]) },
+      groupTeacherHistory: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
       groupTeacher: {
         findMany: jest.fn().mockResolvedValue(baseGroup.teachers),
       },
@@ -1866,6 +1870,10 @@ describe('LessonBillingService', () => {
           }),
         },
         lessonTeacherOverride: {
+          findFirst: jest.fn().mockResolvedValue(null),
+        },
+        groupTeacherHistory: {
+          findMany: jest.fn().mockResolvedValue([]),
           findFirst: jest.fn().mockResolvedValue(null),
         },
         groupTeacher: {

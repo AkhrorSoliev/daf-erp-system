@@ -4,6 +4,13 @@ describe('UnmarkedLessonEventsListener', () => {
   const make = () => {
     const prisma = {
       lessonTeacherOverride: { findFirst: jest.fn().mockResolvedValue(null) },
+      group: {
+        findUnique: jest.fn().mockResolvedValue({ lessonStartTime: '15:00' }),
+      },
+      groupTeacherHistory: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
       groupTeacher: {
         findMany: jest.fn().mockResolvedValue([{ teacherId: 20001 }]),
       },

@@ -63,6 +63,10 @@ describe('SalaryCalculationService', () => {
       // Inactive-student list for the top-up cap; default none.
       student: { findMany: jest.fn().mockResolvedValue([]) },
       group: { findMany: jest.fn().mockResolvedValue([]) },
+      groupTeacherHistory: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
       groupTeacher: { findMany: jest.fn().mockResolvedValue([]) },
       lessonTeacherOverride: { findMany: jest.fn().mockResolvedValue([]) },
       // Oylik kursning MUZLATILGAN dars narxi (`loadFrozenMonthlyCharges`).
@@ -266,6 +270,53 @@ describe('SalaryCalculationService', () => {
     // `createAccrual` summani o'zi qaytadan hisoblaydi; bo'luvchi
     // berilmasa u kursning `lessonPaymentCount` iga (12) qaytadi va
     // markaz qo'shimchasi 13 darslik oyda ham 12 ga bo'linib YOZILARDI.
+    it('fronts the teacher of the lesson day, not the one assigned later (ADR-0144)', async () => {
+      prisma.attendance.findMany.mockResolvedValue([
+        {
+          id: 'att-1',
+          studentId: 100,
+          groupId: 'g1',
+          date: new Date('2026-07-10'),
+        },
+      ]);
+      prisma.attendance.groupBy.mockResolvedValue([
+        { studentId: 100, groupId: 'g1', _count: { _all: 6 } },
+      ]);
+      prisma.group.findMany.mockResolvedValue([
+        { id: 'g1', course: { price: 240_000, lessonPaymentCount: 12 } },
+      ]);
+      // Today's roster is 20020; on 10.07 it was 10010 (changed 12.07).
+      prisma.groupTeacher.findMany.mockResolvedValue([
+        { groupId: 'g1', teacherId: 20020 },
+      ]);
+      prisma.groupTeacherHistory.findMany.mockResolvedValue([
+        {
+          groupId: 'g1',
+          previousTeacherIds: [10010],
+          createdAt: new Date('2026-07-12T05:44:00.000Z'),
+        },
+      ]);
+      prisma.employeeSalaryConfigVersion.findMany.mockResolvedValue(
+        [10010, 20020].map((userId) => ({
+          salaryType: 'PERCENTAGE',
+          value: 30,
+          effectiveFrom: new Date('2026-05-01'),
+          effectiveTo: null,
+          config: { userId, groupId: null, salaryType: 'PERCENTAGE' },
+        })),
+      );
+
+      await service.calculateMonthlySalaries(1, {
+        asOfDate: julyAsOf,
+        now: julyNow,
+      });
+
+      const fronted = accrualService.createAccrual.mock.calls.map(
+        ([p]: any[]) => p.teacherId,
+      );
+      expect(fronted).toEqual([10010]);
+    });
+
     it("MONTHLY: markaz qo'shimchasi oyning bo'luvchisi bilan yoziladi", async () => {
       prisma.attendance.findMany.mockResolvedValue([
         {

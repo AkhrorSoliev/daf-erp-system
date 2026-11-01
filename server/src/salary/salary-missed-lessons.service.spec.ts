@@ -22,8 +22,9 @@ const statusChange = (toStatus: string, at: string) => ({
 function makePrisma() {
   return {
     groupTeacher: {
-      findMany: jest.fn().mockResolvedValue([{ groupId: 'g1' }]),
+      findMany: jest.fn().mockResolvedValue([{ groupId: 'g1', teacherId: 7 }]),
     },
+    groupTeacherHistory: { findMany: jest.fn().mockResolvedValue([]) },
     group: {
       findMany: jest.fn().mockResolvedValue([group]),
       findUnique: jest
@@ -127,6 +128,46 @@ describe('SalaryMissedLessonsService', () => {
       new Date('2026-10-01T05:00:00Z'),
     );
     expect(r).toEqual({ lessons: [], total: 0 });
+  });
+
+  it('leaves out the lessons before the teacher took the group (ADR-0144)', async () => {
+    // Teacher 7 replaced teacher 3 on 06.10 at 10:44 Tashkent.
+    prisma.groupTeacherHistory.findMany.mockResolvedValue([
+      {
+        groupId: 'g1',
+        previousTeacherIds: [3],
+        createdAt: new Date('2026-10-06T05:44:00Z'),
+      },
+    ]);
+    const r = await service.forTeacher(
+      7,
+      1,
+      '2026-10',
+      new Date('2026-10-08T05:00:00Z'),
+    );
+    expect(r.lessons.map((l) => l.date)).toEqual(['2026-10-07']);
+  });
+
+  it('keeps the lessons a teacher taught before leaving the group (ADR-0144)', async () => {
+    prisma.groupTeacher.findMany.mockImplementation(({ where }: any) =>
+      Promise.resolve(
+        where.teacherId === 3 ? [] : [{ groupId: 'g1', teacherId: 7 }],
+      ),
+    );
+    prisma.groupTeacherHistory.findMany.mockResolvedValue([
+      {
+        groupId: 'g1',
+        previousTeacherIds: [3],
+        createdAt: new Date('2026-10-06T05:44:00Z'),
+      },
+    ]);
+    const r = await service.forTeacher(
+      3,
+      1,
+      '2026-10',
+      new Date('2026-10-08T05:00:00Z'),
+    );
+    expect(r.lessons.map((l) => l.date)).toEqual(['2026-10-05']);
   });
 
   it('is empty for someone who teaches no group', async () => {
