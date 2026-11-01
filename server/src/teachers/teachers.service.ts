@@ -543,7 +543,29 @@ export class TeachersService {
     });
 
     if (teacherGroups.length > 0) {
+      // Each group's whole roster before the removal: the teacher-history row
+      // below must carry it, or a later change reads as "nobody taught" for
+      // the lessons before it (ADR-0144).
+      const rosters = await this.prisma.groupTeacher.findMany({
+        where: { groupId: { in: teacherGroups.map((gt) => gt.group.id) } },
+        select: { groupId: true, teacherId: true },
+      });
       await this.prisma.groupTeacher.deleteMany({ where: { teacherId: id } });
+      await this.prisma.groupTeacherHistory.createMany({
+        data: teacherGroups.map((gt) => {
+          const before = rosters
+            .filter((r) => r.groupId === gt.group.id)
+            .map((r) => r.teacherId);
+          return {
+            groupId: gt.group.id,
+            previousTeacherIds: before,
+            newTeacherIds: before.filter((t) => t !== id),
+            changeType: 'REMOVED' as const,
+            triggeredByDismissal: true,
+            changedById: deletedById ?? null,
+          };
+        }),
+      });
 
       for (const gt of teacherGroups) {
         await this.entityHistoryService.recordDelete({

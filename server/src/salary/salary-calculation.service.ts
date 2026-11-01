@@ -36,6 +36,10 @@ import {
   loadForfeitedLessonKeys,
 } from '../unmarked-lessons/forfeited-lessons';
 import { SalaryAccrualService } from './salary-accrual.service';
+import {
+  buildTeachersOnDate,
+  loadRosterChanges,
+} from '../groups/shared/teachers-on-date';
 
 /** One uncovered billable lesson to be fronted by a center top-up accrual. */
 interface GapSpec {
@@ -561,6 +565,7 @@ export class SalaryCalculationService {
       versionRows,
       heldCounts,
       inactiveStudents,
+      rosterChanges,
     ] = await Promise.all([
       // ALL non-reversed accruals bucketed into this period (covered + any
       // prior top-up) → covered-key set so a lesson is never double-listed.
@@ -599,6 +604,7 @@ export class SalaryCalculationService {
         where: { companyId },
         select: {
           id: true,
+          lessonStartTime: true,
           course: {
             select: {
               price: true,
@@ -651,6 +657,7 @@ export class SalaryCalculationService {
         },
         select: { id: true, statusChangedAt: true },
       }),
+      loadRosterChanges(this.prisma),
     ]);
 
     // (studentId::groupId) -> attended-lesson count (BR-09 new-student gate).
@@ -683,25 +690,32 @@ export class SalaryCalculationService {
 
     const dateStr = (d: Date) => d.toISOString().slice(0, 10);
 
+    const payees = new Map<string, number[]>(); // attendanceId → paid teachers
     const coveredKey = new Set<string>(); // `${attendanceId}::${userId}`
     for (const a of accruals) {
       if (a.attendanceId) coveredKey.add(`${a.attendanceId}::${a.userId}`);
+      if (a.attendanceId) {
+        payees.set(a.attendanceId, [
+          ...(payees.get(a.attendanceId) ?? []),
+          a.userId,
+        ]);
+      }
     }
 
     const groupMap = new Map(groups.map((g) => [g.id, g]));
 
-    const rosterMap = new Map<string, number[]>();
-    for (const gt of groupTeachers) {
-      const arr = rosterMap.get(gt.groupId) ?? [];
-      arr.push(gt.teacherId);
-      rosterMap.set(gt.groupId, arr);
-    }
+    // The roster on the lesson day, not today's (ADR-0144).
+    const teachersOn = buildTeachersOnDate(
+      groupTeachers,
+      rosterChanges,
+      groups,
+    );
     const overrideMap = new Map<string, number[]>();
     for (const o of overrides) {
       overrideMap.set(`${o.groupId}::${dateStr(o.date)}`, o.teacherIds);
     }
     const resolveTeachers = (groupId: string, dStr: string): number[] =>
-      overrideMap.get(`${groupId}::${dStr}`) ?? rosterMap.get(groupId) ?? [];
+      overrideMap.get(`${groupId}::${dStr}`) ?? teachersOn(groupId, dStr);
 
     const versByKey = new Map<string, RateVersion[]>();
     const fixedMonthlyTeachers = new Set<number>();
@@ -775,6 +789,7 @@ export class SalaryCalculationService {
       inScope: () => true,
       isCovered: (teacherId, attendanceId) =>
         coveredKey.has(`${attendanceId}::${teacherId}`),
+      payeesOf: (attendanceId) => payees.get(attendanceId) ?? [],
       isFixedMonthly: (teacherId) => fixedMonthlyTeachers.has(teacherId),
       heldByStudentGroup,
       inactiveSince,

@@ -69,6 +69,9 @@ describe('TeachersService — status methods', () => {
         findMany: jest.fn().mockResolvedValue([]),
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
+      groupTeacherHistory: {
+        createMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
     };
 
     redis = {
@@ -168,6 +171,32 @@ describe('TeachersService — status methods', () => {
       expect(statusHistoryService.changeStatus).toHaveBeenCalledWith(
         expect.objectContaining({ entityType: 'User' }),
       );
+    });
+
+    it("records the removal in each group's teacher history (ADR-0144)", async () => {
+      prisma.groupTeacher.findMany
+        .mockResolvedValueOnce([
+          { group: { id: 'g1', name: '#007', companyId: 1001 } },
+        ])
+        .mockResolvedValueOnce([
+          { groupId: 'g1', teacherId: 1 },
+          { groupId: 'g1', teacherId: 5 },
+        ]);
+
+      await service.delete(1, 2, 1001);
+
+      expect(prisma.groupTeacherHistory.createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            groupId: 'g1',
+            previousTeacherIds: [1, 5],
+            newTeacherIds: [5],
+            changeType: 'REMOVED',
+            triggeredByDismissal: true,
+            changedById: 2,
+          },
+        ],
+      });
     });
 
     it('throws NotFoundException when teacher not found', async () => {

@@ -7,6 +7,7 @@ import {
   TransactionType,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { loadTeachersOnLesson } from '../groups/shared/teachers-on-date';
 import {
   baseLessonPrice,
   cycleCostFor,
@@ -1417,8 +1418,9 @@ export class LessonBillingService {
    * Effective teacher list for a single lesson. If a non-deleted
    * `LessonTeacherOverride` exists for (groupId, lessonDate), its
    * `teacherIds` are the authoritative roster — `Group.teachers` is
-   * ignored entirely. Otherwise we fall back to the standard group
-   * roster.
+   * ignored entirely. Otherwise the group's roster ON THAT DAY, not today's
+   * (ADR-0144): a late payment for a lesson taught before a teacher change
+   * pays the teacher who taught it.
    *
    * `lessonDate` is normalised to UTC midnight by the caller, matching
    * the @db.Date column on `LessonTeacherOverride.date`.
@@ -1433,10 +1435,6 @@ export class LessonBillingService {
       select: { teacherIds: true },
     });
     if (override) return override.teacherIds;
-    const groupTeachers = await tx.groupTeacher.findMany({
-      where: { groupId },
-      select: { teacherId: true },
-    });
-    return groupTeachers.map((t) => t.teacherId);
+    return loadTeachersOnLesson(tx, groupId, lessonDate);
   }
 }

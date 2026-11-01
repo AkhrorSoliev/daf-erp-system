@@ -426,6 +426,29 @@ export class GroupsWriteService {
         await tx.groupTeacher.createMany({
           data: teacherIds.map((teacherId) => ({ groupId: id, teacherId })),
         });
+        // Written with the roster, by ids: pay reads it to find who taught a
+        // past lesson (ADR-0144). Comparing names missed two teachers with the
+        // same name, and a write after the commit could be lost.
+        const added = teacherIds.filter((t) => !oldTeacherIds.includes(t));
+        const removed = oldTeacherIds.filter((t) => !teacherIds.includes(t));
+        if (added.length > 0 || removed.length > 0) {
+          await tx.groupTeacherHistory.create({
+            data: {
+              groupId: id,
+              previousTeacherIds: oldTeacherIds,
+              newTeacherIds: teacherIds,
+              changeType:
+                removed.length === 0
+                  ? 'ADDED'
+                  : added.length === 0
+                    ? 'REMOVED'
+                    : 'REPLACED',
+              triggeredByDismissal,
+              changedById: userId ?? null,
+              changeReasonId: changeReasonId ?? null,
+            },
+          });
+        }
       }
 
       return tx.group.update({
@@ -498,35 +521,6 @@ export class GroupsWriteService {
           newValues: { ustozlar: newTeacherNames || '—' },
           changedById: userId,
           companyId: existing.companyId ?? undefined,
-        });
-
-        const newTeacherIds = teacherIds;
-        const added = newTeacherIds.filter(
-          (tid) => !oldTeacherIds.includes(tid),
-        );
-        const removed = oldTeacherIds.filter(
-          (tid) => !newTeacherIds.includes(tid),
-        );
-
-        let changeType: 'ADDED' | 'REMOVED' | 'REPLACED';
-        if (added.length > 0 && removed.length === 0) {
-          changeType = 'ADDED';
-        } else if (removed.length > 0 && added.length === 0) {
-          changeType = 'REMOVED';
-        } else {
-          changeType = 'REPLACED';
-        }
-
-        await this.prisma.groupTeacherHistory.create({
-          data: {
-            groupId: id,
-            previousTeacherIds: oldTeacherIds,
-            newTeacherIds,
-            changeType,
-            triggeredByDismissal,
-            changedById: userId ?? null,
-            changeReasonId: changeReasonId ?? null,
-          },
         });
       }
     }
