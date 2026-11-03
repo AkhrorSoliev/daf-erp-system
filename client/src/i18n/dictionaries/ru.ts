@@ -1823,7 +1823,6 @@ const ru: Dictionary = {
   "Qo'shimcha bo'limlar (ixtiyoriy)": "Дополнительные разделы (необязательно)",
   "Bo'sh qoldirilsa — qisqa hisobot chiqadi (~10 varaq).": "Если ничего не выбрано — получится краткий отчёт (~10 листов).",
   "Yuklab olish": "Скачать",
-  "Bank o'tkazmasi": "Банковский перевод",
   "{amount} so'm to'lov qayd qilindi": "Платёж на {amount} сум записан",
   "To'lovni qayd qilishda xatolik": "Не удалось записать платёж",
   "Ism, telefon yoki ID bo'yicha...": "Имя, телефон или ID...",

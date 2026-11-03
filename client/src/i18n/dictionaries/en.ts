@@ -1823,7 +1823,6 @@ const en: Dictionary = {
   "Qo'shimcha bo'limlar (ixtiyoriy)": "Extra sections (optional)",
   "Bo'sh qoldirilsa — qisqa hisobot chiqadi (~10 varaq).": "If left empty, you get the short report (~10 sheets).",
   "Yuklab olish": "Download",
-  "Bank o'tkazmasi": "Bank transfer",
   "{amount} so'm to'lov qayd qilindi": "Payment of {amount} UZS recorded",
   "To'lovni qayd qilishda xatolik": "Could not record the payment",
   "Ism, telefon yoki ID bo'yicha...": "Name, phone or ID...",
