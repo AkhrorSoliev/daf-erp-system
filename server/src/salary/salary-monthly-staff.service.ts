@@ -10,6 +10,7 @@ import { resolveStaffMonthly } from './shared/staff-monthly-amount';
 import { pickActiveVersion } from './shared/deserved-math';
 import { byWalkOrder, planShownAdvances } from './shared/advance-netting';
 import { tashkentMonthKey } from '../common/date/tashkent';
+import { GLOBAL_FIXED_MONTHLY_CONFIG } from './shared/teacher-roster-where';
 
 /** One advance the payout nets (or netted), as the row's drawer lists it. */
 export interface AdvanceItem {
@@ -131,16 +132,17 @@ const ZERO_TOTALS: StaffTotals = {
 };
 
 /**
- * Non-teaching FIXED_MONTHLY staff (administrators, cashiers, branch directors)
- * for the "Xodimlar oyligi" section of the monthly salary report.
+ * FIXED_MONTHLY staff (administrators, cashiers, branch directors, and anyone
+ * else on a fixed monthly salary, a Teacher role included) for the "Xodimlar
+ * oyligi" section of the monthly salary report.
  *
  * Mirrors the FIXED_MONTHLY resolution in `SalaryCalculationService`
  * (`calculateMonthlySalaries`) — same version-at-period lookup, same advance
  * netting, same prorated amount (`prorateFixedMonthly`) — so the SHOWN figure
  * equals what the cron actually PAYS.
  *
- * Teachers on a fixed monthly are intentionally EXCLUDED here (they render in
- * the teacher table with an "Oylik" badge) to avoid listing anyone twice.
+ * The teacher table leaves these people out (`GLOBAL_FIXED_MONTHLY_CONFIG` in
+ * `buildTeacherRosterWhere`), so nobody is listed — or added to a total — twice.
  */
 @Injectable()
 export class SalaryStaffMonthlyService {
@@ -169,7 +171,7 @@ export class SalaryStaffMonthlyService {
     // the default (everyone attached to the branch).
     const byHomeBranch = branchId !== undefined && staffBranchBasis === 'home';
 
-    // 1. Non-teacher global FIXED_MONTHLY configs in branch scope.
+    // 1. Global FIXED_MONTHLY configs in branch scope, whatever the roles.
     // isActive is NOT filtered: a staff member deactivated mid-cycle must still
     // receive their final (prorated) month — the version's `effectiveTo` bounds
     // the money, and the 4b cascade guarantees a deactivated config's version is
@@ -185,11 +187,9 @@ export class SalaryStaffMonthlyService {
     const configs = await this.prisma.employeeSalaryConfig.findMany({
       where: {
         companyId,
-        groupId: null,
-        salaryType: SalaryType.FIXED_MONTHLY,
+        ...GLOBAL_FIXED_MONTHLY_CONFIG,
         user: {
           deletedAt: null,
-          roles: { none: { role: { name: 'Teacher' } } },
           // Branch-confined caller with no branch → match nothing (fail closed).
           ...(blocked && { id: -1 }),
           ...(userId !== undefined && { id: userId }),

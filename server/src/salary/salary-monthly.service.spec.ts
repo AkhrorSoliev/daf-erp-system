@@ -1911,13 +1911,15 @@ describe('SalaryMonthlyService', () => {
           { id: 10050, firstName: 'Dilnoza', lastName: 'Q' },
         ];
         // `user.findMany` serves two queries: the teacher roster and this one.
+        // Both filter on `salaryConfigs`; only this one excludes roles.
+        const isStaffQuery = (where: any) => Boolean(where.roles?.none);
         const staffQuery = () =>
           prisma.user.findMany.mock.calls
             .map((c: any[]) => c[0])
-            .find((a: any) => a.where.salaryConfigs);
+            .find((a: any) => isStaffQuery(a.where));
         beforeEach(() => {
           prisma.user.findMany.mockImplementation(({ where }: any) =>
-            Promise.resolve(where.salaryConfigs ? withoutRate : []),
+            Promise.resolve(isStaffQuery(where) ? withoutRate : []),
           );
         });
 
