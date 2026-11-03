@@ -1,5 +1,22 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, SalaryType } from '@prisma/client';
 import type { MonthlyScope } from './resolve-monthly-scope';
+
+/**
+ * A person paid a fixed monthly salary: their company-wide (`groupId: null`)
+ * rate is FIXED_MONTHLY. They are reported in the «Xodimlar oyligi» table
+ * (`SalaryStaffMonthlyService`) whatever their roles, and never in the teacher
+ * table — the payroll cron pays them the fixed amount, not per lesson.
+ *
+ * It used to be split by the Teacher ROLE instead, which left an employee who
+ * has the role but teaches no lesson (prod: a 6 000 000 so'm monthly) in the
+ * teacher table with no lesson data: the row showed the payment but added
+ * nothing to `fullDeserved`, so the net profit never subtracted the salary.
+ * Both sides read this one clause, so a person is in exactly one of them.
+ */
+export const GLOBAL_FIXED_MONTHLY_CONFIG = {
+  groupId: null,
+  salaryType: SalaryType.FIXED_MONTHLY,
+} satisfies Prisma.EmployeeSalaryConfigWhereInput;
 
 /**
  * The teacher roster a monthly-salary surface reports on, as ONE where-clause.
@@ -26,6 +43,7 @@ export function buildTeacherRosterWhere(
     deletedAt: null,
     companyId,
     roles: { some: { role: { name: 'Teacher' } } },
+    salaryConfigs: { none: GLOBAL_FIXED_MONTHLY_CONFIG },
     ...(blocked && { id: -1 }),
     ...(userId !== undefined && { id: userId }),
     ...(branchId !== undefined && { branches: { some: { branchId } } }),

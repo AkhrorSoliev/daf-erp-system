@@ -122,7 +122,7 @@ describe('SalaryStaffMonthlyService', () => {
     });
   });
 
-  it('excludes teachers and archived users via the config query filter', async () => {
+  it('excludes archived users via the config query filter', async () => {
     await service.computeStaff(juneScope({ branchId: 7 }));
     expect(prisma.employeeSalaryConfig.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -131,12 +131,21 @@ describe('SalaryStaffMonthlyService', () => {
           salaryType: 'FIXED_MONTHLY',
           user: expect.objectContaining({
             deletedAt: null,
-            roles: { none: { role: { name: 'Teacher' } } },
             branches: { some: { branchId: 7 } },
           }),
         }),
       }),
     );
+  });
+
+  // A Teacher role does not keep a fixed-monthly employee out: the teacher
+  // table leaves them out instead (`buildTeacherRosterWhere`), so their salary
+  // lands in `staffTotals.monthly` and the net profit subtracts it. Filtering by
+  // role here once hid a 6 000 000 so'm monthly from the profit.
+  it('lists a fixed-monthly employee who also has the Teacher role', async () => {
+    await service.computeStaff(juneScope({ branchId: 7 }));
+    const where = prisma.employeeSalaryConfig.findMany.mock.calls[0][0].where;
+    expect(where.user).not.toHaveProperty('roles');
   });
 
   it('pays the full month for a version spanning the whole period', async () => {
