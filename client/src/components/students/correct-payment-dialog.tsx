@@ -171,7 +171,9 @@ export function CorrectPaymentDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => (
+                {Object.entries(PAYMENT_METHOD_LABELS)
+                  .filter(([value]) => value !== "TRANSFER" || value === payment.method)
+                  .map(([value, label]) => (
                   <SelectItem key={value} value={value}>
                     {t(label)}
                   </SelectItem>
