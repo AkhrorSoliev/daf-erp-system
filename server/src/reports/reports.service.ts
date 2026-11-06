@@ -21,7 +21,7 @@ import {
   singleBranchId,
   type ReportBranchIds,
 } from '../common/finance/report-branch-scope';
-import { tashkentMonthKey } from '../common/date/tashkent';
+import { addMonthsToMonthKey, tashkentMonthKey } from '../common/date/tashkent';
 import {
   ReportsProfitLossService,
   ProfitLossQuery,
@@ -331,21 +331,29 @@ export class ReportsService {
         ownMonthProfit: 0,
       };
     }
-    const [y, m] = month.split('-').map(Number);
-    const startDate = `${month}-01`;
-    const endDate = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
-    const [attribution, netProfit] = await Promise.all([
+    const monthBounds = (key: string) => {
+      const [y, m] = key.split('-').map(Number);
+      return {
+        startDate: `${key}-01`,
+        endDate: `${key}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`,
+      };
+    };
+    const prevMonth = addMonthsToMonthKey(month, -1);
+    const [attribution, prevAttribution, netProfit] = await Promise.all([
       this.getIncomeMonthAttribution(companyId, {
         branchIds,
-        startDate,
-        endDate,
+        ...monthBounds(month),
+      }),
+      this.getIncomeMonthAttribution(companyId, {
+        branchIds,
+        ...monthBounds(prevMonth),
       }),
       this.getMonthlyNetProfit(companyId, { month, branchIds, performedById }),
     ]);
-    // The month's own cash in its old meaning (ADR-0067): money paid ahead for
-    // the next month was part of `currentMonth` when this figure was defined,
-    // and the Excel «Xulosa» sheet still reads it that way.
-    const ownMoney = attribution.currentMonth + attribution.advance;
+    // ADR-0146: oyning o'z puli — shu oy uchun kelgan pul va O'TGAN oyda shu
+    // oy uchun oldindan to'langan pul. Shu oyda keyingi oy uchun kelgan
+    // oldindan pul (`attribution.advance`) keyingi oyniki, bu oyga kirmaydi.
+    const ownMoney = attribution.currentMonth + prevAttribution.advance;
     return {
       month,
       ownMoney,

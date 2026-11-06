@@ -251,7 +251,7 @@ function buildBlock2(
     `${curLabel}ning o'z puli`,
     ownMoney.cur,
     ownMoney.prev,
-    'Shu oyda kassaga kirgan pulning shu oy darslariga tegishli qismi (eski qarz undirish emas).',
+    "Shu oy darslari uchun kelgan pul: shu oyda to'langani va o'tgan oyda oldindan to'langani. Eski qarz undirish va keyingi oy uchun oldindan to'lov kirmaydi.",
   );
   compareRow(
     ws,

@@ -995,15 +995,29 @@ describe('ReportsService', () => {
   });
 
   describe('getOwnMonthProfit', () => {
-    it('combines attribution + net profit into the own-month figure', async () => {
+    it("own money = this month's own part + last month's advance, never this month's advance (ADR-0146)", async () => {
       const svc: any = service;
-      jest.spyOn(svc, 'getIncomeMonthAttribution').mockResolvedValue({
-        total: 170_378_987,
-        currentMonth: 100_000_000,
-        advance: 42_064_938,
-        lateTotal: 28_314_049,
-        late: [],
-      });
+      jest
+        .spyOn(svc, 'getIncomeMonthAttribution')
+        .mockImplementation(async (_c: number, q: { startDate: string }) =>
+          q.startDate === '2026-07-01'
+            ? {
+                total: 170_378_987,
+                currentMonth: 100_000_000,
+                // paid in July for AUGUST — August's money, not July's
+                advance: 42_064_938,
+                lateTotal: 28_314_049,
+                late: [],
+              }
+            : {
+                total: 90_000_000,
+                currentMonth: 70_000_000,
+                // paid in June for JULY — July's money
+                advance: 20_000_000,
+                lateTotal: 0,
+                late: [],
+              },
+        );
       jest.spyOn(svc, 'getMonthlyNetProfit').mockResolvedValue({
         teacherSalary: 95_834_547,
         taxes: emptyTaxCosts(),
@@ -1019,9 +1033,9 @@ describe('ReportsService', () => {
         performedById: 10_456,
       });
 
-      expect(out.ownMoney).toBe(142_064_938);
+      expect(out.ownMoney).toBe(120_000_000);
       expect(out.cashTotal).toBe(170_378_987);
-      expect(out.ownMonthProfit).toBe(4_257_391);
+      expect(out.ownMonthProfit).toBe(-17_807_547);
       expect(out.netProfit.netProfit).toBe(35_976_444);
     });
 
@@ -1055,6 +1069,12 @@ describe('ReportsService', () => {
         branchIds: [7],
         startDate: '2026-02-01',
         endDate: '2026-02-28',
+      });
+      // the previous month — its advance was paid for this one
+      expect(attr).toHaveBeenCalledWith(1, {
+        branchIds: [7],
+        startDate: '2026-01-01',
+        endDate: '2026-01-31',
       });
     });
 
