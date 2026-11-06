@@ -971,6 +971,10 @@ export class MonthlyChargeService {
           metadata: {
             kind: 'monthly-release',
             enrollmentId: params.enrollmentId,
+            // The money sits on an earlier enrollment's charge (a re-join).
+            ...(charge.enrollmentId !== params.enrollmentId
+              ? { chargeEnrollmentId: charge.enrollmentId }
+              : {}),
             period: `${periodYear}-${String(periodMonth).padStart(2, '0')}`,
             lessons: remaining,
             policy,
@@ -1278,7 +1282,16 @@ export class MonthlyChargeService {
     }
   }
 
-  /** Reads (never writes) the month charge a departure on `day` would cut. */
+  /**
+   * Reads (never writes) the month charge a departure on `day` would cut.
+   *
+   * The charge is usually the enrollment's own. A student put back into the
+   * same group in the same month has none: `datesPaidByOtherCharges` leaves
+   * the dates the earlier enrollment's charge still holds unbilled, so the
+   * new enrollment gets no row (#11323, 30.10.2026). The money for the days
+   * after the departure then sits on that earlier enrollment's charge, and
+   * this finds it — otherwise the departure refunds nothing, silently.
+   */
   private async loadDepartureInput(
     client: Prisma.TransactionClient,
     enrollmentId: string,
@@ -1287,7 +1300,21 @@ export class MonthlyChargeService {
     const periodYear = Number(day.slice(0, 4));
     const periodMonth = Number(day.slice(5, 7));
 
-    const charge = await client.enrollmentMonthlyCharge.findUnique({
+    const enr = await client.enrollment.findUnique({
+      where: { id: enrollmentId },
+      select: {
+        studentId: true,
+        groupId: true,
+        createdAt: true,
+        startDate: true,
+        group: {
+          select: { branchId: true, exactDays: true, statusEnum: true },
+        },
+      },
+    });
+    if (!enr) return null;
+
+    let charge = await client.enrollmentMonthlyCharge.findUnique({
       where: {
         enrollmentId_periodYear_periodMonth: {
           enrollmentId,
@@ -1296,19 +1323,26 @@ export class MonthlyChargeService {
         },
       },
     });
-    if (!charge || charge.status !== MonthlyChargeStatus.CHARGED) return null;
-
-    const enr = await client.enrollment.findUnique({
-      where: { id: enrollmentId },
-      select: {
-        studentId: true,
-        startDate: true,
-        group: {
-          select: { branchId: true, exactDays: true, statusEnum: true },
+    if (!charge) {
+      const earlier = await client.enrollmentMonthlyCharge.findMany({
+        where: {
+          studentId: enr.studentId,
+          groupId: enr.groupId,
+          periodYear,
+          periodMonth,
+          status: MonthlyChargeStatus.CHARGED,
+          enrollmentId: { not: enrollmentId },
+          enrollment: { createdAt: { lt: enr.createdAt } },
         },
-      },
-    });
-    if (!enr) return null;
+        orderBy: { createdAt: 'asc' },
+      });
+      charge =
+        earlier.find((c) => {
+          const out = new Set(c.frozenOutDates ?? []);
+          return (c.coveredDates ?? []).some((d) => d > day && !out.has(d));
+        }) ?? null;
+    }
+    if (!charge || charge.status !== MonthlyChargeStatus.CHARGED) return null;
 
     const coveredDates = charge.coveredDates ?? [];
     let lessonsThroughDeparture = 0;
