@@ -23,6 +23,10 @@ import {
   type SatzAudioManifest,
 } from '../src/daf/inhalt/satz-audio';
 import {
+  validatePhraseAudio,
+  type PhraseAudioManifest,
+} from '../src/daf/inhalt/phrase-audio';
+import {
   bildPlanFuerUnit,
   validateBildPlan,
   type BildPlan,
@@ -189,6 +193,20 @@ function main(): void {
       ...validateSatzAudio(
         read<SaetzeFile>(code, 'saetze.json').saetze,
         satzAudio,
+      ),
+    );
+  }
+
+  if (existsSync(join(A1, code, 'redemittel.json'))) {
+    const phraseAudio: PhraseAudioManifest = existsSync(
+      join(A1, 'phrase-audio.json'),
+    )
+      ? read<PhraseAudioManifest>('phrase-audio.json')
+      : {};
+    problems.push(
+      ...validatePhraseAudio(
+        read<RedemittelFile>(code, 'redemittel.json').phrasen,
+        phraseAudio,
       ),
     );
   }

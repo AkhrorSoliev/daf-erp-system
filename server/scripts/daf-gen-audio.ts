@@ -160,7 +160,9 @@ export function sprechtext(wort: Pick<SprachEintrag, 'de' | 'tts'>): string {
 }
 
 /** Berilgan so'zlar ro'yxatining jami belgi soni (`sprechtext` bo'yicha). */
-export function gesamtZeichenzahl(woerter: SprachEintrag[]): number {
+export function gesamtZeichenzahl(
+  woerter: Pick<SprachEintrag, 'de' | 'tts'>[],
+): number {
   return woerter.reduce((sum, w) => sum + sprechtext(w).length, 0);
 }
 

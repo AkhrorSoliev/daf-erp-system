@@ -43,6 +43,7 @@
     "daf:voice-samples": "ts-node scripts/daf-voice-samples.ts",
     "daf:gen-audio": "ts-node scripts/daf-gen-audio.ts",
     "daf:gen-satz-audio": "ts-node scripts/daf-gen-satz-audio.ts",
+    "daf:gen-phrase-audio": "ts-node scripts/daf-gen-phrase-audio.ts",
     "daf:gen-uhr-audio": "ts-node scripts/daf-gen-uhr-audio.ts",
     "daf:gen-dialog-audio": "ts-node scripts/daf-gen-dialog-audio.ts",
     "daf:gen-dialog-ambient": "ts-node scripts/daf-gen-dialog-ambient.ts",
